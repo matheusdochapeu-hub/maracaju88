@@ -1,13 +1,25 @@
-# Memória de Atualizações — Maracaju 88 (`maracaju88`)
+# Memória de Atualizações — Maracaju (`maracaju88`)
 
 **Data da última consolidação:** `02/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v1.3.0`
+**Versão Atual:** `v1.3.1`
 
 ---
 
 ## Histórico de Versões
+
+### Versão 1.3.1 (`02/11/2026`) — Remoção do "88" do Nome do App e do Ícone da Casa
+1. **Remoção do "88" da Identidade Visual e Ícones:**
+   - `icons/icon.svg`: Removido o badge circular vermelho com o número "88". O ícone da casa agora exibe um desenho limpo, acolhedor e minimalista com porta em arco e coração sutil em verde sobre a entrada, harmonizado com a nova paleta verde musgo claro.
+   - `scripts/generate-icons.ps1`: Script PowerShell de geração de bitmaps atualizado para remover o badge numérico 88 e renderizar os novos ícones com acabamento nítido e antialiasing.
+   - Ícones regenerados com sucesso: `icon-512.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.png` e `favicon.ico`.
+2. **Atualização do Nome do Aplicativo para "Maracaju":**
+   - Nome atualizado de "Maracaju 88" para "Maracaju" em todas as telas, cabeçalhos, títulos (`<title>`, `<meta apple-mobile-web-app-title>`), tela de autenticação restrita, modais de ajuda e instruções de instalação PWA.
+   - `manifest.json`: Atualizado para `"name": "Maracaju - Gestão do Lar"` e `"short_name": "Maracaju"`.
+   - `js/config.js`: `APP_CONFIG.appName = "Maracaju"`, título do nível 5 atualizado para `"Reis do Maracaju"`, e migração transparente de dados mantida via `legacyStorageKeys` garantindo zero perda de tarefas salvas.
+   - `js/ui.js` e `js/app.js`: Mensagens de boas-vindas, toasts e painel de XP atualizados para "Maracaju".
+   - `sw.js`: Versão de cache atualizada para `maracaju-v1.3.1` forçando atualização imediata nos navegadores e celulares instalados.
 
 ### Versão 1.3.0 (`02/11/2026`) — Fotos e Links em Reformas, Novo Visual Verde Musgo Claro & Correções de UX
 1. **Fotos e Links na Aba Reformas (`reformas.js`, `ui.js`, `app.js`):**

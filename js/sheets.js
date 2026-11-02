@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - GOOGLE SHEETS SYNC & BACKUP CLIENT
+//  MARACAJU - GOOGLE SHEETS SYNC & BACKUP CLIENT
 // ============================================================
 
 export async function testSheetsConnection(url, token) {

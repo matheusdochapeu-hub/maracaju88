@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - MURAL DOS SONHOS & METAS DO CASAL
+//  MARACAJU - MURAL DOS SONHOS & METAS DO CASAL
 // ============================================================
 
 export function addSonho(state, data) {

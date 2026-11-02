@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - MÓDULO DO CARRO & MANUTENÇÃO
+//  MARACAJU - MÓDULO DO CARRO & MANUTENÇÃO
 // ============================================================
 
 export function addCarroItem(state, data) {

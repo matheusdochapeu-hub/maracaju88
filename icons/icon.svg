@@ -1,25 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f172a" />
-      <stop offset="50%" stop-color="#1e293b" />
-      <stop offset="100%" stop-color="#0f766e" />
+      <stop offset="0%" stop-color="#1b3820" />
+      <stop offset="50%" stop-color="#244b2c" />
+      <stop offset="100%" stop-color="#2e5933" />
     </linearGradient>
     <linearGradient id="roofGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38bdf8" />
-      <stop offset="100%" stop-color="#14b8a6" />
+      <stop offset="0%" stop-color="#508c56" />
+      <stop offset="100%" stop-color="#3d785a" />
     </linearGradient>
     <linearGradient id="wallGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#ffffff" />
-      <stop offset="100%" stop-color="#e2e8f0" />
+      <stop offset="100%" stop-color="#f4f6f1" />
     </linearGradient>
     <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f43f5e" />
-      <stop offset="100%" stop-color="#e11d48" />
+      <stop offset="0%" stop-color="#c25746" />
+      <stop offset="100%" stop-color="#a84334" />
     </linearGradient>
     <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#fbbf24" />
-      <stop offset="100%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
     </linearGradient>
     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="10" result="blur" />
@@ -29,34 +29,28 @@
 
   <!-- Background with rounded corners -->
   <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
-  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="6" />
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="6" />
 
   <!-- House Structure -->
   <!-- Roof -->
   <path d="M 120 250 L 256 128 L 392 250 L 366 276 L 256 178 L 146 276 Z" fill="url(#roofGrad)" filter="url(#glow)" />
   
-  <!-- Chimney with little sparkles -->
-  <rect x="330" y="150" width="36" height="60" rx="6" fill="#14b8a6" />
+  <!-- Chimney -->
+  <rect x="330" y="150" width="36" height="60" rx="6" fill="#2e5933" />
   
   <!-- Walls -->
-  <path d="M 152 260 L 360 260 L 360 400 A 16 16 0 0 1 344 416 L 168 416 A 16 16 0 0 1 152 400 Z" fill="url(#wallGrad)" opacity="0.96" />
+  <path d="M 152 260 L 360 260 L 360 400 A 16 16 0 0 1 344 416 L 168 416 A 16 16 0 0 1 152 400 Z" fill="url(#wallGrad)" opacity="0.98" />
 
   <!-- Door / Portal -->
-  <path d="M 226 416 L 226 316 A 30 30 0 0 1 286 316 L 286 416 Z" fill="#0f172a" />
+  <path d="M 226 416 L 226 316 A 30 30 0 0 1 286 316 L 286 416 Z" fill="#19331d" />
   
   <!-- Heart over Door (Couple) -->
   <path d="M 256 310 C 256 295, 238 285, 226 298 C 214 310, 228 326, 256 345 C 284 326, 298 310, 286 298 C 274 285, 256 295, 256 310 Z" fill="url(#heartGrad)" filter="url(#glow)" />
 
   <!-- Windows (Left & Right) -->
-  <rect x="178" y="290" width="34" height="34" rx="8" fill="#38bdf8" opacity="0.85" />
-  <rect x="300" y="290" width="34" height="34" rx="8" fill="#38bdf8" opacity="0.85" />
+  <rect x="178" y="290" width="34" height="34" rx="8" fill="#3d785a" opacity="0.85" />
+  <rect x="300" y="290" width="34" height="34" rx="8" fill="#3d785a" opacity="0.85" />
 
   <!-- Gamification Star above the house -->
   <path d="M 256 68 L 265 92 L 290 92 L 270 107 L 277 131 L 256 117 L 235 131 L 242 107 L 222 92 L 247 92 Z" fill="url(#starGrad)" filter="url(#glow)" />
-
-  <!-- Badge 88 in lower right -->
-  <g transform="translate(350, 360)">
-    <circle cx="28" cy="28" r="32" fill="#0f766e" stroke="#38bdf8" stroke-width="4" />
-    <text x="28" y="37" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="900" fill="#ffffff" text-anchor="middle">88</text>
-  </g>
 </svg>

@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - APP CONTROLLER PRINCIPAL (v1.3.0)
+//  MARACAJU - APP CONTROLLER PRINCIPAL (v1.3.1)
 // ============================================================
 
 import { loadState, saveState, exportBackupJson, importBackupJson } from './storage.js';
@@ -123,7 +123,7 @@ function initAuthModule() {
 
     playSubtleClick(state.settings.soundEnabled);
     triggerConfetti();
-    showToast(`Bem-vindo(a) ao Maracaju 88, ${result.user.name}! 🏡✨`, 'success', 3500);
+    showToast(`Bem-vindo(a) ao Maracaju, ${result.user.name}! 🏡✨`, 'success', 3500);
     refreshAllUI();
   }
 
@@ -195,10 +195,10 @@ function initServiceWorker() {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')
         .then(reg => {
-          console.log('[Maracaju 88] Service Worker ativo:', reg.scope);
+          console.log('[Maracaju] Service Worker ativo:', reg.scope);
         })
         .catch(err => {
-          console.warn('[Maracaju 88] Falha no Service Worker:', err);
+          console.warn('[Maracaju] Falha no Service Worker:', err);
         });
     });
   }
@@ -229,7 +229,7 @@ function initPwaInstallPrompt() {
         deferredInstallPrompt.prompt();
         const choice = await deferredInstallPrompt.userChoice;
         if (choice.outcome === 'accepted') {
-          showToast('Instalando Maracaju 88 no seu celular... 🎉', 'success', 3500);
+          showToast('Instalando Maracaju no seu celular... 🎉', 'success', 3500);
           btnInstall.style.display = 'none';
         }
         deferredInstallPrompt = null;
@@ -1072,7 +1072,7 @@ function initSettingsModule() {
 function triggerAutoSyncIfEnabled() {
   if (state.settings.autoSync && state.settings.sheetsUrl) {
     backupToSheets(state).catch(err => {
-      console.warn('[Maracaju 88] Auto-sync falhou em background:', err);
+      console.warn('[Maracaju] Auto-sync falhou em background:', err);
     });
   }
 }

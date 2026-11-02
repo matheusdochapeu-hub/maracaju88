@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - STORAGE & PERSISTÊNCIA LOCAL
+//  MARACAJU - STORAGE & PERSISTÊNCIA LOCAL
 // ============================================================
 
 import {
@@ -41,7 +41,17 @@ export function getInitialState() {
 
 export function loadState() {
   try {
-    const raw = localStorage.getItem(APP_CONFIG.storageKey);
+    let raw = localStorage.getItem(APP_CONFIG.storageKey);
+    if (!raw && APP_CONFIG.legacyStorageKeys) {
+      for (const legacyKey of APP_CONFIG.legacyStorageKeys) {
+        const legacyData = localStorage.getItem(legacyKey);
+        if (legacyData) {
+          raw = legacyData;
+          break;
+        }
+      }
+    }
+
     if (!raw) {
       const initial = getInitialState();
       saveState(initial);
@@ -90,7 +100,7 @@ export function exportBackupJson(state) {
   const a = document.createElement("a");
   const dateStr = new Date().toISOString().split("T")[0];
   a.href = url;
-  a.download = `maracaju88-backup-${dateStr}.json`;
+  a.download = `maracaju-backup-${dateStr}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }

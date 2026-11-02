@@ -1,8 +1,8 @@
 // ============================================================
-//  MARACAJU 88 - SERVICE WORKER (PWA Offline Cache)
+//  MARACAJU - SERVICE WORKER (PWA Offline Cache)
 // ============================================================
 
-const CACHE_NAME = 'maracaju88-v1.3.0';
+const CACHE_NAME = 'maracaju-v1.3.1';
 
 const ASSETS_TO_CACHE = [
   './',

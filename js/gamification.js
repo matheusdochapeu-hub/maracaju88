@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - SISTEMA DE GAMIFICAÇÃO & PLACAR
+//  MARACAJU - SISTEMA DE GAMIFICAÇÃO & PLACAR
 // ============================================================
 
 import { LEVELS, BADGES } from './config.js';

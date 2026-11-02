@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - CONTROLE DE TAREFAS & PERIODICIDADE
+//  MARACAJU - CONTROLE DE TAREFAS & PERIODICIDADE
 //  Divisão por: Diárias ☀️, Semanais 📅, Mensais 🗓️ e Anuais 🎯
 // ============================================================
 

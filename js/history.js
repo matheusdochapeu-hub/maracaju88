@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - HISTÓRICO & VERIFICAÇÃO DIÁRIA
+//  MARACAJU - HISTÓRICO & VERIFICAÇÃO DIÁRIA
 // ============================================================
 
 import { getLocalDateString } from './tasks.js';

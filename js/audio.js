@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - WEB AUDIO SYNTHESIZER
+//  MARACAJU - WEB AUDIO SYNTHESIZER
 //  Efeitos sonoros nativos e sintetizados (100% offline, sem arquivos externos)
 // ============================================================
 

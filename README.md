@@ -1,6 +1,6 @@
-# 🏠 Maracaju 88 - Gestão do Lar, Gamificação, Carro & Sonhos do Casal
+# 🏠 Maracaju - Gestão do Lar, Gamificação, Carro & Sonhos do Casal
 
-> Aplicativo PWA progressivo, moderno e gamificado feito especialmente para o dia a dia do casal no **Maracaju 88**. Permite gerenciar rotinas domésticas (**diárias, semanais, mensais e anuais**), acompanhar manutenções do **carro** com fotos e links de peças, verificar o que foi feito ou não diariamente, planejar reformas da casa, cultivar sonhos conjuntos e manter backup sincronizado em tempo real com o **Google Sheets**.
+> Aplicativo PWA progressivo, moderno e gamificado feito especialmente para o dia a dia do casal no **Maracaju**. Permite gerenciar rotinas domésticas (**diárias, semanais, mensais e anuais**), acompanhar manutenções do **carro** com fotos e links de peças, verificar o que foi feito ou não diariamente, planejar reformas da casa, cultivar sonhos conjuntos e manter backup sincronizado em tempo real com o **Google Sheets**.
 
 ---
 
@@ -43,7 +43,7 @@
 - **Checklist de Etapas:** Subtarefas interativas por projeto.
 
 ### 5. 🏆 Placar & Conquistas Desbloqueáveis
-- **Níveis do Lar:** De *Iniciantes do Lar* (Nível 1) até *Reis do Maracaju 88* e *Lenda Doméstica Suprema*.
+- **Níveis do Lar:** De *Iniciantes do Lar* (Nível 1) até *Reis do Maracaju* e *Lenda Doméstica Suprema*.
 - **Divisão Saudável de Tarefas:** Gráfico comparativo de XP entre Matheus e Scarlet.
 - **Badges / Conquistas:** Desbloqueie medalhas exclusivas como *Piloto do Maracaju*, *Semana Impecável*, *Chef da Louça*, etc.
 

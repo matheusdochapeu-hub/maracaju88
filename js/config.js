@@ -1,11 +1,12 @@
 // ============================================================
-//  MARACAJU 88 - CONFIGURAÇÃO E DADOS INICIAIS
+//  MARACAJU - CONFIGURAÇÃO E DADOS INICIAIS
 // ============================================================
 
 export const APP_CONFIG = {
-  appName: "Maracaju 88",
-  version: "1.3.0",
-  storageKey: "MARACAJU88_STATE_v1",
+  appName: "Maracaju",
+  version: "1.3.1",
+  storageKey: "MARACAJU_STATE_v1",
+  legacyStorageKeys: ["MARACAJU88_STATE_v1"],
   syncIntervalMs: 60000
 };
 
@@ -72,7 +73,7 @@ export const LEVELS = [
   { level: 2, minXp: 150, title: "Dupla Organizada", icon: "🤝" },
   { level: 3, minXp: 400, title: "Mestres do Conforto", icon: "🛋️" },
   { level: 4, minXp: 800, title: "Guardiões da Casa", icon: "🛡️" },
-  { level: 5, minXp: 1500, title: "Reis do Maracaju 88", icon: "👑" },
+  { level: 5, minXp: 1500, title: "Reis do Maracaju", icon: "👑" },
   { level: 6, minXp: 2500, title: "Lenda Doméstica Suprema", icon: "✨" }
 ];
 

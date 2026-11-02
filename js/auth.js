@@ -1,11 +1,12 @@
 // ============================================================
-//  MARACAJU 88 - AUTENTICAÇÃO & CONTROLE DE ACESSO
+//  MARACAJU - AUTENTICAÇÃO & CONTROLE DE ACESSO
 //  Uso exclusivo de Matheus e Scarlet
 // ============================================================
 
 import { AUTHORIZED_USERS_LIST } from './config.js';
 
-const AUTH_STORAGE_KEY = 'MARACAJU88_AUTH_USER_v1';
+const AUTH_STORAGE_KEY = 'MARACAJU_AUTH_USER_v1';
+const LEGACY_AUTH_STORAGE_KEY = 'MARACAJU88_AUTH_USER_v1';
 
 export function normalizeEmail(email) {
   if (!email || typeof email !== 'string') return '';
@@ -35,7 +36,7 @@ export function findAuthorizedUser(inputEmail) {
 export function getAuthSession() {
   try {
     if (typeof localStorage === 'undefined') return null;
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY) || localStorage.getItem(LEGACY_AUTH_STORAGE_KEY);
     if (!raw) return null;
     const session = JSON.parse(raw);
     if (!session || !session.email) return null;
@@ -79,6 +80,7 @@ export function clearAuthSession() {
   try {
     if (typeof localStorage === 'undefined') return true;
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
     return true;
   } catch (err) {
     return false;

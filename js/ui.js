@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - INTERFACE, RENDERIZAÇÃO & MODAIS
+//  MARACAJU - INTERFACE, RENDERIZAÇÃO & MODAIS
 // ============================================================
 
 import { ROOMS, EFFORT_LEVELS, BADGES, FREQUENCIES, CARRO_CATEGORIES } from './config.js';
@@ -815,7 +815,7 @@ export function renderGamificationTab(state) {
       <div style="text-align: center; margin-bottom: 1.25rem;">
         <div style="font-size: 2.5rem; margin-bottom: 0.25rem;">${lvl.icon}</div>
         <h2 style="font-size: 1.4rem; font-weight: 800;">Nível ${lvl.level}: ${lvl.title}</h2>
-        <p style="font-size: 0.85rem; color: var(--text-secondary);">${totalXp} XP acumulados no Maracaju 88</p>
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">${totalXp} XP acumulados no Maracaju</p>
       </div>
 
       <div style="margin-bottom: 1.5rem;">
@@ -894,7 +894,7 @@ export function renderSettingsTab(state) {
   // Morador Autenticado na Sessão
   const sessionUserEl = document.getElementById('auth-session-user-display');
   if (sessionUserEl) {
-    const raw = localStorage.getItem('MARACAJU88_AUTH_USER_v1');
+    const raw = localStorage.getItem('MARACAJU_AUTH_USER_v1') || localStorage.getItem('MARACAJU88_AUTH_USER_v1');
     if (raw) {
       try {
         const session = JSON.parse(raw);

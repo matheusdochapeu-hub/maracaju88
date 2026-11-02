@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - TESTES UNITÁRIOS DE REGRAS DE NEGÓCIO (v1.1.0)
+//  MARACAJU - TESTES UNITÁRIOS DE REGRAS DE NEGÓCIO
 // ============================================================
 
 import test from 'node:test';

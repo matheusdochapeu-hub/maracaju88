@@ -12,10 +12,10 @@ function Generate-AppIcon {
     $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
     $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
 
-    # Background gradient
+    # Background gradient - Verde Musgo
     $rect = New-Object System.Drawing.Rectangle 0, 0, $Size, $Size
-    $c1 = [System.Drawing.Color]::FromArgb(255, 15, 23, 42)    # slate-900
-    $c2 = [System.Drawing.Color]::FromArgb(255, 15, 118, 110)  # teal-700
+    $c1 = [System.Drawing.Color]::FromArgb(255, 27, 56, 32)   # moss-900 (#1b3820)
+    $c2 = [System.Drawing.Color]::FromArgb(255, 46, 89, 51)   # moss-700 (#2e5933)
     $brush = [System.Drawing.Drawing2D.LinearGradientBrush]::new($rect, $c1, $c2, [System.Drawing.Drawing2D.LinearGradientMode]::ForwardDiagonal)
     $g.FillRectangle($brush, $rect)
 
@@ -27,7 +27,7 @@ function Generate-AppIcon {
     $scale = [float]$Size / 512.0
 
     # Draw House Roof
-    $roofBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 56, 189, 248))
+    $roofBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 80, 140, 86))
     $pt1 = [System.Drawing.PointF]::new(256.0 * $scale, 130.0 * $scale)
     $pt2 = [System.Drawing.PointF]::new(390.0 * $scale, 250.0 * $scale)
     $pt3 = [System.Drawing.PointF]::new(366.0 * $scale, 276.0 * $scale)
@@ -37,34 +37,27 @@ function Generate-AppIcon {
     [System.Drawing.PointF[]]$roofPoints = @($pt1, $pt2, $pt3, $pt4, $pt5, $pt6)
     $g.FillPolygon($roofBrush, $roofPoints)
 
+    # Chimney
+    $chimneyBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 46, 89, 51))
+    $g.FillRectangle($chimneyBrush, [int](325 * $scale), [int](155 * $scale), [int](34 * $scale), [int](55 * $scale))
+
     # House Body
-    $bodyBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(245, 241, 245, 249))
+    $bodyBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 255, 255, 255))
     $g.FillRectangle($bodyBrush, [int](156 * $scale), [int](260 * $scale), [int](200 * $scale), [int](150 * $scale))
 
     # Door
-    $doorBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 15, 23, 42))
+    $doorBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 25, 51, 29))
     $g.FillRectangle($doorBrush, [int](226 * $scale), [int](320 * $scale), [int](60 * $scale), [int](90 * $scale))
 
     # Windows
-    $winBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 56, 189, 248))
+    $winBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 61, 120, 90))
     $g.FillRectangle($winBrush, [int](175 * $scale), [int](285 * $scale), [int](36 * $scale), [int](36 * $scale))
     $g.FillRectangle($winBrush, [int](300 * $scale), [int](285 * $scale), [int](36 * $scale), [int](36 * $scale))
 
-    # Badge 88 circle
-    $badgeBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 13, 148, 136))
-    $g.FillEllipse($badgeBrush, [int](330 * $scale), [int](340 * $scale), [int](76 * $scale), [int](76 * $scale))
-    $badgePen = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(255, 56, 189, 248), [float]($Size * 0.015))
-    $g.DrawEllipse($badgePen, [int](330 * $scale), [int](340 * $scale), [int](76 * $scale), [int](76 * $scale))
-
-    # Text 88
-    $fontSize = [float]($Size * 0.065)
-    $font88 = [System.Drawing.Font]::new("Arial", $fontSize, [System.Drawing.FontStyle]::Bold)
-    $textBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::White)
-    $format = [System.Drawing.StringFormat]::new()
-    $format.Alignment = [System.Drawing.StringAlignment]::Center
-    $format.LineAlignment = [System.Drawing.StringAlignment]::Center
-    $badgeRect = [System.Drawing.RectangleF]::new(330.0 * $scale, 340.0 * $scale, 76.0 * $scale, 76.0 * $scale)
-    $g.DrawString("88", $font88, $textBrush, $badgeRect, $format)
+    # Heart above Door (Couple)
+    $heartBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(255, 194, 87, 70))
+    $g.FillEllipse($heartBrush, [int](240 * $scale), [int](295 * $scale), [int](16 * $scale), [int](16 * $scale))
+    $g.FillEllipse($heartBrush, [int](256 * $scale), [int](295 * $scale), [int](16 * $scale), [int](16 * $scale))
 
     # Save PNG
     $bmp.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
