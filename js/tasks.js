@@ -125,7 +125,7 @@ export function toggleTaskDone(state, taskId, dateStr = getLocalDateString(), us
     if (!state.history[dateStr]) state.history[dateStr] = {};
 
     const activeId = userOverride || state.activeUserId || "matheus";
-    const userKey = activeId === "esposa" ? "user2" : "user1";
+    const userKey = (activeId === "esposa" || activeId === "scarlet") ? "user2" : "user1";
     const userObj = state.users[userKey] || { name: activeId, xp: 0 };
 
     const now = new Date();
@@ -172,7 +172,7 @@ export function toggleTaskDone(state, taskId, dateStr = getLocalDateString(), us
       const prev = state.history[recordedDate][taskId];
       const previousXp = prev.xp || task.xp || 10;
       const userId = prev.userId || "matheus";
-      const userKey = userId === "esposa" ? "user2" : "user1";
+      const userKey = (userId === "esposa" || userId === "scarlet") ? "user2" : "user1";
 
       if (state.users[userKey]) {
         state.users[userKey].xp = Math.max(0, (state.users[userKey].xp || 0) - previousXp);

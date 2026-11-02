@@ -1,8 +1,9 @@
 // ============================================================
-//  MARACAJU 88 - APP CONTROLLER PRINCIPAL (v1.1.0)
+//  MARACAJU 88 - APP CONTROLLER PRINCIPAL (v1.2.0)
 // ============================================================
 
 import { loadState, saveState, exportBackupJson, importBackupJson } from './storage.js';
+import { getAuthSession, loginWithEmail, clearAuthSession } from './auth.js';
 import { playTaskCompleteSound, playLevelUpSound, playSubtleClick } from './audio.js';
 import { toggleTaskDone, addTask, deleteTask, getLocalDateString } from './tasks.js';
 import {
@@ -50,6 +51,7 @@ let deferredInstallPrompt = null;
 document.addEventListener('DOMContentLoaded', () => {
   state = loadState();
 
+  initAuthModule();
   initServiceWorker();
   initPwaInstallPrompt();
   initNavigation();
@@ -64,6 +66,98 @@ document.addEventListener('DOMContentLoaded', () => {
 
   refreshAllUI();
 });
+
+// -------------------------------------------------------------
+// CONTROLE DE ACESSO EXCLUSIVO (Matheus & Scarlet)
+// -------------------------------------------------------------
+function initAuthModule() {
+  const authGate = document.getElementById('auth-gate');
+  const authForm = document.getElementById('form-auth-login');
+  const emailInput = document.getElementById('auth-email-input');
+  const errorBox = document.getElementById('auth-error-box');
+  const errorText = document.getElementById('auth-error-text');
+  const btnQuickMatheus = document.getElementById('btn-quick-matheus');
+  const btnQuickScarlet = document.getElementById('btn-quick-scarlet');
+  const btnLogout = document.getElementById('btn-auth-logout');
+
+  function checkSession() {
+    const session = getAuthSession();
+    if (!session) {
+      if (authGate) authGate.style.display = 'flex';
+      return false;
+    } else {
+      if (authGate) authGate.style.display = 'none';
+      if (state) {
+        state.activeUserId = session.id;
+      }
+      return true;
+    }
+  }
+
+  function handleLogin(email) {
+    if (errorBox) errorBox.style.display = 'none';
+
+    const result = loginWithEmail(email);
+    if (!result.success) {
+      if (errorBox && errorText) {
+        errorText.textContent = result.error;
+        errorBox.style.display = 'flex';
+      } else {
+        alert(result.error);
+      }
+      return;
+    }
+
+    if (authGate) authGate.style.display = 'none';
+    if (emailInput) emailInput.value = '';
+    state.activeUserId = result.user.id;
+    saveState(state);
+
+    playSubtleClick(state.settings.soundEnabled);
+    triggerConfetti();
+    showToast(`Bem-vindo(a) ao Maracaju 88, ${result.user.name}! 🏡✨`, 'success', 3500);
+    refreshAllUI();
+  }
+
+  // Verifica na inicialização
+  checkSession();
+
+  // Submissão do formulário de e-mail
+  if (authForm) {
+    authForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = emailInput ? emailInput.value : '';
+      handleLogin(email);
+    });
+  }
+
+  // Atalhos rápidos de 1 toque para o casal
+  if (btnQuickMatheus) {
+    btnQuickMatheus.addEventListener('click', () => {
+      handleLogin('matheusdochapeu@gmail.com');
+    });
+  }
+
+  if (btnQuickScarlet) {
+    btnQuickScarlet.addEventListener('click', () => {
+      handleLogin('scarletsantos7@gmail.com');
+    });
+  }
+
+  // Botão de Sair / Trocar Usuário (na aba Ajustes)
+  if (btnLogout) {
+    btnLogout.addEventListener('click', () => {
+      clearAuthSession();
+      if (authGate) authGate.style.display = 'flex';
+      if (emailInput) {
+        emailInput.value = '';
+        emailInput.focus();
+      }
+      showToast('Sessão encerrada com sucesso.', 'info', 2500);
+      refreshAllUI();
+    });
+  }
+}
 
 function refreshAllUI() {
   renderHeaderStats(state);
@@ -166,17 +260,17 @@ function initNavigation() {
 }
 
 // -------------------------------------------------------------
-// CONTROLES DO CABEÇALHO (Perfil: Matheus / Esposa)
+// CONTROLES DO CABEÇALHO (Perfil: Matheus / Scarlet)
 // -------------------------------------------------------------
 function initHeaderControls() {
   const userBtn = document.getElementById('active-user-btn');
   if (userBtn) {
     userBtn.addEventListener('click', () => {
-      state.activeUserId = state.activeUserId === 'matheus' ? 'esposa' : 'matheus';
+      state.activeUserId = (state.activeUserId === 'matheus') ? 'scarlet' : 'matheus';
       saveState(state);
       playSubtleClick(state.settings.soundEnabled);
 
-      const activeName = state.activeUserId === 'esposa' ? state.users.user2.name : state.users.user1.name;
+      const activeName = (state.activeUserId === 'scarlet' || state.activeUserId === 'esposa') ? state.users.user2.name : state.users.user1.name;
       showToast(`Perfil ativo: ${activeName}`, 'info', 1800);
       refreshAllUI();
     });
@@ -252,7 +346,7 @@ function initTasksModule() {
         const task = state.tasks.find(t => t.id === taskId);
         if (task) {
           if (task.assignedTo === 'ambos') task.assignedTo = 'matheus';
-          else if (task.assignedTo === 'matheus') task.assignedTo = 'esposa';
+          else if (task.assignedTo === 'matheus') task.assignedTo = 'scarlet';
           else task.assignedTo = 'ambos';
 
           saveState(state);
@@ -753,7 +847,7 @@ function initSettingsModule() {
       state.settings.soundEnabled = document.getElementById('settings-sound-toggle').checked;
 
       state.users.user1.name = document.getElementById('settings-user1-name').value.trim() || 'Matheus';
-      state.users.user2.name = document.getElementById('settings-user2-name').value.trim() || 'Esposa';
+      state.users.user2.name = document.getElementById('settings-user2-name').value.trim() || 'Scarlet';
 
       saveState(state);
       showToast('Configurações salvas!', 'success');

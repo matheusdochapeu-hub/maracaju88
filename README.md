@@ -16,7 +16,7 @@
 - **Gamificação Divertida:** Ganhe pontos de experiência (**XP**) a cada tarefa concluída (+10 XP leve, +25 XP média, +50 XP pesada).
 - **Sequência de Dias (Streak 🔥):** Mantenha a sequência ativa cuidando da casa todos os dias.
 - **Celebração com Confetti e Som:** Chuva de confetti animada via Canvas e efeitos sonoros nativos via Web Audio API.
-- **Seletor de Quem Fez:** Alterne com 1 toque entre **Matheus** e **Esposa** para pontuar o perfil de quem realizou a tarefa.
+- **Seletor de Quem Fez:** Alterne com 1 toque entre **Matheus** e **Scarlet** para pontuar o perfil de quem realizou a tarefa.
 
 ### 2. 🚗 Aba do Carro & Manutenção (Fotos, Links e Peças)
 - **Controle Completo do Veículo:**
@@ -42,10 +42,18 @@
 
 ### 5. 🏆 Placar & Conquistas Desbloqueáveis
 - **Níveis do Lar:** De *Iniciantes do Lar* (Nível 1) até *Reis do Maracaju 88* e *Lenda Doméstica Suprema*.
-- **Divisão Saudável de Tarefas:** Gráfico comparativo de XP entre Matheus e Esposa.
+- **Divisão Saudável de Tarefas:** Gráfico comparativo de XP entre Matheus e Scarlet.
 - **Badges / Conquistas:** Desbloqueie medalhas exclusivas como *Piloto do Maracaju*, *Semana Impecável*, *Chef da Louça*, etc.
 
-### 6. ☁️ Backup & Sincronização no Google Sheets
+### 6. 🔐 Acesso Exclusivo & Validação dos Moradores
+- **Portão de Entrada Restrito:** Apenas duas contas de e-mail autorizadas possuem acesso ao sistema:
+  - 👨‍💻 **Matheus:** `matheusdochapeu@gmail.com`
+  - 👩‍💼 **Scarlet:** `scarletsantos7@gmail.com`
+- **Atalho Rápido de 1 Toque:** No celular, basta selecionar o morador para validação imediata sem atrito.
+- **Bloqueio de Intrusos:** Qualquer e-mail não listado é imediatamente barrado.
+- **Sessão Persistente:** O acesso fica salvo com segurança no aparelho com opção de troca rápida de usuário ou logout.
+
+### 7. ☁️ Backup & Sincronização no Google Sheets
 - **Abas Formatadas na Planilha:**
   - `Resumo_Geral`: Nível, XP do casal, streak e estatísticas.
   - `Tarefas`: Lista de todas as tarefas cadastradas (com periodicidade).

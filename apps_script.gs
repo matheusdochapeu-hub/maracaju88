@@ -185,7 +185,7 @@ function syncResumoSheet(ss, data, now) {
   sheet.clear();
   var gamif = data.gamification || {};
   var user1 = (data.users && data.users.user1) || { name: "Matheus", xp: 0 };
-  var user2 = (data.users && data.users.user2) || { name: "Esposa", xp: 0 };
+  var user2 = (data.users && data.users.user2) || { name: "Scarlet", xp: 0 };
 
   var rows = [
     ["Métrica", "Valor"],

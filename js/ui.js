@@ -115,7 +115,7 @@ export function renderHeaderStats(state) {
 
   // Active User Toggle
   const activeId = state.activeUserId || 'matheus';
-  const activeUser = activeId === 'esposa' ? state.users.user2 : state.users.user1;
+  const activeUser = (activeId === 'esposa' || activeId === 'scarlet') ? state.users.user2 : state.users.user1;
   const userBtn = document.getElementById('active-user-btn');
   if (userBtn && activeUser) {
     userBtn.innerHTML = `
@@ -240,7 +240,7 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
                 </span>
               ` : `
                 <button class="task-assignee-btn" data-change-assignee="${task.id}" title="Alterar responsável">
-                  <span>👤 ${task.assignedTo === 'ambos' ? 'Casal' : (task.assignedTo === 'esposa' ? state.users.user2.name : state.users.user1.name)}</span>
+                  <span>👤 ${task.assignedTo === 'ambos' ? 'Casal' : ((task.assignedTo === 'esposa' || task.assignedTo === 'scarlet') ? state.users.user2.name : state.users.user1.name)}</span>
                 </button>
               `}
             </div>
@@ -306,7 +306,7 @@ export function renderHistoryTab(state, targetDateStr = getLocalDateString()) {
         </div>
         <div style="background: var(--bg-secondary); padding: 0.5rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
           <span style="color: var(--text-muted);">👩‍💼 ${state.users.user2.name}:</span>
-          <strong>${historyData.userStats.esposa.count} tarefas (${historyData.userStats.esposa.xp} XP)</strong>
+          <strong>${(historyData.userStats.scarlet || historyData.userStats.esposa || {count: 0}).count} tarefas (${(historyData.userStats.scarlet || historyData.userStats.esposa || {xp: 0}).xp} XP)</strong>
         </div>
       </div>
     `;
@@ -832,7 +832,7 @@ export function renderSettingsTab(state) {
   if (autoSyncCheck) autoSyncCheck.checked = !!state.settings.autoSync;
   if (soundCheck) soundCheck.checked = !!state.settings.soundEnabled;
   if (user1Name) user1Name.value = state.users.user1.name || 'Matheus';
-  if (user2Name) user2Name.value = state.users.user2.name || 'Esposa';
+  if (user2Name) user2Name.value = state.users.user2.name || 'Scarlet';
 
   const lastSyncEl = document.getElementById('settings-last-sync-label');
   if (lastSyncEl) {
@@ -841,6 +841,26 @@ export function renderSettingsTab(state) {
       lastSyncEl.textContent = `Último backup em: ${dt.toLocaleString('pt-BR')}`;
     } else {
       lastSyncEl.textContent = 'Nenhum backup realizado ainda nesta sessão.';
+    }
+  }
+
+  // Morador Autenticado na Sessão
+  const sessionUserEl = document.getElementById('auth-session-user-display');
+  if (sessionUserEl) {
+    const raw = localStorage.getItem('MARACAJU88_AUTH_USER_v1');
+    if (raw) {
+      try {
+        const session = JSON.parse(raw);
+        sessionUserEl.innerHTML = `
+          <span>${session.avatarEmoji || '👤'}</span>
+          <span>${session.name}</span>
+          <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">(${session.email})</span>
+        `;
+      } catch (e) {
+        sessionUserEl.textContent = 'Sessão ativa';
+      }
+    } else {
+      sessionUserEl.textContent = 'Nenhuma sessão conectada';
     }
   }
 }

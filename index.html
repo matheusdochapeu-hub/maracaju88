@@ -29,6 +29,75 @@
   <!-- Canvas para Chuva de Confetti em Celebrações -->
   <canvas id="confetti-canvas"></canvas>
 
+  <!-- ========================================== -->
+  <!-- TELA DE ACESSO / LOGIN EXCLUSIVO (AUTH GATE) -->
+  <!-- ========================================== -->
+  <div id="auth-gate" class="auth-gate-overlay" style="display: none;">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo-wrapper">
+          <img src="./icons/icon-192.png" alt="Maracaju 88" class="auth-logo" />
+        </div>
+        <h2 class="auth-title">Maracaju 88</h2>
+        <span class="auth-badge">Área Restrita aos Moradores</span>
+        <p class="auth-subtitle">
+          Bem-vindos ao nosso lar! Este app é de uso exclusivo de <strong>Matheus</strong> e <strong>Scarlet</strong>.
+        </p>
+      </div>
+
+      <div id="auth-error-box" class="auth-error-box" style="display: none;">
+        <span class="auth-error-icon">⚠️</span>
+        <span id="auth-error-text"></span>
+      </div>
+
+      <!-- Atalho com 1 Toque (Ideal para Celular) -->
+      <div class="auth-quick-section">
+        <label class="auth-quick-label">Selecione seu perfil no celular:</label>
+        <div class="auth-quick-buttons">
+          <button type="button" class="auth-quick-btn" id="btn-quick-matheus" data-email="matheusdochapeu@gmail.com">
+            <span class="auth-quick-avatar">👨‍💻</span>
+            <div class="auth-quick-info">
+              <strong>Matheus</strong>
+              <small>matheusdochapeu@gmail.com</small>
+            </div>
+          </button>
+          <button type="button" class="auth-quick-btn" id="btn-quick-scarlet" data-email="scarletsantos7@gmail.com">
+            <span class="auth-quick-avatar">👩‍💼</span>
+            <div class="auth-quick-info">
+              <strong>Scarlet</strong>
+              <small>scarletsantos7@gmail.com</small>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div class="auth-divider">
+        <span>ou valide digitando o e-mail</span>
+      </div>
+
+      <form id="form-auth-login" class="auth-form">
+        <div class="form-group" style="text-align: left;">
+          <label class="form-label" for="auth-email-input">E-mail Cadastrado</label>
+          <input 
+            type="email" 
+            id="auth-email-input" 
+            class="form-control" 
+            placeholder="matheusdochapeu@gmail.com ou scarletsantos7@gmail.com" 
+            autocomplete="email"
+            required 
+          />
+        </div>
+        <button type="submit" id="btn-auth-submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem;">
+          🔑 Entrar no Maracaju 88
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        🔒 Acesso seguro: Seus dados são mantidos no seu aparelho e sincronizados com a planilha Google do casal.
+      </div>
+    </div>
+  </div>
+
   <!-- Container de Notificações Toast -->
   <div id="toast-container" class="toast-container"></div>
 
@@ -56,7 +125,7 @@
           <span id="header-streak-count">0 dias</span>
         </div>
 
-        <!-- Seletor Rápido de Quem está Usando (Matheus / Esposa) -->
+        <!-- Seletor Rápido de Quem está Usando (Matheus / Scarlet) -->
         <button id="active-user-btn" class="active-user-toggle" title="Alternar quem está marcando as tarefas">
           <span class="user-avatar-sm">👨‍💻</span>
           <span>Matheus</span>
@@ -261,6 +330,28 @@
     <!-- ========================================== -->
     <section id="tab-ajustes" class="tab-content">
       <form id="form-settings">
+        <!-- Sessão & Controle de Acesso (Exclusivo Matheus & Scarlet) -->
+        <div class="dash-card">
+          <div class="dash-header">
+            <h3 class="dash-title">🔐 Sessão & Acesso Restrito</h3>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--brand-emerald);">Autorizado</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            App exclusivo dos moradores do Maracaju 88: <strong>Matheus</strong> e <strong>Scarlet</strong>.
+          </p>
+          <div style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Morador Conectado</div>
+              <div id="auth-session-user-display" style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.2rem;">
+                <span>👨‍💻</span> <span>Matheus</span> <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">(matheusdochapeu@gmail.com)</span>
+              </div>
+            </div>
+            <button type="button" id="btn-auth-logout" class="btn btn-secondary btn-sm" style="color: var(--brand-rose); border-color: rgba(244, 63, 94, 0.4);">
+              🚪 Sair / Trocar Usuário
+            </button>
+          </div>
+        </div>
+
         <!-- Perfis dos Moradores -->
         <div class="dash-card">
           <h3 class="dash-title" style="margin-bottom: 1rem;">👥 Moradores do Maracaju 88</h3>
@@ -411,7 +502,7 @@
             <select id="task-input-assignee" class="form-control">
               <option value="ambos">Casal (Quem puder)</option>
               <option value="matheus">Matheus</option>
-              <option value="esposa">Esposa</option>
+              <option value="scarlet">Scarlet</option>
             </select>
           </div>
         </div>

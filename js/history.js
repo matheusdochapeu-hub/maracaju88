@@ -14,7 +14,7 @@ export function getHistoryForDate(state, dateStr = getLocalDateString()) {
   let totalXp = 0;
   const userStats = {
     matheus: { count: 0, xp: 0 },
-    esposa: { count: 0, xp: 0 }
+    scarlet: { count: 0, xp: 0 }
   };
 
   tasks.forEach(task => {
@@ -27,7 +27,7 @@ export function getHistoryForDate(state, dateStr = getLocalDateString()) {
       const xp = entry.xp || task.xp || 10;
       totalXp += xp;
 
-      const uid = entry.userId === 'esposa' ? 'esposa' : 'matheus';
+      const uid = (entry.userId === 'esposa' || entry.userId === 'scarlet') ? 'scarlet' : 'matheus';
       userStats[uid].count++;
       userStats[uid].xp += xp;
     } else {

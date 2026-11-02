@@ -3,11 +3,45 @@
 **Data da última consolidação:** `02/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v1.1.0`
+**Versão Atual:** `v1.2.0`
 
 ---
 
 ## Histórico de Versões
+
+### Versão 1.2.0 (`02/11/2026`) — Controle de Acesso Restrito (Matheus & Scarlet)
+1. **Portão de Entrada com Validação de E-mail (`js/auth.js`, `#auth-gate`):**
+   - **Acesso Estritamente Restrito:** Aplicativo configurado com lista de moradores autorizados:
+     - 👨‍💻 **Matheus:** `matheusdochapeu@gmail.com` (com suporte a alias tolerante a digitação `matheusdochpaeu@gmail.com`).
+     - 👩‍💼 **Scarlet:** `scarletsantos7@gmail.com` (validação case-insensitive).
+   - **Bloqueio de E-mails Não Cadastrados:** Qualquer outro endereço é rejeitado com mensagem explicativa em português e animação de alerta visual.
+   - **Atalho Rápido de 1 Toque (Otimizado para Celular):** Botões estilizados para Matheus e Scarlet entrarem diretamente em seus respectivos perfis no celular sem atrito de digitação no teclado touch.
+   - **Validação Manual por Input:** Campo de digitação de e-mail com verificação em tempo real e botão "🔑 Entrar no Maracaju 88".
+
+2. **Gerenciamento Seguro de Sessão & Desconexão:**
+   - **Persistência Local (`localStorage`):** Sessão mantida em chave segura `MARACAJU88_AUTH_USER_v1`, garantindo que no celular o app abra direto após o primeiro acesso.
+   - **Verificação de Integridade:** Toda inicialização do app checa se o e-mail gravado na sessão permanece na lista de autorizados antes de liberar o acesso.
+   - **Card de Sessão Ativa na Aba Ajustes:** Mostra quem está conectado (avatar, nome e e-mail) e botão destacado `🚪 Sair / Trocar Usuário`.
+   - **Troca de Perfil no Cabeçalho:** Alternância rápida entre Matheus e Scarlet preservando o estado e pontuando o XP correto.
+
+3. **Padronização dos Perfis dos Moradores:**
+   - Remoção de menções genéricas a "Esposa", atualizando todo o sistema para o nome oficial **Scarlet** (`👩‍💼`).
+   - Compatibilidade retroativa mantida nas funções de histórico, pontuação e tarefas (`tasks.js`, `history.js`, `ui.js`).
+   - Atualização do script `apps_script.gs` para definir Scarlet por padrão na planilha Google Sheets.
+
+4. **Service Worker & PWA:**
+   - Cache elevado para `maracaju88-v1.2.0`.
+   - Inclusão do módulo `./js/auth.js` na lista de cache offline (`ASSETS_TO_CACHE`).
+
+5. **Testes Unitários Automatizados:**
+   - Adicionada suíte de testes de autenticação em `test/app.test.js`:
+     - Normalização de e-mails (trimming e lowercase).
+     - Validação de e-mail primário e alias de Matheus.
+     - Validação de e-mail de Scarlet (com variações de maiúsculas/minúsculas).
+     - Bloqueio estrito de e-mails desconhecidos e entradas vazias.
+   - 7 suítes de testes executando e passando 100% com `node --test`.
+
+---
 
 ### Versão 1.1.0 (`02/11/2026`) — Tarefas Periódicas, Módulo do Carro & PWA Mobile
 1. **Facilidade de Instalação no Celular (PWA Mobile):**

@@ -27,6 +27,7 @@ import {
 } from '../js/carro.js';
 import { addReforma, getReformasSummary, toggleReformaChecklistItem } from '../js/reformas.js';
 import { addSonho, getSonhosSummary, toggleSonhoMilestone } from '../js/sonhos.js';
+import { normalizeEmail, findAuthorizedUser, loginWithEmail } from '../js/auth.js';
 
 function createMockState() {
   return {
@@ -224,4 +225,48 @@ test('Sonhos: Adicionar sonho do casal, marcos e metas', () => {
   assert.equal(summary.count, 1);
   assert.equal(summary.totalTargetAmount, 12000);
   assert.equal(summary.byCategory.viagem, 1);
+});
+
+test('Auth: Controle de Acesso Restrito Exclusivo para Matheus e Scarlet', () => {
+  // 1. Normalização de e-mail (espaços e maiúsculas/minúsculas)
+  assert.equal(normalizeEmail('  MatheusDoChapeu@Gmail.com '), 'matheusdochapeu@gmail.com');
+  assert.equal(normalizeEmail('ScarletSantos7@GMAIL.COM'), 'scarletsantos7@gmail.com');
+  assert.equal(normalizeEmail(null), '');
+  assert.equal(normalizeEmail(undefined), '');
+
+  // 2. Validação de Matheus (E-mail principal e Alias com typo do prompt)
+  const userMatheus = findAuthorizedUser('matheusdochapeu@gmail.com');
+  assert.ok(userMatheus);
+  assert.equal(userMatheus.id, 'matheus');
+  assert.equal(userMatheus.name, 'Matheus');
+  assert.equal(userMatheus.avatarEmoji, '👨‍💻');
+
+  // Alias digitado no prompt: Matheusdochpaeu@gmail.com
+  const userMatheusAlias = findAuthorizedUser('Matheusdochpaeu@gmail.com');
+  assert.ok(userMatheusAlias);
+  assert.equal(userMatheusAlias.id, 'matheus');
+
+  // 3. Validação de Scarlet
+  const userScarlet = findAuthorizedUser('scarletsantos7@gmail.com');
+  assert.ok(userScarlet);
+  assert.equal(userScarlet.id, 'scarlet');
+  assert.equal(userScarlet.name, 'Scarlet');
+  assert.equal(userScarlet.avatarEmoji, '👩‍💼');
+
+  // 4. Tentativa de login autorizado via loginWithEmail
+  const loginResM = loginWithEmail('  matheusdochapeu@gmail.com  ');
+  assert.equal(loginResM.success, true);
+  assert.equal(loginResM.user.id, 'matheus');
+
+  const loginResS = loginWithEmail('ScarletSantos7@gmail.com');
+  assert.equal(loginResS.success, true);
+  assert.equal(loginResS.user.id, 'scarlet');
+
+  // 5. Bloqueio estrito de intrusos e e-mails não autorizados
+  const loginIntruso = loginWithEmail('visitante@desconhecido.com');
+  assert.equal(loginIntruso.success, false);
+  assert.ok(loginIntruso.error.includes('não autorizado'));
+
+  const loginVazio = loginWithEmail('');
+  assert.equal(loginVazio.success, false);
 });

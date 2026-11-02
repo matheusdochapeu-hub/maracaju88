@@ -4,14 +4,43 @@
 
 export const APP_CONFIG = {
   appName: "Maracaju 88",
-  version: "1.1.0",
+  version: "1.2.0",
   storageKey: "MARACAJU88_STATE_v1",
   syncIntervalMs: 60000
 };
 
+export const AUTHORIZED_USERS_LIST = [
+  {
+    id: "matheus",
+    name: "Matheus",
+    email: "matheusdochapeu@gmail.com",
+    aliases: ["matheusdochpaeu@gmail.com"],
+    avatarEmoji: "👨‍💻"
+  },
+  {
+    id: "scarlet",
+    name: "Scarlet",
+    email: "scarletsantos7@gmail.com",
+    aliases: [],
+    avatarEmoji: "👩‍💼"
+  }
+];
+
 export const DEFAULT_USERS = {
-  user1: { id: "matheus", name: "Matheus", avatarEmoji: "👨‍💻", xp: 0 },
-  user2: { id: "esposa", name: "Esposa", avatarEmoji: "👩‍💼", xp: 0 }
+  user1: {
+    id: "matheus",
+    name: "Matheus",
+    email: "matheusdochapeu@gmail.com",
+    avatarEmoji: "👨‍💻",
+    xp: 0
+  },
+  user2: {
+    id: "scarlet",
+    name: "Scarlet",
+    email: "scarletsantos7@gmail.com",
+    avatarEmoji: "👩‍💼",
+    xp: 0
+  }
 };
 
 export const FREQUENCIES = [
