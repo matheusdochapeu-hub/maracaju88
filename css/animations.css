@@ -1,0 +1,40 @@
+/* ============================================================
+   MARACAJU 88 - ANIMATIONS & CELEBRATION EFFECTS
+   ============================================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translate(-50%, 15px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes pulse-flame {
+  0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.4)); }
+  50% { transform: scale(1.15) rotate(-3deg); filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.8)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.4)); }
+}
+
+@keyframes levelGlow {
+  0% { box-shadow: 0 0 10px rgba(20, 184, 166, 0.4); }
+  50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.8); }
+  100% { box-shadow: 0 0 10px rgba(20, 184, 166, 0.4); }
+}
+
+@keyframes celebrationScale {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+#confetti-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3000;
+}

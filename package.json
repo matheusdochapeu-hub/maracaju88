@@ -1,0 +1,22 @@
+{
+  "name": "maracaju88",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Maracaju 88 - Aplicativo PWA para gestão do lar do casal: tarefas diárias gamificadas, acompanhamento diário, ideias de reformas e mural dos sonhos, com backup sincronizado no Google Sheets.",
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "generate-icons": "powershell -ExecutionPolicy Bypass -File scripts/generate-icons.ps1"
+  },
+  "keywords": [
+    "pwa",
+    "gestao-domestica",
+    "gamificacao",
+    "reformas",
+    "sonhos",
+    "casal",
+    "google-sheets-backup"
+  ],
+  "author": "Matheus",
+  "license": "MIT"
+}
