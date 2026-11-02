@@ -30,24 +30,28 @@
 - **Controle por KM e Data:** Acompanhe a quilometragem alvo para trocas de óleo, pneus e revisões.
 - **Checklist e Orçamento:** Subtarefas de cada manutenção e controle de custo estimado vs gasto real.
 
-### 3. 📅 Histórico & Verificação Diária
-- **Verificação Dia a Dia:** Navegue entre os dias (`◀ Ontem`, `Hoje`, `Amanhã ▶` ou qualquer data no calendário) para auditar exatamente o que foi feito e o que ficou pendente.
-- **Registro Detalhado:** Saiba quem realizou a tarefa, em qual horário e quantos XP foram conquistados.
-- **Mini Calendário de Consistência:** Visualize o percentual de tarefas concluídas nos últimos 7 dias.
-
-### 4. 🔨 Reformas & Melhorias na Casa (Fotos, Inspirações e Links)
+### 3. 🔨 Reformas & Melhorias na Casa (Fotos, Inspirações e Links)
 - **Controle de Projetos:** Registre ideias de melhorias organizadas por status (💡 *Ideia*, 📐 *Em Orçamento*, 🛠️ *Em Andamento*, ✅ *Concluído*).
 - **Fotos e Inspirações:** Anexe fotos do "antes/depois", referências de decoração e notas de materiais tiradas diretamente com a câmera do celular ou da galeria, com compressão automática client-side (~40-70KB) e visualização ampliada.
 - **Links e Lojas:** Adicione links para produtos no Leroy Merlin, Mercado Livre, Pinterest, tutoriais do YouTube ou lojas de materiais de construção.
 - **Controle Orçamentário:** Estimativa de custo (R$) vs Gasto real investido.
 - **Checklist de Etapas:** Subtarefas interativas por projeto.
 
+### 4. ✨ Mural dos Sonhos & Metas
+- **Planejamento a Dois:** Categorias para Viagens ✈️, Casa & Conforto 🏡, Conquistas 🚗 e Vida a Dois 💖.
+- **Controle de Metas:** Valor alvo, valor já guardado e marcos intermediários.
+
 ### 5. 🏆 Placar & Conquistas Desbloqueáveis
 - **Níveis do Lar:** De *Iniciantes do Lar* (Nível 1) até *Reis do Maracaju* e *Lenda Doméstica Suprema*.
 - **Divisão Saudável de Tarefas:** Gráfico comparativo de XP entre Matheus e Scarlet.
 - **Badges / Conquistas:** Desbloqueie medalhas exclusivas como *Piloto do Maracaju*, *Semana Impecável*, *Chef da Louça*, etc.
 
-### 6. 🔐 Acesso Exclusivo & Validação dos Moradores
+### 6. 📅 Histórico & Verificação Diária
+- **Verificação Dia a Dia:** Navegue entre os dias (`◀ Ontem`, `Hoje`, `Amanhã ▶` ou qualquer data no calendário) para auditar exatamente o que foi feito e o que ficou pendente.
+- **Registro Detalhado:** Saiba quem realizou a tarefa, em qual horário e quantos XP foram conquistados.
+- **Mini Calendário de Consistência:** Visualize o percentual de tarefas concluídas nos últimos 7 dias.
+
+### 7. 🔐 Acesso Exclusivo & Validação dos Moradores
 - **Portão de Entrada Restrito:** Apenas duas contas de e-mail autorizadas possuem acesso ao sistema:
   - 👨‍💻 **Matheus:** `matheusdochapeu@gmail.com`
   - 👩‍💼 **Scarlet:** `scarletsantos7@gmail.com`

@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU - APP CONTROLLER PRINCIPAL (v1.3.2)
+//  MARACAJU - APP CONTROLLER PRINCIPAL (v1.3.3)
 // ============================================================
 
 import { loadState, saveState, exportBackupJson, importBackupJson } from './storage.js';

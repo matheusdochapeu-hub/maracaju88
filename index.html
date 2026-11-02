@@ -143,10 +143,6 @@
       <span class="nav-icon">🧹</span>
       <span>Tarefas</span>
     </button>
-    <button class="nav-item" data-tab="historico">
-      <span class="nav-icon">📅</span>
-      <span>Histórico</span>
-    </button>
     <button class="nav-item" data-tab="carro">
       <span class="nav-icon">🚗</span>
       <span>Carro</span>
@@ -162,6 +158,10 @@
     <button class="nav-item" data-tab="gamificacao">
       <span class="nav-icon">🏆</span>
       <span>Placar</span>
+    </button>
+    <button class="nav-item" data-tab="historico">
+      <span class="nav-icon">📅</span>
+      <span>Histórico</span>
     </button>
     <button class="nav-item" data-tab="ajustes">
       <span class="nav-icon">⚙️</span>
@@ -201,37 +201,7 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- ABA 2: HISTÓRICO & VERIFICAÇÃO DIÁRIA      -->
-    <!-- ========================================== -->
-    <section id="tab-historico" class="tab-content">
-      <div class="date-navigator">
-        <button id="btn-history-prev" class="btn btn-secondary btn-sm">◀ Ontem</button>
-        <div id="history-date-display"></div>
-        <button id="btn-history-next" class="btn btn-secondary btn-sm">Amanhã ▶</button>
-      </div>
-
-      <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem; gap: 0.5rem;">
-        <button id="btn-history-today" class="btn btn-secondary btn-sm">Ir para Hoje</button>
-        <input type="date" id="history-custom-date" class="form-control" style="width: auto; padding: 0.3rem 0.5rem; font-size: 0.8rem;" />
-      </div>
-
-      <!-- Mini Calendário de 7 Dias -->
-      <div class="dash-card" style="padding: 0.75rem 0.5rem;">
-        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; text-align: center;">
-          Consistência dos Últimos 7 Dias
-        </div>
-        <div id="history-recent-days-bar" style="display: flex; justify-content: space-between; gap: 4px;"></div>
-      </div>
-
-      <!-- Resumo do Desempenho do Dia -->
-      <div id="history-day-summary" class="dash-card"></div>
-
-      <!-- Detalhamento: Feitas vs Pendentes -->
-      <div id="history-items-list"></div>
-    </section>
-
-    <!-- ========================================== -->
-    <!-- ABA 3: CARRO & MANUTENÇÃO (NOVA!)          -->
+    <!-- ABA 2: CARRO & MANUTENÇÃO                  -->
     <!-- ========================================== -->
     <section id="tab-carro" class="tab-content">
       <!-- Banner Financeiro & Resumo do Carro -->
@@ -272,7 +242,7 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- ABA 4: REFORMAS & MELHORIAS DA CASA        -->
+    <!-- ABA 3: REFORMAS & MELHORIAS DA CASA        -->
     <!-- ========================================== -->
     <section id="tab-reformas" class="tab-content">
       <div id="reformas-summary-banner" class="dash-card"></div>
@@ -299,7 +269,7 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- ABA 5: MURAL DOS SONHOS & METAS            -->
+    <!-- ABA 4: MURAL DOS SONHOS & METAS            -->
     <!-- ========================================== -->
     <section id="tab-sonhos" class="tab-content">
       <div id="sonhos-summary-banner" class="dash-card"></div>
@@ -326,7 +296,7 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- ABA 6: GAMIFICAÇÃO & PLACAR DO CASAL       -->
+    <!-- ABA 5: GAMIFICAÇÃO & PLACAR DO CASAL       -->
     <!-- ========================================== -->
     <section id="tab-gamificacao" class="tab-content">
       <div id="gamification-scoreboard" class="dash-card"></div>
@@ -335,6 +305,36 @@
         <h2 class="section-heading">Conquistas Desbloqueáveis (Badges)</h2>
       </div>
       <div id="gamification-badges-grid" class="badges-grid"></div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- ABA 6: HISTÓRICO & VERIFICAÇÃO DIÁRIA      -->
+    <!-- ========================================== -->
+    <section id="tab-historico" class="tab-content">
+      <div class="date-navigator">
+        <button id="btn-history-prev" class="btn btn-secondary btn-sm">◀ Ontem</button>
+        <div id="history-date-display"></div>
+        <button id="btn-history-next" class="btn btn-secondary btn-sm">Amanhã ▶</button>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 0.75rem; gap: 0.5rem;">
+        <button id="btn-history-today" class="btn btn-secondary btn-sm">Ir para Hoje</button>
+        <input type="date" id="history-custom-date" class="form-control" style="width: auto; padding: 0.3rem 0.5rem; font-size: 0.8rem;" />
+      </div>
+
+      <!-- Mini Calendário de 7 Dias -->
+      <div class="dash-card" style="padding: 0.75rem 0.5rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; text-align: center;">
+          Consistência dos Últimos 7 Dias
+        </div>
+        <div id="history-recent-days-bar" style="display: flex; justify-content: space-between; gap: 4px;"></div>
+      </div>
+
+      <!-- Resumo do Desempenho do Dia -->
+      <div id="history-day-summary" class="dash-card"></div>
+
+      <!-- Detalhamento: Feitas vs Pendentes -->
+      <div id="history-items-list"></div>
     </section>
 
     <!-- ========================================== -->

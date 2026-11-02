@@ -3,11 +3,25 @@
 **Data da última consolidação:** `02/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v1.3.2`
+**Versão Atual:** `v1.3.3`
 
 ---
 
 ## Histórico de Versões
+
+### Versão 1.3.3 (`02/11/2026`) — Reorganização da Barra de Navegação: Histórico ao lado de Placar e Ajustes
+1. **Nova Ordem das Abas no Menu e Conteúdo:**
+   - A aba **Histórico** (📅) foi movida para ficar ao lado de **Placar** (🏆) e vizinha de **Ajustes** (⚙️). Com isso, as 4 abas ativas de projetos e cuidados da casa ficam unidas no início:
+     1. 🧹 **Tarefas** (Rotinas divididas por ciclos)
+     2. 🚗 **Carro** (Manutenção do veículo, fotos e links de peças)
+     3. 🔨 **Reformas** (Projetos da casa, orçamentos, fotos e links)
+     4. ✨ **Sonhos** (Mural de sonhos e metas a dois)
+     5. 🏆 **Placar** (Gamificação, pontuação e conquistas)
+     6. 📅 **Histórico** (Verificação e auditoria diária de tarefas)
+     7. ⚙️ **Ajustes** (Controle de sessão, moradores e Google Sheets)
+2. **Sincronia do DOM e Service Worker:**
+   - `index.html`: Reordenada a barra `<nav class="bottom-nav">` e as seções `<section id="tab-...">`.
+   - `sw.js` e `config.js`: Versão de cache atualizada para `v1.3.3` para forçar recarregamento transparente no celular.
 
 ### Versão 1.3.2 (`02/11/2026`) — Botões de Criação Flutuantes no Canto Inferior Direito (FAB)
 1. **Migração dos Botões de Adição para Floating Action Buttons (FAB):**
