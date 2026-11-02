@@ -1,6 +1,6 @@
 /* ============================================================
    MARACAJU 88 - COMPONENTS CSS
-   Cards, Botões, Badges, Modais, Formulários e Controles
+   Cards, Botões, Badges, Modais, Formulários, Carro e PWA Install
    ============================================================ */
 
 /* Top Dashboard Cards */
@@ -19,6 +19,8 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .dash-title {
@@ -38,6 +40,97 @@
   font-size: 0.75rem;
   font-weight: 800;
   box-shadow: var(--shadow-sm);
+}
+
+/* Install App Banner & Button */
+.install-app-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #ffffff;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.775rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  transition: transform var(--transition-fast);
+}
+
+.install-app-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+}
+
+.install-banner {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* Frequency Segmented Control (Diárias, Semanais, Mensais, Anuais) */
+.frequency-segmented-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+  background: var(--bg-secondary);
+  padding: 0.3rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 0.85rem;
+}
+
+.freq-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.5rem 0.25rem;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.freq-btn .freq-icon {
+  font-size: 1.1rem;
+}
+
+.freq-btn .freq-badge {
+  font-size: 0.65rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+
+.freq-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.freq-btn.active {
+  background: var(--brand-teal);
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--brand-teal-glow);
+}
+
+.freq-btn.active .freq-badge {
+  background: rgba(0, 0, 0, 0.25);
+  color: #ffffff;
 }
 
 /* Progress Bar */
@@ -297,6 +390,14 @@
   flex-wrap: wrap;
 }
 
+.tag-freq {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--brand-purple);
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+}
+
 .tag-room {
   background: rgba(56, 189, 248, 0.12);
   color: var(--brand-cyan);
@@ -383,15 +484,15 @@
   opacity: 0.7;
 }
 
-/* Reformas Grid & Cards */
-.reformas-grid, .sonhos-grid {
+/* Grid Layouts (Carro, Reformas, Sonhos) */
+.carro-grid, .reformas-grid, .sonhos-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
 }
 
 @media (min-width: 640px) {
-  .reformas-grid, .sonhos-grid {
+  .carro-grid, .reformas-grid, .sonhos-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -420,10 +521,101 @@
   font-weight: 700;
   text-transform: uppercase;
 }
-.status-ideia { background: rgba(56, 189, 248, 0.15); color: var(--brand-cyan); }
+.status-ideia, .status-pendente { background: rgba(56, 189, 248, 0.15); color: var(--brand-cyan); }
 .status-orcamento { background: rgba(251, 191, 36, 0.15); color: var(--brand-amber); }
 .status-andamento { background: rgba(168, 85, 247, 0.15); color: var(--brand-purple); }
-.status-concluido { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+.status-concluido, .status-feito { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+
+/* Carro Componentes Específicos: Fotos & Links */
+.carro-photos-container {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.35rem 0;
+  scrollbar-width: none;
+}
+.carro-photos-container::-webkit-scrollbar {
+  display: none;
+}
+
+.carro-thumb-wrapper {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.carro-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-fast);
+}
+
+.carro-thumb-wrapper:hover .carro-thumb-img {
+  transform: scale(1.08);
+}
+
+.carro-thumb-delete {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.carro-links-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+.carro-link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: var(--brand-cyan);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--transition-fast);
+}
+
+.carro-link-chip:hover {
+  background: rgba(56, 189, 248, 0.2);
+  text-decoration: underline;
+}
+
+.carro-link-delete {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  font-size: 11px;
+}
+.carro-link-delete:hover {
+  color: var(--danger);
+}
 
 /* Gamification & Badges */
 .badges-grid {
@@ -475,7 +667,7 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(6px);
   display: none;
   align-items: center;
@@ -577,3 +769,11 @@
 
 .toast.success { border-color: var(--success); background: #064e3b; color: #a7f3d0; }
 .toast.error { border-color: var(--danger); background: #7f1d1d; color: #fecaca; }
+
+/* Photo Viewer Modal */
+.photo-viewer-img {
+  width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}

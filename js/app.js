@@ -1,12 +1,23 @@
 // ============================================================
-//  MARACAJU 88 - APP CONTROLLER PRINCIPAL
+//  MARACAJU 88 - APP CONTROLLER PRINCIPAL (v1.1.0)
 // ============================================================
 
 import { loadState, saveState, exportBackupJson, importBackupJson } from './storage.js';
 import { playTaskCompleteSound, playLevelUpSound, playSubtleClick } from './audio.js';
 import { toggleTaskDone, addTask, deleteTask, getLocalDateString } from './tasks.js';
-import { addReforma, deleteReforma, toggleReformaChecklistItem, updateReforma } from './reformas.js';
-import { addSonho, deleteSonho, toggleSonhoMilestone, updateSonho } from './sonhos.js';
+import {
+  addCarroItem,
+  updateCarroItem,
+  deleteCarroItem,
+  addPhotoToCarro,
+  removePhotoFromCarro,
+  addLinkToCarro,
+  removeLinkFromCarro,
+  toggleCarroChecklistItem,
+  compressImageFile
+} from './carro.js';
+import { addReforma, deleteReforma, toggleReformaChecklistItem } from './reformas.js';
+import { addSonho, deleteSonho, toggleSonhoMilestone } from './sonhos.js';
 import { testSheetsConnection, backupToSheets, restoreFromSheets } from './sheets.js';
 import {
   triggerConfetti,
@@ -14,6 +25,7 @@ import {
   renderHeaderStats,
   renderTasksTab,
   renderHistoryTab,
+  renderCarroTab,
   renderReformasTab,
   renderSonhosTab,
   renderGamificationTab,
@@ -23,10 +35,14 @@ import {
 // Estado global em memória
 let state = null;
 let currentTab = 'tarefas';
+let currentFrequencyFilter = 'diaria';
 let currentRoomFilter = 'tudo';
 let currentHistoryDate = getLocalDateString();
+let currentCarroCategory = 'todas';
+let currentCarroStatus = 'todas';
 let currentReformasFilter = 'todas';
 let currentSonhosFilter = 'todas';
+let deferredInstallPrompt = null;
 
 // -------------------------------------------------------------
 // INICIALIZAÇÃO DO APP
@@ -35,10 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
   state = loadState();
 
   initServiceWorker();
+  initPwaInstallPrompt();
   initNavigation();
   initHeaderControls();
   initTasksModule();
   initHistoryModule();
+  initCarroModule();
   initReformasModule();
   initSonhosModule();
   initSettingsModule();
@@ -51,9 +69,11 @@ function refreshAllUI() {
   renderHeaderStats(state);
 
   if (currentTab === 'tarefas') {
-    renderTasksTab(state, currentRoomFilter);
+    renderTasksTab(state, currentFrequencyFilter, currentRoomFilter);
   } else if (currentTab === 'historico') {
     renderHistoryTab(state, currentHistoryDate);
+  } else if (currentTab === 'carro') {
+    renderCarroTab(state, currentCarroCategory, currentCarroStatus);
   } else if (currentTab === 'reformas') {
     renderReformasTab(state, currentReformasFilter);
   } else if (currentTab === 'sonhos') {
@@ -66,18 +86,55 @@ function refreshAllUI() {
 }
 
 // -------------------------------------------------------------
-// PWA SERVICE WORKER REGISTRATION
+// PWA SERVICE WORKER & INSTALAÇÃO FACILITADA
 // -------------------------------------------------------------
 function initServiceWorker() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')
         .then(reg => {
-          console.log('[Maracaju 88] Service Worker registrado:', reg.scope);
+          console.log('[Maracaju 88] Service Worker ativo:', reg.scope);
         })
         .catch(err => {
           console.warn('[Maracaju 88] Falha no Service Worker:', err);
         });
+    });
+  }
+}
+
+function initPwaInstallPrompt() {
+  const btnInstall = document.getElementById('btn-install-app');
+
+  // Detecta se já está rodando como app instalado (standalone)
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (isStandalone && btnInstall) {
+    btnInstall.style.display = 'none';
+    return;
+  }
+
+  // Captura o evento nativo do Android / Chromium
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if (btnInstall) btnInstall.style.display = 'inline-flex';
+  });
+
+  if (btnInstall) {
+    btnInstall.addEventListener('click', async () => {
+      playSubtleClick(state.settings.soundEnabled);
+
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice.outcome === 'accepted') {
+          showToast('Instalando Maracaju 88 no seu celular... 🎉', 'success', 3500);
+          btnInstall.style.display = 'none';
+        }
+        deferredInstallPrompt = null;
+      } else {
+        // No iPhone/Safari ou navegadores que não disparam o evento, abre o guia ilustrado
+        openModal('modal-install-guide');
+      }
     });
   }
 }
@@ -109,7 +166,7 @@ function initNavigation() {
 }
 
 // -------------------------------------------------------------
-// CONTROLES DO CABEÇALHO (Perfil Ativo: Matheus / Esposa)
+// CONTROLES DO CABEÇALHO (Perfil: Matheus / Esposa)
 // -------------------------------------------------------------
 function initHeaderControls() {
   const userBtn = document.getElementById('active-user-btn');
@@ -127,9 +184,24 @@ function initHeaderControls() {
 }
 
 // -------------------------------------------------------------
-// MÓDULO DE TAREFAS DIÁRIAS (GAMIFICAÇÃO)
+// MÓDULO DE TAREFAS (DIÁRIAS, SEMANAIS, MENSAIS, ANUAIS)
 // -------------------------------------------------------------
 function initTasksModule() {
+  // Controle de Frequência (Diárias, Semanais, Mensais, Anuais)
+  const freqBar = document.getElementById('frequency-segmented-bar');
+  if (freqBar) {
+    freqBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.freq-btn');
+      if (!btn) return;
+      const freq = btn.getAttribute('data-frequency');
+      if (freq) {
+        currentFrequencyFilter = freq;
+        playSubtleClick(state.settings.soundEnabled);
+        renderTasksTab(state, currentFrequencyFilter, currentRoomFilter);
+      }
+    });
+  }
+
   // Filtro de Cômodos (Chips)
   const chipsContainer = document.getElementById('room-chips-container');
   if (chipsContainer) {
@@ -138,7 +210,7 @@ function initTasksModule() {
       if (!chip) return;
       currentRoomFilter = chip.getAttribute('data-room') || 'tudo';
       playSubtleClick(state.settings.soundEnabled);
-      renderTasksTab(state, currentRoomFilter);
+      renderTasksTab(state, currentFrequencyFilter, currentRoomFilter);
     });
   }
 
@@ -174,7 +246,6 @@ function initTasksModule() {
     });
 
     taskListEl.addEventListener('click', (e) => {
-      // Alterar responsável padrão da tarefa
       const changeBtn = e.target.closest('[data-change-assignee]');
       if (changeBtn) {
         const taskId = changeBtn.getAttribute('data-change-assignee');
@@ -186,12 +257,11 @@ function initTasksModule() {
 
           saveState(state);
           playSubtleClick(state.settings.soundEnabled);
-          renderTasksTab(state, currentRoomFilter);
+          renderTasksTab(state, currentFrequencyFilter, currentRoomFilter);
         }
         return;
       }
 
-      // Excluir tarefa
       const deleteBtn = e.target.closest('[data-delete-task]');
       if (deleteBtn) {
         const taskId = deleteBtn.getAttribute('data-delete-task');
@@ -211,6 +281,7 @@ function initTasksModule() {
     addTaskForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const title = document.getElementById('task-input-title').value;
+      const frequency = document.getElementById('task-input-frequency').value || 'diaria';
       const room = document.getElementById('task-input-room').value;
       const effort = document.getElementById('task-input-effort').value;
       const assignedTo = document.getElementById('task-input-assignee').value;
@@ -218,13 +289,14 @@ function initTasksModule() {
 
       if (!title.trim()) return;
 
-      addTask(state, { title, room, effort, assignedTo, notes });
+      addTask(state, { title, frequency, room, effort, assignedTo, notes });
       saveState(state);
       triggerAutoSyncIfEnabled();
 
       closeModal('modal-add-task');
       addTaskForm.reset();
       showToast('Nova tarefa adicionada com sucesso!', 'success');
+      currentFrequencyFilter = frequency;
       refreshAllUI();
     });
   }
@@ -290,10 +362,215 @@ function initHistoryModule() {
 }
 
 // -------------------------------------------------------------
+// MÓDULO DO CARRO & MANUTENÇÃO (NOVO!)
+// -------------------------------------------------------------
+function initCarroModule() {
+  // Filtros de Categoria
+  const catChips = document.querySelectorAll('[data-carro-cat]');
+  catChips.forEach(btn => {
+    btn.addEventListener('click', () => {
+      catChips.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCarroCategory = btn.getAttribute('data-carro-cat') || 'todas';
+      playSubtleClick(state.settings.soundEnabled);
+      renderCarroTab(state, currentCarroCategory, currentCarroStatus);
+    });
+  });
+
+  // Filtros de Status
+  const statusChips = document.querySelectorAll('[data-carro-status-filter]');
+  statusChips.forEach(btn => {
+    btn.addEventListener('click', () => {
+      statusChips.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCarroStatus = btn.getAttribute('data-carro-status-filter') || 'todas';
+      playSubtleClick(state.settings.soundEnabled);
+      renderCarroTab(state, currentCarroCategory, currentCarroStatus);
+    });
+  });
+
+  const gridEl = document.getElementById('carro-grid');
+  if (gridEl) {
+    // Checkbox checklist do carro
+    gridEl.addEventListener('change', async (e) => {
+      if (e.target.classList.contains('carro-check-item')) {
+        const carId = e.target.getAttribute('data-car-id');
+        const checkId = e.target.getAttribute('data-check-id');
+        toggleCarroChecklistItem(state, carId, checkId);
+        saveState(state);
+        playTaskCompleteSound(state.settings.soundEnabled);
+        renderCarroTab(state, currentCarroCategory, currentCarroStatus);
+        return;
+      }
+
+      // Adicionar foto via input file da câmera / galeria
+      if (e.target.classList.contains('input-carro-add-photo')) {
+        const carId = e.target.getAttribute('data-car-id');
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        try {
+          showToast('Processando e comprimindo foto...', 'info', 2000);
+          const compressed = await compressImageFile(file, 800, 0.72);
+          addPhotoToCarro(state, carId, compressed);
+          saveState(state);
+          showToast('Foto anexada com sucesso! 📷', 'success');
+          renderCarroTab(state, currentCarroCategory, currentCarroStatus);
+        } catch (err) {
+          showToast(`Erro na foto: ${err.message}`, 'error');
+        }
+      }
+    });
+
+    gridEl.addEventListener('click', (e) => {
+      // Visualizar foto em tamanho ampliado
+      const thumb = e.target.closest('[data-view-photo]');
+      if (thumb && !e.target.classList.contains('carro-thumb-delete')) {
+        const src = thumb.getAttribute('data-view-photo');
+        const modalImg = document.getElementById('photo-viewer-target');
+        if (modalImg) modalImg.src = src;
+        openModal('modal-photo-viewer');
+        return;
+      }
+
+      // Deletar foto
+      const delPhotoBtn = e.target.closest('[data-del-photo]');
+      if (delPhotoBtn) {
+        const carId = delPhotoBtn.getAttribute('data-del-photo');
+        const pIdx = parseInt(delPhotoBtn.getAttribute('data-photo-idx'), 10);
+        if (confirm('Excluir esta foto?')) {
+          removePhotoFromCarro(state, carId, pIdx);
+          saveState(state);
+          showToast('Foto removida', 'info');
+          renderCarroTab(state, currentCarroCategory, currentCarroStatus);
+        }
+        return;
+      }
+
+      // Adicionar Link a um item existente
+      const addLinkBtn = e.target.closest('[data-add-link-to]');
+      if (addLinkBtn) {
+        const carId = addLinkBtn.getAttribute('data-add-link-to');
+        const url = prompt('Cole o link do produto, peça ou tutorial:');
+        if (url && url.trim()) {
+          const title = prompt('Título ou descrição do link (ex: Mercado Livre, Peça):', 'Ver Link') || 'Link';
+          addLinkToCarro(state, carId, { url, title });
+          saveState(state);
+          showToast('Link adicionado!', 'success');
+          renderCarroTab(state, currentCarroCategory, currentCarroStatus);
+        }
+        return;
+      }
+
+      // Deletar Link
+      const delLinkBtn = e.target.closest('[data-del-link]');
+      if (delLinkBtn) {
+        const carId = delLinkBtn.getAttribute('data-del-link');
+        const linkId = delLinkBtn.getAttribute('data-link-id');
+        removeLinkFromCarro(state, carId, linkId);
+        saveState(state);
+        showToast('Link removido', 'info');
+        renderCarroTab(state, currentCarroCategory, currentCarroStatus);
+        return;
+      }
+
+      // Alterar status rápido
+      const statusBtn = e.target.closest('[data-edit-carro-status]');
+      if (statusBtn) {
+        const carId = statusBtn.getAttribute('data-edit-carro-status');
+        const item = state.carro.find(c => c.id === carId);
+        if (item) {
+          const statuses = ['pendente', 'orcamento', 'andamento', 'concluido'];
+          const curIdx = statuses.indexOf(item.status);
+          item.status = statuses[(curIdx + 1) % statuses.length];
+          saveState(state);
+          playSubtleClick(state.settings.soundEnabled);
+          showToast(`Status atualizado: ${item.status}`, 'info');
+          refreshAllUI();
+        }
+        return;
+      }
+
+      // Excluir item do carro
+      const delBtn = e.target.closest('[data-delete-carro]');
+      if (delBtn) {
+        const carId = delBtn.getAttribute('data-delete-carro');
+        if (confirm('Deseja excluir esta manutenção do carro?')) {
+          deleteCarroItem(state, carId);
+          saveState(state);
+          showToast('Manutenção removida', 'info');
+          refreshAllUI();
+        }
+      }
+    });
+  }
+
+  // Formulário Nova Manutenção do Carro
+  const formAddCarro = document.getElementById('form-add-carro');
+  if (formAddCarro) {
+    formAddCarro.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('carro-input-title').value;
+      const category = document.getElementById('carro-input-category').value;
+      const status = document.getElementById('carro-input-status').value;
+      const priority = document.getElementById('carro-input-priority').value;
+      const estimatedCost = document.getElementById('carro-input-cost').value;
+      const targetKm = document.getElementById('carro-input-km').value;
+      const targetDate = document.getElementById('carro-input-date').value;
+      const notes = document.getElementById('carro-input-notes').value;
+      const linkUrl = document.getElementById('carro-input-link-url').value;
+      const linkTitle = document.getElementById('carro-input-link-title').value;
+      const photoFile = document.getElementById('carro-input-photo').files[0];
+
+      if (!title.trim()) return;
+
+      const links = [];
+      if (linkUrl && linkUrl.trim()) {
+        links.push({
+          id: `lnk_${Date.now()}`,
+          title: (linkTitle && linkTitle.trim()) || 'Link da Peça',
+          url: linkUrl.trim().startsWith('http') ? linkUrl.trim() : 'https://' + linkUrl.trim()
+        });
+      }
+
+      const photos = [];
+      if (photoFile) {
+        try {
+          const comp = await compressImageFile(photoFile, 800, 0.72);
+          photos.push(comp);
+        } catch (err) {
+          console.warn('Erro ao processar foto inicial do carro:', err);
+        }
+      }
+
+      addCarroItem(state, {
+        title,
+        category,
+        status,
+        priority,
+        estimatedCost,
+        targetKm,
+        targetDate,
+        notes,
+        links,
+        photos
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+
+      closeModal('modal-add-carro');
+      formAddCarro.reset();
+      showToast('Manutenção do carro cadastrada com sucesso! 🚗', 'success');
+      refreshAllUI();
+    });
+  }
+}
+
+// -------------------------------------------------------------
 // MÓDULO DE REFORMAS & MELHORIAS
 // -------------------------------------------------------------
 function initReformasModule() {
-  // Filtros de status de reformas
   const statusChips = document.querySelectorAll('[data-reforma-filter]');
   statusChips.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -319,7 +596,6 @@ function initReformasModule() {
     });
 
     gridEl.addEventListener('click', (e) => {
-      // Excluir reforma
       const delBtn = e.target.closest('[data-delete-reforma]');
       if (delBtn) {
         const refId = delBtn.getAttribute('data-delete-reforma');
@@ -332,7 +608,6 @@ function initReformasModule() {
         return;
       }
 
-      // Alterar status rápido
       const statusBtn = e.target.closest('[data-edit-reforma-status]');
       if (statusBtn) {
         const refId = statusBtn.getAttribute('data-edit-reforma-status');
@@ -350,7 +625,6 @@ function initReformasModule() {
     });
   }
 
-  // Formulário Nova Reforma
   const formAddReforma = document.getElementById('form-add-reforma');
   if (formAddReforma) {
     formAddReforma.addEventListener('submit', (e) => {
@@ -435,7 +709,6 @@ function initSonhosModule() {
     });
   }
 
-  // Formulário Novo Sonho
   const formAddSonho = document.getElementById('form-add-sonho');
   if (formAddSonho) {
     formAddSonho.addEventListener('submit', (e) => {
@@ -597,7 +870,6 @@ function triggerAutoSyncIfEnabled() {
 // CONTROLE DE MODAIS
 // -------------------------------------------------------------
 function initModals() {
-  // Abertura de modais
   document.querySelectorAll('[data-open-modal]').forEach(btn => {
     btn.addEventListener('click', () => {
       const modalId = btn.getAttribute('data-open-modal');
@@ -605,7 +877,6 @@ function initModals() {
     });
   });
 
-  // Fechamento de modais
   document.querySelectorAll('[data-close-modal]').forEach(btn => {
     btn.addEventListener('click', () => {
       const modal = btn.closest('.modal-overlay');
@@ -613,7 +884,6 @@ function initModals() {
     });
   });
 
-  // Fechar ao clicar fora do conteúdo
   document.querySelectorAll('.modal-overlay').forEach(modal => {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {

@@ -1,5 +1,6 @@
 // ============================================================
-//  MARACAJU 88 - CONTROLE DE TAREFAS DIÁRIAS
+//  MARACAJU 88 - CONTROLE DE TAREFAS & PERIODICIDADE
+//  Divisão por: Diárias ☀️, Semanais 📅, Mensais 🗓️ e Anuais 🎯
 // ============================================================
 
 import { calculateStreaks, evaluateBadges } from './gamification.js';
@@ -11,29 +12,118 @@ export function getLocalDateString(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-export function isTaskDoneOnDate(state, taskId, dateStr) {
-  if (!state.history || !state.history[dateStr]) return false;
-  const entry = state.history[dateStr][taskId];
-  return !!(entry && entry.done);
+// Retorna o intervalo [segunda-feira, domingo] da semana para uma data
+export function getWeekBoundaries(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const target = new Date(y, m - 1, d);
+  const dayOfWeek = target.getDay(); // 0 = Domingo, 1 = Segunda, ...
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+  const monday = new Date(target);
+  monday.setDate(target.getDate() + diffToMonday);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  return {
+    startStr: getLocalDateString(monday),
+    endStr: getLocalDateString(sunday)
+  };
 }
 
-export function getTaskHistoryEntry(state, taskId, dateStr) {
-  if (!state.history || !state.history[dateStr]) return null;
-  return state.history[dateStr][taskId] || null;
+// Verifica se uma tarefa está concluída no período correspondente à sua frequência
+export function isTaskDoneOnDate(state, taskId, dateStr = getLocalDateString()) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (!task) return false;
+
+  const freq = task.frequency || 'diaria';
+  const history = state.history || {};
+
+  if (freq === 'diaria') {
+    return !!(history[dateStr] && history[dateStr][taskId] && history[dateStr][taskId].done);
+  }
+
+  if (freq === 'semanal') {
+    const { startStr, endStr } = getWeekBoundaries(dateStr);
+    const dates = Object.keys(history).filter(d => d >= startStr && d <= endStr);
+    return dates.some(d => history[d] && history[d][taskId] && history[d][taskId].done);
+  }
+
+  if (freq === 'mensal') {
+    const monthPrefix = dateStr.substring(0, 7); // "YYYY-MM"
+    const dates = Object.keys(history).filter(d => d.startsWith(monthPrefix));
+    return dates.some(d => history[d] && history[d][taskId] && history[d][taskId].done);
+  }
+
+  if (freq === 'anual') {
+    const yearPrefix = dateStr.substring(0, 4); // "YYYY"
+    const dates = Object.keys(history).filter(d => d.startsWith(yearPrefix));
+    return dates.some(d => history[d] && history[d][taskId] && history[d][taskId].done);
+  }
+
+  return !!(history[dateStr] && history[dateStr][taskId] && history[dateStr][taskId].done);
+}
+
+// Encontra o registro de histórico de conclusão da tarefa para o período
+export function getTaskHistoryEntry(state, taskId, dateStr = getLocalDateString()) {
+  const task = (state.tasks || []).find(t => t.id === taskId);
+  if (!task) return null;
+
+  const freq = task.frequency || 'diaria';
+  const history = state.history || {};
+
+  if (freq === 'diaria') {
+    return (history[dateStr] && history[dateStr][taskId]) || null;
+  }
+
+  if (freq === 'semanal') {
+    const { startStr, endStr } = getWeekBoundaries(dateStr);
+    const dates = Object.keys(history).filter(d => d >= startStr && d <= endStr).sort().reverse();
+    for (const d of dates) {
+      if (history[d] && history[d][taskId] && history[d][taskId].done) {
+        return { ...history[d][taskId], completedOnDate: d };
+      }
+    }
+    return null;
+  }
+
+  if (freq === 'mensal') {
+    const monthPrefix = dateStr.substring(0, 7);
+    const dates = Object.keys(history).filter(d => d.startsWith(monthPrefix)).sort().reverse();
+    for (const d of dates) {
+      if (history[d] && history[d][taskId] && history[d][taskId].done) {
+        return { ...history[d][taskId], completedOnDate: d };
+      }
+    }
+    return null;
+  }
+
+  if (freq === 'anual') {
+    const yearPrefix = dateStr.substring(0, 4);
+    const dates = Object.keys(history).filter(d => d.startsWith(yearPrefix)).sort().reverse();
+    for (const d of dates) {
+      if (history[d] && history[d][taskId] && history[d][taskId].done) {
+        return { ...history[d][taskId], completedOnDate: d };
+      }
+    }
+    return null;
+  }
+
+  return (history[dateStr] && history[dateStr][taskId]) || null;
 }
 
 export function toggleTaskDone(state, taskId, dateStr = getLocalDateString(), userOverride = null) {
-  const task = state.tasks.find(t => t.id === taskId);
+  const task = (state.tasks || []).find(t => t.id === taskId);
   if (!task) return null;
 
   if (!state.history) state.history = {};
-  if (!state.history[dateStr]) state.history[dateStr] = {};
 
-  const currentEntry = state.history[dateStr][taskId];
-  const isCurrentlyDone = currentEntry && currentEntry.done;
+  const isCurrentlyDone = isTaskDoneOnDate(state, taskId, dateStr);
 
   if (!isCurrentlyDone) {
-    // Marcar como concluída
+    // Marcar como concluída na data informada
+    if (!state.history[dateStr]) state.history[dateStr] = {};
+
     const activeId = userOverride || state.activeUserId || "matheus";
     const userKey = activeId === "esposa" ? "user2" : "user1";
     const userObj = state.users[userKey] || { name: activeId, xp: 0 };
@@ -48,6 +138,7 @@ export function toggleTaskDone(state, taskId, dateStr = getLocalDateString(), us
       xp: task.xp || 10,
       title: task.title,
       room: task.room,
+      frequency: task.frequency || 'diaria',
       completedAt: timeStr
     };
 
@@ -73,48 +164,45 @@ export function toggleTaskDone(state, taskId, dateStr = getLocalDateString(), us
     };
 
   } else {
-    // Desmarcar tarefa
-    const previousXp = currentEntry.xp || task.xp || 10;
-    const userId = currentEntry.userId || "matheus";
-    const userKey = userId === "esposa" ? "user2" : "user1";
+    // Desmarcar tarefa: busca a data onde foi gravada a conclusão
+    const entry = getTaskHistoryEntry(state, taskId, dateStr);
+    const recordedDate = (entry && entry.completedOnDate) || dateStr;
 
-    if (state.users[userKey]) {
-      state.users[userKey].xp = Math.max(0, (state.users[userKey].xp || 0) - previousXp);
+    if (state.history[recordedDate] && state.history[recordedDate][taskId]) {
+      const prev = state.history[recordedDate][taskId];
+      const previousXp = prev.xp || task.xp || 10;
+      const userId = prev.userId || "matheus";
+      const userKey = userId === "esposa" ? "user2" : "user1";
+
+      if (state.users[userKey]) {
+        state.users[userKey].xp = Math.max(0, (state.users[userKey].xp || 0) - previousXp);
+      }
+
+      delete state.history[recordedDate][taskId];
+      state.gamification.streak = calculateStreaks(state.history);
+
+      return {
+        status: 'uncompleted',
+        xpRemoved: previousXp
+      };
     }
 
-    delete state.history[dateStr][taskId];
-
-    // Recalcula streak
-    state.gamification.streak = calculateStreaks(state.history);
-
-    return {
-      status: 'uncompleted',
-      xpRemoved: previousXp
-    };
+    return { status: 'uncompleted', xpRemoved: 0 };
   }
 }
 
-export function getDailyTaskProgress(state, dateStr = getLocalDateString()) {
-  const tasks = state.tasks || [];
-  const dayHistory = (state.history && state.history[dateStr]) || {};
+// Progresso das tarefas filtradas por frequência (diária, semanal, mensal, anual)
+export function getTasksProgressByFrequency(state, frequency = 'diaria', dateStr = getLocalDateString()) {
+  const allTasks = state.tasks || [];
+  const tasks = allTasks.filter(t => (t.frequency || 'diaria') === frequency);
 
   let completedCount = 0;
-  let xpEarnedToday = 0;
-  const byUser = {
-    matheus: { count: 0, xp: 0 },
-    esposa: { count: 0, xp: 0 }
-  };
+  let xpEarned = 0;
 
-  tasks.forEach(task => {
-    const entry = dayHistory[task.id];
-    if (entry && entry.done) {
+  tasks.forEach(t => {
+    if (isTaskDoneOnDate(state, t.id, dateStr)) {
       completedCount++;
-      const xp = entry.xp || task.xp || 10;
-      xpEarnedToday += xp;
-
-      const uid = entry.userId === 'esposa' ? 'esposa' : 'matheus';
-      byUser[uid].count++;
-      byUser[uid].xp += xp;
+      xpEarned += (t.xp || 10);
     }
   });
 
@@ -122,12 +210,26 @@ export function getDailyTaskProgress(state, dateStr = getLocalDateString()) {
   const percent = total > 0 ? Math.round((completedCount / total) * 100) : 0;
 
   return {
+    frequency,
     total,
     completed: completedCount,
     percent,
-    xpEarnedToday,
-    byUser
+    xpEarned
   };
+}
+
+// Resumo geral com contagem para cada uma das 4 abas de frequência
+export function getAllFrequenciesSummary(state, dateStr = getLocalDateString()) {
+  return {
+    diaria: getTasksProgressByFrequency(state, 'diaria', dateStr),
+    semanal: getTasksProgressByFrequency(state, 'semanal', dateStr),
+    mensal: getTasksProgressByFrequency(state, 'mensal', dateStr),
+    anual: getTasksProgressByFrequency(state, 'anual', dateStr)
+  };
+}
+
+export function getDailyTaskProgress(state, dateStr = getLocalDateString()) {
+  return getTasksProgressByFrequency(state, 'diaria', dateStr);
 }
 
 export function addTask(state, taskData) {
@@ -148,10 +250,9 @@ export function addTask(state, taskData) {
 }
 
 export function deleteTask(state, taskId) {
-  const index = state.tasks.findIndex(t => t.id === taskId);
+  const index = (state.tasks || []).findIndex(t => t.id === taskId);
   if (index !== -1) {
-    const removed = state.tasks.splice(index, 1)[0];
-    return removed;
+    return state.tasks.splice(index, 1)[0];
   }
   return null;
 }

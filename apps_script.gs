@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - GOOGLE APPS SCRIPT BACKUP & SYNC
+//  MARACAJU 88 - GOOGLE APPS SCRIPT BACKUP & SYNC (v1.1.0)
 //  Vincule este script à sua planilha pessoal do Google Sheets
 // ============================================================
 //
@@ -137,10 +137,13 @@ function doPost(e) {
     // 4. Atualiza Aba: Historico_Execucoes (Log diário de quem fez o quê)
     syncHistoricoSheet(ss, data.history || {});
 
-    // 5. Atualiza Aba: Reformas
+    // 5. Atualiza Aba: Carro (Manutenções, peças e links)
+    syncCarroSheet(ss, data.carro || []);
+
+    // 6. Atualiza Aba: Reformas
     syncReformasSheet(ss, data.reformas || []);
 
-    // 6. Atualiza Aba: Sonhos
+    // 7. Atualiza Aba: Sonhos
     syncSonhosSheet(ss, data.sonhos || []);
 
     return createJsonResponse({
@@ -195,6 +198,7 @@ function syncResumoSheet(ss, data, now) {
     ["Sequência Atual (Dias)", gamif.streak || 0],
     ["Recorde de Sequência", gamif.bestStreak || 0],
     ["Total de Tarefas Cadastradas", (data.tasks || []).length],
+    ["Manutenções do Carro Cadastradas", (data.carro || []).length],
     ["Total de Reformas em Andamento", (data.reformas || []).filter(function(r){ return r.status === "andamento"; }).length],
     ["Total de Sonhos Cadastrados", (data.sonhos || []).length]
   ];
@@ -202,25 +206,25 @@ function syncResumoSheet(ss, data, now) {
   sheet.getRange(1, 1, rows.length, 2).setValues(rows);
   sheet.getRange(1, 1, 1, 2).setFontWeight("bold").setBackground("#1e293b").setFontColor("#ffffff");
   sheet.getRange(2, 1, rows.length - 1, 1).setFontWeight("bold");
-  sheet.setColumnWidth(1, 240);
+  sheet.setColumnWidth(1, 260);
   sheet.setColumnWidth(2, 240);
 }
 
 function syncTarefasSheet(ss, tasks) {
   var sheet = getOrCreateSheet(ss, "Tarefas");
   sheet.clear();
-  var headers = ["ID", "Título da Tarefa", "Cômodo / Área", "Esforço", "XP", "Responsável Padrão", "Frequência", "Notas"];
+  var headers = ["ID", "Título da Tarefa", "Frequência", "Cômodo / Área", "Esforço", "XP", "Responsável Padrão", "Notas"];
   var rows = [headers];
 
   tasks.forEach(function(t) {
     rows.push([
       t.id || "",
       t.title || "",
+      t.frequency || "diaria",
       t.room || "",
       t.effort || "",
       t.xp || 10,
       t.assignedTo || "ambos",
-      t.frequency || "diaria",
       t.notes || ""
     ]);
   });
@@ -236,10 +240,9 @@ function syncTarefasSheet(ss, tasks) {
 function syncHistoricoSheet(ss, history) {
   var sheet = getOrCreateSheet(ss, "Historico_Log");
   sheet.clear();
-  var headers = ["Data (YYYY-MM-DD)", "ID Tarefa", "Título Tarefa", "Feito Por", "XP Ganho", "Horário Conclusão"];
+  var headers = ["Data (YYYY-MM-DD)", "ID Tarefa", "Título Tarefa", "Frequência", "Feito Por", "XP Ganho", "Horário Conclusão"];
   var rows = [headers];
 
-  // history: { "2026-11-01": { "task_1": { done: true, title: "...", doneBy: "Matheus", xp: 25, time: "14:20" } } }
   var dates = Object.keys(history).sort().reverse();
   dates.forEach(function(d) {
     var dayEntries = history[d] || {};
@@ -250,6 +253,7 @@ function syncHistoricoSheet(ss, history) {
           d,
           taskId,
           entry.title || taskId,
+          entry.frequency || "diaria",
           entry.doneBy || "Casal",
           entry.xp || 0,
           entry.completedAt || ""
@@ -259,11 +263,46 @@ function syncHistoricoSheet(ss, history) {
   });
 
   if (rows.length === 1) {
-    rows.push(["-", "-", "Nenhum histórico registrado ainda", "-", "-", "-"]);
+    rows.push(["-", "-", "Nenhum histórico registrado ainda", "-", "-", "-", "-"]);
   }
 
   sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
   sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#4f46e5").setFontColor("#ffffff");
+  sheet.setFrozenRows(1);
+  for (var col = 1; col <= headers.length; col++) {
+    sheet.autoResizeColumn(col);
+  }
+}
+
+function syncCarroSheet(ss, carro) {
+  var sheet = getOrCreateSheet(ss, "Carro");
+  sheet.clear();
+  var headers = ["ID", "Título / Manutenção", "Categoria", "Status", "Prioridade", "Estimado (R$)", "Gasto Real (R$)", "KM Alvo", "Data Alvo", "Links", "Notas"];
+  var rows = [headers];
+
+  carro.forEach(function(c) {
+    var linksStr = (c.links || []).map(function(l){ return l.title + ": " + l.url; }).join(" | ");
+    rows.push([
+      c.id || "",
+      c.title || "",
+      c.category || "mecanica",
+      c.status || "pendente",
+      c.priority || "media",
+      c.estimatedCost || 0,
+      c.actualCost || 0,
+      c.targetKm || "",
+      c.targetDate || "",
+      linksStr,
+      c.notes || ""
+    ]);
+  });
+
+  if (rows.length === 1) {
+    rows.push(["-", "Nenhuma manutenção cadastrada ainda", "-", "-", "-", 0, 0, "-", "-", "-", "-"]);
+  }
+
+  sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#059669").setFontColor("#ffffff");
   sheet.setFrozenRows(1);
   for (var col = 1; col <= headers.length; col++) {
     sheet.autoResizeColumn(col);

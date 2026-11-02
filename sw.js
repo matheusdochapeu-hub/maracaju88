@@ -2,7 +2,7 @@
 //  MARACAJU 88 - SERVICE WORKER (PWA Offline Cache)
 // ============================================================
 
-const CACHE_NAME = 'maracaju88-v1.0.0';
+const CACHE_NAME = 'maracaju88-v1.1.0';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -19,6 +19,7 @@ const ASSETS_TO_CACHE = [
   './js/gamification.js',
   './js/tasks.js',
   './js/history.js',
+  './js/carro.js',
   './js/reformas.js',
   './js/sonhos.js',
   './js/sheets.js',
@@ -34,7 +35,14 @@ const ASSETS_TO_CACHE = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      // Faz o cache resiliente: se algum asset opcional falhar, não aborta a instalação do SW
+      return Promise.all(
+        ASSETS_TO_CACHE.map((url) => {
+          return cache.add(url).catch((err) => {
+            console.warn(`[SW] Aviso ao cachear ${url}:`, err);
+          });
+        })
+      );
     }).then(() => self.skipWaiting())
   );
 });

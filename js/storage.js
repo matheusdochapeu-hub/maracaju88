@@ -6,6 +6,7 @@ import {
   APP_CONFIG,
   DEFAULT_USERS,
   INITIAL_TASKS,
+  INITIAL_CARRO,
   INITIAL_REFORMAS,
   INITIAL_SONHOS
 } from './config.js';
@@ -25,6 +26,7 @@ export function getInitialState() {
     tasks: [...INITIAL_TASKS],
     // history format: { "2026-11-01": { [taskId]: { done: true, doneBy: "matheus", xp: 25, completedAt: "14:30" } } }
     history: {},
+    carro: [...INITIAL_CARRO],
     reformas: [...INITIAL_REFORMAS],
     sonhos: [...INITIAL_SONHOS],
     settings: {
@@ -58,6 +60,7 @@ export function loadState() {
       settings: { ...initial.settings, ...(parsed.settings || {}) },
       tasks: Array.isArray(parsed.tasks) && parsed.tasks.length > 0 ? parsed.tasks : initial.tasks,
       history: parsed.history || {},
+      carro: Array.isArray(parsed.carro) ? parsed.carro : initial.carro,
       reformas: Array.isArray(parsed.reformas) ? parsed.reformas : initial.reformas,
       sonhos: Array.isArray(parsed.sonhos) ? parsed.sonhos : initial.sonhos
     };

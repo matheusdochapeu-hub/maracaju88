@@ -2,10 +2,17 @@
 //  MARACAJU 88 - INTERFACE, RENDERIZAÇÃO & MODAIS
 // ============================================================
 
-import { ROOMS, EFFORT_LEVELS, BADGES } from './config.js';
+import { ROOMS, EFFORT_LEVELS, BADGES, FREQUENCIES, CARRO_CATEGORIES } from './config.js';
 import { getCoupleTotalXp, getCurrentLevel } from './gamification.js';
-import { getLocalDateString, getDailyTaskProgress, isTaskDoneOnDate, getTaskHistoryEntry } from './tasks.js';
+import {
+  getLocalDateString,
+  isTaskDoneOnDate,
+  getTaskHistoryEntry,
+  getAllFrequenciesSummary,
+  getTasksProgressByFrequency
+} from './tasks.js';
 import { getHistoryForDate, getRecentDaysSummary } from './history.js';
+import { getCarroSummary } from './carro.js';
 import { getReformasSummary } from './reformas.js';
 import { getSonhosSummary } from './sonhos.js';
 
@@ -47,7 +54,7 @@ export function triggerConfetti() {
         alive++;
         p.x += p.dx;
         p.y += p.dy;
-        p.dy += 0.35; // gravidade
+        p.dy += 0.35;
         p.life -= 0.015;
         p.tilt += p.tiltSpeed;
 
@@ -126,33 +133,51 @@ export function renderHeaderStats(state) {
 }
 
 // -------------------------------------------------------------
-// RENDERIZAÇÃO DA ABA 1: TAREFAS DIÁRIAS
+// RENDERIZAÇÃO DA ABA 1: TAREFAS (DIÁRIAS, SEMANAIS, MENSAIS, ANUAIS)
 // -------------------------------------------------------------
-export function renderTasksTab(state, selectedRoom = 'tudo') {
+export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom = 'tudo') {
   const todayStr = getLocalDateString();
-  const progress = getDailyTaskProgress(state, todayStr);
+  const freqSummary = getAllFrequenciesSummary(state, todayStr);
+  const currentProg = getTasksProgressByFrequency(state, selectedFrequency, todayStr);
   const totalXp = getCoupleTotalXp(state);
   const lvl = getCurrentLevel(totalXp);
 
-  // Card de Progresso do Dia
+  // Barra Segmentada de Frequências (Diárias, Semanais, Mensais, Anuais)
+  const freqBar = document.getElementById('frequency-segmented-bar');
+  if (freqBar) {
+    freqBar.innerHTML = FREQUENCIES.map(f => {
+      const p = freqSummary[f.id] || { completed: 0, total: 0 };
+      const isActive = f.id === selectedFrequency;
+      return `
+        <button class="freq-btn ${isActive ? 'active' : ''}" data-frequency="${f.id}">
+          <span class="freq-icon">${f.icon}</span>
+          <span>${f.label}</span>
+          <span class="freq-badge">${p.completed}/${p.total}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  // Card de Progresso da Frequência Selecionada
   const progContainer = document.getElementById('daily-progress-card');
   if (progContainer) {
+    const curFreqObj = FREQUENCIES.find(f => f.id === selectedFrequency) || FREQUENCIES[0];
     progContainer.innerHTML = `
       <div class="dash-header">
         <div class="dash-title">
-          <span>🧹 Rotina de Hoje</span>
+          <span>${curFreqObj.icon} Tarefas ${curFreqObj.label}</span>
           <span class="level-badge">${lvl.icon} Nível ${lvl.level}: ${lvl.title}</span>
         </div>
         <div style="font-size: 0.85rem; font-weight: 700; color: var(--brand-teal);">
-          +${progress.xpEarnedToday} XP hoje
+          +${currentProg.xpEarned} XP conquistados
         </div>
       </div>
       <div class="progress-container">
-        <div class="progress-bar ${progress.percent === 100 ? 'gold' : ''}" style="width: ${progress.percent}%"></div>
+        <div class="progress-bar ${currentProg.percent === 100 ? 'gold' : ''}" style="width: ${currentProg.percent}%"></div>
       </div>
       <div class="dash-stats-row">
-        <span><strong class="highlight-stat">${progress.completed}</strong> de ${progress.total} tarefas feitas</span>
-        <span><strong class="highlight-stat">${progress.percent}%</strong> concluído</span>
+        <span><strong class="highlight-stat">${currentProg.completed}</strong> de ${currentProg.total} concluídas</span>
+        <span><strong class="highlight-stat">${currentProg.percent}%</strong> do ciclo</span>
       </div>
     `;
   }
@@ -168,19 +193,22 @@ export function renderTasksTab(state, selectedRoom = 'tudo') {
     `).join('');
   }
 
-  // Lista de Tarefas Filtrada
+  // Lista de Tarefas Filtrada por Frequência E Cômodo
   const taskListEl = document.getElementById('tasks-list');
   if (!taskListEl) return;
 
-  const tasksToDisplay = selectedRoom === 'tudo'
-    ? state.tasks
-    : state.tasks.filter(t => t.room === selectedRoom);
+  let tasksToDisplay = (state.tasks || []).filter(t => (t.frequency || 'diaria') === selectedFrequency);
+
+  if (selectedRoom !== 'tudo') {
+    tasksToDisplay = tasksToDisplay.filter(t => t.room === selectedRoom);
+  }
 
   if (tasksToDisplay.length === 0) {
+    const curFreqObj = FREQUENCIES.find(f => f.id === selectedFrequency) || FREQUENCIES[0];
     taskListEl.innerHTML = `
       <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg);">
-        <p style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</p>
-        <p style="font-weight: 600;">Nenhuma tarefa encontrada neste cômodo.</p>
+        <p style="font-size: 2.2rem; margin-bottom: 0.5rem;">${curFreqObj.icon}</p>
+        <p style="font-weight: 600;">Nenhuma tarefa ${curFreqObj.label.toLowerCase()} cadastrada neste cômodo.</p>
         <p style="font-size: 0.8rem; margin-top: 0.25rem;">Clique em "+ Nova Tarefa" para adicionar.</p>
       </div>
     `;
@@ -192,6 +220,7 @@ export function renderTasksTab(state, selectedRoom = 'tudo') {
     const historyEntry = getTaskHistoryEntry(state, task.id, todayStr);
     const effort = EFFORT_LEVELS[task.effort] || EFFORT_LEVELS.media;
     const room = ROOMS.find(r => r.id === task.room) || { label: task.room, icon: '🏠' };
+    const curFreqObj = FREQUENCIES.find(f => f.id === task.frequency) || FREQUENCIES[0];
 
     return `
       <div class="task-card ${isDone ? 'completed' : ''}" data-task-id="${task.id}">
@@ -202,18 +231,20 @@ export function renderTasksTab(state, selectedRoom = 'tudo') {
           <div class="task-info">
             <span class="task-title" title="${task.title}">${task.title}</span>
             <div class="task-meta">
+              <span class="tag-freq">${curFreqObj.icon} ${curFreqObj.label}</span>
               <span class="tag-room">${room.icon} ${room.label}</span>
               <span class="tag-xp">+${task.xp || effort.xp} XP</span>
               ${isDone && historyEntry ? `
                 <span style="color: var(--success); font-weight: 600;">
-                  Feito por ${historyEntry.doneBy} às ${historyEntry.completedAt || ''}
+                  ✓ Feito por ${historyEntry.doneBy} ${historyEntry.completedOnDate ? `(${historyEntry.completedOnDate})` : ''}
                 </span>
               ` : `
-                <button class="task-assignee-btn" data-change-assignee="${task.id}" title="Alterar quem fará esta tarefa">
+                <button class="task-assignee-btn" data-change-assignee="${task.id}" title="Alterar responsável">
                   <span>👤 ${task.assignedTo === 'ambos' ? 'Casal' : (task.assignedTo === 'esposa' ? state.users.user2.name : state.users.user1.name)}</span>
                 </button>
               `}
             </div>
+            ${task.notes ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">${task.notes}</div>` : ''}
           </div>
         </div>
         <div class="task-actions">
@@ -231,7 +262,6 @@ export function renderHistoryTab(state, targetDateStr = getLocalDateString()) {
   const historyData = getHistoryForDate(state, targetDateStr);
   const recentDays = getRecentDaysSummary(state, 7);
 
-  // Seletor de Data
   const dateDisplay = document.getElementById('history-date-display');
   const dObj = new Date(targetDateStr + 'T12:00:00');
   const formattedFriendly = dObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -243,7 +273,6 @@ export function renderHistoryTab(state, targetDateStr = getLocalDateString()) {
     `;
   }
 
-  // Mini Barra de Consistência (7 dias)
   const streakBar = document.getElementById('history-recent-days-bar');
   if (streakBar) {
     streakBar.innerHTML = recentDays.map(d => `
@@ -260,7 +289,6 @@ export function renderHistoryTab(state, targetDateStr = getLocalDateString()) {
     `).join('');
   }
 
-  // Resumo do Dia
   const summaryBox = document.getElementById('history-day-summary');
   if (summaryBox) {
     summaryBox.innerHTML = `
@@ -284,7 +312,6 @@ export function renderHistoryTab(state, targetDateStr = getLocalDateString()) {
     `;
   }
 
-  // Lista Detalhada do que foi feito e do que ficou pendente
   const listEl = document.getElementById('history-items-list');
   if (!listEl) return;
 
@@ -295,7 +322,6 @@ export function renderHistoryTab(state, targetDateStr = getLocalDateString()) {
 
   let html = '';
 
-  // Concluídas
   if (historyData.tasksDone.length > 0) {
     html += `<h4 style="font-size: 0.9rem; color: var(--success); margin: 1rem 0 0.5rem 0; display: flex; align-items: center; gap: 0.4rem;">
       ✅ Concluídas (${historyData.tasksDone.length})
@@ -313,7 +339,6 @@ export function renderHistoryTab(state, targetDateStr = getLocalDateString()) {
     `).join('');
   }
 
-  // Pendentes
   if (historyData.tasksPending.length > 0) {
     html += `<h4 style="font-size: 0.9rem; color: var(--warning); margin: 1.25rem 0 0.5rem 0; display: flex; align-items: center; gap: 0.4rem;">
       ⏳ Pendentes / Não Realizadas (${historyData.tasksPending.length})
@@ -335,12 +360,191 @@ export function renderHistoryTab(state, targetDateStr = getLocalDateString()) {
 }
 
 // -------------------------------------------------------------
-// RENDERIZAÇÃO DA ABA 3: REFORMAS & MELHORIAS
+// RENDERIZAÇÃO DA ABA 3: CARRO & MANUTENÇÃO (NOVA!)
+// -------------------------------------------------------------
+export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = 'todas') {
+  const summary = getCarroSummary(state);
+
+  // Banner Resumo do Carro
+  const bannerEl = document.getElementById('carro-summary-banner');
+  if (bannerEl) {
+    bannerEl.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.5rem;">
+        <div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Orçado / Estimado</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: var(--brand-cyan);">
+            R$ ${summary.totalEstimated.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Total Investido</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: var(--success);">
+            R$ ${summary.totalActual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.5rem; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap; border-top: 1px solid var(--border-subtle); padding-top: 0.5rem;">
+        <span>⏳ Pendentes: <strong>${summary.byStatus.pendente}</strong></span>
+        <span>•</span>
+        <span>📐 Em Orçamento: <strong>${summary.byStatus.orcamento}</strong></span>
+        <span>•</span>
+        <span>🛠️ Em Andamento: <strong>${summary.byStatus.andamento}</strong></span>
+        <span>•</span>
+        <span>✅ Concluídas: <strong>${summary.byStatus.concluido}</strong></span>
+      </div>
+    `;
+  }
+
+  const gridEl = document.getElementById('carro-grid');
+  if (!gridEl) return;
+
+  let list = state.carro || [];
+
+  if (categoryFilter !== 'todas') {
+    list = list.filter(c => c.category === categoryFilter);
+  }
+
+  if (statusFilter !== 'todas') {
+    list = list.filter(c => c.status === statusFilter);
+  }
+
+  if (list.length === 0) {
+    gridEl.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg);">
+        <p style="font-size: 2.2rem; margin-bottom: 0.5rem;">🚗</p>
+        <p style="font-weight: 600;">Nenhuma manutenção ou ideia encontrada nesta categoria.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.25rem;">Clique em "+ Nova Manutenção" para registrar peças, revisões ou fotos.</p>
+      </div>
+    `;
+    return;
+  }
+
+  gridEl.innerHTML = list.map(item => {
+    const catObj = CARRO_CATEGORIES.find(c => c.id === item.category) || { label: item.category, icon: '🚗' };
+    const checklist = item.checklist || [];
+    const doneChecks = checklist.filter(c => c.done).length;
+    const checkPercent = checklist.length > 0 ? Math.round((doneChecks / checklist.length) * 100) : 0;
+    const photos = item.photos || [];
+    const links = item.links || [];
+
+    return `
+      <div class="project-card" data-carro-id="${item.id}">
+        <div>
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem;">
+            <span class="project-status-badge status-${item.status}">${item.status}</span>
+            <span class="tag-room">${catObj.icon} ${catObj.label}</span>
+          </div>
+
+          <h3 style="font-size: 1.05rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.35rem;">${item.title}</h3>
+
+          ${item.notes ? `<p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.65rem;">${item.notes}</p>` : ''}
+
+          <!-- Valores Financeiros & KM -->
+          <div style="background: var(--bg-secondary); padding: 0.6rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem; font-size: 0.8rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem;">
+            <div>
+              <span style="color: var(--text-muted);">Estimado:</span>
+              <strong>R$ ${item.estimatedCost.toLocaleString('pt-BR')}</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted);">Gasto Real:</span>
+              <strong style="color: var(--success);">R$ ${item.actualCost.toLocaleString('pt-BR')}</strong>
+            </div>
+            ${item.targetKm > 0 ? `
+              <div>
+                <span style="color: var(--text-muted);">KM Alvo:</span>
+                <strong style="color: var(--brand-amber);">${item.targetKm.toLocaleString('pt-BR')} km</strong>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Galeria de Fotos da Manutenção -->
+          <div style="margin-bottom: 0.65rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+              <span>📷 Fotos da Peça / Manutenção (${photos.length})</span>
+              <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;">
+                + Foto
+                <input type="file" accept="image/*" capture="environment" class="input-carro-add-photo" data-car-id="${item.id}" style="display: none;" />
+              </label>
+            </div>
+            ${photos.length > 0 ? `
+              <div class="carro-photos-container">
+                ${photos.map((src, pIdx) => `
+                  <div class="carro-thumb-wrapper" data-view-photo="${src}">
+                    <img src="${src}" alt="Foto ${item.title}" class="carro-thumb-img" />
+                    <button class="carro-thumb-delete" data-del-photo="${item.id}" data-photo-idx="${pIdx}" title="Excluir foto">✕</button>
+                  </div>
+                `).join('')}
+              </div>
+            ` : `
+              <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Nenhuma foto anexada. Tire uma foto ou escolha da galeria.</div>
+            `}
+          </div>
+
+          <!-- Links de Peças / Referências -->
+          <div style="margin-bottom: 0.65rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+              <span>🔗 Links e Peças (${links.length})</span>
+              <button class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem;" data-add-link-to="${item.id}">+ Link</button>
+            </div>
+            ${links.length > 0 ? `
+              <div class="carro-links-list">
+                ${links.map(l => `
+                  <span class="carro-link-chip">
+                    <a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">
+                      🔗 ${l.title}
+                    </a>
+                    <button class="carro-link-delete" data-del-link="${item.id}" data-link-id="${l.id}" title="Remover link">✕</button>
+                  </span>
+                `).join('')}
+              </div>
+            ` : `
+              <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Nenhum link adicionado.</div>
+            `}
+          </div>
+
+          <!-- Checklist de Etapas -->
+          ${checklist.length > 0 ? `
+            <div style="margin-top: 0.5rem;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+                <span>Etapas</span>
+                <span>${doneChecks}/${checklist.length} (${checkPercent}%)</span>
+              </div>
+              <div class="progress-container" style="height: 6px;">
+                <div class="progress-bar" style="width: ${checkPercent}%"></div>
+              </div>
+              <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                ${checklist.map(c => `
+                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer;">
+                    <input type="checkbox" class="carro-check-item" data-car-id="${item.id}" data-check-id="${c.id}" ${c.done ? 'checked' : ''} />
+                    <span style="${c.done ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${c.title}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Rodapé do Card -->
+        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; margin-top: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="font-size: 0.75rem; color: var(--text-muted);">
+            ${item.targetDate ? `📅 Previsão: ${item.targetDate}` : ''}
+          </div>
+          <div style="display: flex; gap: 0.35rem;">
+            <button class="btn btn-secondary btn-sm" data-edit-carro-status="${item.id}">Alterar Status</button>
+            <button class="btn btn-icon btn-sm" data-delete-carro="${item.id}">🗑️</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// -------------------------------------------------------------
+// RENDERIZAÇÃO DA ABA 4: REFORMAS & MELHORIAS
 // -------------------------------------------------------------
 export function renderReformasTab(state, statusFilter = 'todas') {
   const summary = getReformasSummary(state);
 
-  // Banner Financeiro de Reformas
   const bannerEl = document.getElementById('reformas-summary-banner');
   if (bannerEl) {
     bannerEl.innerHTML = `
@@ -441,7 +645,7 @@ export function renderReformasTab(state, statusFilter = 'todas') {
 }
 
 // -------------------------------------------------------------
-// RENDERIZAÇÃO DA ABA 4: MURAL DOS SONHOS & METAS
+// RENDERIZAÇÃO DA ABA 5: MURAL DOS SONHOS & METAS
 // -------------------------------------------------------------
 export function renderSonhosTab(state, categoryFilter = 'todas') {
   const summary = getSonhosSummary(state);
@@ -546,7 +750,7 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
 }
 
 // -------------------------------------------------------------
-// RENDERIZAÇÃO DA ABA 5: CONQUISTAS & PLACAR DO CASAL
+// RENDERIZAÇÃO DA ABA 6: CONQUISTAS & PLACAR DO CASAL
 // -------------------------------------------------------------
 export function renderGamificationTab(state) {
   const totalXp = getCoupleTotalXp(state);
@@ -558,7 +762,6 @@ export function renderGamificationTab(state) {
   const u1Percent = totalUserXp > 0 ? Math.round(((u1.xp || 0) / totalUserXp) * 100) : 50;
   const u2Percent = 100 - u1Percent;
 
-  // Placar do Casal
   const scoreboard = document.getElementById('gamification-scoreboard');
   if (scoreboard) {
     scoreboard.innerHTML = `
@@ -593,7 +796,6 @@ export function renderGamificationTab(state) {
     `;
   }
 
-  // Grade de Conquistas (Badges)
   const badgesGrid = document.getElementById('gamification-badges-grid');
   if (!badgesGrid) return;
 
@@ -615,7 +817,7 @@ export function renderGamificationTab(state) {
 }
 
 // -------------------------------------------------------------
-// RENDERIZAÇÃO DA ABA 6: AJUSTES & GOOGLE SHEETS
+// RENDERIZAÇÃO DA ABA 7: AJUSTES & GOOGLE SHEETS
 // -------------------------------------------------------------
 export function renderSettingsTab(state) {
   const urlInput = document.getElementById('settings-sheets-url');

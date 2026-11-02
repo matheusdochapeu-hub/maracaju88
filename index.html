@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Maracaju 88" />
-  <meta name="description" content="App do casal: tarefas diárias gamificadas, reformas, sonhos e backup no Google Sheets" />
+  <meta name="description" content="App do casal: tarefas diárias e periódicas gamificadas, carro, reformas, sonhos e backup no Google Sheets" />
 
   <!-- Icons & Manifest -->
   <link rel="manifest" href="./manifest.json" />
@@ -44,6 +44,12 @@
       </div>
 
       <div class="header-actions">
+        <!-- Botão de Instalar App no Celular (Visível no navegador) -->
+        <button id="btn-install-app" class="install-app-btn" title="Baixar e instalar aplicativo no celular">
+          <span>📲</span>
+          <span>Instalar App</span>
+        </button>
+
         <!-- Sequência de dias seguidos (Gamificação) -->
         <div class="streak-pill" title="Dias seguidos com tarefas concluídas!">
           <span class="streak-icon">🔥</span>
@@ -62,7 +68,7 @@
     </div>
   </header>
 
-  <!-- Barra de Navegação Desktop / Topo Alternativo -->
+  <!-- Barra de Navegação Desktop / Topo Alternativo / Mobile Bottom Nav -->
   <nav class="bottom-nav" id="main-navigation">
     <button class="nav-item active" data-tab="tarefas">
       <span class="nav-icon">🧹</span>
@@ -71,6 +77,10 @@
     <button class="nav-item" data-tab="historico">
       <span class="nav-icon">📅</span>
       <span>Histórico</span>
+    </button>
+    <button class="nav-item" data-tab="carro">
+      <span class="nav-icon">🚗</span>
+      <span>Carro</span>
     </button>
     <button class="nav-item" data-tab="reformas">
       <span class="nav-icon">🔨</span>
@@ -94,18 +104,21 @@
   <main class="app-main">
 
     <!-- ========================================== -->
-    <!-- ABA 1: TAREFAS & ROTINA GAMIFICADA         -->
+    <!-- ABA 1: TAREFAS (DIÁRIAS, SEMANAIS, MENSAIS, ANUAIS) -->
     <!-- ========================================== -->
     <section id="tab-tarefas" class="tab-content active">
-      <!-- Card de Progresso do Dia -->
+      <!-- Card de Progresso da Frequência Selecionada -->
       <div id="daily-progress-card" class="dash-card"></div>
+
+      <!-- Barra Segmentada de Frequências -->
+      <div id="frequency-segmented-bar" class="frequency-segmented-bar"></div>
 
       <!-- Filtro por Cômodos -->
       <div id="room-chips-container" class="chips-scroll"></div>
 
       <!-- Barra de Ações da Seção -->
       <div class="section-action-bar">
-        <h2 class="section-heading">Checklist do Dia</h2>
+        <h2 class="section-heading">Tarefas a Realizar</h2>
         <button class="btn btn-primary btn-sm" data-open-modal="modal-add-task">
           <span>+</span> Nova Tarefa
         </button>
@@ -146,7 +159,45 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- ABA 3: REFORMAS & MELHORIAS DA CASA        -->
+    <!-- ABA 3: CARRO & MANUTENÇÃO (NOVA!)          -->
+    <!-- ========================================== -->
+    <section id="tab-carro" class="tab-content">
+      <!-- Banner Financeiro & Resumo do Carro -->
+      <div id="carro-summary-banner" class="dash-card"></div>
+
+      <!-- Filtros por Categoria -->
+      <div class="chips-scroll">
+        <button class="chip active" data-carro-cat="todas">Todas Categorias</button>
+        <button class="chip" data-carro-cat="oleo_revisao">🛢️ Revisão & Óleo</button>
+        <button class="chip" data-carro-cat="mecanica">🔧 Mecânica</button>
+        <button class="chip" data-carro-cat="pneus_freios">🛞 Pneus & Freios</button>
+        <button class="chip" data-carro-cat="estetica">✨ Estética</button>
+        <button class="chip" data-carro-cat="eletrica_acessorios">🔌 Elétrica & Acessórios</button>
+      </div>
+
+      <!-- Filtros por Status -->
+      <div class="chips-scroll" style="margin-top: -0.25rem;">
+        <button class="chip active" data-carro-status-filter="todas">Todos Status</button>
+        <button class="chip" data-carro-status-filter="pendente">⏳ Pendentes</button>
+        <button class="chip" data-carro-status-filter="orcamento">📐 Em Orçamento</button>
+        <button class="chip" data-carro-status-filter="andamento">🛠️ Em Andamento</button>
+        <button class="chip" data-carro-status-filter="concluido">✅ Concluídas</button>
+      </div>
+
+      <!-- Barra de Ações -->
+      <div class="section-action-bar">
+        <h2 class="section-heading">Cuidados & Peças do Carro</h2>
+        <button class="btn btn-primary btn-sm" data-open-modal="modal-add-carro">
+          <span>+</span> Nova Manutenção
+        </button>
+      </div>
+
+      <!-- Grid de Manutenções do Carro -->
+      <div id="carro-grid" class="carro-grid"></div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- ABA 4: REFORMAS & MELHORIAS DA CASA        -->
     <!-- ========================================== -->
     <section id="tab-reformas" class="tab-content">
       <div id="reformas-summary-banner" class="dash-card"></div>
@@ -170,7 +221,7 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- ABA 4: MURAL DOS SONHOS & METAS            -->
+    <!-- ABA 5: MURAL DOS SONHOS & METAS            -->
     <!-- ========================================== -->
     <section id="tab-sonhos" class="tab-content">
       <div id="sonhos-summary-banner" class="dash-card"></div>
@@ -194,7 +245,7 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- ABA 5: GAMIFICAÇÃO & PLACAR DO CASAL       -->
+    <!-- ABA 6: GAMIFICAÇÃO & PLACAR DO CASAL       -->
     <!-- ========================================== -->
     <section id="tab-gamificacao" class="tab-content">
       <div id="gamification-scoreboard" class="dash-card"></div>
@@ -206,7 +257,7 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- ABA 6: AJUSTES & GOOGLE SHEETS BACKUP      -->
+    <!-- ABA 7: AJUSTES & GOOGLE SHEETS BACKUP      -->
     <!-- ========================================== -->
     <section id="tab-ajustes" class="tab-content">
       <form id="form-settings">
@@ -225,6 +276,17 @@
           </div>
         </div>
 
+        <!-- Instalação no Celular -->
+        <div class="dash-card">
+          <h3 class="dash-title" style="margin-bottom: 0.5rem;">📱 Aplicativo no Celular (PWA)</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            Tenha o ícone do Maracaju 88 na tela inicial do seu celular, com abertura instantânea em tela cheia e funcionamento offline.
+          </p>
+          <button type="button" class="btn btn-secondary btn-sm" data-open-modal="modal-install-guide">
+            Ver Passo a Passo de Instalação (iPhone & Android)
+          </button>
+        </div>
+
         <!-- Sincronização Google Sheets -->
         <div class="dash-card">
           <div class="dash-header">
@@ -235,7 +297,7 @@
           </div>
 
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-            Vincule o script <code style="color: var(--brand-cyan);">apps_script.gs</code> da pasta do projeto à sua planilha Google pessoal. Todos os dados (tarefas, histórico de cada dia, reformas e sonhos) são salvos de forma organizada em abas!
+            Vincule o script <code style="color: var(--brand-cyan);">apps_script.gs</code> da pasta do projeto à sua planilha Google pessoal. Todos os dados (tarefas periódicas, histórico diário, manutenções do carro, reformas e sonhos) são salvos de forma organizada em abas!
           </p>
 
           <div class="form-group">
@@ -304,7 +366,7 @@
   <div id="modal-add-task" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Nova Tarefa Diária</h3>
+        <h3 class="modal-title">Nova Tarefa do Lar</h3>
         <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-task">
@@ -312,16 +374,28 @@
           <label class="form-label">Título da Tarefa</label>
           <input type="text" id="task-input-title" class="form-control" placeholder="Ex: Higienizar micro-ondas" required />
         </div>
-        <div class="form-group">
-          <label class="form-label">Cômodo / Área</label>
-          <select id="task-input-room" class="form-control">
-            <option value="cozinha">🍳 Cozinha</option>
-            <option value="sala">🛋️ Sala</option>
-            <option value="quartos">🛏️ Quartos</option>
-            <option value="banheiros">🚿 Banheiros</option>
-            <option value="lavanderia">🧺 Lavanderia</option>
-            <option value="cuidados">🪴 Cuidados & Plantas</option>
-          </select>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Periodicidade</label>
+            <select id="task-input-frequency" class="form-control">
+              <option value="diaria" selected>☀️ Diária</option>
+              <option value="semanal">📅 Semanal</option>
+              <option value="mensal">🗓️ Mensal</option>
+              <option value="anual">🎯 Anual</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cômodo / Área</label>
+            <select id="task-input-room" class="form-control">
+              <option value="cozinha">🍳 Cozinha</option>
+              <option value="sala">🛋️ Sala</option>
+              <option value="quartos">🛏️ Quartos</option>
+              <option value="banheiros">🚿 Banheiros</option>
+              <option value="lavanderia">🧺 Lavanderia</option>
+              <option value="cuidados">🪴 Cuidados & Plantas</option>
+              <option value="garagem">🚗 Garagem</option>
+            </select>
+          </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
@@ -346,6 +420,92 @@
           <textarea id="task-input-notes" class="form-control" rows="2" placeholder="Dicas de produtos ou detalhes"></textarea>
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%;">Adicionar Tarefa</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Nova Manutenção do Carro (NOVO!) -->
+  <div id="modal-add-carro" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Nova Manutenção ou Cuidado do Carro</h3>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-carro">
+        <div class="form-group">
+          <label class="form-label">O que precisa ser feito?</label>
+          <input type="text" id="carro-input-title" class="form-control" placeholder="Ex: Troca de pastilhas de freio dianteiras" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Categoria</label>
+            <select id="carro-input-category" class="form-control">
+              <option value="oleo_revisao">🛢️ Revisão & Óleo</option>
+              <option value="mecanica" selected>🔧 Mecânica Geral</option>
+              <option value="pneus_freios">🛞 Pneus & Freios</option>
+              <option value="estetica">✨ Estética & Lavagem</option>
+              <option value="eletrica_acessorios">🔌 Elétrica & Acessórios</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select id="carro-input-status" class="form-control">
+              <option value="pendente" selected>⏳ Pendente / Ideia</option>
+              <option value="orcamento">📐 Em Orçamento</option>
+              <option value="andamento">🛠️ Em Andamento</option>
+              <option value="concluido">✅ Concluído</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Prioridade</label>
+            <select id="carro-input-priority" class="form-control">
+              <option value="baixa">Baixa (Estética)</option>
+              <option value="media" selected>Média</option>
+              <option value="alta">Alta (Segurança)</option>
+              <option value="urgente">Urgente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Orçamento Estimado (R$)</label>
+            <input type="number" id="carro-input-cost" class="form-control" placeholder="0" min="0" step="10" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">KM Alvo (Opcional)</label>
+            <input type="number" id="carro-input-km" class="form-control" placeholder="Ex: 80000" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Data Limite / Prevista</label>
+            <input type="date" id="carro-input-date" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Link de Peça ou Tutorial (Opcional)</label>
+          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 0.5rem;">
+            <input type="text" id="carro-input-link-title" class="form-control" placeholder="Título (ex: Mercado Livre)" />
+            <input type="url" id="carro-input-link-url" class="form-control" placeholder="https://..." />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Foto da Peça / Defeito / Referência (Opcional)</label>
+          <input type="file" id="carro-input-photo" class="form-control" accept="image/*" capture="environment" />
+          <span style="font-size: 0.7rem; color: var(--text-muted);">Você pode tirar foto com a câmera ou anexar da galeria (comprimida automaticamente).</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notas e Instruções</label>
+          <textarea id="carro-input-notes" class="form-control" rows="2" placeholder="Marca da peça recomendada, especificações, oficina de preferência"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar Manutenção do Carro</button>
       </form>
     </div>
   </div>
@@ -442,6 +602,61 @@
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%;">Adicionar ao Mural dos Sonhos</button>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Visualizador de Foto Ampliada -->
+  <div id="modal-photo-viewer" class="modal-overlay">
+    <div class="modal-content" style="max-width: 650px; text-align: center; padding: 1rem;">
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem;">
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <img id="photo-viewer-target" src="" alt="Foto Ampliada" class="photo-viewer-img" />
+    </div>
+  </div>
+
+  <!-- Modal: Guia Ilustrado de Como Baixar / Instalar no Celular -->
+  <div id="modal-install-guide" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">📲 Como Instalar no Celular</h3>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+
+      <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 1.25rem;">
+        
+        <!-- Bloco iPhone / iOS -->
+        <div style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem;">
+          <h4 style="font-size: 1rem; color: #ffffff; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            🍏 Se você usa <strong>iPhone / iPad (Safari)</strong>:
+          </h4>
+          <ol style="padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.4rem;">
+            <li>Abra o link no navegador <strong>Safari</strong>.</li>
+            <li>Toque no botão de <strong>Compartilhar</strong> (o ícone de quadrado com uma seta para cima <code style="color: var(--brand-cyan);">⎋</code> no rodapé).</li>
+            <li>Role a lista para baixo e toque em <strong>"Adicionar à Tela de Início"</strong> (ícone com um <code style="color: var(--brand-teal);">+</code>).</li>
+            <li>No topo direito, toque em <strong>"Adicionar"</strong>.</li>
+          </ol>
+          <div style="font-size: 0.75rem; color: var(--brand-amber); margin-top: 0.5rem;">
+            Pronto! O ícone do Maracaju 88 ficará na sua tela inicial junto aos seus outros aplicativos.
+          </div>
+        </div>
+
+        <!-- Bloco Android -->
+        <div style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem;">
+          <h4 style="font-size: 1rem; color: #ffffff; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            🤖 Se você usa <strong>Android (Chrome)</strong>:
+          </h4>
+          <ol style="padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.4rem;">
+            <li>Abra o link no <strong>Google Chrome</strong>.</li>
+            <li>Toque no botão verde <strong>"📲 Instalar App"</strong> no topo da tela (se disponível).</li>
+            <li>Ou toque nos <strong>3 pontinhos</strong> (<code style="color: var(--brand-cyan);">⋮</code>) no canto superior direito do Chrome.</li>
+            <li>Toque em <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.</li>
+          </ol>
+        </div>
+
+      </div>
+
+      <button class="btn btn-primary" style="width: 100%; margin-top: 1.25rem;" data-close-modal>Entendido!</button>
     </div>
   </div>
 

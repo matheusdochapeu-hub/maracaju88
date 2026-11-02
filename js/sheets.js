@@ -49,6 +49,7 @@ export async function backupToSheets(state) {
       gamification: state.gamification,
       tasks: state.tasks,
       history: state.history,
+      carro: state.carro || [],
       reformas: state.reformas,
       sonhos: state.sonhos
     }
