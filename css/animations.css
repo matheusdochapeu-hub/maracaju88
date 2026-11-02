@@ -1,6 +1,11 @@
 /* ============================================================
-   MARACAJU 88 - ANIMATIONS & CELEBRATION EFFECTS
+   MARACAJU - ANIMATIONS & CELEBRATION EFFECTS
    ============================================================ */
+
+@keyframes tabFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }

@@ -3,11 +3,26 @@
 **Data da última consolidação:** `02/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v1.3.1`
+**Versão Atual:** `v1.3.2`
 
 ---
 
 ## Histórico de Versões
+
+### Versão 1.3.2 (`02/11/2026`) — Botões de Criação Flutuantes no Canto Inferior Direito (FAB)
+1. **Migração dos Botões de Adição para Floating Action Buttons (FAB):**
+   - Os botões de criação foram transferidos dos cabeçalhos das seções para o canto inferior direito da tela, facilitando o alcance ergonômico com uma mão no celular:
+     - Aba Tarefas: `[＋ Nova Tarefa]`
+     - Aba Carro: `[＋ Nova Manutenção]`
+     - Aba Reformas: `[＋ Nova Reforma]`
+     - Aba Sonhos: `[＋ Novo Sonho]`
+2. **Estilização e Experiência Mobile-First:**
+   - Formato pílula elegante com gradiente Verde Musgo (`#1b3820` a `#2e5933`), borda translúcida, ícone `＋` em dourado suave (`#fcd34d`) e sombra com elevação natural.
+   - Posicionamento fixo `fixed` inteligente (`bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 16px) + 1.25rem)`), flutuando confortavelmente acima da barra inferior de navegação.
+   - Alinhamento adaptativo para telas grandes (`max(1.25rem, calc((100vw - var(--max-content-width)) / 2 + 1.25rem))`).
+   - Aumento do respiro inferior da página (`padding-bottom: +5.5rem`) para assegurar que nenhum cartão ou lista seja encoberto pelo botão flutuante ao rolar até o fim.
+   - Reposicionamento dos avisos toast para não sobrepor o botão de ação.
+   - Animação de transição de abas via `tabFadeIn` pura, mantendo o botão perfeitamente ancorado sem solavancos visuais.
 
 ### Versão 1.3.1 (`02/11/2026`) — Remoção do "88" do Nome do App e do Ícone da Casa
 1. **Remoção do "88" da Identidade Visual e Ícones:**

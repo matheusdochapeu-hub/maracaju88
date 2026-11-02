@@ -29,7 +29,7 @@ body {
   color: var(--text-primary);
   line-height: 1.5;
   overflow-x: hidden;
-  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 20px) + 2rem);
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 20px) + 5.5rem);
 }
 
 /* App Header - Verde Musgo Nobre */
@@ -197,7 +197,7 @@ body {
 
 .tab-content.active {
   display: block;
-  animation: fadeIn 0.25s ease-out;
+  animation: tabFadeIn 0.2s ease-out;
 }
 
 /* Bottom Navigation Bar (7 abas mobile-first) */
