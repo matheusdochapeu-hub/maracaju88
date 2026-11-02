@@ -19,9 +19,9 @@
 }
 
 @keyframes levelGlow {
-  0% { box-shadow: 0 0 10px rgba(20, 184, 166, 0.4); }
-  50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.8); }
-  100% { box-shadow: 0 0 10px rgba(20, 184, 166, 0.4); }
+  0% { box-shadow: 0 0 10px rgba(46, 89, 51, 0.4); }
+  50% { box-shadow: 0 0 25px rgba(79, 133, 85, 0.8); }
+  100% { box-shadow: 0 0 10px rgba(46, 89, 51, 0.4); }
 }
 
 @keyframes celebrationScale {

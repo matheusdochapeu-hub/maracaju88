@@ -25,7 +25,15 @@ import {
   removeLinkFromCarro,
   toggleCarroChecklistItem
 } from '../js/carro.js';
-import { addReforma, getReformasSummary, toggleReformaChecklistItem } from '../js/reformas.js';
+import {
+  addReforma,
+  getReformasSummary,
+  toggleReformaChecklistItem,
+  addPhotoToReforma,
+  removePhotoFromReforma,
+  addLinkToReforma,
+  removeLinkFromReforma
+} from '../js/reformas.js';
 import { addSonho, getSonhosSummary, toggleSonhoMilestone } from '../js/sonhos.js';
 import { normalizeEmail, findAuthorizedUser, loginWithEmail } from '../js/auth.js';
 
@@ -182,7 +190,7 @@ test('Carro: Cadastrar manutenção, adicionar fotos, links e checklist', () => 
   assert.equal(summary.byStatus.orcamento, 1);
 });
 
-test('Reformas: Adicionar projeto, alternar checklist e totalizar orçamento', () => {
+test('Reformas: Adicionar projeto, alternar checklist, totalizar orçamento, fotos e links', () => {
   const state = createMockState();
   const ref = addReforma(state, {
     title: "Pintura da Sala",
@@ -198,6 +206,25 @@ test('Reformas: Adicionar projeto, alternar checklist e totalizar orçamento', (
 
   const isDone = toggleReformaChecklistItem(state, ref.id, "c1");
   assert.equal(isDone, true);
+
+  // Fotos na reforma
+  const photoAdded = addPhotoToReforma(state, ref.id, "data:image/jpeg;base64,mockphotodata");
+  assert.equal(photoAdded, true);
+  assert.equal(ref.photos.length, 1);
+
+  const photoRemoved = removePhotoFromReforma(state, ref.id, 0);
+  assert.equal(photoRemoved, true);
+  assert.equal(ref.photos.length, 0);
+
+  // Links na reforma
+  const linkAdded = addLinkToReforma(state, ref.id, { url: "leroymerlin.com.br/tinta", title: "Tinta Suvinil Verde" });
+  assert.ok(linkAdded);
+  assert.equal(linkAdded.url, "https://leroymerlin.com.br/tinta");
+  assert.equal(ref.links.length, 1);
+
+  const linkRemoved = removeLinkFromReforma(state, ref.id, linkAdded.id);
+  assert.equal(linkRemoved, true);
+  assert.equal(ref.links.length, 0);
 
   const summary = getReformasSummary(state);
   assert.equal(summary.totalEstimated, 800);

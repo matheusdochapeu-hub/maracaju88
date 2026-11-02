@@ -23,24 +23,26 @@ body {
   flex-direction: column;
   background-color: var(--bg-primary);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(20, 184, 166, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(244, 63, 94, 0.06) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(46, 89, 51, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(194, 87, 70, 0.04) 0px, transparent 50%);
   background-attachment: fixed;
   color: var(--text-primary);
   line-height: 1.5;
   overflow-x: hidden;
-  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 20px));
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 20px) + 2rem);
 }
 
-/* App Header */
+/* App Header - Verde Musgo Nobre */
 .app-header {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--bg-glass);
+  background: linear-gradient(135deg, #1b3820 0%, #29532e 100%);
+  color: #ffffff;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 16px rgba(25, 51, 29, 0.16);
   padding: env(safe-area-inset-top, 0) 0.75rem 0 0.75rem;
 }
 
@@ -68,17 +70,16 @@ body {
   height: 36px;
   border-radius: var(--radius-md);
   object-fit: cover;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-subtle);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
 }
 
 .brand-text h1 {
   font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #ffffff 40%, var(--brand-cyan) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
   line-height: 1.1;
 }
 
@@ -87,7 +88,10 @@ body {
   font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--brand-teal);
+  color: #c8e6cb;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-full);
   letter-spacing: 0.05em;
 }
 
@@ -103,14 +107,15 @@ body {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  background: rgba(251, 191, 36, 0.12);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  padding: 0.2rem 0.5rem;
+  background: rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  padding: 0.25rem 0.55rem;
   border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--brand-amber);
+  color: #fef08a;
   white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 .streak-icon {
@@ -122,28 +127,30 @@ body {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-strong);
-  padding: 0.2rem 0.5rem 0.2rem 0.3rem;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  padding: 0.25rem 0.65rem 0.25rem 0.35rem;
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: var(--transition-fast);
-  color: var(--text-primary);
+  color: #ffffff;
   font-size: 0.775rem;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 .active-user-toggle:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--brand-teal);
+  background: rgba(255, 255, 255, 0.26);
+  border-color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .user-avatar-sm {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--brand-teal);
+  background: rgba(255, 255, 255, 0.25);
   color: #fff;
   display: flex;
   align-items: center;
@@ -152,17 +159,17 @@ body {
 }
 
 .sync-status-indicator {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: rgba(255, 255, 255, 0.4);
   flex-shrink: 0;
   transition: background-color var(--transition-fast);
 }
 
 .sync-status-indicator.synced {
-  background: var(--success);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  background: #4ade80;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.8);
 }
 
 .sync-status-indicator.syncing {
@@ -200,15 +207,16 @@ body {
   left: 0;
   right: 0;
   height: var(--bottom-nav-height);
-  background: var(--bg-glass);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid rgba(46, 89, 51, 0.14);
+  box-shadow: 0 -4px 20px rgba(25, 51, 29, 0.07);
   display: flex;
   align-items: center;
   justify-content: space-around;
   z-index: 100;
-  padding: 0 2px env(safe-area-inset-bottom, 0) 2px;
+  padding: 0 4px env(safe-area-inset-bottom, 0) 4px;
 }
 
 .nav-item {
@@ -219,15 +227,16 @@ body {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  height: 100%;
+  height: 84%;
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-size: 0.65rem;
   font-weight: 600;
   cursor: pointer;
-  transition: var(--transition-fast);
-  padding: 2px 1px;
+  transition: all var(--transition-fast);
+  padding: 3px 2px;
+  border-radius: var(--radius-md);
 }
 
 .nav-item span:last-child {
@@ -238,21 +247,24 @@ body {
 }
 
 .nav-item .nav-icon {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   transition: transform var(--transition-fast);
 }
 
 .nav-item:hover {
-  color: var(--text-primary);
+  color: var(--brand-moss);
+  background: rgba(46, 89, 51, 0.05);
 }
 
 .nav-item.active {
-  color: var(--brand-teal);
+  color: var(--brand-moss-dark);
+  font-weight: 800;
+  background: var(--brand-moss-soft);
 }
 
 .nav-item.active .nav-icon {
-  transform: translateY(-2px) scale(1.1);
-  filter: drop-shadow(0 0 6px var(--brand-teal-glow));
+  transform: translateY(-2px) scale(1.12);
+  filter: drop-shadow(0 2px 4px rgba(46, 89, 51, 0.25));
 }
 
 /* Responsive Desktop Improvements */
@@ -281,23 +293,25 @@ body {
     gap: 0.4rem;
     justify-content: flex-start;
     flex-wrap: wrap;
+    box-shadow: none;
   }
 
   .nav-item {
     flex: none;
     flex-direction: row;
     gap: 0.45rem;
-    padding: 0.45rem 0.85rem;
+    padding: 0.5rem 0.95rem;
     border-radius: var(--radius-md);
     font-size: 0.85rem;
-    background: var(--bg-secondary);
+    background: #ffffff;
     border: 1px solid var(--border-subtle);
+    height: auto;
   }
 
   .nav-item.active {
-    background: var(--brand-teal);
+    background: var(--brand-moss);
     color: #ffffff;
-    border-color: var(--brand-teal);
+    border-color: var(--brand-moss);
   }
 
   .nav-item.active .nav-icon {

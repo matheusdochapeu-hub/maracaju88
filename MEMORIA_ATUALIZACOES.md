@@ -3,11 +3,42 @@
 **Data da última consolidação:** `02/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v1.2.0`
+**Versão Atual:** `v1.3.0`
 
 ---
 
 ## Histórico de Versões
+
+### Versão 1.3.0 (`02/11/2026`) — Fotos e Links em Reformas, Novo Visual Verde Musgo Claro & Correções de UX
+1. **Fotos e Links na Aba Reformas (`reformas.js`, `ui.js`, `app.js`):**
+   - **Galeria de Fotos da Reforma:** Anexe fotos do "antes e depois", referências de Pinterest/Instagram ou notas fiscais de materiais tiradas diretamente com a câmera do celular ou da galeria.
+   - **Compressão Automática Client-Side:** Imagens redimensionadas para WebP/JPEG leve de até 800px (~40-70KB) para garantir velocidade instantânea e não sobrecarregar a memória do navegador.
+   - **Visualizador Ampliado:** Clique na miniatura de qualquer foto para abrir o modal de visualização em tela cheia (`modal-photo-viewer`).
+   - **Links e Lojas Externas:** Adicione links para compras e referências (Leroy Merlin, Mercado Livre, tutoriais de DIY no YouTube) com tags clicáveis e botão de exclusão.
+   - **Formulário de Cadastro Expandido:** O modal de nova reforma (`modal-add-reforma`) agora permite incluir fotos e links já no momento do cadastro inicial.
+
+2. **Identidade Visual Verde Musgo Claro & Orgânico Botânico (`variables.css`, `base.css`, `components.css`):**
+   - **Paleta Refinada e Confortável:**
+     - Fundo suave estilo linho/sage claro (`#f4f6f1`) para leitura repousante sob qualquer iluminação.
+     - Cartões em branco puro (`#ffffff`) com contornos sutis de verde musgo (`rgba(46, 89, 51, 0.12)`) e elevação natural.
+     - Cabeçalho superior em gradiente Verde Musgo Nobre profundo (`#1b3820` a `#29532e`) com tipografia branca nítida e detalhes em dourado e verde claro.
+     - Barra de navegação inferior em branco translúcido (`rgba(255, 255, 255, 0.96)`) com desfoque de fundo e realce ativo em verde musgo.
+   - **Tipografia e Contraste:** Textos escuros em tom floresta profunda (`#19331d`) proporcionando legibilidade impecável e atmosfera acolhedora de lar.
+
+3. **Correções Abrangentes de UX (Experiência do Usuário):**
+   - **Espaçamento e Scroll no Mobile:** Ajustado o padding inferior (`calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 20px) + 2rem)`) eliminando o corte de botões e cartões inferiores pela barra de navegação no iPhone e Android.
+   - **Controles Segmentados Touch-Friendly:** Botões de frequência e cômodos com rolagem horizontal suave sem scrollbar visível e áreas de toque mínimas de 44px/48px.
+   - **Checkboxes Gamificados Aperfeiçoados:** Checkbox circular com feedback tátil, animação suave de marcação e efeito de conclusão sutil.
+   - **Cards de Status e Orçamento Mais Claros:** Badges de status coloridos com bordas suaves e caixas de estimativa de custo vs gasto real destacadas.
+   - **Transição Suave nos Modais:** Modais com backdrop blur escurecido suave e cantos arredondados modernos (`var(--radius-xl)`).
+
+4. **Sincronização no Google Sheets (`apps_script.gs`):**
+   - Atualizada a função `syncReformasSheet` para incluir as colunas `Links` e `Qtd Fotos`, mantendo a planilha do casal 100% alinhada com as informações de reformas.
+
+5. **Testes Automatizados:**
+   - Adicionada suíte de testes cobrindo inclusão e remoção de fotos e links em reformas em `test/app.test.js`. 7 testes executando com 100% de aprovação.
+
+---
 
 ### Versão 1.2.0 (`02/11/2026`) — Controle de Acesso Restrito (Matheus & Scarlet)
 1. **Portão de Entrada com Validação de E-mail (`js/auth.js`, `#auth-gate`):**

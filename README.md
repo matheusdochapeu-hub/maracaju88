@@ -35,8 +35,10 @@
 - **Registro Detalhado:** Saiba quem realizou a tarefa, em qual horário e quantos XP foram conquistados.
 - **Mini Calendário de Consistência:** Visualize o percentual de tarefas concluídas nos últimos 7 dias.
 
-### 4. 🔨 Reformas & Melhorias na Casa
+### 4. 🔨 Reformas & Melhorias na Casa (Fotos, Inspirações e Links)
 - **Controle de Projetos:** Registre ideias de melhorias organizadas por status (💡 *Ideia*, 📐 *Em Orçamento*, 🛠️ *Em Andamento*, ✅ *Concluído*).
+- **Fotos e Inspirações:** Anexe fotos do "antes/depois", referências de decoração e notas de materiais tiradas diretamente com a câmera do celular ou da galeria, com compressão automática client-side (~40-70KB) e visualização ampliada.
+- **Links e Lojas:** Adicione links para produtos no Leroy Merlin, Mercado Livre, Pinterest, tutoriais do YouTube ou lojas de materiais de construção.
 - **Controle Orçamentário:** Estimativa de custo (R$) vs Gasto real investido.
 - **Checklist de Etapas:** Subtarefas interativas por projeto.
 

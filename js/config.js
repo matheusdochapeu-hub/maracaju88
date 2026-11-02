@@ -4,7 +4,7 @@
 
 export const APP_CONFIG = {
   appName: "Maracaju 88",
-  version: "1.2.0",
+  version: "1.3.0",
   storageKey: "MARACAJU88_STATE_v1",
   syncIntervalMs: 60000
 };

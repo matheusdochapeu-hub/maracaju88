@@ -1,5 +1,5 @@
 // ============================================================
-//  MARACAJU 88 - APP CONTROLLER PRINCIPAL (v1.2.0)
+//  MARACAJU 88 - APP CONTROLLER PRINCIPAL (v1.3.0)
 // ============================================================
 
 import { loadState, saveState, exportBackupJson, importBackupJson } from './storage.js';
@@ -17,7 +17,15 @@ import {
   toggleCarroChecklistItem,
   compressImageFile
 } from './carro.js';
-import { addReforma, deleteReforma, toggleReformaChecklistItem } from './reformas.js';
+import {
+  addReforma,
+  deleteReforma,
+  toggleReformaChecklistItem,
+  addPhotoToReforma,
+  removePhotoFromReforma,
+  addLinkToReforma,
+  removeLinkFromReforma
+} from './reformas.js';
 import { addSonho, deleteSonho, toggleSonhoMilestone } from './sonhos.js';
 import { testSheetsConnection, backupToSheets, restoreFromSheets } from './sheets.js';
 import {
@@ -678,7 +686,8 @@ function initReformasModule() {
 
   const gridEl = document.getElementById('reformas-grid');
   if (gridEl) {
-    gridEl.addEventListener('change', (e) => {
+    gridEl.addEventListener('change', async (e) => {
+      // Checklist de etapas
       if (e.target.classList.contains('reforma-check-item')) {
         const refId = e.target.getAttribute('data-ref-id');
         const checkId = e.target.getAttribute('data-check-id');
@@ -686,10 +695,83 @@ function initReformasModule() {
         saveState(state);
         playTaskCompleteSound(state.settings.soundEnabled);
         renderReformasTab(state, currentReformasFilter);
+        return;
+      }
+
+      // Adicionar nova foto à reforma
+      if (e.target.classList.contains('input-reforma-add-photo')) {
+        const file = e.target.files[0];
+        const refId = e.target.getAttribute('data-ref-id');
+        if (!file || !refId) return;
+
+        try {
+          showToast('Processando foto da reforma...', 'info', 1800);
+          const compressed = await compressImageFile(file, 800, 0.72);
+          addPhotoToReforma(state, refId, compressed);
+          saveState(state);
+          showToast('Foto anexada à reforma! 📸', 'success');
+          renderReformasTab(state, currentReformasFilter);
+        } catch (err) {
+          showToast(`Erro na foto: ${err.message}`, 'error');
+        }
       }
     });
 
     gridEl.addEventListener('click', (e) => {
+      // Visualizar foto em tamanho ampliado
+      const thumb = e.target.closest('[data-view-photo]');
+      if (thumb && !e.target.classList.contains('carro-thumb-delete')) {
+        const src = thumb.getAttribute('data-view-photo');
+        const modalImg = document.getElementById('photo-viewer-target');
+        if (modalImg && src) {
+          modalImg.src = src;
+          openModal('modal-photo-viewer');
+        }
+        return;
+      }
+
+      // Deletar Foto da Reforma
+      const delPhotoBtn = e.target.closest('[data-del-reforma-photo]');
+      if (delPhotoBtn) {
+        const refId = delPhotoBtn.getAttribute('data-del-reforma-photo');
+        const pIdx = parseInt(delPhotoBtn.getAttribute('data-photo-idx'), 10);
+        if (confirm('Deseja excluir esta foto da reforma?')) {
+          removePhotoFromReforma(state, refId, pIdx);
+          saveState(state);
+          showToast('Foto removida', 'info');
+          renderReformasTab(state, currentReformasFilter);
+        }
+        return;
+      }
+
+      // Adicionar Link à Reforma
+      const addLinkBtn = e.target.closest('[data-add-reforma-link-to]');
+      if (addLinkBtn) {
+        const refId = addLinkBtn.getAttribute('data-add-reforma-link-to');
+        const url = prompt('Cole o endereço do link ou inspiração (ex: Pinterest, Leroy Merlin, YouTube):');
+        if (url && url.trim()) {
+          const title = prompt('Nome ou título do link (ex: Luminária Pendente, Tutorial Instalação):') || url;
+          addLinkToReforma(state, refId, { url, title });
+          saveState(state);
+          showToast('Link adicionado à reforma!', 'success');
+          renderReformasTab(state, currentReformasFilter);
+        }
+        return;
+      }
+
+      // Deletar Link da Reforma
+      const delLinkBtn = e.target.closest('[data-del-reforma-link]');
+      if (delLinkBtn) {
+        const refId = delLinkBtn.getAttribute('data-del-reforma-link');
+        const linkId = delLinkBtn.getAttribute('data-link-id');
+        removeLinkFromReforma(state, refId, linkId);
+        saveState(state);
+        showToast('Link removido', 'info');
+        renderReformasTab(state, currentReformasFilter);
+        return;
+      }
+
+      // Deletar Reforma
       const delBtn = e.target.closest('[data-delete-reforma]');
       if (delBtn) {
         const refId = delBtn.getAttribute('data-delete-reforma');
@@ -702,6 +784,7 @@ function initReformasModule() {
         return;
       }
 
+      // Alterar Status da Reforma
       const statusBtn = e.target.closest('[data-edit-reforma-status]');
       if (statusBtn) {
         const refId = statusBtn.getAttribute('data-edit-reforma-status');
@@ -721,7 +804,7 @@ function initReformasModule() {
 
   const formAddReforma = document.getElementById('form-add-reforma');
   if (formAddReforma) {
-    formAddReforma.addEventListener('submit', (e) => {
+    formAddReforma.addEventListener('submit', async (e) => {
       e.preventDefault();
       const title = document.getElementById('reforma-input-title').value;
       const room = document.getElementById('reforma-input-room').value;
@@ -730,16 +813,50 @@ function initReformasModule() {
       const estimatedCost = document.getElementById('reforma-input-cost').value;
       const targetDate = document.getElementById('reforma-input-date').value;
       const description = document.getElementById('reforma-input-desc').value;
+      const linkUrl = document.getElementById('reforma-input-link-url') ? document.getElementById('reforma-input-link-url').value : '';
+      const linkTitle = document.getElementById('reforma-input-link-title') ? document.getElementById('reforma-input-link-title').value : '';
+      const photoFileInput = document.getElementById('reforma-input-photo');
+      const photoFile = photoFileInput && photoFileInput.files ? photoFileInput.files[0] : null;
 
       if (!title.trim()) return;
 
-      addReforma(state, { title, room, priority, status, estimatedCost, targetDate, description });
+      const links = [];
+      if (linkUrl && linkUrl.trim()) {
+        links.push({
+          id: `lnk_${Date.now()}`,
+          title: (linkTitle && linkTitle.trim()) || 'Inspiração da Reforma',
+          url: linkUrl.trim().startsWith('http') ? linkUrl.trim() : 'https://' + linkUrl.trim()
+        });
+      }
+
+      const photos = [];
+      if (photoFile) {
+        try {
+          const comp = await compressImageFile(photoFile, 800, 0.72);
+          photos.push(comp);
+        } catch (err) {
+          console.warn('Erro ao processar foto inicial da reforma:', err);
+        }
+      }
+
+      addReforma(state, {
+        title,
+        room,
+        priority,
+        status,
+        estimatedCost,
+        targetDate,
+        description,
+        links,
+        photos
+      });
+
       saveState(state);
       triggerAutoSyncIfEnabled();
 
       closeModal('modal-add-reforma');
       formAddReforma.reset();
-      showToast('Reforma cadastrada!', 'success');
+      showToast('Reforma cadastrada com fotos e links! 🛠️', 'success');
       refreshAllUI();
     });
   }

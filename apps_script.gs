@@ -312,10 +312,16 @@ function syncCarroSheet(ss, carro) {
 function syncReformasSheet(ss, reformas) {
   var sheet = getOrCreateSheet(ss, "Reformas");
   sheet.clear();
-  var headers = ["ID", "Projeto / Melhoria", "Cômodo", "Prioridade", "Status", "Estimativa (R$)", "Gasto Real (R$)", "Data Alvo", "Descrição"];
+  var headers = ["ID", "Projeto / Melhoria", "Cômodo", "Prioridade", "Status", "Estimativa (R$)", "Gasto Real (R$)", "Data Alvo", "Links", "Qtd Fotos", "Descrição"];
   var rows = [headers];
 
   reformas.forEach(function(r) {
+    var linksStr = "";
+    if (r.links && r.links.length > 0) {
+      linksStr = r.links.map(function(l) { return (l.title || "Link") + ": " + l.url; }).join(" | ");
+    }
+    var photosCount = (r.photos && r.photos.length) ? r.photos.length : 0;
+
     rows.push([
       r.id || "",
       r.title || "",
@@ -325,16 +331,18 @@ function syncReformasSheet(ss, reformas) {
       r.estimatedCost || 0,
       r.actualCost || 0,
       r.targetDate || "",
+      linksStr,
+      photosCount,
       r.description || ""
     ]);
   });
 
   if (rows.length === 1) {
-    rows.push(["-", "Nenhuma reforma cadastrada ainda", "-", "-", "-", 0, 0, "-", "-"]);
+    rows.push(["-", "Nenhuma reforma cadastrada ainda", "-", "-", "-", 0, 0, "-", "-", 0, "-"]);
   }
 
   sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
-  sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#d97706").setFontColor("#ffffff");
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#2e5933").setFontColor("#ffffff");
   sheet.setFrozenRows(1);
   for (var col = 1; col <= headers.length; col++) {
     sheet.autoResizeColumn(col);

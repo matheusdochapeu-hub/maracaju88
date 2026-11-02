@@ -585,6 +585,8 @@ export function renderReformasTab(state, statusFilter = 'todas') {
 
   gridEl.innerHTML = list.map(ref => {
     const checklist = ref.checklist || [];
+    const photos = ref.photos || [];
+    const links = ref.links || [];
     const doneChecks = checklist.filter(c => c.done).length;
     const checkPercent = checklist.length > 0 ? Math.round((doneChecks / checklist.length) * 100) : 0;
 
@@ -598,7 +600,7 @@ export function renderReformasTab(state, statusFilter = 'todas') {
           <h3 style="font-size: 1.05rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.4rem;">${ref.title}</h3>
           ${ref.description ? `<p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">${ref.description}</p>` : ''}
           
-          <div style="background: var(--bg-secondary); padding: 0.6rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem; font-size: 0.8rem; display: flex; justify-content: space-between;">
+          <div style="background: var(--bg-tertiary); padding: 0.6rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem; font-size: 0.8rem; display: flex; justify-content: space-between;">
             <div>
               <span style="color: var(--text-muted);">Estimado:</span>
               <strong>R$ ${ref.estimatedCost.toLocaleString('pt-BR')}</strong>
@@ -607,6 +609,51 @@ export function renderReformasTab(state, statusFilter = 'todas') {
               <span style="color: var(--text-muted);">Gasto:</span>
               <strong style="color: var(--success);">R$ ${ref.actualCost.toLocaleString('pt-BR')}</strong>
             </div>
+          </div>
+
+          <!-- Galeria de Fotos da Reforma / Inspirações -->
+          <div style="margin-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+              <span style="font-weight: 600;">📷 Fotos e Inspirações (${photos.length})</span>
+              <label class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.725rem; cursor: pointer; margin-bottom: 0;">
+                + Foto
+                <input type="file" accept="image/*" capture="environment" class="input-reforma-add-photo" data-ref-id="${ref.id}" style="display: none;" />
+              </label>
+            </div>
+            ${photos.length > 0 ? `
+              <div class="carro-photos-container">
+                ${photos.map((src, pIdx) => `
+                  <div class="carro-thumb-wrapper" data-view-photo="${src}">
+                    <img src="${src}" alt="Foto ${ref.title}" class="carro-thumb-img" />
+                    <button class="carro-thumb-delete" data-del-reforma-photo="${ref.id}" data-photo-idx="${pIdx}" title="Excluir foto">✕</button>
+                  </div>
+                `).join('')}
+              </div>
+            ` : `
+              <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Nenhuma foto anexada. Tire uma foto ou escolha da galeria.</div>
+            `}
+          </div>
+
+          <!-- Links de Inspirações / Peças / Materiais -->
+          <div style="margin-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+              <span style="font-weight: 600;">🔗 Links e Lojas (${links.length})</span>
+              <button class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.725rem;" data-add-reforma-link-to="${ref.id}">+ Link</button>
+            </div>
+            ${links.length > 0 ? `
+              <div class="carro-links-list">
+                ${links.map(l => `
+                  <span class="carro-link-chip">
+                    <a href="${l.url}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">
+                      🔗 ${l.title}
+                    </a>
+                    <button class="carro-link-delete" data-del-reforma-link="${ref.id}" data-link-id="${l.id}" title="Remover link">✕</button>
+                  </span>
+                `).join('')}
+              </div>
+            ` : `
+              <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Nenhum link adicionado.</div>
+            `}
           </div>
 
           ${checklist.length > 0 ? `

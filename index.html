@@ -6,7 +6,7 @@
   <title>Maracaju 88 - Gestão do Lar do Casal</title>
   
   <!-- PWA Meta Tags -->
-  <meta name="theme-color" content="#1e293b" />
+  <meta name="theme-color" content="#1b3820" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Maracaju 88" />
@@ -647,6 +647,21 @@
           <label class="form-label">Previsão / Data Alvo</label>
           <input type="date" id="reforma-input-date" class="form-control" />
         </div>
+
+        <div class="form-group">
+          <label class="form-label">Link de Inspiração ou Loja (Opcional)</label>
+          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 0.5rem;">
+            <input type="text" id="reforma-input-link-title" class="form-control" placeholder="Título (ex: Pinterest, Leroy)" />
+            <input type="url" id="reforma-input-link-url" class="form-control" placeholder="https://..." />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Foto de Referência / Antes da Reforma (Opcional)</label>
+          <input type="file" id="reforma-input-photo" class="form-control" accept="image/*" capture="environment" />
+          <span style="font-size: 0.7rem; color: var(--text-muted);">Tire foto com a câmera ou escolha da galeria. Você também pode anexar mais fotos direto no card depois.</span>
+        </div>
+
         <div class="form-group">
           <label class="form-label">Descrição & Inspirações</label>
           <textarea id="reforma-input-desc" class="form-control" rows="3" placeholder="Detalhes de materiais, medidas, referências"></textarea>
