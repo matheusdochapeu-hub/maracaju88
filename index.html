@@ -18,11 +18,21 @@
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
   <link rel="shortcut icon" href="./favicon.ico" />
 
-  <!-- Stylesheets -->
-  <link rel="stylesheet" href="./css/variables.css" />
-  <link rel="stylesheet" href="./css/base.css" />
-  <link rel="stylesheet" href="./css/components.css" />
-  <link rel="stylesheet" href="./css/animations.css" />
+  <!-- Auto-update PWA e escape de cache -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        console.log('[Maracaju] Nova versão detectada. Atualizando tela...');
+        window.location.reload();
+      });
+    }
+  </script>
+
+  <!-- Stylesheets (v2.0.2) -->
+  <link rel="stylesheet" href="./css/variables.css?v=2.0.2" />
+  <link rel="stylesheet" href="./css/base.css?v=2.0.2" />
+  <link rel="stylesheet" href="./css/components.css?v=2.0.2" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.0.2" />
 </head>
 <body>
 
@@ -106,8 +116,11 @@
         </button>
       </form>
 
-      <div class="auth-footer">
-        🔒 Acesso seguro: Seus dados são mantidos no seu aparelho e sincronizados com a planilha Google do casal.
+      <div class="auth-footer" style="display: flex; flex-direction: column; gap: 0.6rem; align-items: center;">
+        <span>🔒 Acesso seguro: Seus dados são mantidos no seu aparelho e sincronizados com a planilha Google do casal.</span>
+        <button type="button" id="btn-force-update-login" style="background: none; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem; color: var(--brand-moss); font-size: 0.75rem; cursor: pointer; text-decoration: none;">
+          🔄 App desatualizado ou travado? Toque para Limpar Cache e Atualizar (v2.0.2)
+        </button>
       </div>
     </div>
   </div>
@@ -526,6 +539,17 @@
               <input type="file" id="input-import-json" accept=".json" style="display: none;" />
             </label>
           </div>
+        </div>
+
+        <!-- Manutenção & Atualização do Aplicativo -->
+        <div class="dash-card">
+          <h3 class="dash-title" style="margin-bottom: 0.75rem;">📲 Atualização do Aplicativo</h3>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            Versão instalada: <strong>Maracaju v2.0.2</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
+          </p>
+          <button type="button" id="btn-force-update-settings" class="btn btn-secondary btn-sm" onclick="window.forceUpdateApp && window.forceUpdateApp()">
+            🔄 Limpar Cache e Forçar Atualização
+          </button>
         </div>
 
         <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
@@ -1192,7 +1216,7 @@
     </div>
   </div>
 
-  <!-- Script Principal Modular -->
-  <script type="module" src="./js/app.js"></script>
+  <!-- Script Principal Modular (v2.0.2) -->
+  <script type="module" src="./js/app.js?v=2.0.2"></script>
 </body>
 </html>

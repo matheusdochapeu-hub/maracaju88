@@ -3,13 +3,23 @@
 **Data da última consolidação:** `04/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v2.0.1`
+**Versão Atual:** `v2.0.2`
 
 ---
 
 ## Histórico de Versões
 
-### Versão 2.0.1 (`04/11/2026`) — Correção Crítica de Acesso no Celular & Estratégia de Cache PWA
+### Versão 2.0.2 (`04/11/2026`) — Resolução Definitiva de Travamento Mobile, Auto-Update de Cache PWA e Fallback Retroativo
+1. **Eliminação dos Erros Sintáticos e de Renderização:**
+   - **Correção de Exportações em `config.js`:** Restauradas as exportações retrocompatíveis `ROOMS`, `EFFORT_LEVELS`, `LEVELS`, `BADGES` e `CARRO_CATEGORIES`, eliminando o erro fatal `Uncaught SyntaxError: The requested module './config.js' does not provide an export named 'BADGES'` que impedia o carregamento de qualquer script e congelava o app no celular.
+   - **Correção no Mecanismo de Confetti (`CanvasRenderingContext2D.ellipse`):** Corrigido o cálculo de raio horizontal e vertical em `js/ui.js` com `Math.abs()`, prevenindo o erro `IndexSizeError: The minor-axis radius provided is negative` que abortava silenciosamente a conclusão do login e travava a interface.
+   - **Exportação de Fallback em `ui.js`:** Adicionado fallback `renderGamificationTab()` em `ui.js` para garantir compatibilidade caso algum cliente mobile ainda possua partes de scripts anteriores em cache.
+
+2. **Purga Forçada de Cache & Mecanismo de Auto-Update:**
+   - **Service Worker v2.0.2 com Network-First para Código:** `sw.js` atualizado para buscar HTML (`index.html`), scripts (`.js`) e folhas de estilo (`.css`) sempre via **Network-First**, garantindo que dispositivos conectados recebam a versão atual instantaneamente e usem o cache apenas como contingência offline.
+   - **Purga Ativa de Caches Antigos:** Evento `activate` do Service Worker descarta imediatamente qualquer cache de versões legadas (`maracaju-v1.3.3`, `maracaju-v2.0.0`, `maracaju-v2.0.1`).
+   - **Auto-Reload via `controllerchange`:** Injetado listener nativo no `<head>` do `index.html` que detecta a ativação do novo Service Worker e recarrega a página automaticamente no celular.
+   - **Botões de Escape de Cache:** Adicionado atalho de "Limpar Cache e Atualizar" na tela de login (`auth-gate`) e na aba de Ajustes (`window.forceUpdateApp()`), permitindo reset total e download imediato do app limpo caso o navegador do celular tenha guardado cache estático.
 1. **Desbloqueio Imediato e Acesso sem Travamento:**
    - **Correção da Sessão Legada:** Adicionada verificação de chaves de autenticação de versões anteriores (`MARACAJU88_AUTH_USER_v1` e `MARACAJU_AUTH_USER_v1`) no `localStorage`. Dispositivos que já estavam conectados continuam com a sessão ativa sem deslogar.
    - **Acesso em 1 Toque Restaurado:** Tocar no perfil de **Matheus** ou **Scarlet** na tela de login realiza a entrada direta instantânea caso o usuário ainda não tenha definido uma senha pessoal em Ajustes.

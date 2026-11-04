@@ -325,7 +325,36 @@ function refreshAllUI() {
 // -------------------------------------------------------------
 // PWA SERVICE WORKER & INSTALAÇÃO FACILITADA
 // -------------------------------------------------------------
+window.forceUpdateApp = async function() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        await reg.unregister();
+      }
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      for (const key of keys) {
+        await caches.delete(key);
+      }
+    }
+  } catch (e) {
+    console.error('[Maracaju] Erro ao limpar caches:', e);
+  } finally {
+    window.location.reload();
+  }
+};
+
 function initServiceWorker() {
+  const forceUpdateBtn = document.getElementById('btn-force-update-login');
+  if (forceUpdateBtn) {
+    forceUpdateBtn.addEventListener('click', () => {
+      forceUpdateBtn.textContent = '⏳ Atualizando...';
+      window.forceUpdateApp();
+    });
+  }
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')

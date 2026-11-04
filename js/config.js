@@ -4,7 +4,7 @@
 
 export const APP_CONFIG = {
   appName: "Maracaju",
-  version: "2.0.0",
+  version: "2.0.2",
   storageKey: "MARACAJU_STATE_v1",
   legacyStorageKeys: ["MARACAJU88_STATE_v1"],
   deviceStorageKey: "MARACAJU_DEVICE_v1",
@@ -38,6 +38,38 @@ export const FREQUENCIES = [
   { id: "semanal", label: "Semanais", single: "Semanal", icon: "📅", period: "esta semana" },
   { id: "mensal", label: "Mensais", single: "Mensal", icon: "🗓️", period: "este mês" },
   { id: "anual", label: "Anuais", single: "Anual", icon: "🎯", period: "este ano" }
+];
+
+// Compatibilidade retroativa com versões e telas legadas
+export const ROOMS = [
+  { id: "cozinha", label: "Cozinha", icon: "🍳" },
+  { id: "sala", label: "Sala", icon: "🛋️" },
+  { id: "quartos", label: "Quartos", icon: "🛏️" },
+  { id: "banheiros", label: "Banheiros", icon: "🚿" },
+  { id: "lavanderia", label: "Lavanderia", icon: "🧺" },
+  { id: "cuidados", label: "Cuidados", icon: "🪴" },
+  { id: "garagem", label: "Garagem", icon: "🚗" }
+];
+
+export const EFFORT_LEVELS = {
+  leve: { label: "Leve", xp: 10, icon: "⚡" },
+  media: { label: "Média", xp: 25, icon: "⚡⚡" },
+  pesada: { label: "Pesada", xp: 50, icon: "⚡⚡⚡" }
+};
+
+export const LEVELS = [
+  { level: 1, minXp: 0, title: "Iniciantes do Lar", icon: "🌱" }
+];
+
+export const BADGES = [];
+
+export const CARRO_CATEGORIES = [
+  { id: "oleo_revisao", label: "Revisão & Óleo", icon: "🛢️" },
+  { id: "mecanica", label: "Mecânica Geral", icon: "🔧" },
+  { id: "pneus_freios", label: "Pneus & Freios", icon: "🛞" },
+  { id: "estetica", label: "Estética & Lavagem", icon: "✨" },
+  { id: "eletrica", label: "Elétrica & Acessórios", icon: "🔌" },
+  { id: "outros", label: "Outros", icon: "📦" }
 ];
 
 export const ASSIGNEES = [

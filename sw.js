@@ -2,7 +2,7 @@
 //  MARACAJU - SERVICE WORKER (PWA Offline Cache)
 // ============================================================
 
-const CACHE_NAME = 'maracaju-v2.0.1';
+const CACHE_NAME = 'maracaju-v2.0.2';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -41,7 +41,6 @@ const ASSETS_TO_CACHE = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Faz o cache resiliente: se algum asset opcional falhar, não aborta a instalação do SW
       return Promise.all(
         ASSETS_TO_CACHE.map((url) => {
           return cache.add(url).catch((err) => {
@@ -59,6 +58,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[SW] Purgando cache antigo:', key);
             return caches.delete(key);
           }
         })
@@ -75,9 +75,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Para navegações principais (carregar a página HTML): Network First, fallback Cache
-  // Isso garante que celulares sempre peguem a versão mais recente após atualizações
-  if (event.request.mode === 'navigate') {
+  // 1. Para navegações e documentos HTML: Network First, fallback Cache
+  const isDocument = event.request.mode === 'navigate' ||
+                     event.request.destination === 'document' ||
+                     url.pathname.endsWith('/') ||
+                     url.pathname.endsWith('.html');
+
+  if (isDocument) {
     event.respondWith(
       fetch(event.request)
         .then((networkResponse) => {
@@ -94,17 +98,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Requisições para assets do app: Cache First, fallback Network
+  // 2. Para arquivos de código (JS e CSS): Network First, fallback Cache
+  // Garante que o celular receba a versão mais recente imediatamente quando online
+  const isCode = url.pathname.endsWith('.js') || url.pathname.endsWith('.css');
+  if (isCode) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // 3. Demais assets (ícones, imagens): Cache First, fallback Network
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Atualiza o cache em background (Stale While Revalidate)
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-          }
-        }).catch(() => {/* Offline */});
-
         return cachedResponse;
       }
 
@@ -119,9 +136,7 @@ self.addEventListener('fetch', (event) => {
         });
 
         return networkResponse;
-      }).catch(() => {
-        return null;
-      });
+      }).catch(() => null);
     })
   );
 });

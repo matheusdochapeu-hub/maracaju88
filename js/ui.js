@@ -65,7 +65,9 @@ export function triggerConfetti() {
         ctx.beginPath();
         ctx.fillStyle = p.color;
         ctx.globalAlpha = Math.max(0, p.life);
-        ctx.ellipse(p.x, p.y, p.r, p.r * Math.sin(p.tilt), p.tilt, 0, Math.PI * 2);
+        const radiusX = Math.max(0.1, Math.abs(p.r));
+        const radiusY = Math.max(0.1, Math.abs(p.r * Math.sin(p.tilt)));
+        ctx.ellipse(p.x, p.y, radiusX, radiusY, p.tilt, 0, Math.PI * 2);
         ctx.fill();
       }
     });
