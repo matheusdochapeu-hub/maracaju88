@@ -35,7 +35,13 @@ import {
   addLinkToReforma,
   removeLinkFromReforma
 } from '../js/reformas.js';
-import { addSonho, getSonhosSummary, toggleSonhoMilestone } from '../js/sonhos.js';
+import {
+  addSonho,
+  getSonhosSummary,
+  toggleSonhoMilestone,
+  addPhotoToSonho,
+  removePhotoFromSonho
+} from '../js/sonhos.js';
 import {
   normalizeEmail,
   findAuthorizedUser,
@@ -49,7 +55,11 @@ import {
   toggleShoppingItem,
   getShoppingSummary,
   addMarketPurchase,
-  getMarketPurchasesByMonth
+  getMarketPurchasesByMonth,
+  addPhotoToShoppingItem,
+  removePhotoFromShoppingItem,
+  addPhotoToMarketPurchase,
+  removePhotoFromMarketPurchase
 } from '../js/shopping.js';
 import {
   parseNfceQrCodeText,
@@ -117,15 +127,27 @@ test('Mercado: Lista de Compras do Mês (adicionar itens, marcar comprado, totai
   assert.equal(i1.bought, false);
   assert.equal(i1.addedBy, 'matheus');
 
-  // 2. Scarlet adiciona outro item
+  // 2. Scarlet adiciona outro item usando title e quantity
   const { item: i2 } = addShoppingItem(state, {
-    name: 'Detergente neutro',
-    qty: '2 un',
+    title: 'Detergente neutro',
+    quantity: '2 un',
     category: 'limpeza',
     price: '5,98'
   }, 'scarlet');
 
   assert.equal(state.compras.length, 2);
+  assert.equal(i2.name, 'Detergente neutro');
+  assert.equal(i2.title, 'Detergente neutro');
+  assert.equal(i2.qty, '2 un');
+
+  // Fotos no item de lista de mercado
+  assert.ok(Array.isArray(i2.photos));
+  const photoAdded = addPhotoToShoppingItem(state, i2.id, "data:image/jpeg;base64,mockfotoitem");
+  assert.equal(photoAdded, true);
+  assert.equal(i2.photos.length, 1);
+  const photoRemoved = removePhotoFromShoppingItem(state, i2.id, 0);
+  assert.equal(photoRemoved, true);
+  assert.equal(i2.photos.length, 0);
 
   // 3. Resumo da lista
   let summary = getShoppingSummary(state);
@@ -170,6 +192,15 @@ test('Mercado: Registro de Notas Fiscais (NFC-e QR Code, data da compra e separa
 
   assert.equal(purchase1.total, 264.33);
   assert.equal(purchase1.monthKey, '2026-11');
+
+  // Fotos na compra/nota fiscal
+  assert.ok(Array.isArray(purchase1.photos));
+  const photoAdded = addPhotoToMarketPurchase(state, purchase1.id, "data:image/jpeg;base64,mockfotonfce");
+  assert.equal(photoAdded, true);
+  assert.equal(purchase1.photos.length, 1);
+  const photoRemoved = removePhotoFromMarketPurchase(state, purchase1.id, 0);
+  assert.equal(photoRemoved, true);
+  assert.equal(purchase1.photos.length, 0);
 
   // 3. Registrar outra compra no mês anterior (Outubro)
   addMarketPurchase(state, {
@@ -376,6 +407,15 @@ test('Sonhos: Adicionar sonho do casal, marcos e metas', () => {
 
   const isDone = toggleSonhoMilestone(state, s.id, "m1");
   assert.equal(isDone, true);
+
+  // Fotos no sonho
+  assert.ok(Array.isArray(s.photos));
+  const photoAdded = addPhotoToSonho(state, s.id, "data:image/jpeg;base64,mockfotosonho");
+  assert.equal(photoAdded, true);
+  assert.equal(s.photos.length, 1);
+  const photoRemoved = removePhotoFromSonho(state, s.id, 0);
+  assert.equal(photoRemoved, true);
+  assert.equal(s.photos.length, 0);
 
   const summary = getSonhosSummary(state);
   assert.equal(summary.count, 1);

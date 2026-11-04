@@ -4,6 +4,52 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-04 17:47] - Remoção do Histórico, Mercado ao lado de Tarefas, Correção da Lista de Compras e Fotos com Câmera/Galeria (v2.0.3)
+
+### 🔍 Problemas Identificados & Causa Raiz
+1. **Aba "Histórico" Obsoleta e Poluição de Navegação Mobile:**
+   - **Causa Raiz:** A aba Histórico ocupava espaço valioso na barra inferior (7 itens), reduzindo o alvo de toque em telas menores de celular, e tornou-se desnecessária após as melhorias na aba Tarefas.
+2. **Item da Lista de Mercado Não Salvava:**
+   - **Causa Raiz:** No modal `form-add-shopping-item`, o formulário lia `shopping-input-title` e passava `{ title, quantity, category, price, ... }`, enquanto `addShoppingItem()` em `js/shopping.js` validava exclusivamente `data.name`. Como `data.name` era `undefined`, disparava a exceção não tratada `Error: Digite o nome do item a comprar`, abortando o salvamento antes de persistir no estado.
+3. **Fotos Restritas e Ausência de Abertura Direta da Câmera:**
+   - **Causa Raiz:** Somente módulos como Carro e Reformas possuíam upload de foto genérico (sem `capture="environment"` para abrir a câmera do celular com 1 toque) e Sonhos e Mercado (itens e notas fiscais) não permitiam fotos.
+4. **Posicionamento da Aba Mercado:**
+   - **Causa Raiz:** A aba Mercado ficava após Sonhos e Histórico, quando a preferência do casal era que ficasse imediatamente à direita da aba Tarefas.
+
+---
+
+### 🛠️ Correções Implementadas
+1. **Remoção Total da Aba "Histórico":**
+   - Removido o botão de navegação `nav-item[data-tab="historico"]` e a seção `#tab-historico` do DOM.
+   - A barra de navegação agora possui 6 abas bem dimensionadas e confortáveis para o polegar no mobile.
+2. **Reorganização de Abas (Mercado ao Lado de Tarefas):**
+   - Posicionada a aba `🛒 Mercado` (`data-tab="compras"`) imediatamente à direita de `🧹 Tarefas` na barra inferior e no DOM.
+3. **Correção do Salvamento de Itens na Lista de Mercado:**
+   - Normalizados `addShoppingItem` e `updateShoppingItem` em `js/shopping.js` para aceitar `title` ou `name`, `qty` ou `quantity`, preenchendo ambos no registro.
+   - Adicionado tratamento de erro defensivo (`try/catch`) com toasts claros em `form-add-shopping-item` e `form-edit-shopping-item`.
+4. **Sistema Unificado de Fotos (Câmera Nativa + Galeria):**
+   - Implementados botões duplos `📸 Câmera` (`capture="environment"`) e `🖼️ Galeria` em todos os 4 módulos:
+     - **Mercado:** Fotos em itens da lista de compras e em recibos/notas fiscais de compras mensais.
+     - **Reformas:** Fotos de projetos e antes/depois.
+     - **Carro:** Fotos de manutenções e peças.
+     - **Sonhos:** Fotos de referências e inspirações para metas do casal.
+   - Suporte a compressão automática no cliente (`compressImageFile` a 800px) para não sobrecarregar o `localStorage`, visualizador modal em tela cheia e exclusão individual.
+5. **Atualização de Cache PWA e Versionamento:**
+   - Atualizado para `v2.0.3` em `sw.js` (`maracaju-v2.0.3`), `APP_CONFIG.version` e `index.html`.
+
+---
+
+### 🧪 Validação Automatizada
+- **Testes Unitários:** `node --test test/**/*.test.js` aprovado com 14/14 testes.
+- **Testes E2E Headless Chrome (CDP):**
+  - Confirmação de 6 abas na barra inferior (`tarefas`, `compras`, `carro`, `reformas`, `sonhos`, `ajustes`).
+  - Ausência total da aba `historico` e `placar`.
+  - Inclusão com sucesso de item de compras na lista via DOM e renderização imediata.
+  - Validação da presença dos inputs com câmera (`capture="environment"`) e galeria.
+  - Zero erros ou exceções no console do navegador.
+
+---
+
 ## [2026-11-04 17:26] - Revisão e Correção Automática (/revisar)
 
 ### 🔍 Problemas Identificados & Causa Raiz
@@ -55,8 +101,8 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 ### 🧠 Regras & Decisões Aprendidas (Para Próximos Chats)
 1. **Nome do Aplicativo:**
    - O nome oficial e estrito é **Maracaju**. **NUNCA** reintroduzir "Maracaju 88" ou "Nosso Lar" na interface ou nos textos visíveis.
-2. **Gamificação:**
-   - A gamificação (placar, badges, streak, níveis) foi deliberadamente descontinuada a pedido do casal. O app agora foca em utilidade prática: Tarefas, Histórico, Carro, Reformas, Sonhos, Mercado e Ajustes. Não reintroduzir a aba Placar.
+2. **Gamificação e Abas Removidas:**
+   - A gamificação (placar, badges, streak, níveis) e a antiga aba "Histórico" foram deliberadamente descontinuadas a pedido do casal. O app agora foca em utilidade prática com 6 abas principais: **Tarefas**, **Mercado** (ao lado de tarefas), **Carro**, **Reformas**, **Sonhos** e **Ajustes**. Não reintroduzir Placar nem Histórico.
 3. **Estratégia de Cache PWA:**
    - Arquivos `.js`, `.css` e `.html` **DEVEM** sempre seguir a estratégia Network-First no Service Worker com fallback de cache. Qualquer mudança estrutural deve incrementar `CACHE_NAME` no `sw.js` e a query string `?v=...` no `index.html`.
 4. **Valores Decimais Quebrados:**

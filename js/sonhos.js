@@ -22,11 +22,27 @@ export function addSonho(state, data) {
     savedAmount: parseCurrency(data.savedAmount),
     targetDate: data.targetDate || '',
     description: (data.description || '').trim(),
+    photos: Array.isArray(data.photos) ? data.photos : [],
     milestones: Array.isArray(data.milestones) ? data.milestones : [],
     createdAt: new Date().toISOString()
   };
   list(state).push(sonho);
   return sonho;
+}
+
+export function addPhotoToSonho(state, id, photoUrl) {
+  const item = list(state).find(s => s.id === id);
+  if (!item) return false;
+  if (!Array.isArray(item.photos)) item.photos = [];
+  item.photos.push(photoUrl);
+  return true;
+}
+
+export function removePhotoFromSonho(state, id, index) {
+  const item = list(state).find(s => s.id === id);
+  if (!item || !Array.isArray(item.photos) || index < 0 || index >= item.photos.length) return false;
+  item.photos.splice(index, 1);
+  return true;
 }
 
 export function updateSonho(state, id, data) {

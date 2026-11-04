@@ -497,10 +497,16 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
           <div style="margin-bottom: 0.65rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">
               <span>📷 Fotos da Peça / Manutenção (${photos.length})</span>
-              <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;">
-                + Foto
-                <input type="file" accept="image/*" capture="environment" class="input-carro-add-photo" data-car-id="${item.id}" style="display: none;" />
-              </label>
+              <div style="display: flex; gap: 0.35rem;">
+                <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;" title="Bater foto com a câmera do celular">
+                  📸 Câmera
+                  <input type="file" accept="image/*" capture="environment" class="input-carro-add-photo" data-car-id="${item.id}" style="display: none;" />
+                </label>
+                <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;" title="Escolher foto da galeria">
+                  🖼️ Galeria
+                  <input type="file" accept="image/*" class="input-carro-add-photo" data-car-id="${item.id}" style="display: none;" />
+                </label>
+              </div>
             </div>
             ${photos.length > 0 ? `
               <div class="carro-photos-container">
@@ -679,10 +685,16 @@ export function renderReformasTab(state, statusFilter = 'todas', categoryFilter 
           <div style="margin-bottom: 0.75rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">
               <span style="font-weight: 600;">📷 Fotos e Inspirações (${photos.length})</span>
-              <label class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.725rem; cursor: pointer; margin-bottom: 0;">
-                + Foto
-                <input type="file" accept="image/*" capture="environment" class="input-reforma-add-photo" data-ref-id="${ref.id}" style="display: none;" />
-              </label>
+              <div style="display: flex; gap: 0.35rem;">
+                <label class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.725rem; cursor: pointer; margin-bottom: 0;" title="Bater foto com a câmera do celular">
+                  📸 Câmera
+                  <input type="file" accept="image/*" capture="environment" class="input-reforma-add-photo" data-ref-id="${ref.id}" style="display: none;" />
+                </label>
+                <label class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.725rem; cursor: pointer; margin-bottom: 0;" title="Escolher foto da galeria">
+                  🖼️ Galeria
+                  <input type="file" accept="image/*" class="input-reforma-add-photo" data-ref-id="${ref.id}" style="display: none;" />
+                </label>
+              </div>
             </div>
             ${photos.length > 0 ? `
               <div class="carro-photos-container">
@@ -862,6 +874,35 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
               </div>
             </div>
           ` : ''}
+
+          <!-- Fotos & Inspirações do Sonho -->
+          <div style="margin-top: 0.75rem; border-top: 1px solid var(--border-subtle); padding-top: 0.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+              <span style="font-weight: 600;">✨ Fotos e Inspirações (${(sonho.photos || []).length})</span>
+              <div style="display: flex; gap: 0.35rem;">
+                <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;" title="Bater foto com a câmera do celular">
+                  📸 Câmera
+                  <input type="file" accept="image/*" capture="environment" class="input-sonho-add-photo" data-sonho-id="${sonho.id}" style="display: none;" />
+                </label>
+                <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;" title="Escolher foto da galeria">
+                  🖼️ Galeria
+                  <input type="file" accept="image/*" class="input-sonho-add-photo" data-sonho-id="${sonho.id}" style="display: none;" />
+                </label>
+              </div>
+            </div>
+            ${(sonho.photos && sonho.photos.length > 0) ? `
+              <div class="carro-photos-container">
+                ${sonho.photos.map((src, pIdx) => `
+                  <div class="carro-thumb-wrapper" data-view-photo="${src}">
+                    <img src="${src}" alt="Foto ${sonho.title}" class="carro-thumb-img" />
+                    <button class="carro-thumb-delete" data-del-sonho-photo="${sonho.id}" data-photo-idx="${pIdx}" title="Excluir foto">✕</button>
+                  </div>
+                `).join('')}
+              </div>
+            ` : `
+              <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">Nenhuma foto anexada. Adicione fotos de lugares, referências ou metas!</div>
+            `}
+          </div>
         </div>
 
         <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; margin-top: 0.5rem;">
@@ -973,14 +1014,38 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
                 <input type="checkbox" class="shopping-checkbox" data-id="${item.id}" ${item.bought ? 'checked' : ''} />
               </label>
               <div class="shopping-info">
-                <span class="shopping-title">${item.title}</span>
+                <span class="shopping-title">${item.title || item.name}</span>
                 <div class="shopping-meta">
                   <span class="tag-room">${catObj.icon} ${catObj.label}</span>
-                  ${item.quantity ? `<span class="shopping-qty-pill">${item.quantity}</span>` : ''}
+                  ${(item.quantity || item.qty) ? `<span class="shopping-qty-pill">${item.quantity || item.qty}</span>` : ''}
                   ${item.price > 0 ? `<span class="shopping-price-tag">${formatCurrencyWithSymbol(item.price)}</span>` : ''}
                   <span style="color: var(--text-muted); font-size: 0.75rem;">${userLabel}</span>
                 </div>
                 ${item.notes ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">${item.notes}</div>` : ''}
+
+                <!-- Fotos / Embalagem do Produto -->
+                <div style="margin-top: 0.4rem;">
+                  <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--text-muted);">
+                    <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Bater foto do item ou embalagem com a câmera">
+                      📸 Câmera
+                      <input type="file" accept="image/*" capture="environment" class="input-shopping-add-photo" data-shopping-id="${item.id}" style="display: none;" />
+                    </label>
+                    <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Escolher foto da galeria">
+                      🖼️ Galeria
+                      <input type="file" accept="image/*" class="input-shopping-add-photo" data-shopping-id="${item.id}" style="display: none;" />
+                    </label>
+                  </div>
+                  ${(item.photos && item.photos.length > 0) ? `
+                    <div class="carro-photos-container" style="margin-top: 0.25rem;">
+                      ${item.photos.map((src, pIdx) => `
+                        <div class="carro-thumb-wrapper" style="width: 58px; height: 58px;" data-view-photo="${src}">
+                          <img src="${src}" alt="Foto ${item.title || item.name}" class="carro-thumb-img" />
+                          <button class="carro-thumb-delete" data-del-shopping-photo="${item.id}" data-photo-idx="${pIdx}" title="Excluir foto">✕</button>
+                        </div>
+                      `).join('')}
+                    </div>
+                  ` : ''}
+                </div>
               </div>
             </div>
             <div class="task-actions" style="display: flex; gap: 0.25rem; align-items: center;">
@@ -1019,16 +1084,40 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
             <div class="month-purchases-list">
               ${group.purchases.map(p => `
                 <div class="market-receipt-row" data-purchase-id="${p.id}">
-                  <div class="market-receipt-info">
+                  <div class="market-receipt-info" style="flex: 1;">
                     <div class="market-receipt-name">🛒 ${p.marketName || 'Supermercado'}</div>
                     <div class="market-receipt-meta">
                       <span>📅 ${p.date || 'Data da compra'}</span>
                       ${p.items && p.items.length ? `<span>• ${p.items.length} itens</span>` : ''}
-                      ${p.accessKey ? `<span style="font-size: 0.7rem; color: var(--text-muted);" title="${p.accessKey}">Chave: ${p.accessKey.slice(0, 10)}...</span>` : ''}
+                      ${(p.nfeKey || p.accessKey) ? `<span style="font-size: 0.7rem; color: var(--text-muted);" title="${p.nfeKey || p.accessKey}">Chave: ${(p.nfeKey || p.accessKey).slice(0, 10)}...</span>` : ''}
+                    </div>
+
+                    <!-- Fotos do Cupom / Comprovante -->
+                    <div style="margin-top: 0.35rem;">
+                      <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--text-muted);">
+                        <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Bater foto do cupom fiscal ou recibo">
+                          📸 Câmera
+                          <input type="file" accept="image/*" capture="environment" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
+                        </label>
+                        <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Escolher foto da galeria">
+                          🖼️ Galeria
+                          <input type="file" accept="image/*" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
+                        </label>
+                      </div>
+                      ${(p.photos && p.photos.length > 0) ? `
+                        <div class="carro-photos-container" style="margin-top: 0.25rem;">
+                          ${p.photos.map((src, pIdx) => `
+                            <div class="carro-thumb-wrapper" style="width: 58px; height: 58px;" data-view-photo="${src}">
+                              <img src="${src}" alt="Cupom ${p.marketName}" class="carro-thumb-img" />
+                              <button class="carro-thumb-delete" data-del-purchase-photo="${p.id}" data-photo-idx="${pIdx}" title="Excluir foto">✕</button>
+                            </div>
+                          `).join('')}
+                        </div>
+                      ` : ''}
                     </div>
                   </div>
                   <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div class="market-receipt-total">${formatCurrencyWithSymbol(p.totalAmount)}</div>
+                    <div class="market-receipt-total">${formatCurrencyWithSymbol(p.total || p.totalAmount || 0)}</div>
                     <button class="btn btn-icon btn-sm" data-delete-purchase="${p.id}" title="Excluir Registro de Compra">🗑️</button>
                   </div>
                 </div>

@@ -3,13 +3,32 @@
 **Data da última consolidação:** `04/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v2.0.2`
+**Versão Atual:** `v2.0.3`
 
 ---
 
 ## Histórico de Versões
 
-### Versão 2.0.2 (`04/11/2026`) — Resolução Definitiva de Travamento Mobile, Auto-Update de Cache PWA e Fallback Retroativo
+### Versão 2.0.3 (`04/11/2026`) — Remoção do Histórico, Mercado ao lado de Tarefas, Correção de Salvamento da Lista de Compras e Fotos com Câmera Nativa/Galeria
+1. **Navegação Otimizada e Reorganização de Abas:**
+   - **Remoção da Aba "Histórico":** A aba Histórico foi completamente eliminada da navegação e do layout, reduzindo os itens da barra de navegação para 6 abas essenciais e ampliando os alvos de toque no celular.
+   - **Mercado Imediatamente Após Tarefas:** A aba `🛒 Mercado` foi reposicionada diretamente à direita de `🧹 Tarefas` (`tarefas` -> `compras` -> `carro` -> `reformas` -> `sonhos` -> `ajustes`).
+
+2. **Correção Definitiva no Salvamento de Itens da Lista de Compras:**
+   - **Causa Raiz Resolvida:** A função `addShoppingItem` em `js/shopping.js` esperava exclusivamente `name`, enquanto o formulário de adição enviava `title`, causando erro de validação. Agora ambas as propriedades (`title`/`name`, `quantity`/`qty`) são normalizadas e sincronizadas de forma bidirecional.
+   - Adicionado tratamento com toasts descritivos para prevenir travamento silencioso em novos itens.
+
+3. **Novo Sistema de Fotos com Câmera Direta e Galeria:**
+   - Adicionados botões duplos `📸 Câmera` (`capture="environment"`) e `🖼️ Galeria` em todos os módulos solicitados:
+     - **Mercado:** Fotos em itens da lista de compras e em recibos/notas fiscais de compras mensais.
+     - **Reformas:** Fotos nos cards de projetos para acompanhamento de obras.
+     - **Carro:** Fotos para manutenções preventivas, orçamentos e peças.
+     - **Sonhos:** Galeria de fotos de inspiração para os sonhos e metas do casal.
+   - Compressão automática de imagem (800px max, JPEG 0.72) para economia de armazenamento e sincronização veloz.
+   - Visualização em tela cheia via modal e exclusão fácil com 1 toque.
+
+4. **Service Worker e Cache PWA v2.0.3:**
+   - Cache atualizado para `maracaju-v2.0.3` com Network-First estrito para código e HTML.
 1. **Eliminação dos Erros Sintáticos e de Renderização:**
    - **Correção de Exportações em `config.js`:** Restauradas as exportações retrocompatíveis `ROOMS`, `EFFORT_LEVELS`, `LEVELS`, `BADGES` e `CARRO_CATEGORIES`, eliminando o erro fatal `Uncaught SyntaxError: The requested module './config.js' does not provide an export named 'BADGES'` que impedia o carregamento de qualquer script e congelava o app no celular.
    - **Correção no Mecanismo de Confetti (`CanvasRenderingContext2D.ellipse`):** Corrigido o cálculo de raio horizontal e vertical em `js/ui.js` com `Math.abs()`, prevenindo o erro `IndexSizeError: The minor-axis radius provided is negative` que abortava silenciosamente a conclusão do login e travava a interface.

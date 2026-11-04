@@ -27,6 +27,10 @@ import {
   restoreBoughtItems,
   addMarketPurchase,
   deleteMarketPurchase,
+  addPhotoToShoppingItem,
+  removePhotoFromShoppingItem,
+  addPhotoToMarketPurchase,
+  removePhotoFromMarketPurchase,
   getShoppingSummary,
   getMarketPurchasesByMonth
 } from './shopping.js';
@@ -52,7 +56,7 @@ import {
   addLinkToReforma,
   removeLinkFromReforma
 } from './reformas.js';
-import { addSonho, deleteSonho, toggleSonhoMilestone } from './sonhos.js';
+import { addSonho, deleteSonho, toggleSonhoMilestone, addPhotoToSonho, removePhotoFromSonho } from './sonhos.js';
 import { testSheetsConnection, backupToSheets, restoreFromSheets } from './sheets.js';
 import {
   getCategories,
@@ -269,8 +273,6 @@ function initAuthModule() {
       const uId = selectedUserInput ? selectedUserInput.value : 'matheus';
       const email = (uId === 'scarlet') ? 'scarletsantos7@gmail.com' : 'matheusdochapeu@gmail.com';
       handleLogin(email);
-    });
-  }
     });
   }
 
@@ -1129,7 +1131,7 @@ function initSonhosModule() {
 
   const gridEl = document.getElementById('sonhos-grid');
   if (gridEl) {
-    gridEl.addEventListener('change', (e) => {
+    gridEl.addEventListener('change', async (e) => {
       if (e.target.classList.contains('sonho-milestone-item')) {
         const sonhoId = e.target.getAttribute('data-sonho-id');
         const mId = e.target.getAttribute('data-milestone-id');
@@ -1137,10 +1139,54 @@ function initSonhosModule() {
         saveState(state);
         playTaskCompleteSound(state.settings.soundEnabled);
         renderSonhosTab(state, currentSonhosFilter);
+        return;
+      }
+
+      // Adicionar foto via câmera ou galeria no sonho
+      if (e.target.classList.contains('input-sonho-add-photo')) {
+        const sonhoId = e.target.getAttribute('data-sonho-id');
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        try {
+          showToast('Processando foto do sonho...', 'info', 1800);
+          const compressed = await compressImageFile(file, 800, 0.72);
+          addPhotoToSonho(state, sonhoId, compressed);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          showToast('Foto anexada ao sonho! ✨📷', 'success');
+          renderSonhosTab(state, currentSonhosFilter);
+        } catch (err) {
+          showToast(`Erro na foto: ${err.message}`, 'error');
+        }
       }
     });
 
     gridEl.addEventListener('click', (e) => {
+      // Visualizar foto em tamanho ampliado
+      const thumb = e.target.closest('[data-view-photo]');
+      if (thumb && !e.target.classList.contains('carro-thumb-delete')) {
+        const src = thumb.getAttribute('data-view-photo');
+        const modalImg = document.getElementById('photo-viewer-target');
+        if (modalImg) modalImg.src = src;
+        openModal('modal-photo-viewer');
+        return;
+      }
+
+      // Deletar foto do sonho
+      const delPhotoBtn = e.target.closest('[data-del-sonho-photo]');
+      if (delPhotoBtn) {
+        const sonhoId = delPhotoBtn.getAttribute('data-del-sonho-photo');
+        const pIdx = parseInt(delPhotoBtn.getAttribute('data-photo-idx'), 10);
+        if (confirm('Excluir esta foto do sonho?')) {
+          removePhotoFromSonho(state, sonhoId, pIdx);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          renderSonhosTab(state, currentSonhosFilter);
+        }
+        return;
+      }
+
       const delBtn = e.target.closest('[data-delete-sonho]');
       if (delBtn) {
         const id = delBtn.getAttribute('data-delete-sonho');
@@ -1420,10 +1466,10 @@ function initComprasModule() {
     });
   }
 
-  // Interações na Lista de Itens (Marcar comprado, editar, excluir)
+  // Interações na Lista de Itens (Marcar comprado, fotos, editar, excluir)
   const shoppingListEl = document.getElementById('shopping-items-list');
   if (shoppingListEl) {
-    shoppingListEl.addEventListener('change', (e) => {
+    shoppingListEl.addEventListener('change', async (e) => {
       if (e.target.classList.contains('shopping-checkbox')) {
         const itemId = e.target.getAttribute('data-id');
         const item = toggleShoppingItem(state, itemId);
@@ -1438,10 +1484,54 @@ function initComprasModule() {
         }
 
         renderComprasTab(state, currentComprasCategory, currentComprasView);
+        return;
+      }
+
+      // Adicionar foto do item (câmera ou galeria)
+      if (e.target.classList.contains('input-shopping-add-photo')) {
+        const itemId = e.target.getAttribute('data-shopping-id');
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        try {
+          showToast('Processando foto do item...', 'info', 1800);
+          const compressed = await compressImageFile(file, 800, 0.72);
+          addPhotoToShoppingItem(state, itemId, compressed);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          showToast('Foto do item anexada com sucesso! 📷', 'success');
+          renderComprasTab(state, currentComprasCategory, currentComprasView);
+        } catch (err) {
+          showToast(`Erro na foto: ${err.message}`, 'error');
+        }
       }
     });
 
     shoppingListEl.addEventListener('click', (e) => {
+      // Visualizar foto em tamanho ampliado
+      const thumb = e.target.closest('[data-view-photo]');
+      if (thumb && !e.target.classList.contains('carro-thumb-delete')) {
+        const src = thumb.getAttribute('data-view-photo');
+        const modalImg = document.getElementById('photo-viewer-target');
+        if (modalImg) modalImg.src = src;
+        openModal('modal-photo-viewer');
+        return;
+      }
+
+      // Deletar foto do item de compras
+      const delPhotoBtn = e.target.closest('[data-del-shopping-photo]');
+      if (delPhotoBtn) {
+        const itemId = delPhotoBtn.getAttribute('data-del-shopping-photo');
+        const pIdx = parseInt(delPhotoBtn.getAttribute('data-photo-idx'), 10);
+        if (confirm('Excluir foto deste item?')) {
+          removePhotoFromShoppingItem(state, itemId, pIdx);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          renderComprasTab(state, currentComprasCategory, currentComprasView);
+        }
+        return;
+      }
+
       // Editar Item
       const editBtn = e.target.closest('[data-edit-shopping]');
       if (editBtn) {
@@ -1450,9 +1540,9 @@ function initComprasModule() {
         if (item) {
           populateCategorySelects(state);
           document.getElementById('shopping-edit-id').value = item.id;
-          document.getElementById('shopping-edit-title').value = item.title;
+          document.getElementById('shopping-edit-title').value = item.title || item.name || '';
           document.getElementById('shopping-edit-category').value = item.category || 'outros';
-          document.getElementById('shopping-edit-qty').value = item.quantity || '1 un';
+          document.getElementById('shopping-edit-qty').value = item.quantity || item.qty || '1 un';
           document.getElementById('shopping-edit-price').value = item.price ? formatCurrency(item.price) : '';
           document.getElementById('shopping-edit-suggested-by').value = item.suggestedBy || 'ambos';
           document.getElementById('shopping-edit-notes').value = item.notes || '';
@@ -1475,10 +1565,55 @@ function initComprasModule() {
     });
   }
 
-  // Interações nas Notas Fiscais Registradas (Excluir compra)
+  // Interações nas Notas Fiscais Registradas (Fotos e Exclusão)
   const purchasesContainer = document.getElementById('market-purchases-container');
   if (purchasesContainer) {
+    purchasesContainer.addEventListener('change', async (e) => {
+      // Adicionar foto do cupom fiscal / produtos (câmera ou galeria)
+      if (e.target.classList.contains('input-purchase-add-photo')) {
+        const purchaseId = e.target.getAttribute('data-purchase-id');
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        try {
+          showToast('Processando foto do comprovante...', 'info', 1800);
+          const compressed = await compressImageFile(file, 800, 0.72);
+          addPhotoToMarketPurchase(state, purchaseId, compressed);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          showToast('Foto do cupom anexada com sucesso! 🧾📷', 'success');
+          renderComprasTab(state, currentComprasCategory, currentComprasView);
+        } catch (err) {
+          showToast(`Erro na foto: ${err.message}`, 'error');
+        }
+      }
+    });
+
     purchasesContainer.addEventListener('click', (e) => {
+      // Visualizar foto em tamanho ampliado
+      const thumb = e.target.closest('[data-view-photo]');
+      if (thumb && !e.target.classList.contains('carro-thumb-delete')) {
+        const src = thumb.getAttribute('data-view-photo');
+        const modalImg = document.getElementById('photo-viewer-target');
+        if (modalImg) modalImg.src = src;
+        openModal('modal-photo-viewer');
+        return;
+      }
+
+      // Deletar foto do registro de compra
+      const delPhotoBtn = e.target.closest('[data-del-purchase-photo]');
+      if (delPhotoBtn) {
+        const purchaseId = delPhotoBtn.getAttribute('data-del-purchase-photo');
+        const pIdx = parseInt(delPhotoBtn.getAttribute('data-photo-idx'), 10);
+        if (confirm('Excluir foto deste comprovante?')) {
+          removePhotoFromMarketPurchase(state, purchaseId, pIdx);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          renderComprasTab(state, currentComprasCategory, currentComprasView);
+        }
+        return;
+      }
+
       const delBtn = e.target.closest('[data-delete-purchase]');
       if (delBtn) {
         const purchaseId = delBtn.getAttribute('data-delete-purchase');
@@ -1497,14 +1632,14 @@ function initComprasModule() {
   const btnClearBought = document.getElementById('btn-clear-bought-items');
   if (btnClearBought) {
     btnClearBought.addEventListener('click', () => {
-      const removed = clearBoughtItems(state);
-      if (removed.length === 0) {
+      const removedCount = clearBoughtItems(state);
+      if (removedCount === 0) {
         showToast('Nenhum item marcado como comprado para limpar.', 'info');
         return;
       }
       saveState(state);
       triggerAutoSyncIfEnabled();
-      showToast(`${removed.length} ${removed.length === 1 ? 'item comprado foi limpo' : 'itens comprados foram limpos'} da lista! 🧹`, 'success');
+      showToast(`${removedCount} ${removedCount === 1 ? 'item comprado foi limpo' : 'itens comprados foram limpos'} da lista! 🧹`, 'success');
       renderComprasTab(state, currentComprasCategory, currentComprasView);
     });
   }
@@ -1514,24 +1649,42 @@ function initComprasModule() {
   if (formAddShopping) {
     formAddShopping.addEventListener('submit', (e) => {
       e.preventDefault();
-      const title = document.getElementById('shopping-input-title').value.trim();
-      const category = document.getElementById('shopping-input-category').value || 'outros';
-      const quantity = document.getElementById('shopping-input-qty').value.trim() || '1 un';
-      const priceRaw = document.getElementById('shopping-input-price').value;
-      const price = parseCurrency(priceRaw);
-      const suggestedBy = document.getElementById('shopping-input-suggested-by').value || state.activeUserId;
-      const notes = document.getElementById('shopping-input-notes').value.trim();
+      try {
+        const title = document.getElementById('shopping-input-title').value.trim();
+        const category = document.getElementById('shopping-input-category').value || 'outros';
+        const quantity = document.getElementById('shopping-input-qty').value.trim() || '1 un';
+        const priceRaw = document.getElementById('shopping-input-price').value;
+        const price = parseCurrency(priceRaw);
+        const suggestedBy = document.getElementById('shopping-input-suggested-by').value || state.activeUserId;
+        const notes = document.getElementById('shopping-input-notes').value.trim();
 
-      if (!title) return;
+        if (!title) {
+          showToast('Digite o nome do item a comprar.', 'warning');
+          return;
+        }
 
-      addShoppingItem(state, { title, category, quantity, price, suggestedBy, notes });
-      saveState(state);
-      triggerAutoSyncIfEnabled();
+        addShoppingItem(state, {
+          name: title,
+          title,
+          qty: quantity,
+          quantity,
+          category,
+          price,
+          suggestedBy,
+          notes
+        }, state.activeUserId);
 
-      closeModal('modal-add-shopping-item');
-      formAddShopping.reset();
-      showToast('Item adicionado à lista de compras! 🛒', 'success');
-      renderComprasTab(state, currentComprasCategory, currentComprasView);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+
+        closeModal('modal-add-shopping-item');
+        formAddShopping.reset();
+        showToast('Item adicionado à lista de compras! 🛒', 'success');
+        renderComprasTab(state, currentComprasCategory, currentComprasView);
+      } catch (err) {
+        console.error('Erro ao adicionar item de compras:', err);
+        showToast(err.message || 'Erro ao adicionar item.', 'error');
+      }
     });
   }
 
@@ -1540,24 +1693,39 @@ function initComprasModule() {
   if (formEditShopping) {
     formEditShopping.addEventListener('submit', (e) => {
       e.preventDefault();
-      const itemId = document.getElementById('shopping-edit-id').value;
-      const title = document.getElementById('shopping-edit-title').value.trim();
-      const category = document.getElementById('shopping-edit-category').value;
-      const quantity = document.getElementById('shopping-edit-qty').value.trim();
-      const priceRaw = document.getElementById('shopping-edit-price').value;
-      const price = parseCurrency(priceRaw);
-      const suggestedBy = document.getElementById('shopping-edit-suggested-by').value;
-      const notes = document.getElementById('shopping-edit-notes').value.trim();
+      try {
+        const itemId = document.getElementById('shopping-edit-id').value;
+        const title = document.getElementById('shopping-edit-title').value.trim();
+        const category = document.getElementById('shopping-edit-category').value;
+        const quantity = document.getElementById('shopping-edit-qty').value.trim();
+        const priceRaw = document.getElementById('shopping-edit-price').value;
+        const price = parseCurrency(priceRaw);
+        const suggestedBy = document.getElementById('shopping-edit-suggested-by').value;
+        const notes = document.getElementById('shopping-edit-notes').value.trim();
 
-      if (!title || !itemId) return;
+        if (!title || !itemId) return;
 
-      updateShoppingItem(state, itemId, { title, category, quantity, price, suggestedBy, notes });
-      saveState(state);
-      triggerAutoSyncIfEnabled();
+        updateShoppingItem(state, itemId, {
+          name: title,
+          title,
+          qty: quantity,
+          quantity,
+          category,
+          price,
+          suggestedBy,
+          notes
+        });
 
-      closeModal('modal-edit-shopping-item');
-      showToast('Item atualizado com sucesso!', 'success');
-      renderComprasTab(state, currentComprasCategory, currentComprasView);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+
+        closeModal('modal-edit-shopping-item');
+        showToast('Item atualizado com sucesso!', 'success');
+        renderComprasTab(state, currentComprasCategory, currentComprasView);
+      } catch (err) {
+        console.error('Erro ao editar item:', err);
+        showToast(err.message || 'Erro ao atualizar item.', 'error');
+      }
     });
   }
 }
