@@ -1,8 +1,8 @@
 {
   "name": "Maracaju - Gestão do Lar",
   "short_name": "Maracaju",
-  "id": "/maracaju88/",
-  "description": "App do casal: tarefas diárias e periódicas gamificadas, cuidados com o carro, reformas, sonhos e backup no Google Sheets",
+  "id": "/maracaju/",
+  "description": "App do casal Matheus e Scarlet: tarefas da casa, mercado com leitor de nota fiscal NFC-e, cuidados com o carro, reformas e sonhos",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

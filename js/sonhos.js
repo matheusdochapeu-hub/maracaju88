@@ -2,93 +2,100 @@
 //  MARACAJU - MURAL DOS SONHOS & METAS DO CASAL
 // ============================================================
 
-export function addSonho(state, data) {
-  if (!state.sonhos) state.sonhos = [];
+import { parseCurrency } from './currency.js';
+import { makeId } from './projects.js';
 
-  const newSonho = {
-    id: `sonho_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    title: data.title.trim(),
+function list(state) {
+  if (!Array.isArray(state.sonhos)) state.sonhos = [];
+  return state.sonhos;
+}
+
+export function addSonho(state, data) {
+  const title = (data.title || '').trim();
+  if (!title) throw new Error('O título do sonho é obrigatório.');
+  const sonho = {
+    id: makeId('sonho'),
+    title,
     category: data.category || 'viagem',
     status: data.status || 'sonhando',
-    targetAmount: parseFloat(data.targetAmount) || 0,
+    targetAmount: parseCurrency(data.targetAmount),
+    savedAmount: parseCurrency(data.savedAmount),
     targetDate: data.targetDate || '',
-    description: data.description ? data.description.trim() : '',
+    description: (data.description || '').trim(),
     milestones: Array.isArray(data.milestones) ? data.milestones : [],
     createdAt: new Date().toISOString()
   };
-
-  state.sonhos.push(newSonho);
-  return newSonho;
+  list(state).push(sonho);
+  return sonho;
 }
 
 export function updateSonho(state, id, data) {
-  const item = (state.sonhos || []).find(s => s.id === id);
+  const item = list(state).find(s => s.id === id);
   if (!item) return null;
-
-  if (data.title !== undefined) item.title = data.title.trim();
-  if (data.category !== undefined) item.category = data.category;
-  if (data.status !== undefined) item.status = data.status;
-  if (data.targetAmount !== undefined) item.targetAmount = parseFloat(data.targetAmount) || 0;
-  if (data.targetDate !== undefined) item.targetDate = data.targetDate;
-  if (data.description !== undefined) item.description = data.description.trim();
-
+  if (data.title !== undefined) {
+    const t = data.title.trim();
+    if (!t) throw new Error('O título do sonho é obrigatório.');
+    item.title = t;
+  }
+  ['category', 'status', 'targetDate'].forEach(f => { if (data[f] !== undefined) item[f] = data[f]; });
+  if (data.description !== undefined) item.description = (data.description || '').trim();
+  if (data.targetAmount !== undefined) item.targetAmount = parseCurrency(data.targetAmount);
+  if (data.savedAmount !== undefined) item.savedAmount = parseCurrency(data.savedAmount);
+  item.updatedAt = new Date().toISOString();
   return item;
 }
 
 export function deleteSonho(state, id) {
-  const idx = (state.sonhos || []).findIndex(s => s.id === id);
-  if (idx !== -1) {
-    return state.sonhos.splice(idx, 1)[0];
-  }
-  return null;
+  const arr = list(state);
+  const idx = arr.findIndex(s => s.id === id);
+  return idx !== -1 ? arr.splice(idx, 1)[0] : null;
 }
 
 export function toggleSonhoMilestone(state, sonhoId, milestoneId) {
-  const item = (state.sonhos || []).find(s => s.id === sonhoId);
-  if (!item || !item.milestones) return false;
-
-  const milestone = item.milestones.find(m => m.id === milestoneId);
-  if (milestone) {
-    milestone.done = !milestone.done;
-    return milestone.done;
-  }
-  return false;
+  const item = list(state).find(s => s.id === sonhoId);
+  const m = item && (item.milestones || []).find(x => x.id === milestoneId);
+  if (!m) return false;
+  m.done = !m.done;
+  return m.done;
 }
 
 export function addSonhoMilestone(state, sonhoId, title) {
-  const item = (state.sonhos || []).find(s => s.id === sonhoId);
-  if (!item) return null;
+  const item = list(state).find(s => s.id === sonhoId);
+  const t = (title || '').trim();
+  if (!item || !t) return null;
   if (!item.milestones) item.milestones = [];
+  const m = { id: makeId('m'), title: t, done: false };
+  item.milestones.push(m);
+  return m;
+}
 
-  const newMilestone = {
-    id: `m_${Date.now()}`,
-    title: title.trim(),
-    done: false
-  };
+export function removeSonhoMilestone(state, sonhoId, milestoneId) {
+  const item = list(state).find(s => s.id === sonhoId);
+  if (!item || !item.milestones) return false;
+  const before = item.milestones.length;
+  item.milestones = item.milestones.filter(m => m.id !== milestoneId);
+  return item.milestones.length < before;
+}
 
-  item.milestones.push(newMilestone);
-  return newMilestone;
+export function getSonhoProgress(sonho) {
+  if (!sonho.targetAmount) return 0;
+  return Math.min(100, Math.round(((sonho.savedAmount || 0) / sonho.targetAmount) * 100));
 }
 
 export function getSonhosSummary(state) {
-  const list = state.sonhos || [];
+  const arr = list(state);
+  const byCategory = {};
   let totalTargetAmount = 0;
-  const byCategory = {
-    viagem: 0,
-    casa: 0,
-    bens: 0,
-    experiencia: 0
-  };
-
-  list.forEach(s => {
-    totalTargetAmount += (s.targetAmount || 0);
-    const cat = s.category || 'viagem';
-    if (byCategory[cat] !== undefined) byCategory[cat]++;
+  let totalSaved = 0;
+  arr.forEach(s => {
+    totalTargetAmount += s.targetAmount || 0;
+    totalSaved += s.savedAmount || 0;
+    byCategory[s.category] = (byCategory[s.category] || 0) + 1;
   });
-
   return {
-    count: list.length,
-    totalTargetAmount,
+    count: arr.length,
+    totalTargetAmount: Math.round(totalTargetAmount * 100) / 100,
+    totalSaved: Math.round(totalSaved * 100) / 100,
     byCategory
   };
 }

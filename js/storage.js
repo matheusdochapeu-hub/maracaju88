@@ -10,6 +10,7 @@ import {
   INITIAL_REFORMAS,
   INITIAL_SONHOS
 } from './config.js';
+import { DEFAULT_CATEGORIES } from './categories.js';
 
 export function getInitialState() {
   return {
@@ -29,6 +30,9 @@ export function getInitialState() {
     carro: [...INITIAL_CARRO],
     reformas: [...INITIAL_REFORMAS],
     sonhos: [...INITIAL_SONHOS],
+    compras: [],
+    comprasRegistros: [],
+    categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)),
     settings: {
       sheetsUrl: "",
       sheetsToken: "Maracaju88CasalSegredo2026!",
@@ -72,7 +76,26 @@ export function loadState() {
       history: parsed.history || {},
       carro: Array.isArray(parsed.carro) ? parsed.carro : initial.carro,
       reformas: Array.isArray(parsed.reformas) ? parsed.reformas : initial.reformas,
-      sonhos: Array.isArray(parsed.sonhos) ? parsed.sonhos : initial.sonhos
+      sonhos: Array.isArray(parsed.sonhos) ? parsed.sonhos : initial.sonhos,
+      compras: Array.isArray(parsed.compras) ? parsed.compras : initial.compras,
+      comprasRegistros: Array.isArray(parsed.comprasRegistros) ? parsed.comprasRegistros : initial.comprasRegistros,
+      categories: {
+        tarefas: (parsed.categories && Array.isArray(parsed.categories.tarefas) && parsed.categories.tarefas.length > 0)
+          ? parsed.categories.tarefas
+          : initial.categories.tarefas,
+        carro: (parsed.categories && Array.isArray(parsed.categories.carro) && parsed.categories.carro.length > 0)
+          ? parsed.categories.carro
+          : initial.categories.carro,
+        reformas: (parsed.categories && Array.isArray(parsed.categories.reformas) && parsed.categories.reformas.length > 0)
+          ? parsed.categories.reformas
+          : initial.categories.reformas,
+        sonhos: (parsed.categories && Array.isArray(parsed.categories.sonhos) && parsed.categories.sonhos.length > 0)
+          ? parsed.categories.sonhos
+          : initial.categories.sonhos,
+        compras: (parsed.categories && Array.isArray(parsed.categories.compras) && parsed.categories.compras.length > 0)
+          ? parsed.categories.compras
+          : initial.categories.compras
+      }
     };
 
     return merged;

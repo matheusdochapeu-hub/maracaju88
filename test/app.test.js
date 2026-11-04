@@ -13,7 +13,8 @@ import {
   getTasksProgressByFrequency,
   getAllFrequenciesSummary,
   addTask,
-  deleteTask
+  deleteTask,
+  updateTask
 } from '../js/tasks.js';
 import { getHistoryForDate, getRecentDaysSummary } from '../js/history.js';
 import {
@@ -35,7 +36,38 @@ import {
   removeLinkFromReforma
 } from '../js/reformas.js';
 import { addSonho, getSonhosSummary, toggleSonhoMilestone } from '../js/sonhos.js';
-import { normalizeEmail, findAuthorizedUser, loginWithEmail } from '../js/auth.js';
+import {
+  normalizeEmail,
+  findAuthorizedUser,
+  loginWithEmail,
+  setUserPassword,
+  verifyUserPassword,
+  loginWithCredentials
+} from '../js/auth.js';
+import {
+  addShoppingItem,
+  toggleShoppingItem,
+  getShoppingSummary,
+  addMarketPurchase,
+  getMarketPurchasesByMonth
+} from '../js/shopping.js';
+import {
+  parseNfceQrCodeText,
+  formatCnpj,
+  guessMarketNameFromCnpj
+} from '../js/nfce.js';
+import {
+  parseCurrency,
+  formatCurrency,
+  formatCurrencyWithSymbol
+} from '../js/currency.js';
+import {
+  getCategories,
+  addCategory,
+  updateCategory,
+  deleteCategory,
+  findCategory
+} from '../js/categories.js';
 
 function createMockState() {
   return {
@@ -60,6 +92,8 @@ function createMockState() {
     carro: [],
     reformas: [],
     sonhos: [],
+    compras: [],
+    comprasRegistros: [],
     settings: {
       soundEnabled: true,
       autoSync: false
@@ -67,18 +101,113 @@ function createMockState() {
   };
 }
 
-test('Gamification: Cálculo de Nível e XP Total do Casal', () => {
+test('Mercado: Lista de Compras do Mês (adicionar itens, marcar comprado, totais com centavos)', () => {
   const state = createMockState();
-  state.users.user1.xp = 100;
-  state.users.user2.xp = 80;
 
-  const total = getCoupleTotalXp(state);
-  assert.equal(total, 180);
+  // 1. Matheus adiciona itens conforme lembra
+  const { item: i1 } = addShoppingItem(state, {
+    name: 'Leite desnatado',
+    qty: '3 caixas',
+    category: 'frios',
+    price: '16,47'
+  }, 'matheus');
 
-  const lvl = getCurrentLevel(total);
-  assert.equal(lvl.level, 2);
-  assert.equal(lvl.title, "Dupla Organizada");
-  assert.ok(lvl.progressPercent >= 0 && lvl.progressPercent <= 100);
+  assert.equal(i1.name, 'Leite desnatado');
+  assert.equal(i1.price, 16.47);
+  assert.equal(i1.bought, false);
+  assert.equal(i1.addedBy, 'matheus');
+
+  // 2. Scarlet adiciona outro item
+  const { item: i2 } = addShoppingItem(state, {
+    name: 'Detergente neutro',
+    qty: '2 un',
+    category: 'limpeza',
+    price: '5,98'
+  }, 'scarlet');
+
+  assert.equal(state.compras.length, 2);
+
+  // 3. Resumo da lista
+  let summary = getShoppingSummary(state);
+  assert.equal(summary.total, 2);
+  assert.equal(summary.pendingCount, 2);
+  assert.equal(summary.boughtCount, 0);
+  assert.equal(summary.estimatedTotal, 22.45);
+
+  // 4. Marcar item como comprado no supermercado
+  const toggled = toggleShoppingItem(state, i1.id, 'scarlet');
+  assert.equal(toggled.bought, true);
+  assert.equal(toggled.boughtBy, 'scarlet');
+
+  summary = getShoppingSummary(state);
+  assert.equal(summary.pendingCount, 1);
+  assert.equal(summary.boughtCount, 1);
+  assert.equal(summary.boughtTotal, 16.47);
+  assert.equal(summary.pendingTotal, 5.98);
+});
+
+test('Mercado: Registro de Notas Fiscais (NFC-e QR Code, data da compra e separação por mês)', () => {
+  const state = createMockState();
+
+  // 1. Parser de URL de QR Code de NFC-e (ex: SEFAZ SP / Pão de Açúcar com R$ 264,33)
+  const qrUrl = 'https://www.fazenda.sp.gov.br/nfce/qrcode?p=35261147508411000100650010000000011000000018|2|1|1|264.33|hash';
+  const parsed = parseNfceQrCodeText(qrUrl);
+
+  assert.ok(parsed.nfeKey);
+  assert.equal(parsed.nfeKey.length, 44);
+  assert.equal(parsed.total, 264.33);
+  assert.equal(parsed.marketName, 'Pão de Açúcar / Extra');
+  assert.ok(parsed.date.startsWith('2026-11'));
+
+  // 2. Registrar compra no app
+  const purchase1 = addMarketPurchase(state, {
+    marketName: parsed.marketName,
+    date: '2026-11-04',
+    total: parsed.total,
+    nfeKey: parsed.nfeKey,
+    nfeUrl: qrUrl
+  }, 'matheus');
+
+  assert.equal(purchase1.total, 264.33);
+  assert.equal(purchase1.monthKey, '2026-11');
+
+  // 3. Registrar outra compra no mês anterior (Outubro)
+  addMarketPurchase(state, {
+    marketName: 'Atacadão',
+    date: '2026-10-18',
+    total: '512,80'
+  }, 'scarlet');
+
+  // 4. Separação automática por mês
+  const byMonth = getMarketPurchasesByMonth(state);
+  assert.equal(byMonth.length, 2);
+
+  // Mês mais recente primeiro (Novembro/2026)
+  assert.equal(byMonth[0].monthKey, '2026-11');
+  assert.equal(byMonth[0].total, 264.33);
+  assert.equal(byMonth[0].purchases.length, 1);
+
+  // Mês anterior (Outubro/2026)
+  assert.equal(byMonth[1].monthKey, '2026-10');
+  assert.equal(byMonth[1].total, 512.80);
+});
+
+test('Moeda & Valores Quebrados: Suporte completo a centavos R$ 264,33 em todas as categorias', () => {
+  // Testes com formatos brasileiros e decimais
+  assert.equal(parseCurrency('264,33'), 264.33);
+  assert.equal(parseCurrency('R$ 264,33'), 264.33);
+  assert.equal(parseCurrency('R$264,33'), 264.33);
+  assert.equal(parseCurrency('264.33'), 264.33);
+  assert.equal(parseCurrency('1.250,50'), 1250.50);
+  assert.equal(parseCurrency('0,99'), 0.99);
+  assert.equal(parseCurrency(264.33), 264.33);
+  assert.equal(parseCurrency(''), 0);
+  assert.equal(parseCurrency(null), 0);
+
+  // Formatação em padrão brasileiro
+  assert.equal(formatCurrency(264.33), '264,33');
+  assert.equal(formatCurrencyWithSymbol(264.33), 'R$ 264,33');
+  assert.equal(formatCurrencyWithSymbol('1250.50'), 'R$ 1.250,50');
 });
 
 test('Tasks: Frequências Diárias, Semanais, Mensais e Anuais', () => {
@@ -296,4 +425,124 @@ test('Auth: Controle de Acesso Restrito Exclusivo para Matheus e Scarlet', () =>
 
   const loginVazio = loginWithEmail('');
   assert.equal(loginVazio.success, false);
+
+  // 6. Definição de senhas individuais para Matheus e Scarlet
+  setUserPassword('matheus', 'senhaMatheus2026');
+  assert.equal(verifyUserPassword('matheus', 'senhaMatheus2026'), true);
+  assert.equal(verifyUserPassword('matheus', 'errada'), false);
+
+  setUserPassword('scarlet', 'senhaScarletCasal');
+  assert.equal(verifyUserPassword('scarlet', 'senhaScarletCasal'), true);
+  assert.equal(verifyUserPassword('scarlet', '1234'), false);
+
+  // Login com credenciais válidas e inválidas
+  const credOk = loginWithCredentials('matheus', 'senhaMatheus2026');
+  assert.equal(credOk.success, true);
+  assert.equal(credOk.user.name, 'Matheus');
+
+  const credFail = loginWithCredentials('matheus', 'senhaInvalida');
+  assert.equal(credFail.success, false);
+});
+
+test('Categories: Definir categorias personalizadas e emojis para filtro', () => {
+  const state = createMockState();
+
+  // 1. Obter categorias padrão de tarefas
+  const taskCats = getCategories(state, 'tarefas');
+  assert.ok(taskCats.length >= 7);
+  assert.equal(taskCats[0].id, 'cozinha');
+  assert.equal(taskCats[0].icon, '🍳');
+
+  // 2. Adicionar nova categoria com emoji (ex: Varanda Gourmet)
+  const newCat = addCategory(state, 'tarefas', { label: 'Varanda Gourmet', icon: '🌿' });
+  assert.ok(newCat);
+  assert.equal(newCat.id, 'varanda_gourmet');
+  assert.equal(newCat.label, 'Varanda Gourmet');
+  assert.equal(newCat.icon, '🌿');
+
+  const updatedTaskCats = getCategories(state, 'tarefas');
+  assert.ok(updatedTaskCats.some(c => c.id === 'varanda_gourmet' && c.icon === '🌿'));
+
+  // 3. Atualizar categoria (mudar emoji e nome)
+  const updated = updateCategory(state, 'tarefas', 'varanda_gourmet', { label: 'Varanda & Churrasqueira', icon: '🍖' });
+  assert.equal(updated.label, 'Varanda & Churrasqueira');
+  assert.equal(updated.icon, '🍖');
+
+  // 4. Buscar categoria por id
+  const found = findCategory(state, 'tarefas', 'varanda_gourmet');
+  assert.equal(found.label, 'Varanda & Churrasqueira');
+  assert.equal(found.icon, '🍖');
+
+  // 5. Excluir categoria
+  const deleted = deleteCategory(state, 'tarefas', 'varanda_gourmet');
+  assert.equal(deleted, true);
+  const afterDelete = getCategories(state, 'tarefas');
+  assert.equal(afterDelete.some(c => c.id === 'varanda_gourmet'), false);
+
+  // 6. Categorias para o módulo Carro
+  const newCarCat = addCategory(state, 'carro', { label: 'Som & Multimídia', icon: '🎵' });
+  assert.equal(newCarCat.icon, '🎵');
+  const carCats = getCategories(state, 'carro');
+  assert.ok(carCats.some(c => c.id === 'som_multimidia'));
+});
+
+test('Tasks: Editar tarefa e alterar periodicidade (diária, semanal, mensal, anual)', () => {
+  const state = createMockState();
+  state.tasks = []; // Inicia vazio para teste isolado
+  const task = addTask(state, {
+    title: "Limpar fogão",
+    room: "cozinha",
+    effort: "leve",
+    xp: 10,
+    assignedTo: "matheus",
+    frequency: "diaria",
+    notes: "Usar desengordurante"
+  });
+
+  assert.equal(task.title, "Limpar fogão");
+  assert.equal(task.frequency, "diaria");
+
+  // 1. Atualizar título, esforço e observações
+  const updated1 = updateTask(state, task.id, {
+    title: "Limpar e desengordurar fogão e forno",
+    effort: "pesada",
+    notes: "Cuidado com o vidro do forno"
+  });
+  assert.equal(updated1.title, "Limpar e desengordurar fogão e forno");
+  assert.equal(updated1.effort, "pesada");
+  assert.equal(updated1.xp, 50); // XP atualizado de acordo com o esforço
+  assert.equal(updated1.notes, "Cuidado com o vidro do forno");
+
+  // 2. Mudar periodicidade de 'diaria' para 'semanal'
+  updateTask(state, task.id, { frequency: "semanal" });
+  assert.equal(task.frequency, "semanal");
+
+  const summarySemanal = getAllFrequenciesSummary(state);
+  assert.equal(summarySemanal.semanal.total, 1);
+  assert.equal(summarySemanal.diaria.total, 0);
+
+  // 3. Mudar periodicidade para 'mensal'
+  updateTask(state, task.id, { frequency: "mensal" });
+  assert.equal(task.frequency, "mensal");
+  const summaryMensal = getAllFrequenciesSummary(state);
+  assert.equal(summaryMensal.mensal.total, 1);
+  assert.equal(summaryMensal.semanal.total, 0);
+
+  // 4. Mudar periodicidade para 'anual'
+  updateTask(state, task.id, { frequency: "anual" });
+  assert.equal(task.frequency, "anual");
+  const summaryAnual = getAllFrequenciesSummary(state);
+  assert.equal(summaryAnual.anual.total, 1);
+  assert.equal(summaryAnual.mensal.total, 0);
+
+  // 5. Retornar para 'diaria'
+  updateTask(state, task.id, { frequency: "diaria" });
+  assert.equal(task.frequency, "diaria");
+  const summaryDiaria = getAllFrequenciesSummary(state);
+  assert.equal(summaryDiaria.diaria.total, 1);
+  assert.equal(summaryDiaria.anual.total, 0);
+
+  // 6. Testar com ID inexistente
+  const notFound = updateTask(state, "inexistente_123", { title: "Nada" });
+  assert.equal(notFound, null);
 });

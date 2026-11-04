@@ -3,7 +3,11 @@
 // ============================================================
 
 import { ROOMS, EFFORT_LEVELS, BADGES, FREQUENCIES, CARRO_CATEGORIES } from './config.js';
+import { getCategories, findCategory, QUICK_EMOJIS_LIST } from './categories.js';
 import { getCoupleTotalXp, getCurrentLevel } from './gamification.js';
+import { parseCurrency, formatCurrency, formatCurrencyWithSymbol } from './currency.js';
+import { getShoppingSummary, getMarketPurchasesByMonth, getMonthLabel } from './shopping.js';
+import { isBiometricsSupported, isBiometricsEnabled } from './auth.js';
 import {
   getLocalDateString,
   isTaskDoneOnDate,
@@ -166,10 +170,9 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
       <div class="dash-header">
         <div class="dash-title">
           <span>${curFreqObj.icon} Tarefas ${curFreqObj.label}</span>
-          <span class="level-badge">${lvl.icon} Nível ${lvl.level}: ${lvl.title}</span>
         </div>
-        <div style="font-size: 0.85rem; font-weight: 700; color: var(--brand-teal);">
-          +${currentProg.xpEarned} XP conquistados
+        <div style="font-size: 0.85rem; font-weight: 700; color: var(--brand-moss-dark);">
+          ${currentProg.completed} de ${currentProg.total} feitas
         </div>
       </div>
       <div class="progress-container">
@@ -182,15 +185,25 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
     `;
   }
 
-  // Chips de Cômodos
+  // Chips de Cômodos / Categorias de Tarefas
   const chipsContainer = document.getElementById('room-chips-container');
   if (chipsContainer) {
-    chipsContainer.innerHTML = ROOMS.map(r => `
+    const userRooms = getCategories(state, 'tarefas');
+    const allChips = [
+      { id: 'tudo', label: 'Todos os Cômodos', icon: '🏠' },
+      ...userRooms
+    ];
+    chipsContainer.innerHTML = allChips.map(r => `
       <button class="chip ${r.id === selectedRoom ? 'active' : ''}" data-room="${r.id}">
         <span>${r.icon}</span>
         <span>${r.label}</span>
       </button>
-    `).join('');
+    `).join('') + `
+      <button type="button" class="chip chip-add-category" data-open-category-modal="tarefas" style="border-style: dashed; border-color: rgba(46, 89, 51, 0.45); background: rgba(46, 89, 51, 0.05);" title="Adicionar ou personalizar categorias">
+        <span>➕</span>
+        <span>Nova Categoria</span>
+      </button>
+    `;
   }
 
   // Lista de Tarefas Filtrada por Frequência E Cômodo
@@ -219,7 +232,7 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
     const isDone = isTaskDoneOnDate(state, task.id, todayStr);
     const historyEntry = getTaskHistoryEntry(state, task.id, todayStr);
     const effort = EFFORT_LEVELS[task.effort] || EFFORT_LEVELS.media;
-    const room = ROOMS.find(r => r.id === task.room) || { label: task.room, icon: '🏠' };
+    const room = findCategory(state, 'tarefas', task.room);
     const curFreqObj = FREQUENCIES.find(f => f.id === task.frequency) || FREQUENCIES[0];
 
     return `
@@ -233,7 +246,6 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
             <div class="task-meta">
               <span class="tag-freq">${curFreqObj.icon} ${curFreqObj.label}</span>
               <span class="tag-room">${room.icon} ${room.label}</span>
-              <span class="tag-xp">+${task.xp || effort.xp} XP</span>
               ${isDone && historyEntry ? `
                 <span style="color: var(--success); font-weight: 600;">
                   ✓ Feito por ${historyEntry.doneBy} ${historyEntry.completedOnDate ? `(${historyEntry.completedOnDate})` : ''}
@@ -248,6 +260,7 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
           </div>
         </div>
         <div class="task-actions">
+          <button class="btn btn-icon btn-sm" data-edit-task="${task.id}" title="Editar tarefa e periodicidade" style="color: var(--brand-forest); margin-right: 0.25rem;">✏️</button>
           <button class="btn btn-icon btn-sm" data-delete-task="${task.id}" title="Excluir tarefa">🗑️</button>
         </div>
       </div>
@@ -395,6 +408,27 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
     `;
   }
 
+  // Chips de Categorias do Carro (Dinâmicos com Emojis)
+  const catContainer = document.getElementById('carro-category-chips');
+  if (catContainer) {
+    const userCarCats = getCategories(state, 'carro');
+    const allChips = [
+      { id: 'todas', label: 'Todas Categorias', icon: '🚗' },
+      ...userCarCats
+    ];
+    catContainer.innerHTML = allChips.map(c => `
+      <button class="chip ${c.id === categoryFilter ? 'active' : ''}" data-carro-cat="${c.id}">
+        <span>${c.icon}</span>
+        <span>${c.label}</span>
+      </button>
+    `).join('') + `
+      <button type="button" class="chip chip-add-category" data-open-category-modal="carro" style="border-style: dashed; border-color: rgba(46, 89, 51, 0.45); background: rgba(46, 89, 51, 0.05);" title="Adicionar ou personalizar categorias">
+        <span>➕</span>
+        <span>Nova Categoria</span>
+      </button>
+    `;
+  }
+
   const gridEl = document.getElementById('carro-grid');
   if (!gridEl) return;
 
@@ -420,7 +454,7 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
   }
 
   gridEl.innerHTML = list.map(item => {
-    const catObj = CARRO_CATEGORIES.find(c => c.id === item.category) || { label: item.category, icon: '🚗' };
+    const catObj = findCategory(state, 'carro', item.category);
     const checklist = item.checklist || [];
     const doneChecks = checklist.filter(c => c.done).length;
     const checkPercent = checklist.length > 0 ? Math.round((doneChecks / checklist.length) * 100) : 0;
@@ -540,9 +574,9 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
 }
 
 // -------------------------------------------------------------
-// RENDERIZAÇÃO DA ABA 4: REFORMAS & MELHORIAS
+// RENDERIZAÇÃO DA ABA 3: REFORMAS & MELHORIAS
 // -------------------------------------------------------------
-export function renderReformasTab(state, statusFilter = 'todas') {
+export function renderReformasTab(state, statusFilter = 'todas', categoryFilter = 'todas') {
   const summary = getReformasSummary(state);
 
   const bannerEl = document.getElementById('reformas-summary-banner');
@@ -565,12 +599,39 @@ export function renderReformasTab(state, statusFilter = 'todas') {
     `;
   }
 
+  // Chips de Cômodos / Categorias de Reformas (Dinâmicos com Emojis)
+  const catContainer = document.getElementById('reformas-category-chips');
+  if (catContainer) {
+    const userRefCats = getCategories(state, 'reformas');
+    const allChips = [
+      { id: 'todas', label: 'Todos os Cômodos', icon: '🏠' },
+      ...userRefCats
+    ];
+    catContainer.innerHTML = allChips.map(c => `
+      <button class="chip ${c.id === categoryFilter ? 'active' : ''}" data-reforma-cat="${c.id}">
+        <span>${c.icon}</span>
+        <span>${c.label}</span>
+      </button>
+    `).join('') + `
+      <button type="button" class="chip chip-add-category" data-open-category-modal="reformas" style="border-style: dashed; border-color: rgba(46, 89, 51, 0.45); background: rgba(46, 89, 51, 0.05);" title="Adicionar ou personalizar categorias">
+        <span>➕</span>
+        <span>Nova Categoria</span>
+      </button>
+    `;
+  }
+
   const gridEl = document.getElementById('reformas-grid');
   if (!gridEl) return;
 
-  const list = statusFilter === 'todas'
-    ? state.reformas
-    : state.reformas.filter(r => r.status === statusFilter);
+  let list = state.reformas || [];
+
+  if (statusFilter !== 'todas') {
+    list = list.filter(r => r.status === statusFilter);
+  }
+
+  if (categoryFilter !== 'todas') {
+    list = list.filter(r => r.room === categoryFilter);
+  }
 
   if (list.length === 0) {
     gridEl.innerHTML = `
@@ -589,13 +650,14 @@ export function renderReformasTab(state, statusFilter = 'todas') {
     const links = ref.links || [];
     const doneChecks = checklist.filter(c => c.done).length;
     const checkPercent = checklist.length > 0 ? Math.round((doneChecks / checklist.length) * 100) : 0;
+    const roomObj = findCategory(state, 'reformas', ref.room);
 
     return `
       <div class="project-card" data-reforma-id="${ref.id}">
         <div>
           <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem;">
             <span class="project-status-badge status-${ref.status}">${ref.status}</span>
-            <span class="tag-room">🏠 ${ref.room}</span>
+            <span class="tag-room">${roomObj.icon} ${roomObj.label}</span>
           </div>
           <h3 style="font-size: 1.05rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.4rem;">${ref.title}</h3>
           ${ref.description ? `<p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">${ref.description}</p>` : ''}
@@ -692,7 +754,7 @@ export function renderReformasTab(state, statusFilter = 'todas') {
 }
 
 // -------------------------------------------------------------
-// RENDERIZAÇÃO DA ABA 5: MURAL DOS SONHOS & METAS
+// RENDERIZAÇÃO DA ABA 4: MURAL DOS SONHOS & METAS
 // -------------------------------------------------------------
 export function renderSonhosTab(state, categoryFilter = 'todas') {
   const summary = getSonhosSummary(state);
@@ -715,12 +777,35 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
     `;
   }
 
+  // Chips de Categorias dos Sonhos (Dinâmicos com Emojis)
+  const catContainer = document.getElementById('sonhos-category-chips');
+  if (catContainer) {
+    const userSonhoCats = getCategories(state, 'sonhos');
+    const allChips = [
+      { id: 'todas', label: 'Todos os Sonhos', icon: '✨' },
+      ...userSonhoCats
+    ];
+    catContainer.innerHTML = allChips.map(c => `
+      <button class="chip ${c.id === categoryFilter ? 'active' : ''}" data-sonho-filter="${c.id}">
+        <span>${c.icon}</span>
+        <span>${c.label}</span>
+      </button>
+    `).join('') + `
+      <button type="button" class="chip chip-add-category" data-open-category-modal="sonhos" style="border-style: dashed; border-color: rgba(46, 89, 51, 0.45); background: rgba(46, 89, 51, 0.05);" title="Adicionar ou personalizar categorias">
+        <span>➕</span>
+        <span>Nova Categoria</span>
+      </button>
+    `;
+  }
+
   const gridEl = document.getElementById('sonhos-grid');
   if (!gridEl) return;
 
-  const list = categoryFilter === 'todas'
-    ? state.sonhos
-    : state.sonhos.filter(s => s.category === categoryFilter);
+  let list = state.sonhos || [];
+
+  if (categoryFilter !== 'todas') {
+    list = list.filter(s => s.category === categoryFilter);
+  }
 
   if (list.length === 0) {
     gridEl.innerHTML = `
@@ -737,19 +822,14 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
     const milestones = sonho.milestones || [];
     const doneMilestones = milestones.filter(m => m.done).length;
     const mPercent = milestones.length > 0 ? Math.round((doneMilestones / milestones.length) * 100) : 0;
-
-    let catIcon = '✨';
-    if (sonho.category === 'viagem') catIcon = '✈️';
-    if (sonho.category === 'casa') catIcon = '🏡';
-    if (sonho.category === 'bens') catIcon = '🚗';
-    if (sonho.category === 'experiencia') catIcon = '💖';
+    const catObj = findCategory(state, 'sonhos', sonho.category);
 
     return `
       <div class="project-card" data-sonho-id="${sonho.id}">
         <div>
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
             <span class="project-status-badge status-andamento">${sonho.status}</span>
-            <span class="tag-room">${catIcon} ${sonho.category}</span>
+            <span class="tag-room">${catObj.icon} ${catObj.label}</span>
           </div>
           <h3 style="font-size: 1.1rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.4rem;">${sonho.title}</h3>
           ${sonho.description ? `<p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">${sonho.description}</p>` : ''}
@@ -797,70 +877,170 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
 }
 
 // -------------------------------------------------------------
-// RENDERIZAÇÃO DA ABA 6: CONQUISTAS & PLACAR DO CASAL
+// RENDERIZAÇÃO DA ABA: MERCADO & LISTA DE COMPRAS
 // -------------------------------------------------------------
-export function renderGamificationTab(state) {
-  const totalXp = getCoupleTotalXp(state);
-  const lvl = getCurrentLevel(totalXp);
-  const u1 = state.users.user1;
-  const u2 = state.users.user2;
+export function renderComprasTab(state, activeCategory = 'todas', activeView = 'lista') {
+  const summary = getShoppingSummary(state);
 
-  const totalUserXp = (u1.xp || 0) + (u2.xp || 0);
-  const u1Percent = totalUserXp > 0 ? Math.round(((u1.xp || 0) / totalUserXp) * 100) : 50;
-  const u2Percent = 100 - u1Percent;
-
-  const scoreboard = document.getElementById('gamification-scoreboard');
-  if (scoreboard) {
-    scoreboard.innerHTML = `
-      <div style="text-align: center; margin-bottom: 1.25rem;">
-        <div style="font-size: 2.5rem; margin-bottom: 0.25rem;">${lvl.icon}</div>
-        <h2 style="font-size: 1.4rem; font-weight: 800;">Nível ${lvl.level}: ${lvl.title}</h2>
-        <p style="font-size: 0.85rem; color: var(--text-secondary);">${totalXp} XP acumulados no Maracaju</p>
-      </div>
-
-      <div style="margin-bottom: 1.5rem;">
-        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.35rem;">
-          <span>Progresso para ${lvl.nextTitle ? `Nível ${lvl.level + 1} (${lvl.nextTitle})` : 'Nível Máximo!'}</span>
-          <span>${lvl.progressPercent}%</span>
+  // Banner de Resumo da Lista & Mês
+  const bannerEl = document.getElementById('compras-summary-banner');
+  if (bannerEl) {
+    bannerEl.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+          <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Itens a Comprar</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: var(--brand-moss-dark);">
+            ${summary.pendingCount} <span style="font-size: 0.85rem; font-weight: normal; color: var(--text-muted);">(de ${summary.totalCount})</span>
+          </div>
         </div>
-        <div class="progress-container" style="height: 12px;">
-          <div class="progress-bar gold" style="width: ${lvl.progressPercent}%"></div>
-        </div>
-        ${lvl.xpNeeded > 0 ? `<div style="font-size: 0.75rem; color: var(--text-muted); text-align: right; margin-top: 0.25rem;">Faltam ${lvl.xpNeeded} XP</div>` : ''}
-      </div>
-
-      <div style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle);">
-        <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem;">Divisão de XP do Casal</h3>
-        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.4rem;">
-          <div>${u1.avatarEmoji} <strong>${u1.name}</strong>: ${u1.xp || 0} XP (${u1Percent}%)</div>
-          <div>${u2.avatarEmoji} <strong>${u2.name}</strong>: ${u2.xp || 0} XP (${u2Percent}%)</div>
-        </div>
-        <div class="progress-container" style="height: 10px; display: flex;">
-          <div style="height: 100%; width: ${u1Percent}%; background: var(--brand-teal);"></div>
-          <div style="height: 100%; width: ${u2Percent}%; background: var(--brand-rose);"></div>
+        <div style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+          <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Estimativa Total</div>
+          <div style="font-size: 1.35rem; font-weight: 800; color: var(--brand-moss-dark);">
+            ${formatCurrencyWithSymbol(summary.estimatedTotal)}
+          </div>
         </div>
       </div>
     `;
   }
 
-  const badgesGrid = document.getElementById('gamification-badges-grid');
-  if (!badgesGrid) return;
+  // Alternador de Visão (Lista do Mês vs Notas & Histórico)
+  const viewListaEl = document.getElementById('compras-view-lista-container');
+  const viewNotasEl = document.getElementById('compras-view-notas-container');
+  const viewButtons = document.querySelectorAll('[data-compras-view]');
+  viewButtons.forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-compras-view') === activeView);
+  });
 
-  const unlockedSet = new Set(state.gamification.unlockedBadges || []);
+  if (activeView === 'notas') {
+    if (viewListaEl) viewListaEl.style.display = 'none';
+    if (viewNotasEl) viewNotasEl.style.display = 'block';
+  } else {
+    if (viewListaEl) viewListaEl.style.display = 'block';
+    if (viewNotasEl) viewNotasEl.style.display = 'none';
+  }
 
-  badgesGrid.innerHTML = BADGES.map(b => {
-    const isUnlocked = unlockedSet.has(b.id);
-    return `
-      <div class="badge-card ${isUnlocked ? 'unlocked' : 'locked'}" title="${b.desc}">
-        <span class="badge-icon">${b.icon}</span>
-        <span class="badge-name">${b.name}</span>
-        <span class="badge-desc">${b.desc}</span>
-        <span style="font-size: 0.65rem; font-weight: 800; color: ${isUnlocked ? 'var(--brand-amber)' : 'var(--text-muted)'}; margin-top: 0.2rem;">
-          ${isUnlocked ? '✨ DESBLOQUEADA' : '🔒 BLOQUEADA'}
-        </span>
-      </div>
+  // Chips de Categoria para Lista de Compras
+  const chipsContainer = document.getElementById('compras-category-chips');
+  if (chipsContainer) {
+    const userCats = getCategories(state, 'compras');
+    const allChips = [
+      { id: 'todas', label: 'Todos os Itens', icon: '🛒' },
+      ...userCats
+    ];
+    chipsContainer.innerHTML = allChips.map(c => `
+      <button class="chip ${c.id === activeCategory ? 'active' : ''}" data-compras-cat="${c.id}">
+        <span>${c.icon}</span>
+        <span>${c.label}</span>
+      </button>
+    `).join('') + `
+      <button type="button" class="chip chip-add-category" data-open-category-modal="compras" style="border-style: dashed; border-color: rgba(46, 89, 51, 0.45); background: rgba(46, 89, 51, 0.05);" title="Adicionar ou personalizar categorias">
+        <span>➕</span>
+        <span>Nova Categoria</span>
+      </button>
     `;
-  }).join('');
+  }
+
+  // Lista de Itens da Lista de Compras
+  const listEl = document.getElementById('shopping-items-list');
+  if (listEl) {
+    let items = (state.compras || []);
+    if (activeCategory !== 'todas') {
+      items = items.filter(i => (i.category || 'outros') === activeCategory);
+    }
+
+    if (items.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg);">
+          <p style="font-size: 2.2rem; margin-bottom: 0.5rem;">🛒</p>
+          <p style="font-weight: 600;">Sua lista de mercado está vazia nesta categoria.</p>
+          <p style="font-size: 0.8rem; margin-top: 0.25rem;">Adicione itens conforme for lembrando durante o mês!</p>
+        </div>
+      `;
+    } else {
+      // Ordena: pendentes primeiro, comprados por último
+      const sorted = [...items].sort((a, b) => (a.bought ? 1 : 0) - (b.bought ? 1 : 0));
+
+      listEl.innerHTML = sorted.map(item => {
+        const catObj = findCategory(state, 'compras', item.category);
+        const userLabel = item.suggestedBy === 'scarlet' ? '👩‍💼 Scarlet' : (item.suggestedBy === 'matheus' ? '👨‍💻 Matheus' : '👥 Casal');
+
+        return `
+          <div class="shopping-card ${item.bought ? 'bought' : ''}" data-shopping-id="${item.id}">
+            <div class="shopping-main">
+              <label class="task-checkbox-wrapper">
+                <input type="checkbox" class="shopping-checkbox" data-id="${item.id}" ${item.bought ? 'checked' : ''} />
+              </label>
+              <div class="shopping-info">
+                <span class="shopping-title">${item.title}</span>
+                <div class="shopping-meta">
+                  <span class="tag-room">${catObj.icon} ${catObj.label}</span>
+                  ${item.quantity ? `<span class="shopping-qty-pill">${item.quantity}</span>` : ''}
+                  ${item.price > 0 ? `<span class="shopping-price-tag">${formatCurrencyWithSymbol(item.price)}</span>` : ''}
+                  <span style="color: var(--text-muted); font-size: 0.75rem;">${userLabel}</span>
+                </div>
+                ${item.notes ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">${item.notes}</div>` : ''}
+              </div>
+            </div>
+            <div class="task-actions" style="display: flex; gap: 0.25rem; align-items: center;">
+              <button class="btn btn-icon btn-sm" data-edit-shopping="${item.id}" title="Editar Item">✏️</button>
+              <button class="btn btn-icon btn-sm" data-delete-shopping="${item.id}" title="Excluir Item">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Compras de Mercado / Notas Fiscais Separadas por Mês
+  const purchasesContainer = document.getElementById('market-purchases-container');
+  if (purchasesContainer) {
+    const monthlyGroups = getMarketPurchasesByMonth(state);
+    const monthKeys = Object.keys(monthlyGroups).sort().reverse();
+
+    if (monthKeys.length === 0) {
+      purchasesContainer.innerHTML = `
+        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg);">
+          <p style="font-size: 2.2rem; margin-bottom: 0.5rem;">🧾</p>
+          <p style="font-weight: 600;">Nenhuma nota fiscal de mercado registrada ainda.</p>
+          <p style="font-size: 0.8rem; margin-top: 0.25rem;">Toque no botão "📷 Ler QR Code da Nota Fiscal" para registrar sua compra!</p>
+        </div>
+      `;
+    } else {
+      purchasesContainer.innerHTML = monthKeys.map(mKey => {
+        const group = monthlyGroups[mKey];
+        return `
+          <div class="month-group-card">
+            <div class="month-group-header">
+              <span class="month-group-title">📅 ${getMonthLabel(group.monthKey)}</span>
+              <span class="month-group-total">${formatCurrencyWithSymbol(group.total)} (${group.count} ${group.count === 1 ? 'compra' : 'compras'})</span>
+            </div>
+            <div class="month-purchases-list">
+              ${group.purchases.map(p => `
+                <div class="market-receipt-row" data-purchase-id="${p.id}">
+                  <div class="market-receipt-info">
+                    <div class="market-receipt-name">🛒 ${p.marketName || 'Supermercado'}</div>
+                    <div class="market-receipt-meta">
+                      <span>📅 ${p.date || 'Data da compra'}</span>
+                      ${p.items && p.items.length ? `<span>• ${p.items.length} itens</span>` : ''}
+                      ${p.accessKey ? `<span style="font-size: 0.7rem; color: var(--text-muted);" title="${p.accessKey}">Chave: ${p.accessKey.slice(0, 10)}...</span>` : ''}
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="market-receipt-total">${formatCurrencyWithSymbol(p.totalAmount)}</div>
+                    <button class="btn btn-icon btn-sm" data-delete-purchase="${p.id}" title="Excluir Registro de Compra">🗑️</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
+export function renderGamificationTab(state) {
+  // Gamificação removida a pedido do casal
 }
 
 // -------------------------------------------------------------
@@ -910,4 +1090,123 @@ export function renderSettingsTab(state) {
       sessionUserEl.textContent = 'Nenhuma sessão conectada';
     }
   }
+
+  // Biometria do Celular
+  const biometricsToggle = document.getElementById('settings-biometrics-toggle');
+  if (biometricsToggle) {
+    biometricsToggle.checked = isBiometricsEnabled();
+    if (!isBiometricsSupported()) {
+      biometricsToggle.disabled = true;
+      if (biometricsToggle.parentElement) {
+        biometricsToggle.parentElement.title = 'Biometria não suportada ou não disponível neste navegador/dispositivo';
+      }
+    }
+  }
+
+  // Renderiza Gerenciador de Categorias em Ajustes
+  renderCategoriesManager(state, 'tarefas');
+}
+
+// -------------------------------------------------------------
+// GESTOR DE CATEGORIAS & EMOJIS (Ajustes & Modais)
+// -------------------------------------------------------------
+export function populateCategorySelects(state) {
+  const taskSelect = document.getElementById('task-input-room');
+  if (taskSelect) {
+    const cats = getCategories(state, 'tarefas');
+    const curVal = taskSelect.value;
+    taskSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+    if (curVal && cats.some(c => c.id === curVal)) taskSelect.value = curVal;
+  }
+
+  const taskEditSelect = document.getElementById('task-edit-room');
+  if (taskEditSelect) {
+    const cats = getCategories(state, 'tarefas');
+    const curVal = taskEditSelect.value;
+    taskEditSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+    if (curVal && cats.some(c => c.id === curVal)) taskEditSelect.value = curVal;
+  }
+
+  const shoppingSelect = document.getElementById('shopping-input-category');
+  if (shoppingSelect) {
+    const cats = getCategories(state, 'compras');
+    const curVal = shoppingSelect.value;
+    shoppingSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+    if (curVal && cats.some(c => c.id === curVal)) shoppingSelect.value = curVal;
+  }
+
+  const shoppingEditSelect = document.getElementById('shopping-edit-category');
+  if (shoppingEditSelect) {
+    const cats = getCategories(state, 'compras');
+    const curVal = shoppingEditSelect.value;
+    shoppingEditSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+    if (curVal && cats.some(c => c.id === curVal)) shoppingEditSelect.value = curVal;
+  }
+
+  const carroSelect = document.getElementById('carro-input-category');
+  if (carroSelect) {
+    const cats = getCategories(state, 'carro');
+    const curVal = carroSelect.value;
+    carroSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+    if (curVal && cats.some(c => c.id === curVal)) carroSelect.value = curVal;
+  }
+
+  const reformaSelect = document.getElementById('reforma-input-room');
+  if (reformaSelect) {
+    const cats = getCategories(state, 'reformas');
+    const curVal = reformaSelect.value;
+    reformaSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+    if (curVal && cats.some(c => c.id === curVal)) reformaSelect.value = curVal;
+  }
+
+  const sonhoSelect = document.getElementById('sonho-input-category');
+  if (sonhoSelect) {
+    const cats = getCategories(state, 'sonhos');
+    const curVal = sonhoSelect.value;
+    sonhoSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+    if (curVal && cats.some(c => c.id === curVal)) sonhoSelect.value = curVal;
+  }
+}
+
+export function renderCategoriesManager(state, activeModule = 'tarefas') {
+  const container = document.getElementById('categories-list-container');
+  if (!container) return;
+
+  const cats = getCategories(state, activeModule);
+  if (cats.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; color: var(--text-muted); padding: 1.25rem 0.5rem; font-size: 0.85rem;">
+        Nenhuma categoria cadastrada para este módulo. Toque em "+ Nova Categoria" para criar!
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = cats.map(cat => `
+    <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.65rem 0.85rem; gap: 0.5rem;">
+      <div style="display: flex; align-items: center; gap: 0.65rem; min-width: 0;">
+        <span style="font-size: 1.45rem; line-height: 1;">${cat.icon}</span>
+        <span style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${cat.label}</span>
+      </div>
+      <div style="display: flex; gap: 0.4rem; flex-shrink: 0;">
+        <button type="button" class="btn btn-secondary btn-sm" data-action-edit-cat="${cat.id}" data-cat-module="${activeModule}" title="Editar Categoria" style="padding: 0.35rem 0.6rem;">
+          ✏️
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" data-action-delete-cat="${cat.id}" data-cat-module="${activeModule}" title="Excluir Categoria" style="padding: 0.35rem 0.6rem; color: var(--brand-rose); border-color: rgba(244, 63, 94, 0.3);">
+          🗑️
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+export function renderQuickEmojis() {
+  const grid = document.getElementById('quick-emoji-grid');
+  if (!grid) return;
+
+  grid.innerHTML = QUICK_EMOJIS_LIST.map(emoji => `
+    <button type="button" class="btn-quick-emoji" data-emoji="${emoji}" style="font-size: 1.35rem; padding: 0.3rem 0.45rem; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); cursor: pointer; line-height: 1; transition: transform 0.1s ease;">
+      ${emoji}
+    </button>
+  `).join('');
 }

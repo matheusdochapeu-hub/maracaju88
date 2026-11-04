@@ -52,9 +52,9 @@
 
       <!-- Atalho com 1 Toque (Ideal para Celular) -->
       <div class="auth-quick-section">
-        <label class="auth-quick-label">Selecione seu perfil no celular:</label>
+        <label class="auth-quick-label">Selecione quem está acessando:</label>
         <div class="auth-quick-buttons">
-          <button type="button" class="auth-quick-btn" id="btn-quick-matheus" data-email="matheusdochapeu@gmail.com">
+          <button type="button" class="auth-quick-btn active-profile-btn" id="btn-quick-matheus" data-email="matheusdochapeu@gmail.com">
             <span class="auth-quick-avatar">👨‍💻</span>
             <div class="auth-quick-info">
               <strong>Matheus</strong>
@@ -71,21 +71,35 @@
         </div>
       </div>
 
+      <!-- Opção de Biometria / Desbloqueio de Tela do Celular -->
+      <div id="auth-biometrics-container" style="margin-top: 0.75rem; text-align: center;">
+        <button type="button" id="btn-auth-biometrics" class="btn btn-secondary" style="width: 100%; justify-content: center; gap: 0.5rem; padding: 0.75rem; border-color: var(--brand-moss); background: rgba(46, 89, 51, 0.08);">
+          <span>👆</span>
+          <span>Desbloquear com Celular / Digital / Face</span>
+        </button>
+      </div>
+
       <div class="auth-divider">
-        <span>ou valide digitando o e-mail</span>
+        <span>ou digite a senha pessoal</span>
       </div>
 
       <form id="form-auth-login" class="auth-form">
+        <input type="hidden" id="auth-selected-user" value="matheus" />
         <div class="form-group" style="text-align: left;">
-          <label class="form-label" for="auth-email-input">E-mail Cadastrado</label>
-          <input 
-            type="email" 
-            id="auth-email-input" 
-            class="form-control" 
-            placeholder="matheusdochapeu@gmail.com ou scarletsantos7@gmail.com" 
-            autocomplete="email"
-            required 
-          />
+          <label class="form-label" for="auth-password-input">Senha / PIN Pessoal</label>
+          <div style="position: relative;">
+            <input 
+              type="password" 
+              id="auth-password-input" 
+              class="form-control" 
+              placeholder="Digite sua senha (ou deixe vazia se não definiu)" 
+              autocomplete="current-password"
+            />
+            <button type="button" id="btn-toggle-auth-password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-muted);" title="Ver senha">👁️</button>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+            Se ainda não definiu senha, basta tocar em Entrar e você poderá configurar na aba Ajustes.
+          </span>
         </div>
         <button type="submit" id="btn-auth-submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem;">
           🔑 Entrar no Maracaju
@@ -108,7 +122,6 @@
         <img src="./icons/icon-192.png" alt="Maracaju" class="brand-logo" />
         <div class="brand-text">
           <h1>Maracaju</h1>
-          <span class="brand-badge">Nosso Lar</span>
         </div>
       </div>
 
@@ -118,12 +131,6 @@
           <span>📲</span>
           <span>Instalar App</span>
         </button>
-
-        <!-- Sequência de dias seguidos (Gamificação) -->
-        <div class="streak-pill" title="Dias seguidos com tarefas concluídas!">
-          <span class="streak-icon">🔥</span>
-          <span id="header-streak-count">0 dias</span>
-        </div>
 
         <!-- Seletor Rápido de Quem está Usando (Matheus / Scarlet) -->
         <button id="active-user-btn" class="active-user-toggle" title="Alternar quem está marcando as tarefas">
@@ -155,9 +162,9 @@
       <span class="nav-icon">✨</span>
       <span>Sonhos</span>
     </button>
-    <button class="nav-item" data-tab="gamificacao">
-      <span class="nav-icon">🏆</span>
-      <span>Placar</span>
+    <button class="nav-item" data-tab="compras">
+      <span class="nav-icon">🛒</span>
+      <span>Mercado</span>
     </button>
     <button class="nav-item" data-tab="historico">
       <span class="nav-icon">📅</span>
@@ -207,15 +214,8 @@
       <!-- Banner Financeiro & Resumo do Carro -->
       <div id="carro-summary-banner" class="dash-card"></div>
 
-      <!-- Filtros por Categoria -->
-      <div class="chips-scroll">
-        <button class="chip active" data-carro-cat="todas">Todas Categorias</button>
-        <button class="chip" data-carro-cat="oleo_revisao">🛢️ Revisão & Óleo</button>
-        <button class="chip" data-carro-cat="mecanica">🔧 Mecânica</button>
-        <button class="chip" data-carro-cat="pneus_freios">🛞 Pneus & Freios</button>
-        <button class="chip" data-carro-cat="estetica">✨ Estética</button>
-        <button class="chip" data-carro-cat="eletrica_acessorios">🔌 Elétrica & Acessórios</button>
-      </div>
+      <!-- Filtros por Categoria (Dinâmicos com Emojis) -->
+      <div id="carro-category-chips" class="chips-scroll"></div>
 
       <!-- Filtros por Status -->
       <div class="chips-scroll" style="margin-top: -0.25rem;">
@@ -247,8 +247,12 @@
     <section id="tab-reformas" class="tab-content">
       <div id="reformas-summary-banner" class="dash-card"></div>
 
-      <div class="chips-scroll">
-        <button class="chip active" data-reforma-filter="todas">Todas</button>
+      <!-- Filtros por Cômodo/Categoria (Dinâmicos com Emojis) -->
+      <div id="reformas-category-chips" class="chips-scroll"></div>
+
+      <!-- Filtros por Status -->
+      <div class="chips-scroll" style="margin-top: -0.25rem;">
+        <button class="chip active" data-reforma-filter="todas">Todos Status</button>
         <button class="chip" data-reforma-filter="ideia">💡 Ideias</button>
         <button class="chip" data-reforma-filter="orcamento">📐 Em Orçamento</button>
         <button class="chip" data-reforma-filter="andamento">🛠️ Em Andamento</button>
@@ -274,13 +278,8 @@
     <section id="tab-sonhos" class="tab-content">
       <div id="sonhos-summary-banner" class="dash-card"></div>
 
-      <div class="chips-scroll">
-        <button class="chip active" data-sonho-filter="todas">Todos</button>
-        <button class="chip" data-sonho-filter="viagem">✈️ Viagens</button>
-        <button class="chip" data-sonho-filter="casa">🏡 Casa & Conforto</button>
-        <button class="chip" data-sonho-filter="bens">🚗 Conquistas</button>
-        <button class="chip" data-sonho-filter="experiencia">💖 Vida a Dois</button>
-      </div>
+      <!-- Filtros por Categoria (Dinâmicos com Emojis) -->
+      <div id="sonhos-category-chips" class="chips-scroll"></div>
 
       <div class="section-action-bar">
         <h2 class="section-heading">Nossos Planos Juntos</h2>
@@ -296,15 +295,47 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- ABA 5: GAMIFICAÇÃO & PLACAR DO CASAL       -->
+    <!-- ABA 5: MERCADO & LISTA DE COMPRAS          -->
     <!-- ========================================== -->
-    <section id="tab-gamificacao" class="tab-content">
-      <div id="gamification-scoreboard" class="dash-card"></div>
+    <section id="tab-compras" class="tab-content">
+      <!-- Banner de Resumo da Lista & Mês -->
+      <div id="compras-summary-banner" class="dash-card"></div>
 
-      <div class="section-action-bar" style="margin-top: 1.5rem;">
-        <h2 class="section-heading">Conquistas Desbloqueáveis (Badges)</h2>
+      <!-- Alternador de Visão: Lista de Compras vs Notas Fiscais Registradas -->
+      <div class="compras-view-pills" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+        <button type="button" class="chip active" data-compras-view="lista">🛒 Lista do Mês</button>
+        <button type="button" class="chip" data-compras-view="notas">🧾 Notas & Compras Mensais</button>
       </div>
-      <div id="gamification-badges-grid" class="badges-grid"></div>
+
+      <!-- Barra de Ações: Leitor de QR Code de Nota Fiscal + Limpar Comprados -->
+      <div class="compras-actions-row" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+        <button type="button" class="btn btn-primary" id="btn-scan-nfce-qr" style="flex: 1; min-width: 180px; justify-content: center; background: linear-gradient(135deg, var(--brand-moss), #1e3a24);">
+          <span>📷</span> Ler QR Code da Nota Fiscal
+        </button>
+        <button type="button" class="btn btn-secondary" id="btn-clear-bought-items" title="Limpar itens marcados como comprados">
+          <span>🧹</span> Limpar Comprados
+        </button>
+      </div>
+
+      <!-- Subseção: Visão Lista de Compras -->
+      <div id="compras-view-lista-container">
+        <!-- Filtros por Categoria de Compras -->
+        <div id="compras-category-chips" class="chips-scroll"></div>
+
+        <!-- Lista de Itens a Comprar / Comprados -->
+        <div id="shopping-items-list" class="shopping-list-container"></div>
+      </div>
+
+      <!-- Subseção: Visão Notas Fiscais & Gastos Separados por Mês -->
+      <div id="compras-view-notas-container" style="display: none;">
+        <div id="market-purchases-container"></div>
+      </div>
+
+      <!-- Botão Flutuante (FAB) no Canto Inferior Direito -->
+      <button type="button" class="fab-btn" data-open-modal="modal-add-shopping-item" aria-label="Novo Item de Compra">
+        <span class="fab-icon">＋</span>
+        <span class="fab-label">Novo Item</span>
+      </button>
     </section>
 
     <!-- ========================================== -->
@@ -364,19 +395,63 @@
           </div>
         </div>
 
-        <!-- Perfis dos Moradores -->
+        <!-- Perfis dos Moradores & Senhas Individuais -->
         <div class="dash-card">
-          <h3 class="dash-title" style="margin-bottom: 1rem;">👥 Moradores do Maracaju</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <h3 class="dash-title" style="margin-bottom: 0.5rem;">👥 Moradores & Senhas Individuais</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+            Cada morador pode definir sua própria senha ou PIN de acesso e habilitar a biometria do celular.
+          </p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
             <div class="form-group">
               <label class="form-label">Nome Usuário 1</label>
               <input type="text" id="settings-user1-name" class="form-control" required />
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-change-pass-matheus" style="width: 100%; margin-top: 0.5rem;">
+                🔑 Senha do Matheus
+              </button>
             </div>
             <div class="form-group">
               <label class="form-label">Nome Usuário 2</label>
               <input type="text" id="settings-user2-name" class="form-control" required />
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-change-pass-scarlet" style="width: 100%; margin-top: 0.5rem;">
+                🔑 Senha da Scarlet
+              </button>
             </div>
           </div>
+
+          <div style="border-top: 1px solid var(--border-subtle); padding-top: 0.75rem;">
+            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; cursor: pointer;">
+              <span>👆 <strong>Desbloqueio com Biometria do Celular (Digital / Face ID)</strong></span>
+              <input type="checkbox" id="settings-biometrics-toggle" style="transform: scale(1.2);" />
+            </label>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+              Usa a autenticação do seu próprio aparelho (Face ID, impressão digital ou bloqueio de tela).
+            </div>
+          </div>
+        </div>
+
+        <!-- Gerenciador de Categorias & Emojis -->
+        <div class="dash-card">
+          <div class="dash-header">
+            <h3 class="dash-title">🏷️ Categorias & Emojis de Filtro</h3>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-category-settings">
+              <span>+</span> Nova Categoria
+            </button>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            Personalize as categorias e emojis usados para filtrar tarefas do lar, compras de mercado, cuidados do carro, reformas e sonhos.
+          </p>
+
+          <!-- Seletor de Módulo para Gerenciar -->
+          <div class="chips-scroll" id="categories-module-selector" style="margin-bottom: 0.75rem;">
+            <button type="button" class="chip active" data-manage-module="tarefas">🧹 Tarefas</button>
+            <button type="button" class="chip" data-manage-module="compras">🛒 Mercado</button>
+            <button type="button" class="chip" data-manage-module="carro">🚗 Carro</button>
+            <button type="button" class="chip" data-manage-module="reformas">🔨 Reformas</button>
+            <button type="button" class="chip" data-manage-module="sonhos">✨ Sonhos</button>
+          </div>
+
+          <!-- Lista de Categorias do Módulo Ativo -->
+          <div id="categories-list-container" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
         </div>
 
         <!-- Instalação no Celular -->
@@ -527,6 +602,64 @@
     </div>
   </div>
 
+  <!-- Modal: Editar Tarefa do Lar -->
+  <div id="modal-edit-task" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Tarefa do Lar</h3>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-task">
+        <input type="hidden" id="task-edit-id" value="" />
+        <div class="form-group">
+          <label class="form-label">Título da Tarefa</label>
+          <input type="text" id="task-edit-title" class="form-control" placeholder="Ex: Higienizar micro-ondas" required />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Periodicidade</label>
+            <select id="task-edit-frequency" class="form-control">
+              <option value="diaria">☀️ Diária</option>
+              <option value="semanal">📅 Semanal</option>
+              <option value="mensal">🗓️ Mensal</option>
+              <option value="anual">🎯 Anual</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cômodo / Categoria</label>
+            <select id="task-edit-room" class="form-control"></select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Nível de Esforço (XP)</label>
+            <select id="task-edit-effort" class="form-control">
+              <option value="leve">⚡ Leve (+10 XP)</option>
+              <option value="media">⚡⚡ Média (+25 XP)</option>
+              <option value="pesada">⚡⚡⚡ Pesada (+50 XP)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Responsável Padrão</label>
+            <select id="task-edit-assignee" class="form-control">
+              <option value="ambos">Casal (Quem puder)</option>
+              <option value="matheus">Matheus</option>
+              <option value="scarlet">Scarlet</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Instruções ou Observações (Opcional)</label>
+          <textarea id="task-edit-notes" class="form-control" rows="2" placeholder="Dicas de produtos ou detalhes"></textarea>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal: Nova Manutenção do Carro (NOVO!) -->
   <div id="modal-add-carro" class="modal-overlay">
     <div class="modal-content">
@@ -574,7 +707,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">Orçamento Estimado (R$)</label>
-            <input type="number" id="carro-input-cost" class="form-control" placeholder="0" min="0" step="10" />
+            <input type="text" inputmode="decimal" id="carro-input-cost" class="form-control" placeholder="Ex: 264,33" />
           </div>
         </div>
 
@@ -627,8 +760,8 @@
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label">Cômodo / Área</label>
-            <input type="text" id="reforma-input-room" class="form-control" placeholder="Ex: Cozinha, Varanda" required />
+            <label class="form-label">Cômodo / Categoria</label>
+            <select id="reforma-input-room" class="form-control" required></select>
           </div>
           <div class="form-group">
             <label class="form-label">Prioridade</label>
@@ -652,7 +785,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">Orçamento Estimado (R$)</label>
-            <input type="number" id="reforma-input-cost" class="form-control" placeholder="0" min="0" step="50" />
+            <input type="text" inputmode="decimal" id="reforma-input-cost" class="form-control" placeholder="Ex: 264,33" />
           </div>
         </div>
         <div class="form-group">
@@ -707,7 +840,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">Meta Financeira (R$)</label>
-            <input type="number" id="sonho-input-amount" class="form-control" placeholder="0" min="0" step="100" />
+            <input type="text" inputmode="decimal" id="sonho-input-amount" class="form-control" placeholder="Ex: 264,33" />
           </div>
         </div>
         <div class="form-group">
@@ -802,6 +935,260 @@
         </ol>
       </div>
       <button class="btn btn-primary" style="width: 100%; margin-top: 1.25rem;" data-close-modal>Entendi</button>
+    </div>
+  </div>
+
+  <!-- Modal: Criar / Editar Categoria -->
+  <div id="modal-category-editor" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="category-modal-title">Nova Categoria</h3>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <form id="form-category-editor">
+        <input type="hidden" id="category-edit-id" value="" />
+        
+        <div class="form-group">
+          <label class="form-label">Aplicar em qual Módulo?</label>
+          <select id="category-input-module" class="form-control">
+            <option value="tarefas">🧹 Tarefas do Lar</option>
+            <option value="compras">🛒 Mercado & Lista de Compras</option>
+            <option value="carro">🚗 Carro & Manutenção</option>
+            <option value="reformas">🔨 Reformas & Melhorias</option>
+            <option value="sonhos">✨ Mural dos Sonhos</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nome da Categoria</label>
+          <input type="text" id="category-input-label" class="form-control" placeholder="Ex: Varanda, Escritório, Pet, Som" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Emoji da Categoria</label>
+          <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <input type="text" id="category-input-icon" class="form-control" style="width: 75px; text-align: center; font-size: 1.6rem; padding: 0.35rem;" value="🏷️" maxlength="4" required />
+            <span style="font-size: 0.8rem; color: var(--text-secondary);">Escolha uma sugestão rápida abaixo ou digite qualquer emoji no teclado.</span>
+          </div>
+        </div>
+
+        <!-- Grade de Emojis Rápidos -->
+        <div class="form-group">
+          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Sugestões Rápidas de Emojis:</label>
+          <div id="quick-emoji-grid" style="display: flex; flex-wrap: wrap; gap: 0.35rem; max-height: 120px; overflow-y: auto; padding: 0.5rem; background: var(--bg-primary); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);"></div>
+        </div>
+
+        <!-- Pré-visualização ao Vivo -->
+        <div style="background: var(--bg-primary); border: 1px dashed var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 1rem; text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">Pré-visualização do Filtro:</div>
+          <div class="chip active" style="display: inline-flex; pointer-events: none;" id="category-preview-chip">
+            <span id="preview-chip-icon">🏷️</span>
+            <span id="preview-chip-label">Exemplo</span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Categoria</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Adicionar Item na Lista de Compras -->
+  <div id="modal-add-shopping-item" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">🛒 Novo Item para o Mercado</h3>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-shopping-item">
+        <div class="form-group">
+          <label class="form-label">O que precisamos comprar?</label>
+          <input type="text" id="shopping-input-title" class="form-control" placeholder="Ex: Café moído 500g, Tomate, Detergente" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Categoria</label>
+            <select id="shopping-input-category" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quantidade / Unidade</label>
+            <input type="text" id="shopping-input-qty" class="form-control" placeholder="Ex: 2 un, 1 kg, 500g" value="1 un" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Preço Estimado (R$)</label>
+            <input type="text" inputmode="decimal" id="shopping-input-price" class="form-control" placeholder="Ex: 18,90" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quem Lembrou?</label>
+            <select id="shopping-input-suggested-by" class="form-control">
+              <option value="matheus">Matheus</option>
+              <option value="scarlet">Scarlet</option>
+              <option value="ambos" selected>Casal</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Marca ou Detalhes (Opcional)</label>
+          <input type="text" id="shopping-input-notes" class="form-control" placeholder="Ex: Preferência marca X ou embalagem econômica" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Adicionar à Lista de Mercado</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Editar Item da Lista de Compras -->
+  <div id="modal-edit-shopping-item" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Item de Compra</h3>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-shopping-item">
+        <input type="hidden" id="shopping-edit-id" value="" />
+        <div class="form-group">
+          <label class="form-label">Nome do Item</label>
+          <input type="text" id="shopping-edit-title" class="form-control" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Categoria</label>
+            <select id="shopping-edit-category" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quantidade</label>
+            <input type="text" id="shopping-edit-qty" class="form-control" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Preço (R$)</label>
+            <input type="text" inputmode="decimal" id="shopping-edit-price" class="form-control" placeholder="Ex: 264,33" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quem Lembrou?</label>
+            <select id="shopping-edit-suggested-by" class="form-control">
+              <option value="matheus">Matheus</option>
+              <option value="scarlet">Scarlet</option>
+              <option value="ambos">Casal</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Marca ou Detalhes</label>
+          <input type="text" id="shopping-edit-notes" class="form-control" />
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Leitor de QR Code de Nota Fiscal (NFC-e) -->
+  <div id="modal-qr-scanner" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">📷 Ler QR Code da Nota Fiscal</h3>
+        <button class="btn btn-icon btn-sm" id="btn-close-qr-scanner" data-close-modal>✕</button>
+      </div>
+
+      <div class="qr-scanner-wrapper">
+        <!-- Viewport da Câmera do Celular -->
+        <div class="qr-camera-viewport" id="qr-camera-container">
+          <video id="qr-video" playsinline muted autoplay></video>
+          <div class="qr-scan-guide"></div>
+          <div class="qr-laser-line"></div>
+        </div>
+
+        <!-- Controles da Câmera -->
+        <div style="display: flex; gap: 0.5rem; width: 100%; justify-content: center;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-camera">
+            🔄 Alternar Câmera
+          </button>
+          <label class="btn btn-secondary btn-sm" style="margin-bottom: 0; cursor: pointer;">
+            📁 Enviar Foto do QR Code
+            <input type="file" id="qr-file-input" accept="image/*" style="display: none;" />
+          </label>
+        </div>
+
+        <!-- Feedback / Status do Scanner -->
+        <div id="qr-status-msg" style="font-size: 0.85rem; color: var(--text-secondary); text-align: center;">
+          Aponte a câmera para o QR Code impresso no cupom fiscal (NFC-e).
+        </div>
+
+        <!-- Card de Resultado Pré-visualizado -->
+        <div id="qr-preview-result" style="display: none; width: 100%;" class="qr-result-box">
+          <h4 style="font-size: 0.95rem; color: var(--brand-moss-dark); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span>🧾</span> Dados Extraídos da Nota:
+          </h4>
+          <div style="font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); margin-bottom: 0.75rem;">
+            <div><strong>Mercado:</strong> <span id="qr-res-market">--</span></div>
+            <div><strong>Data:</strong> <span id="qr-res-date">--</span></div>
+            <div><strong>Total:</strong> <span id="qr-res-total" style="font-weight: 800; color: var(--success); font-size: 1.05rem;">R$ 0,00</span></div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); word-break: break-all; margin-top: 0.25rem;">
+              <strong>Chave:</strong> <span id="qr-res-key">--</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-confirm-qr-purchase" style="width: 100%;">
+            ✅ Confirmar e Registrar Compra no App
+          </button>
+        </div>
+
+        <!-- Entrada Manual Alternativa -->
+        <div style="width: 100%; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem;">
+          <label class="form-label" style="font-size: 0.75rem;">Ou cole o link ou os 44 dígitos da nota:</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="qr-manual-input" class="form-control" placeholder="Link da NFC-e ou chave de acesso..." style="font-size: 0.8rem;" />
+            <button type="button" id="btn-qr-manual-submit" class="btn btn-primary btn-sm">Processar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Definir / Alterar Senha de Morador -->
+  <div id="modal-change-password" class="modal-overlay">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="pass-modal-title">Definir Senha de Acesso</h3>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <form id="form-change-password">
+        <input type="hidden" id="pass-modal-user-id" value="" />
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+          Defina uma senha pessoal ou PIN numérico para <strong id="pass-modal-user-name">Morador</strong>.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Nova Senha ou PIN</label>
+          <input type="password" id="pass-modal-new-input" class="form-control" placeholder="Mínimo 4 caracteres" minlength="4" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Confirme a Senha</label>
+          <input type="password" id="pass-modal-confirm-input" class="form-control" placeholder="Repita a senha" minlength="4" required />
+        </div>
+
+        <div id="pass-modal-error" style="display: none; color: var(--brand-rose); font-size: 0.8rem; margin-bottom: 0.75rem;"></div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Senha</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
     </div>
   </div>
 

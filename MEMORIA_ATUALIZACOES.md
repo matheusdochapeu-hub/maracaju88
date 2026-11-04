@@ -1,9 +1,68 @@
-# Memória de Atualizações — Maracaju (`maracaju88`)
+# Memória de Atualizações — Maracaju (`maracaju`)
 
-**Data da última consolidação:** `02/11/2026`  
+**Data da última consolidação:** `04/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v1.3.3`
+**Versão Atual:** `v2.0.0`
+
+---
+
+## Histórico de Versões
+
+### Versão 2.0.0 (`04/11/2026`) — Nova Identidade Maracaju, Lista de Mercado & Leitor NFC-e, Senhas Individuais, Biometria e Fim da Gamificação
+1. **Identidade Visual Limpa e Nome Estritamente "Maracaju":**
+   - Removido "Nosso Lar" do cabeçalho do aplicativo e de todos os componentes da interface.
+   - Removido o número "88" do ícone e de todas as telas. O ícone da casa agora é minimalista e acolhedor com contornos botânicos.
+   - Paleta verde musgo suave e elegante (`#1b3820`, `#2e5933`, `#f4f6f1`) em todos os cards e modais.
+
+2. **Remoção Completa da Gamificação:**
+   - Removidos contadores de streak (dias seguidos), pontos de XP, níveis e badges.
+   - A aba "Placar" foi completamente substituída pela aba **Mercado** (Lista de Compras & Histórico de Notas Fiscais).
+
+3. **Nova Aba Mercado & Lista de Compras do Casal (`js/shopping.js`, `#tab-compras`):**
+   - Lista colaborativa para Matheus e Scarlet anotarem itens de supermercado conforme forem lembrando durante o mês.
+   - Registro de quantidade, categoria com emoji, preço unitário/estimado, quem lembrou e notas.
+   - Checkbox para marcar itens comprados e botão para limpar comprados mantendo histórico.
+   - Painel com contagem de itens pendentes e estimativa total de gastos do mês.
+
+4. **Leitor de QR Code de Nota Fiscal (NFC-e) & Compras Mensais (`js/nfce.js`, `#modal-qr-scanner`):**
+   - Scanner de câmera com guia visual e linha laser animada para ler o QR Code impresso no cupom fiscal.
+   - Opção alternativa para carregar foto do QR Code da galeria ou colar a URL / chave de 44 dígitos.
+   - Extração automática de:
+     - Supermercado (detecção inteligente de CNPJs de grandes redes: Pão de Açúcar, Carrefour, Atacadão, Assaí, etc.)
+     - Data e hora exatas da compra
+     - Valor total com centavos
+     - Chave de acesso da nota fiscal
+   - Separação e agrupamento automático das compras por mês, com total acumulado por período.
+
+5. **Suporte Universal a Valores "Quebrados" com Centavos (`js/currency.js`):**
+   - Todas as categorias e campos monetários aceitam valores fracionados com centavos (ex: `R$ 264,33`, `264,33` ou `264.33`).
+   - Aplicado em Mercado, Carro, Reformas e Mural dos Sonhos.
+   - Inputs configurados com `inputmode="decimal"` evitando rejeição de vírgulas em teclados mobile.
+
+6. **Definição de Categorias Personalizadas e Emojis de Filtro (`js/categories.js`):**
+   - Criação, edição e exclusão de categorias personalizadas com emojis para:
+     - 🧹 Tarefas do Lar
+     - 🛒 Mercado & Compras
+     - 🚗 Carro & Manutenção
+     - 🔨 Reformas & Melhorias
+     - ✨ Mural dos Sonhos
+   - Seletor de emojis rápidos e pré-visualização em tempo real do chip.
+
+7. **Edição Completa de Tarefas do Lar (`#modal-edit-task`):**
+   - Botão ✏️ em cada tarefa da lista.
+   - Permite editar título, cômodo/categoria, responsável padrão, instruções e alterar periodicidade (Diária, Semanal, Mensal ou Anual).
+
+8. **Autenticação Aperfeiçoada com Senhas Individuais & Biometria do Celular (`js/auth.js`):**
+   - Senhas ou PINs independentes configuráveis para Matheus e para Scarlet na aba Ajustes.
+   - Suporte a desbloqueio nativo por biometria do aparelho (Face ID, Touch ID / Digital ou bloqueio de tela via WebAuthn).
+   - Tela de login com seleção de morador, alternador de visualização de senha e botão de biometria.
+
+9. **UX Refinado & Posicionamento Flutuante dos Botões de Ação (FAB):**
+   - Botões de adição posicionados no canto inferior direito para acesso fácil com o polegar.
+   - Modais uniformes com design botânico e responsivo.
+   - Service Worker atualizado para `maracaju-v2.0.0` com cache offline completo.
+   - 11 testes automatizados em `test/app.test.js` com 100% de sucesso.
 
 ---
 

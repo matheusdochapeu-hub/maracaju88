@@ -1,73 +1,64 @@
-# 🏠 Maracaju - Gestão do Lar, Gamificação, Carro & Sonhos do Casal
+# 🏠 Maracaju - Gestão do Lar, Mercado, Carro, Reformas & Sonhos do Casal
 
-> Aplicativo PWA progressivo, moderno e gamificado feito especialmente para o dia a dia do casal no **Maracaju**. Permite gerenciar rotinas domésticas (**diárias, semanais, mensais e anuais**), acompanhar manutenções do **carro** com fotos e links de peças, verificar o que foi feito ou não diariamente, planejar reformas da casa, cultivar sonhos conjuntos e manter backup sincronizado em tempo real com o **Google Sheets**.
+> Aplicativo PWA progressivo, moderno e elegante feito especialmente para a gestão do lar de **Matheus** e **Scarlet** no **Maracaju**. Permite gerenciar rotinas domésticas com periodicidades personalizáveis, montar a **lista de compras de mercado colaborativa**, registrar compras escaneando o **QR Code da nota fiscal (NFC-e)** com separação por mês, acompanhar manutenções do **carro** com fotos e links, planejar **reformas** da casa, cultivar **sonhos** conjuntos, definir categorias com emojis, autenticar com **senhas individuais e biometria do celular**, com suporte a valores com centavos (`R$ 264,33`) e backup sincronizado no **Google Sheets**.
 
 ---
 
 ## 🌟 Principais Recursos
 
-### 1. 🧹 Tarefas Divididas por Periodicidade (Diárias, Semanais, Mensais e Anuais)
+### 1. 🧹 Tarefas do Lar (Diárias, Semanais, Mensais e Anuais) com Edição
 - **Divisão Clara por Ciclos:**
   - ☀️ **Diárias:** Louça, fogão/bancada, lixo da pia, arrumar cama, guardar roupas, lixo do banheiro.
   - 📅 **Semanais:** Lavar box/sanitário, trocar roupa de cama e toalhas, passar pano na casa toda, lavar roupas, tirar pó.
   - 🗓️ **Mensais:** Limpeza profunda de geladeira, fornos e micro-ondas, vidros e janelas, tapetes, lavagem da máquina.
   - 🎯 **Anuais:** Lavar cortinas, higienização de sofás e estofados, revisão de calhas e telhado, limpeza de caixa d'água, dedetização.
-- **Filtro Secundário por Cômodos:** Cozinha 🍳, Sala 🛋️, Quartos 🛏️, Banheiros 🚿, Lavanderia 🧺, Cuidados/Plantas 🪴 e Garagem 🚗.
-- **Gamificação Divertida:** Ganhe pontos de experiência (**XP**) a cada tarefa concluída (+10 XP leve, +25 XP média, +50 XP pesada).
-- **Sequência de Dias (Streak 🔥):** Mantenha a sequência ativa cuidando da casa todos os dias.
-- **Celebração com Confetti e Som:** Chuva de confetti animada via Canvas e efeitos sonoros nativos via Web Audio API.
-- **Seletor de Quem Fez:** Alterne com 1 toque entre **Matheus** e **Scarlet** para pontuar o perfil de quem realizou a tarefa.
+- **Edição Completa de Tarefas (✏️):** Permite alterar título, cômodo/categoria, responsável padrão e mudar periodicidade a qualquer momento.
+- **Filtro por Cômodos e Categorias Personalizadas:** Cozinha 🍳, Sala 🛋️, Quartos 🛏️, Banheiros 🚿, Lavanderia 🧺, Cuidados/Plantas 🪴 e Garagem 🚗, com suporte a criação de novas categorias com emojis customizados.
+- **Seletor de Quem Fez:** Alterne com 1 toque entre **Matheus** e **Scarlet** para registrar quem realizou a tarefa.
 
-### 2. 🚗 Aba do Carro & Manutenção (Fotos, Links e Peças)
-- **Controle Completo do Veículo:**
-  - Categorias: 🛢️ *Revisão & Óleo*, 🔧 *Mecânica Geral*, 🛞 *Pneus & Freios*, ✨ *Estética & Lavagem*, 🔌 *Elétrica & Acessórios*.
-- **Fotos Direto do Celular:**
-  - Anexe fotos de peças, notas, orçamentos ou referências tiradas com a câmera do celular ou da galeria.
-  - As fotos são **comprimidas automaticamente** via Canvas nativo (~40-70KB) para não pesar na memória.
-  - Toque na foto para visualizar em tamanho ampliado.
-- **Links Úteis:**
-  - Guarde links diretos para compras no Mercado Livre, Shopee, manuais e vídeos de tutoriais do YouTube.
-- **Controle por KM e Data:** Acompanhe a quilometragem alvo para trocas de óleo, pneus e revisões.
-- **Checklist e Orçamento:** Subtarefas de cada manutenção e controle de custo estimado vs gasto real.
+### 2. 🛒 Mercado & Lista de Compras com Leitor de Nota Fiscal (NFC-e)
+- **Lista de Compras do Mês Colaborativa:** Matheus e Scarlet adicionam itens conforme forem lembrando durante o mês, com quantidade, preço estimado, quem lembrou e observações.
+- **Leitor de QR Code de Nota Fiscal (NFC-e):**
+  - Câmera integrada com guia de leitura e mira laser.
+  - Suporte a upload de foto do QR Code ou entrada de chave de 44 dígitos / link SEFAZ.
+  - Extração automática de dados: Supermercado (detecção inteligente de CNPJs de Carrefour, Pão de Açúcar, Assaí, Atacadão, etc.), data da compra e valor total com centavos.
+- **Histórico Mensal de Compras:** Compras agrupadas automaticamente por mês com total acumulado por período.
+- **Limpeza Rápida de Comprados:** Botão para limpar itens concluídos mantendo a lista enxuta.
 
-### 3. 🔨 Reformas & Melhorias na Casa (Fotos, Inspirações e Links)
-- **Controle de Projetos:** Registre ideias de melhorias organizadas por status (💡 *Ideia*, 📐 *Em Orçamento*, 🛠️ *Em Andamento*, ✅ *Concluído*).
-- **Fotos e Inspirações:** Anexe fotos do "antes/depois", referências de decoração e notas de materiais tiradas diretamente com a câmera do celular ou da galeria, com compressão automática client-side (~40-70KB) e visualização ampliada.
-- **Links e Lojas:** Adicione links para produtos no Leroy Merlin, Mercado Livre, Pinterest, tutoriais do YouTube ou lojas de materiais de construção.
-- **Controle Orçamentário:** Estimativa de custo (R$) vs Gasto real investido.
-- **Checklist de Etapas:** Subtarefas interativas por projeto.
+### 3. 💵 Suporte a Valores com Centavos em Todo o App
+- Suporte a valores quebrados com centavos (ex: `R$ 264,33`, `264,33` ou `264.33`) em todas as categorias: Mercado, Carro, Reformas e Sonhos.
+- Teclado numérico decimal otimizado para celulares (`inputmode="decimal"`).
 
-### 4. ✨ Mural dos Sonhos & Metas
-- **Planejamento a Dois:** Categorias para Viagens ✈️, Casa & Conforto 🏡, Conquistas 🚗 e Vida a Dois 💖.
-- **Controle de Metas:** Valor alvo, valor já guardado e marcos intermediários.
+### 4. 🏷️ Categorias e Emojis Personalizáveis
+- Crie, edite e personalize categorias e emojis para filtros em Tarefas, Mercado, Carro, Reformas e Sonhos.
+- Grade de emojis rápidos e visualização em tempo real do chip de filtro.
 
-### 5. 🏆 Placar & Conquistas Desbloqueáveis
-- **Níveis do Lar:** De *Iniciantes do Lar* (Nível 1) até *Reis do Maracaju* e *Lenda Doméstica Suprema*.
-- **Divisão Saudável de Tarefas:** Gráfico comparativo de XP entre Matheus e Scarlet.
-- **Badges / Conquistas:** Desbloqueie medalhas exclusivas como *Piloto do Maracaju*, *Semana Impecável*, *Chef da Louça*, etc.
+### 5. 🚗 Aba do Carro & Manutenção (Fotos, Links e Peças)
+- **Controle Completo do Veículo:** Revisão & Óleo, Mecânica Geral, Pneus & Freios, Estética & Lavagem, Elétrica & Acessórios.
+- **Fotos e Links Direto do Celular:** Anexe fotos da peça ou defeito (comprimidas automaticamente client-side para ~40-70KB) e links de compras (Mercado Livre, lojas de autopeças).
+- **Checklist e Orçamento:** Subtarefas interativas e previsão orçamentária.
 
-### 6. 📅 Histórico & Verificação Diária
-- **Verificação Dia a Dia:** Navegue entre os dias (`◀ Ontem`, `Hoje`, `Amanhã ▶` ou qualquer data no calendário) para auditar exatamente o que foi feito e o que ficou pendente.
-- **Registro Detalhado:** Saiba quem realizou a tarefa, em qual horário e quantos XP foram conquistados.
+### 6. 🔨 Reformas & Melhorias na Casa (Fotos, Inspirações e Links)
+- **Controle de Projetos:** Status de Ideia, Em Orçamento, Em Andamento e Concluído.
+- **Fotos e Inspirações:** Galeria com upload de fotos da câmera/galeria com visualizador ampliado.
+- **Links e Lojas:** Links diretos de lojas (Leroy Merlin, Pinterest, Mercado Livre).
+- **Controle Orçamentário:** Estimativa de custo vs Gasto real investido.
+
+### 7. ✨ Mural dos Sonhos & Metas
+- **Planejamento do Casal:** Categorias para Viagens ✈️, Casa & Conforto 🏡, Conquistas 🚗 e Vida a Dois 💖.
+- **Controle de Metas:** Valor alvo com centavos e marcos intermediários.
+
+### 8. 📅 Histórico & Verificação Diária
+- **Verificação Dia a Dia:** Navegue entre os dias (`◀ Ontem`, `Hoje`, `Amanhã ▶` ou selecione data no calendário) para auditar exatamente o que foi feito e o que ficou pendente.
 - **Mini Calendário de Consistência:** Visualize o percentual de tarefas concluídas nos últimos 7 dias.
 
-### 7. 🔐 Acesso Exclusivo & Validação dos Moradores
-- **Portão de Entrada Restrito:** Apenas duas contas de e-mail autorizadas possuem acesso ao sistema:
-  - 👨‍💻 **Matheus:** `matheusdochapeu@gmail.com`
-  - 👩‍💼 **Scarlet:** `scarletsantos7@gmail.com`
-- **Atalho Rápido de 1 Toque:** No celular, basta selecionar o morador para validação imediata sem atrito.
-- **Bloqueio de Intrusos:** Qualquer e-mail não listado é imediatamente barrado.
-- **Sessão Persistente:** O acesso fica salvo com segurança no aparelho com opção de troca rápida de usuário ou logout.
+### 9. 🔐 Senhas Individuais & Desbloqueio por Biometria do Celular
+- **Acesso Restrito Exclusivo:** Matheus (`matheusdochapeu@gmail.com`) e Scarlet (`scarletsantos7@gmail.com`).
+- **Senhas Pessoais / PINs:** Cada morador pode configurar sua própria senha ou PIN na aba Ajustes.
+- **Biometria do Celular (WebAuthn):** Desbloqueio rápido utilizando Face ID, Touch ID / Impressão Digital ou bloqueio de tela do smartphone.
 
-### 7. ☁️ Backup & Sincronização no Google Sheets
-- **Abas Formatadas na Planilha:**
-  - `Resumo_Geral`: Nível, XP do casal, streak e estatísticas.
-  - `Tarefas`: Lista de todas as tarefas cadastradas (com periodicidade).
-  - `Historico_Log`: Log diário de cada tarefa com data, horário e responsável.
-  - `Carro`: Manutenções do carro, orçamentos, KM e links.
-  - `Reformas`: Projetos da casa e custos.
-  - `Sonhos`: Sonhos e metas do casal.
-  - `Backup_JSON`: Snapshot integral para restauração com 1 clique.
+### 10. ☁️ Backup & Sincronização no Google Sheets
+- Sincronização automática e manual com planilha Google pessoal via Apps Script.
 
 ---
 

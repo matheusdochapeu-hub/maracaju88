@@ -3,9 +3,33 @@
 // ============================================================
 
 import { loadState, saveState, exportBackupJson, importBackupJson } from './storage.js';
-import { getAuthSession, loginWithEmail, clearAuthSession } from './auth.js';
+import {
+  getAuthSession,
+  loginWithEmail,
+  clearAuthSession,
+  isBiometricsSupported,
+  isBiometricsEnabled,
+  setBiometricsEnabled,
+  authenticateWithBiometrics,
+  setUserPassword,
+  verifyUserPassword
+} from './auth.js';
 import { playTaskCompleteSound, playLevelUpSound, playSubtleClick } from './audio.js';
-import { toggleTaskDone, addTask, deleteTask, getLocalDateString } from './tasks.js';
+import { toggleTaskDone, addTask, deleteTask, updateTask, getLocalDateString } from './tasks.js';
+import {
+  addShoppingItem,
+  toggleShoppingItem,
+  updateShoppingItem,
+  deleteShoppingItem,
+  clearBoughtItems,
+  restoreBoughtItems,
+  addMarketPurchase,
+  deleteMarketPurchase,
+  getShoppingSummary,
+  getMarketPurchasesByMonth
+} from './shopping.js';
+import { parseNfceQrCodeText, fetchNfceDetailsOnline } from './nfce.js';
+import { parseCurrency, formatCurrency, formatCurrencyWithSymbol } from './currency.js';
 import {
   addCarroItem,
   updateCarroItem,
@@ -29,6 +53,13 @@ import {
 import { addSonho, deleteSonho, toggleSonhoMilestone } from './sonhos.js';
 import { testSheetsConnection, backupToSheets, restoreFromSheets } from './sheets.js';
 import {
+  getCategories,
+  findCategory,
+  addCategory,
+  updateCategory,
+  deleteCategory
+} from './categories.js';
+import {
   triggerConfetti,
   showToast,
   renderHeaderStats,
@@ -37,8 +68,12 @@ import {
   renderCarroTab,
   renderReformasTab,
   renderSonhosTab,
+  renderComprasTab,
   renderGamificationTab,
-  renderSettingsTab
+  renderSettingsTab,
+  populateCategorySelects,
+  renderCategoriesManager,
+  renderQuickEmojis
 } from './ui.js';
 
 // Estado global em memória
@@ -50,7 +85,11 @@ let currentHistoryDate = getLocalDateString();
 let currentCarroCategory = 'todas';
 let currentCarroStatus = 'todas';
 let currentReformasFilter = 'todas';
+let currentReformasCategory = 'todas';
 let currentSonhosFilter = 'todas';
+let currentComprasCategory = 'todas';
+let currentComprasView = 'lista';
+let currentCategoryManageModule = 'tarefas';
 let deferredInstallPrompt = null;
 
 // -------------------------------------------------------------
@@ -69,9 +108,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initCarroModule();
   initReformasModule();
   initSonhosModule();
+  initComprasModule();
+  initQrCodeScanner();
   initSettingsModule();
+  initCategoryManagement();
   initModals();
 
+  populateCategorySelects(state);
   refreshAllUI();
 });
 
@@ -81,12 +124,25 @@ document.addEventListener('DOMContentLoaded', () => {
 function initAuthModule() {
   const authGate = document.getElementById('auth-gate');
   const authForm = document.getElementById('form-auth-login');
-  const emailInput = document.getElementById('auth-email-input');
+  const passwordInput = document.getElementById('auth-password-input');
+  const selectedUserInput = document.getElementById('auth-selected-user');
+  const togglePassBtn = document.getElementById('btn-toggle-auth-password');
+  const btnBiometrics = document.getElementById('btn-auth-biometrics');
+  const biometricsContainer = document.getElementById('auth-biometrics-container');
   const errorBox = document.getElementById('auth-error-box');
   const errorText = document.getElementById('auth-error-text');
   const btnQuickMatheus = document.getElementById('btn-quick-matheus');
   const btnQuickScarlet = document.getElementById('btn-quick-scarlet');
   const btnLogout = document.getElementById('btn-auth-logout');
+
+  // Verifica se o dispositivo suporta biometria
+  if (biometricsContainer) {
+    if (!isBiometricsSupported() || !isBiometricsEnabled()) {
+      biometricsContainer.style.display = 'none';
+    } else {
+      biometricsContainer.style.display = 'block';
+    }
+  }
 
   function checkSession() {
     const session = getAuthSession();
@@ -102,7 +158,7 @@ function initAuthModule() {
     }
   }
 
-  function handleLogin(email) {
+  function handleLogin(email, skipPasswordCheck = false) {
     if (errorBox) errorBox.style.display = 'none';
 
     const result = loginWithEmail(email);
@@ -117,7 +173,7 @@ function initAuthModule() {
     }
 
     if (authGate) authGate.style.display = 'none';
-    if (emailInput) emailInput.value = '';
+    if (passwordInput) passwordInput.value = '';
     state.activeUserId = result.user.id;
     saveState(state);
 
@@ -127,28 +183,76 @@ function initAuthModule() {
     refreshAllUI();
   }
 
+  // Alterna visibilidade da senha
+  if (togglePassBtn && passwordInput) {
+    togglePassBtn.addEventListener('click', () => {
+      const isPassword = passwordInput.type === 'password';
+      passwordInput.type = isPassword ? 'text' : 'password';
+      togglePassBtn.textContent = isPassword ? '🙈' : '👁️';
+    });
+  }
+
+  // Desbloqueio com Biometria do Celular (Face ID / Digital)
+  if (btnBiometrics) {
+    btnBiometrics.addEventListener('click', async () => {
+      try {
+        const ok = await authenticateWithBiometrics();
+        if (ok) {
+          const uId = selectedUserInput ? selectedUserInput.value : 'matheus';
+          const email = (uId === 'scarlet') ? 'scarletsantos7@gmail.com' : 'matheusdochapeu@gmail.com';
+          handleLogin(email, true);
+        } else {
+          if (errorBox && errorText) {
+            errorText.textContent = 'Não foi possível validar a biometria neste aparelho.';
+            errorBox.style.display = 'flex';
+          }
+        }
+      } catch (err) {
+        if (errorBox && errorText) {
+          errorText.textContent = err.message || 'Falha ao validar biometria.';
+          errorBox.style.display = 'flex';
+        }
+      }
+    });
+  }
+
   // Verifica na inicialização
   checkSession();
 
-  // Submissão do formulário de e-mail
+  // Seleção rápida de perfil (Matheus / Scarlet)
+  function selectProfile(uId) {
+    if (selectedUserInput) selectedUserInput.value = uId;
+    if (btnQuickMatheus) btnQuickMatheus.classList.toggle('active-profile-btn', uId === 'matheus');
+    if (btnQuickScarlet) btnQuickScarlet.classList.toggle('active-profile-btn', uId === 'scarlet');
+    if (errorBox) errorBox.style.display = 'none';
+    if (passwordInput) passwordInput.focus();
+  }
+
+  if (btnQuickMatheus) {
+    btnQuickMatheus.addEventListener('click', () => selectProfile('matheus'));
+  }
+  if (btnQuickScarlet) {
+    btnQuickScarlet.addEventListener('click', () => selectProfile('scarlet'));
+  }
+
+  // Submissão do formulário com validação de senha
   if (authForm) {
     authForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const email = emailInput ? emailInput.value : '';
+      const uId = selectedUserInput ? selectedUserInput.value : 'matheus';
+      const pass = passwordInput ? passwordInput.value : '';
+
+      const verify = verifyUserPassword(uId, pass);
+      if (!verify.success) {
+        if (errorBox && errorText) {
+          errorText.textContent = verify.error;
+          errorBox.style.display = 'flex';
+        }
+        return;
+      }
+
+      const email = (uId === 'scarlet') ? 'scarletsantos7@gmail.com' : 'matheusdochapeu@gmail.com';
       handleLogin(email);
-    });
-  }
-
-  // Atalhos rápidos de 1 toque para o casal
-  if (btnQuickMatheus) {
-    btnQuickMatheus.addEventListener('click', () => {
-      handleLogin('matheusdochapeu@gmail.com');
-    });
-  }
-
-  if (btnQuickScarlet) {
-    btnQuickScarlet.addEventListener('click', () => {
-      handleLogin('scarletsantos7@gmail.com');
     });
   }
 
@@ -157,9 +261,9 @@ function initAuthModule() {
     btnLogout.addEventListener('click', () => {
       clearAuthSession();
       if (authGate) authGate.style.display = 'flex';
-      if (emailInput) {
-        emailInput.value = '';
-        emailInput.focus();
+      if (passwordInput) {
+        passwordInput.value = '';
+        passwordInput.focus();
       }
       showToast('Sessão encerrada com sucesso.', 'info', 2500);
       refreshAllUI();
@@ -169,6 +273,7 @@ function initAuthModule() {
 
 function refreshAllUI() {
   renderHeaderStats(state);
+  populateCategorySelects(state);
 
   if (currentTab === 'tarefas') {
     renderTasksTab(state, currentFrequencyFilter, currentRoomFilter);
@@ -177,11 +282,11 @@ function refreshAllUI() {
   } else if (currentTab === 'carro') {
     renderCarroTab(state, currentCarroCategory, currentCarroStatus);
   } else if (currentTab === 'reformas') {
-    renderReformasTab(state, currentReformasFilter);
+    renderReformasTab(state, currentReformasFilter, currentReformasCategory);
   } else if (currentTab === 'sonhos') {
     renderSonhosTab(state, currentSonhosFilter);
-  } else if (currentTab === 'gamificacao') {
-    renderGamificationTab(state);
+  } else if (currentTab === 'compras' || currentTab === 'gamificacao') {
+    renderComprasTab(state, currentComprasCategory, currentComprasView);
   } else if (currentTab === 'ajustes') {
     renderSettingsTab(state);
   }
@@ -304,11 +409,17 @@ function initTasksModule() {
     });
   }
 
-  // Filtro de Cômodos (Chips)
+  // Filtro de Cômodos / Categorias (Chips)
   const chipsContainer = document.getElementById('room-chips-container');
   if (chipsContainer) {
     chipsContainer.addEventListener('click', (e) => {
-      const chip = e.target.closest('.chip');
+      const addBtn = e.target.closest('[data-open-category-modal]');
+      if (addBtn) {
+        const mod = addBtn.getAttribute('data-open-category-modal') || 'tarefas';
+        openCategoryEditorModal(mod);
+        return;
+      }
+      const chip = e.target.closest('[data-room]');
       if (!chip) return;
       currentRoomFilter = chip.getAttribute('data-room') || 'tudo';
       playSubtleClick(state.settings.soundEnabled);
@@ -364,6 +475,24 @@ function initTasksModule() {
         return;
       }
 
+      const editBtn = e.target.closest('[data-edit-task]');
+      if (editBtn) {
+        const taskId = editBtn.getAttribute('data-edit-task');
+        const task = state.tasks.find(t => t.id === taskId);
+        if (task) {
+          populateCategorySelects(state);
+          document.getElementById('task-edit-id').value = task.id;
+          document.getElementById('task-edit-title').value = task.title;
+          document.getElementById('task-edit-frequency').value = task.frequency || 'diaria';
+          document.getElementById('task-edit-room').value = task.room || 'cozinha';
+          document.getElementById('task-edit-effort').value = task.effort || 'media';
+          document.getElementById('task-edit-assignee').value = task.assignedTo || 'ambos';
+          document.getElementById('task-edit-notes').value = task.notes || '';
+          openModal('modal-edit-task');
+        }
+        return;
+      }
+
       const deleteBtn = e.target.closest('[data-delete-task]');
       if (deleteBtn) {
         const taskId = deleteBtn.getAttribute('data-delete-task');
@@ -399,6 +528,47 @@ function initTasksModule() {
       addTaskForm.reset();
       showToast('Nova tarefa adicionada com sucesso!', 'success');
       currentFrequencyFilter = frequency;
+      refreshAllUI();
+    });
+  }
+
+  // Formulário de Edição de Tarefa
+  const formEditTask = document.getElementById('form-edit-task');
+  if (formEditTask) {
+    formEditTask.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const taskId = document.getElementById('task-edit-id').value;
+      const title = document.getElementById('task-edit-title').value;
+      const frequency = document.getElementById('task-edit-frequency').value;
+      const room = document.getElementById('task-edit-room').value;
+      const effort = document.getElementById('task-edit-effort').value;
+      const assignedTo = document.getElementById('task-edit-assignee').value;
+      const notes = document.getElementById('task-edit-notes').value;
+
+      if (!title.trim() || !taskId) return;
+
+      const previousTask = state.tasks.find(t => t.id === taskId);
+      const prevFreq = previousTask ? previousTask.frequency : null;
+
+      updateTask(state, taskId, {
+        title,
+        frequency,
+        room,
+        effort,
+        assignedTo,
+        notes
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+
+      closeModal('modal-edit-task');
+      showToast('Tarefa atualizada com sucesso! ✏️', 'success');
+
+      if (prevFreq && prevFreq !== frequency) {
+        currentFrequencyFilter = frequency;
+      }
+
       refreshAllUI();
     });
   }
@@ -467,17 +637,23 @@ function initHistoryModule() {
 // MÓDULO DO CARRO & MANUTENÇÃO (NOVO!)
 // -------------------------------------------------------------
 function initCarroModule() {
-  // Filtros de Categoria
-  const catChips = document.querySelectorAll('[data-carro-cat]');
-  catChips.forEach(btn => {
-    btn.addEventListener('click', () => {
-      catChips.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentCarroCategory = btn.getAttribute('data-carro-cat') || 'todas';
+  // Filtros de Categoria (Dinâmicos)
+  const carroChipsContainer = document.getElementById('carro-category-chips');
+  if (carroChipsContainer) {
+    carroChipsContainer.addEventListener('click', (e) => {
+      const addBtn = e.target.closest('[data-open-category-modal]');
+      if (addBtn) {
+        const mod = addBtn.getAttribute('data-open-category-modal') || 'carro';
+        openCategoryEditorModal(mod);
+        return;
+      }
+      const chip = e.target.closest('[data-carro-cat]');
+      if (!chip) return;
+      currentCarroCategory = chip.getAttribute('data-carro-cat') || 'todas';
       playSubtleClick(state.settings.soundEnabled);
       renderCarroTab(state, currentCarroCategory, currentCarroStatus);
     });
-  });
+  }
 
   // Filtros de Status
   const statusChips = document.querySelectorAll('[data-carro-status-filter]');
@@ -680,9 +856,27 @@ function initReformasModule() {
       btn.classList.add('active');
       currentReformasFilter = btn.getAttribute('data-reforma-filter') || 'todas';
       playSubtleClick(state.settings.soundEnabled);
-      renderReformasTab(state, currentReformasFilter);
+      renderReformasTab(state, currentReformasFilter, currentReformasCategory);
     });
   });
+
+  // Filtros de Cômodo/Categoria das Reformas (Dinâmicos)
+  const reformaCatsContainer = document.getElementById('reformas-category-chips');
+  if (reformaCatsContainer) {
+    reformaCatsContainer.addEventListener('click', (e) => {
+      const addBtn = e.target.closest('[data-open-category-modal]');
+      if (addBtn) {
+        const mod = addBtn.getAttribute('data-open-category-modal') || 'reformas';
+        openCategoryEditorModal(mod);
+        return;
+      }
+      const chip = e.target.closest('[data-reforma-cat]');
+      if (!chip) return;
+      currentReformasCategory = chip.getAttribute('data-reforma-cat') || 'todas';
+      playSubtleClick(state.settings.soundEnabled);
+      renderReformasTab(state, currentReformasFilter, currentReformasCategory);
+    });
+  }
 
   const gridEl = document.getElementById('reformas-grid');
   if (gridEl) {
@@ -866,16 +1060,22 @@ function initReformasModule() {
 // MÓDULO DE SONHOS & METAS DO CASAL
 // -------------------------------------------------------------
 function initSonhosModule() {
-  const catChips = document.querySelectorAll('[data-sonho-filter]');
-  catChips.forEach(btn => {
-    btn.addEventListener('click', () => {
-      catChips.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentSonhosFilter = btn.getAttribute('data-sonho-filter') || 'todas';
+  const catChipsContainer = document.getElementById('sonhos-category-chips');
+  if (catChipsContainer) {
+    catChipsContainer.addEventListener('click', (e) => {
+      const addBtn = e.target.closest('[data-open-category-modal]');
+      if (addBtn) {
+        const mod = addBtn.getAttribute('data-open-category-modal') || 'sonhos';
+        openCategoryEditorModal(mod);
+        return;
+      }
+      const chip = e.target.closest('[data-sonho-filter]');
+      if (!chip) return;
+      currentSonhosFilter = chip.getAttribute('data-sonho-filter') || 'todas';
       playSubtleClick(state.settings.soundEnabled);
       renderSonhosTab(state, currentSonhosFilter);
     });
-  });
+  }
 
   const gridEl = document.getElementById('sonhos-grid');
   if (gridEl) {
@@ -969,6 +1169,67 @@ function initSettingsModule() {
       saveState(state);
       showToast('Configurações salvas!', 'success');
       refreshAllUI();
+    });
+  }
+
+  // Senhas Individuais para Matheus e Scarlet
+  const btnPassMatheus = document.getElementById('btn-change-pass-matheus');
+  const btnPassScarlet = document.getElementById('btn-change-pass-scarlet');
+  const formPass = document.getElementById('form-change-password');
+  const passUserId = document.getElementById('pass-modal-user-id');
+  const passUserName = document.getElementById('pass-modal-user-name');
+  const passNewInput = document.getElementById('pass-modal-new-input');
+  const passConfirmInput = document.getElementById('pass-modal-confirm-input');
+  const passError = document.getElementById('pass-modal-error');
+  const biometricsToggle = document.getElementById('settings-biometrics-toggle');
+
+  function openPasswordModal(uId, name) {
+    if (passUserId) passUserId.value = uId;
+    if (passUserName) passUserName.textContent = name;
+    if (passNewInput) passNewInput.value = '';
+    if (passConfirmInput) passConfirmInput.value = '';
+    if (passError) passError.style.display = 'none';
+    openModal('modal-change-password');
+    if (passNewInput) passNewInput.focus();
+  }
+
+  if (btnPassMatheus) {
+    btnPassMatheus.addEventListener('click', () => {
+      openPasswordModal('matheus', state.users.user1.name || 'Matheus');
+    });
+  }
+
+  if (btnPassScarlet) {
+    btnPassScarlet.addEventListener('click', () => {
+      openPasswordModal('scarlet', state.users.user2.name || 'Scarlet');
+    });
+  }
+
+  if (formPass) {
+    formPass.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const uId = passUserId ? passUserId.value : 'matheus';
+      const p1 = passNewInput ? passNewInput.value : '';
+      const p2 = passConfirmInput ? passConfirmInput.value : '';
+
+      if (p1 !== p2) {
+        if (passError) {
+          passError.textContent = 'As senhas digitadas não conferem.';
+          passError.style.display = 'block';
+        }
+        return;
+      }
+
+      setUserPassword(uId, p1);
+      closeModal('modal-change-password');
+      showToast(`Senha de ${uId === 'scarlet' ? 'Scarlet' : 'Matheus'} salva com sucesso! 🔐`, 'success', 3500);
+    });
+  }
+
+  if (biometricsToggle) {
+    biometricsToggle.addEventListener('change', (e) => {
+      setBiometricsEnabled(e.target.checked);
+      showToast(e.target.checked ? 'Desbloqueio por biometria ativado!' : 'Desbloqueio por biometria desativado.', 'info');
     });
   }
 
@@ -1073,6 +1334,535 @@ function triggerAutoSyncIfEnabled() {
   if (state.settings.autoSync && state.settings.sheetsUrl) {
     backupToSheets(state).catch(err => {
       console.warn('[Maracaju] Auto-sync falhou em background:', err);
+    });
+  }
+}
+
+// -------------------------------------------------------------
+// MÓDULO DE MERCADO & LISTA DE COMPRAS
+// -------------------------------------------------------------
+function initComprasModule() {
+  // Alternador de Visão (Lista do Mês vs Notas & Histórico)
+  const comprasTab = document.getElementById('tab-compras');
+  if (comprasTab) {
+    comprasTab.addEventListener('click', (e) => {
+      const viewBtn = e.target.closest('[data-compras-view]');
+      if (viewBtn) {
+        currentComprasView = viewBtn.getAttribute('data-compras-view') || 'lista';
+        playSubtleClick(state.settings.soundEnabled);
+        renderComprasTab(state, currentComprasCategory, currentComprasView);
+        return;
+      }
+
+      const catChip = e.target.closest('[data-compras-cat]');
+      if (catChip) {
+        currentComprasCategory = catChip.getAttribute('data-compras-cat') || 'todas';
+        playSubtleClick(state.settings.soundEnabled);
+        renderComprasTab(state, currentComprasCategory, currentComprasView);
+        return;
+      }
+
+      const addCatBtn = e.target.closest('[data-open-category-modal]');
+      if (addCatBtn) {
+        openCategoryEditorModal('compras');
+        return;
+      }
+    });
+  }
+
+  // Interações na Lista de Itens (Marcar comprado, editar, excluir)
+  const shoppingListEl = document.getElementById('shopping-items-list');
+  if (shoppingListEl) {
+    shoppingListEl.addEventListener('change', (e) => {
+      if (e.target.classList.contains('shopping-checkbox')) {
+        const itemId = e.target.getAttribute('data-id');
+        const item = toggleShoppingItem(state, itemId);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+
+        if (item && item.bought) {
+          playTaskCompleteSound(state.settings.soundEnabled);
+          showToast('Item marcado como comprado! ✓', 'success', 2000);
+        } else {
+          playSubtleClick(state.settings.soundEnabled);
+        }
+
+        renderComprasTab(state, currentComprasCategory, currentComprasView);
+      }
+    });
+
+    shoppingListEl.addEventListener('click', (e) => {
+      // Editar Item
+      const editBtn = e.target.closest('[data-edit-shopping]');
+      if (editBtn) {
+        const itemId = editBtn.getAttribute('data-edit-shopping');
+        const item = (state.compras || []).find(i => i.id === itemId);
+        if (item) {
+          populateCategorySelects(state);
+          document.getElementById('shopping-edit-id').value = item.id;
+          document.getElementById('shopping-edit-title').value = item.title;
+          document.getElementById('shopping-edit-category').value = item.category || 'outros';
+          document.getElementById('shopping-edit-qty').value = item.quantity || '1 un';
+          document.getElementById('shopping-edit-price').value = item.price ? formatCurrency(item.price) : '';
+          document.getElementById('shopping-edit-suggested-by').value = item.suggestedBy || 'ambos';
+          document.getElementById('shopping-edit-notes').value = item.notes || '';
+          openModal('modal-edit-shopping-item');
+        }
+        return;
+      }
+
+      // Excluir Item
+      const delBtn = e.target.closest('[data-delete-shopping]');
+      if (delBtn) {
+        const itemId = delBtn.getAttribute('data-delete-shopping');
+        if (confirm('Deseja remover este item da lista de compras?')) {
+          deleteShoppingItem(state, itemId);
+          saveState(state);
+          showToast('Item removido da lista', 'info');
+          renderComprasTab(state, currentComprasCategory, currentComprasView);
+        }
+      }
+    });
+  }
+
+  // Interações nas Notas Fiscais Registradas (Excluir compra)
+  const purchasesContainer = document.getElementById('market-purchases-container');
+  if (purchasesContainer) {
+    purchasesContainer.addEventListener('click', (e) => {
+      const delBtn = e.target.closest('[data-delete-purchase]');
+      if (delBtn) {
+        const purchaseId = delBtn.getAttribute('data-delete-purchase');
+        if (confirm('Deseja excluir este registro de nota fiscal de compra?')) {
+          deleteMarketPurchase(state, purchaseId);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          showToast('Registro de compra excluído', 'info');
+          renderComprasTab(state, currentComprasCategory, currentComprasView);
+        }
+      }
+    });
+  }
+
+  // Botão Limpar Comprados
+  const btnClearBought = document.getElementById('btn-clear-bought-items');
+  if (btnClearBought) {
+    btnClearBought.addEventListener('click', () => {
+      const removed = clearBoughtItems(state);
+      if (removed.length === 0) {
+        showToast('Nenhum item marcado como comprado para limpar.', 'info');
+        return;
+      }
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      showToast(`${removed.length} ${removed.length === 1 ? 'item comprado foi limpo' : 'itens comprados foram limpos'} da lista! 🧹`, 'success');
+      renderComprasTab(state, currentComprasCategory, currentComprasView);
+    });
+  }
+
+  // Formulário Adicionar Item na Lista
+  const formAddShopping = document.getElementById('form-add-shopping-item');
+  if (formAddShopping) {
+    formAddShopping.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const title = document.getElementById('shopping-input-title').value.trim();
+      const category = document.getElementById('shopping-input-category').value || 'outros';
+      const quantity = document.getElementById('shopping-input-qty').value.trim() || '1 un';
+      const priceRaw = document.getElementById('shopping-input-price').value;
+      const price = parseCurrency(priceRaw);
+      const suggestedBy = document.getElementById('shopping-input-suggested-by').value || state.activeUserId;
+      const notes = document.getElementById('shopping-input-notes').value.trim();
+
+      if (!title) return;
+
+      addShoppingItem(state, { title, category, quantity, price, suggestedBy, notes });
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+
+      closeModal('modal-add-shopping-item');
+      formAddShopping.reset();
+      showToast('Item adicionado à lista de compras! 🛒', 'success');
+      renderComprasTab(state, currentComprasCategory, currentComprasView);
+    });
+  }
+
+  // Formulário Editar Item
+  const formEditShopping = document.getElementById('form-edit-shopping-item');
+  if (formEditShopping) {
+    formEditShopping.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const itemId = document.getElementById('shopping-edit-id').value;
+      const title = document.getElementById('shopping-edit-title').value.trim();
+      const category = document.getElementById('shopping-edit-category').value;
+      const quantity = document.getElementById('shopping-edit-qty').value.trim();
+      const priceRaw = document.getElementById('shopping-edit-price').value;
+      const price = parseCurrency(priceRaw);
+      const suggestedBy = document.getElementById('shopping-edit-suggested-by').value;
+      const notes = document.getElementById('shopping-edit-notes').value.trim();
+
+      if (!title || !itemId) return;
+
+      updateShoppingItem(state, itemId, { title, category, quantity, price, suggestedBy, notes });
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+
+      closeModal('modal-edit-shopping-item');
+      showToast('Item atualizado com sucesso!', 'success');
+      renderComprasTab(state, currentComprasCategory, currentComprasView);
+    });
+  }
+}
+
+// -------------------------------------------------------------
+// LEITOR DE NOTAS FISCAIS (NFC-e QR CODE) & REGISTRO AUTOMÁTICO
+// -------------------------------------------------------------
+function initQrCodeScanner() {
+  const btnScan = document.getElementById('btn-scan-nfce-qr');
+  const videoEl = document.getElementById('qr-video');
+  const btnToggleCam = document.getElementById('btn-toggle-camera');
+  const fileInput = document.getElementById('qr-file-input');
+  const statusMsg = document.getElementById('qr-status-msg');
+  const previewBox = document.getElementById('qr-preview-result');
+  const resMarket = document.getElementById('qr-res-market');
+  const resDate = document.getElementById('qr-res-date');
+  const resTotal = document.getElementById('qr-res-total');
+  const resKey = document.getElementById('qr-res-key');
+  const btnConfirm = document.getElementById('btn-confirm-qr-purchase');
+  const manualInput = document.getElementById('qr-manual-input');
+  const btnManualSubmit = document.getElementById('btn-qr-manual-submit');
+
+  let activeStream = null;
+  let scanInterval = null;
+  let currentFacingMode = 'environment';
+  let pendingPurchase = null;
+
+  async function startCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (statusMsg) statusMsg.textContent = 'Câmera não suportada neste navegador. Use a foto ou link.';
+      return;
+    }
+
+    try {
+      if (activeStream) {
+        stopCamera();
+      }
+
+      activeStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+
+      if (videoEl) {
+        videoEl.srcObject = activeStream;
+        await videoEl.play();
+      }
+
+      if (statusMsg) statusMsg.textContent = 'Câmera ativa! Aponte para o QR Code da nota fiscal.';
+      startScanningLoop();
+    } catch (err) {
+      console.warn('Erro ao acessar câmera:', err);
+      if (statusMsg) statusMsg.textContent = 'Acesso à câmera não concedido. Você pode anexar foto ou colar o link.';
+    }
+  }
+
+  function stopCamera() {
+    if (scanInterval) {
+      clearInterval(scanInterval);
+      scanInterval = null;
+    }
+    if (activeStream) {
+      activeStream.getTracks().forEach(t => t.stop());
+      activeStream = null;
+    }
+    if (videoEl) {
+      videoEl.srcObject = null;
+    }
+  }
+
+  function startScanningLoop() {
+    if (window.BarcodeDetector) {
+      const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+      scanInterval = setInterval(async () => {
+        if (!videoEl || videoEl.readyState < 2) return;
+        try {
+          const barcodes = await detector.detect(videoEl);
+          if (barcodes && barcodes.length > 0) {
+            const rawValue = barcodes[0].rawValue;
+            handleDetectedCode(rawValue);
+          }
+        } catch (e) {
+          // Frame skip
+        }
+      }, 500);
+    }
+  }
+
+  function handleDetectedCode(rawText) {
+    if (!rawText) return;
+    const parsed = parseNfceQrCodeText(rawText);
+
+    pendingPurchase = {
+      marketName: parsed.marketName || 'Supermercado',
+      date: parsed.date || getLocalDateString(),
+      totalAmount: parsed.totalAmount || 0,
+      accessKey: parsed.accessKey || '',
+      rawUrl: parsed.rawUrl || rawText,
+      items: parsed.items || []
+    };
+
+    if (previewBox) {
+      if (resMarket) resMarket.textContent = pendingPurchase.marketName;
+      if (resDate) resDate.textContent = pendingPurchase.date;
+      if (resTotal) resTotal.textContent = formatCurrencyWithSymbol(pendingPurchase.totalAmount);
+      if (resKey) resKey.textContent = pendingPurchase.accessKey || pendingPurchase.rawUrl.slice(0, 44);
+      previewBox.style.display = 'block';
+    }
+
+    if (statusMsg) statusMsg.textContent = 'QR Code lido com sucesso! Confirme os dados abaixo:';
+    playTaskCompleteSound(state.settings.soundEnabled);
+
+    // Se temos a URL online, tenta enriquecer com os itens em background
+    if (parsed.rawUrl && parsed.rawUrl.startsWith('http')) {
+      fetchNfceDetailsOnline(parsed.rawUrl).then(enhanced => {
+        if (enhanced && enhanced.success) {
+          if (enhanced.marketName) pendingPurchase.marketName = enhanced.marketName;
+          if (enhanced.totalAmount) pendingPurchase.totalAmount = enhanced.totalAmount;
+          if (enhanced.items && enhanced.items.length) pendingPurchase.items = enhanced.items;
+          if (resMarket) resMarket.textContent = pendingPurchase.marketName;
+          if (resTotal) resTotal.textContent = formatCurrencyWithSymbol(pendingPurchase.totalAmount);
+        }
+      }).catch(() => {});
+    }
+  }
+
+  if (btnScan) {
+    btnScan.addEventListener('click', () => {
+      openModal('modal-qr-scanner');
+      if (previewBox) previewBox.style.display = 'none';
+      pendingPurchase = null;
+      startCamera();
+    });
+  }
+
+  if (btnToggleCam) {
+    btnToggleCam.addEventListener('click', () => {
+      currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+      startCamera();
+    });
+  }
+
+  // Upload de Foto do QR Code
+  if (fileInput) {
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      if (statusMsg) statusMsg.textContent = 'Processando imagem da nota...';
+
+      if (window.BarcodeDetector) {
+        try {
+          const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+          const imgBitmap = await createImageBitmap(file);
+          const barcodes = await detector.detect(imgBitmap);
+          if (barcodes && barcodes.length > 0) {
+            handleDetectedCode(barcodes[0].rawValue);
+            return;
+          }
+        } catch (err) {
+          console.warn('BarcodeDetector error:', err);
+        }
+      }
+
+      if (statusMsg) statusMsg.textContent = 'Não conseguimos ler o QR da imagem diretamente. Cole o link ou chave abaixo.';
+    });
+  }
+
+  // Entrada manual do link ou chave
+  if (btnManualSubmit && manualInput) {
+    btnManualSubmit.addEventListener('click', () => {
+      const val = manualInput.value.trim();
+      if (!val) {
+        showToast('Digite ou cole a URL ou chave da nota', 'error');
+        return;
+      }
+      handleDetectedCode(val);
+      manualInput.value = '';
+    });
+  }
+
+  // Confirmação do Registro da Compra
+  if (btnConfirm) {
+    btnConfirm.addEventListener('click', () => {
+      if (!pendingPurchase) return;
+
+      addMarketPurchase(state, pendingPurchase);
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+
+      stopCamera();
+      closeModal('modal-qr-scanner');
+      pendingPurchase = null;
+
+      currentComprasView = 'notas';
+      triggerConfetti();
+      playTaskCompleteSound(state.settings.soundEnabled);
+      showToast('Compra de mercado registrada com sucesso no mês! 🧾🎉', 'success', 4000);
+      refreshAllUI();
+    });
+  }
+
+  // Desativa câmera ao fechar modal
+  document.querySelectorAll('#btn-close-qr-scanner, [data-close-modal]').forEach(b => {
+    b.addEventListener('click', () => {
+      stopCamera();
+    });
+  });
+}
+
+// -------------------------------------------------------------
+// GESTÃO DE CATEGORIAS & EMOJIS (Tarefas, Compras, Carro, etc)
+// -------------------------------------------------------------
+function openCategoryEditorModal(targetModule, categoryIdToEdit = null) {
+  const titleEl = document.getElementById('category-modal-title');
+  const idInput = document.getElementById('category-edit-id');
+  const moduleSelect = document.getElementById('category-input-module');
+  const labelInput = document.getElementById('category-input-label');
+  const iconInput = document.getElementById('category-input-icon');
+  const previewIcon = document.getElementById('preview-chip-icon');
+  const previewLabel = document.getElementById('preview-chip-label');
+
+  renderQuickEmojis();
+
+  if (categoryIdToEdit) {
+    const cat = findCategory(state, targetModule, categoryIdToEdit);
+    if (titleEl) titleEl.textContent = '✏️ Editar Categoria';
+    if (idInput) idInput.value = cat.id;
+    if (moduleSelect) moduleSelect.value = targetModule;
+    if (labelInput) labelInput.value = cat.label;
+    if (iconInput) iconInput.value = cat.icon;
+    if (previewIcon) previewIcon.textContent = cat.icon;
+    if (previewLabel) previewLabel.textContent = cat.label;
+  } else {
+    if (titleEl) titleEl.textContent = '➕ Nova Categoria';
+    if (idInput) idInput.value = '';
+    if (moduleSelect) moduleSelect.value = targetModule || currentCategoryManageModule;
+    if (labelInput) labelInput.value = '';
+    if (iconInput) iconInput.value = '🏷️';
+    if (previewIcon) previewIcon.textContent = '🏷️';
+    if (previewLabel) previewLabel.textContent = 'Nova Categoria';
+  }
+
+  openModal('modal-category-editor');
+  if (labelInput) labelInput.focus();
+}
+
+function initCategoryManagement() {
+  const moduleChips = document.querySelectorAll('#categories-module-selector [data-manage-module]');
+  const btnAddSettings = document.getElementById('btn-add-category-settings');
+  const categoriesListEl = document.getElementById('categories-list-container');
+  const formEditor = document.getElementById('form-category-editor');
+  const iconInput = document.getElementById('category-input-icon');
+  const labelInput = document.getElementById('category-input-label');
+  const previewIcon = document.getElementById('preview-chip-icon');
+  const previewLabel = document.getElementById('preview-chip-label');
+  const quickEmojiGrid = document.getElementById('quick-emoji-grid');
+
+  // Alternador de módulo na aba Ajustes
+  moduleChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      moduleChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentCategoryManageModule = chip.getAttribute('data-manage-module') || 'tarefas';
+      playSubtleClick(state.settings.soundEnabled);
+      renderCategoriesManager(state, currentCategoryManageModule);
+    });
+  });
+
+  // Botão Adicionar Categoria na aba Ajustes
+  if (btnAddSettings) {
+    btnAddSettings.addEventListener('click', () => {
+      openCategoryEditorModal(currentCategoryManageModule);
+    });
+  }
+
+  // Atualização em tempo real da pré-visualização do chip
+  if (iconInput) {
+    iconInput.addEventListener('input', () => {
+      if (previewIcon) previewIcon.textContent = iconInput.value || '🏷️';
+    });
+  }
+  if (labelInput) {
+    labelInput.addEventListener('input', () => {
+      if (previewLabel) previewLabel.textContent = labelInput.value || 'Exemplo';
+    });
+  }
+
+  // Seleção rápida de emojis da grade
+  if (quickEmojiGrid) {
+    quickEmojiGrid.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-emoji]');
+      if (!btn) return;
+      const emoji = btn.getAttribute('data-emoji');
+      if (emoji && iconInput) {
+        iconInput.value = emoji;
+        if (previewIcon) previewIcon.textContent = emoji;
+        playSubtleClick(state.settings.soundEnabled);
+      }
+    });
+  }
+
+  // Ações na lista de categorias (Editar e Excluir)
+  if (categoriesListEl) {
+    categoriesListEl.addEventListener('click', (e) => {
+      const editBtn = e.target.closest('[data-action-edit-cat]');
+      if (editBtn) {
+        const catId = editBtn.getAttribute('data-action-edit-cat');
+        const mod = editBtn.getAttribute('data-cat-module') || currentCategoryManageModule;
+        openCategoryEditorModal(mod, catId);
+        return;
+      }
+
+      const delBtn = e.target.closest('[data-action-delete-cat]');
+      if (delBtn) {
+        const catId = delBtn.getAttribute('data-action-delete-cat');
+        const mod = delBtn.getAttribute('data-cat-module') || currentCategoryManageModule;
+        if (confirm('Deseja excluir esta categoria? Os itens que a utilizam manterão o registro.')) {
+          deleteCategory(state, mod, catId);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          showToast('Categoria excluída', 'info');
+          renderCategoriesManager(state, mod);
+          populateCategorySelects(state);
+          refreshAllUI();
+        }
+      }
+    });
+  }
+
+  // Submissão do formulário de criação/edição de categoria
+  if (formEditor) {
+    formEditor.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const catId = document.getElementById('category-edit-id').value;
+      const mod = document.getElementById('category-input-module').value;
+      const label = document.getElementById('category-input-label').value.trim();
+      const icon = document.getElementById('category-input-icon').value.trim() || '🏷️';
+
+      if (!label) return;
+
+      if (catId) {
+        updateCategory(state, mod, catId, { label, icon });
+        showToast('Categoria atualizada!', 'success');
+      } else {
+        addCategory(state, mod, { label, icon });
+        showToast('Nova categoria criada!', 'success');
+      }
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      closeModal('modal-category-editor');
+      formEditor.reset();
+      populateCategorySelects(state);
+      renderCategoriesManager(state, mod);
+      refreshAllUI();
     });
   }
 }
