@@ -6,13 +6,15 @@ import { loadState, saveState, exportBackupJson, importBackupJson } from './stor
 import {
   getAuthSession,
   loginWithEmail,
+  loginWithCredentials,
   clearAuthSession,
   isBiometricsSupported,
   isBiometricsEnabled,
   setBiometricsEnabled,
   authenticateWithBiometrics,
   setUserPassword,
-  verifyUserPassword
+  verifyUserPassword,
+  hasUserCustomPassword
 } from './auth.js';
 import { playTaskCompleteSound, playLevelUpSound, playSubtleClick } from './audio.js';
 import { toggleTaskDone, addTask, deleteTask, updateTask, getLocalDateString } from './tasks.js';
@@ -135,12 +137,17 @@ function initAuthModule() {
   const btnQuickScarlet = document.getElementById('btn-quick-scarlet');
   const btnLogout = document.getElementById('btn-auth-logout');
 
-  // Verifica se o dispositivo suporta biometria
+  // Verifica se o dispositivo suporta biometria de forma assíncrona segura
   if (biometricsContainer) {
-    if (!isBiometricsSupported() || !isBiometricsEnabled()) {
-      biometricsContainer.style.display = 'none';
-    } else {
-      biometricsContainer.style.display = 'block';
+    biometricsContainer.style.display = 'none';
+    if (typeof isBiometricsSupported === 'function') {
+      isBiometricsSupported().then(supported => {
+        if (supported && isBiometricsEnabled()) {
+          biometricsContainer.style.display = 'block';
+        }
+      }).catch(() => {
+        biometricsContainer.style.display = 'none';
+      });
     }
   }
 
@@ -158,7 +165,7 @@ function initAuthModule() {
     }
   }
 
-  function handleLogin(email, skipPasswordCheck = false) {
+  function handleLogin(email) {
     if (errorBox) errorBox.style.display = 'none';
 
     const result = loginWithEmail(email);
@@ -196,11 +203,11 @@ function initAuthModule() {
   if (btnBiometrics) {
     btnBiometrics.addEventListener('click', async () => {
       try {
-        const ok = await authenticateWithBiometrics();
+        const uId = selectedUserInput ? selectedUserInput.value : 'matheus';
+        const ok = await authenticateWithBiometrics(uId);
         if (ok) {
-          const uId = selectedUserInput ? selectedUserInput.value : 'matheus';
           const email = (uId === 'scarlet') ? 'scarletsantos7@gmail.com' : 'matheusdochapeu@gmail.com';
-          handleLogin(email, true);
+          handleLogin(email);
         } else {
           if (errorBox && errorText) {
             errorText.textContent = 'Não foi possível validar a biometria neste aparelho.';
@@ -216,10 +223,10 @@ function initAuthModule() {
     });
   }
 
-  // Verifica na inicialização
+  // Verifica sessão na inicialização
   checkSession();
 
-  // Seleção rápida de perfil (Matheus / Scarlet)
+  // Seleção de perfil e suporte a 1 toque quando não há senha
   function selectProfile(uId) {
     if (selectedUserInput) selectedUserInput.value = uId;
     if (btnQuickMatheus) btnQuickMatheus.classList.toggle('active-profile-btn', uId === 'matheus');
@@ -229,30 +236,53 @@ function initAuthModule() {
   }
 
   if (btnQuickMatheus) {
-    btnQuickMatheus.addEventListener('click', () => selectProfile('matheus'));
-  }
-  if (btnQuickScarlet) {
-    btnQuickScarlet.addEventListener('click', () => selectProfile('scarlet'));
+    btnQuickMatheus.addEventListener('click', () => {
+      if (hasUserCustomPassword('matheus')) {
+        selectProfile('matheus');
+      } else {
+        // Se ainda não configurou senha, entra imediatamente com 1 toque!
+        handleLogin('matheusdochapeu@gmail.com');
+      }
+    });
   }
 
-  // Submissão do formulário com validação de senha
+  if (btnQuickScarlet) {
+    btnQuickScarlet.addEventListener('click', () => {
+      if (hasUserCustomPassword('scarlet')) {
+        selectProfile('scarlet');
+      } else {
+        // Se ainda não configurou senha, entra imediatamente com 1 toque!
+        handleLogin('scarletsantos7@gmail.com');
+      }
+    });
+  }
+
+  // Submissão do formulário com validação segura de credenciais
   if (authForm) {
     authForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const uId = selectedUserInput ? selectedUserInput.value : 'matheus';
       const pass = passwordInput ? passwordInput.value : '';
+      const email = (uId === 'scarlet') ? 'scarletsantos7@gmail.com' : 'matheusdochapeu@gmail.com';
 
-      const verify = verifyUserPassword(uId, pass);
-      if (!verify.success) {
+      const res = loginWithCredentials(email, pass);
+      if (!res.success) {
         if (errorBox && errorText) {
-          errorText.textContent = verify.error;
+          errorText.textContent = res.error || 'Acesso não autorizado.';
           errorBox.style.display = 'flex';
         }
         return;
       }
 
-      const email = (uId === 'scarlet') ? 'scarletsantos7@gmail.com' : 'matheusdochapeu@gmail.com';
-      handleLogin(email);
+      if (authGate) authGate.style.display = 'none';
+      if (passwordInput) passwordInput.value = '';
+      state.activeUserId = res.user.id;
+      saveState(state);
+
+      playSubtleClick(state.settings.soundEnabled);
+      triggerConfetti();
+      showToast(`Bem-vindo(a) ao Maracaju, ${res.user.name}! 🏡✨`, 'success', 3500);
+      refreshAllUI();
     });
   }
 
@@ -301,6 +331,9 @@ function initServiceWorker() {
       navigator.serviceWorker.register('./sw.js')
         .then(reg => {
           console.log('[Maracaju] Service Worker ativo:', reg.scope);
+          if (reg && typeof reg.update === 'function') {
+            reg.update().catch(() => {});
+          }
         })
         .catch(err => {
           console.warn('[Maracaju] Falha no Service Worker:', err);

@@ -3,11 +3,23 @@
 **Data da última consolidação:** `04/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v2.0.0`
+**Versão Atual:** `v2.0.1`
 
 ---
 
 ## Histórico de Versões
+
+### Versão 2.0.1 (`04/11/2026`) — Correção Crítica de Acesso no Celular & Estratégia de Cache PWA
+1. **Desbloqueio Imediato e Acesso sem Travamento:**
+   - **Correção da Sessão Legada:** Adicionada verificação de chaves de autenticação de versões anteriores (`MARACAJU88_AUTH_USER_v1` e `MARACAJU_AUTH_USER_v1`) no `localStorage`. Dispositivos que já estavam conectados continuam com a sessão ativa sem deslogar.
+   - **Acesso em 1 Toque Restaurado:** Tocar no perfil de **Matheus** ou **Scarlet** na tela de login realiza a entrada direta instantânea caso o usuário ainda não tenha definido uma senha pessoal em Ajustes.
+   - **Correção do Fluxo de Validação:** Corrigida a validação de formulário que apresentava erro `undefined` ao submeter credenciais sem senha configurada.
+   - **Biometria Segura:** Detecção assíncrona do suporte à biometria do dispositivo (`isBiometricsSupported`), evitando travamentos em navegadores sem WebAuthn ativo.
+
+2. **Estratégia Network-First para o PWA no Celular:**
+   - Atualizado o Service Worker para a versão de cache `maracaju-v2.0.1`.
+   - Implementada a estratégia **Network-First** para navegação (`index.html`), garantindo que o celular sempre carregue os arquivos mais recentes publicados no GitHub Pages, sem prender a tela em versões desatualizadas ou em branco.
+   - Invocado `reg.update()` automático no carregamento do app para atualização em segundo plano.
 
 ### Versão 2.0.0 (`04/11/2026`) — Nova Identidade Maracaju, Lista de Mercado & Leitor NFC-e, Senhas Individuais, Biometria e Fim da Gamificação
 1. **Identidade Visual Limpa e Nome Estritamente "Maracaju":**

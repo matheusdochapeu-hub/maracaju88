@@ -2,7 +2,7 @@
 //  MARACAJU - SERVICE WORKER (PWA Offline Cache)
 // ============================================================
 
-const CACHE_NAME = 'maracaju-v2.0.0';
+const CACHE_NAME = 'maracaju-v2.0.1';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -75,6 +75,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Para navegações principais (carregar a página HTML): Network First, fallback Cache
+  // Isso garante que celulares sempre peguem a versão mais recente após atualizações
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match('./index.html') || caches.match('./');
+        })
+    );
+    return;
+  }
+
   // Requisições para assets do app: Cache First, fallback Network
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
@@ -101,10 +120,7 @@ self.addEventListener('fetch', (event) => {
 
         return networkResponse;
       }).catch(() => {
-        // Se for navegação e estiver offline, retorna index.html
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
+        return null;
       });
     })
   );

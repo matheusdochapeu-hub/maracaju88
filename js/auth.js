@@ -7,7 +7,12 @@ import { AUTHORIZED_USERS_LIST } from './config.js';
 
 const AUTH_STORAGE_KEY = 'MARACAJU_AUTH_USER_v2';
 const CREDENTIALS_STORAGE_KEY = 'MARACAJU_CREDENTIALS_v2';
-const LEGACY_AUTH_STORAGE_KEY = 'MARACAJU_AUTH_USER_v1';
+const LEGACY_STORAGE_KEYS = [
+  'MARACAJU_AUTH_USER_v1',
+  'MARACAJU88_AUTH_USER_v1',
+  'MARACAJU_AUTH_USER',
+  'MARACAJU88_AUTH_USER'
+];
 
 export function normalizeEmail(email) {
   if (!email || typeof email !== 'string') return '';
@@ -43,15 +48,15 @@ function defaultCredentials() {
   return {
     users: {
       matheus: {
-        passwordHash: syncHash('1234'),
+        passwordHash: null,
         hasCustomPassword: false
       },
       scarlet: {
-        passwordHash: syncHash('1234'),
+        passwordHash: null,
         hasCustomPassword: false
       }
     },
-    biometricsEnabled: true
+    biometricsEnabled: false
   };
 }
 
@@ -64,6 +69,12 @@ export function saveStoredCredentials(creds) {
   } catch (err) {
     return false;
   }
+}
+
+export function hasUserCustomPassword(userId) {
+  const uId = userId === 'scarlet' || userId === 'esposa' ? 'scarlet' : 'matheus';
+  const creds = getStoredCredentials();
+  return !!(creds.users && creds.users[uId] && creds.users[uId].hasCustomPassword && creds.users[uId].passwordHash);
 }
 
 export function setUserPassword(userId, newPassword) {
@@ -82,12 +93,30 @@ export function setUserPassword(userId, newPassword) {
   return true;
 }
 
+export function removeUserPassword(userId) {
+  const uId = userId === 'scarlet' || userId === 'esposa' ? 'scarlet' : 'matheus';
+  const creds = getStoredCredentials();
+  if (creds.users && creds.users[uId]) {
+    creds.users[uId].hasCustomPassword = false;
+    creds.users[uId].passwordHash = null;
+  }
+  saveStoredCredentials(creds);
+  return true;
+}
+
 export function verifyUserPassword(userId, inputPassword) {
   const uId = userId === 'scarlet' || userId === 'esposa' ? 'scarlet' : 'matheus';
   const creds = getStoredCredentials();
-  const userCred = (creds.users && creds.users[uId]) || { passwordHash: syncHash('1234') };
-  const inputHash = syncHash(String(inputPassword || '').trim());
-  return userCred.passwordHash === inputHash;
+  const userCred = creds.users && creds.users[uId];
+
+  // Se o usuário não configurou senha customizada, o acesso é aceito diretamente
+  if (!userCred || !userCred.hasCustomPassword || !userCred.passwordHash) {
+    return true;
+  }
+
+  const cleanPass = String(inputPassword || '').trim();
+  if (!cleanPass) return false;
+  return userCred.passwordHash === syncHash(cleanPass);
 }
 
 export function isBiometricsEnabled() {
@@ -198,7 +227,16 @@ export function getAuthSession() {
     if (typeof localStorage === 'undefined') {
       return inMemorySession;
     }
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY) || localStorage.getItem(LEGACY_AUTH_STORAGE_KEY);
+    let raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) {
+      for (const key of LEGACY_STORAGE_KEYS) {
+        const val = localStorage.getItem(key);
+        if (val) {
+          raw = val;
+          break;
+        }
+      }
+    }
     if (!raw) return inMemorySession;
     const session = JSON.parse(raw);
     if (!session || (!session.email && !session.id)) return null;
@@ -209,6 +247,7 @@ export function getAuthSession() {
       return null;
     }
 
+    setAuthSession(user);
     return {
       ...user,
       loggedAt: session.loggedAt || new Date().toISOString()
@@ -241,7 +280,9 @@ export function clearAuthSession() {
     inMemorySession = null;
     if (typeof localStorage === 'undefined') return true;
     localStorage.removeItem(AUTH_STORAGE_KEY);
-    localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
+    for (const key of LEGACY_STORAGE_KEYS) {
+      localStorage.removeItem(key);
+    }
     return true;
   } catch (err) {
     return false;
@@ -257,12 +298,13 @@ export function loginWithCredentials(userIdentifier, password) {
     };
   }
 
-  if (password !== undefined && password !== null && password !== '') {
+  // Só exige validação de senha se o usuário de fato definiu uma senha personalizada
+  if (hasUserCustomPassword(user.id)) {
     const ok = verifyUserPassword(user.id, password);
     if (!ok) {
       return {
         success: false,
-        error: 'Senha incorreta. Tente novamente ou use a senha padrão 1234.'
+        error: 'Senha incorreta. Tente novamente.'
       };
     }
   }
