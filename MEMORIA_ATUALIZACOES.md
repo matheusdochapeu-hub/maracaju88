@@ -3,11 +3,29 @@
 **Data da última consolidação:** `04/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v2.0.3`
+**Versão Atual:** `v2.0.4`
 
 ---
 
 ## Histórico de Versões
+
+### Versão 2.0.4 (`04/11/2026`) — Clarificação de Quantidades ("6 unidades") e Multiplicação Precisa de Valor Total
+1. **Clarificação de Quantidades em Cada Item:**
+   - Adicionada a função `parseQuantity` em `js/shopping.js` que formata automaticamente números isolados (ex: `6` vira explicitamente `6 unidades`, `1` vira `1 unidade`).
+   - Mantém unidades compostas como `6 un`, `2 kg`, `3 caixas`, `4 pct` sem alteração.
+   - Itens pré-existentes na lista agora são renderizados com clareza imediata sem necessidade de recadastro.
+
+2. **Cálculo de Preço Unitário & Total do Item:**
+   - O campo de preço foi renomeado e identificado como **Preço Unitário (R$)**.
+   - Para itens com quantidade superior a 1, o card exibe tanto o valor por unidade quanto o subtotal calculado:
+     `[ 6 unidades ] [ R$ 8,00/un ] [ Total: R$ 48,00 ]`.
+   - A **Estimativa Total** no topo da tela agora calcula com precisão a multiplicação: 6 unidades a R$ 8,00 = **R$ 48,00**.
+   - Adicionada calculadora em tempo real nos modais de inclusão e edição: ao digitar quantidade e preço unitário, a prévia de subtotal é atualizada instantaneamente antes de salvar.
+
+3. **Sincronização com Google Sheets:**
+   - `apps_script.gs` atualizado para exportar o total calculado do item na planilha compartilhada do casal.
+
+---
 
 ### Versão 2.0.3 (`04/11/2026`) — Remoção do Histórico, Mercado ao lado de Tarefas, Correção de Salvamento da Lista de Compras e Fotos com Câmera Nativa/Galeria
 1. **Navegação Otimizada e Reorganização de Abas:**

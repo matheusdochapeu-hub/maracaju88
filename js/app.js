@@ -32,7 +32,9 @@ import {
   addPhotoToMarketPurchase,
   removePhotoFromMarketPurchase,
   getShoppingSummary,
-  getMarketPurchasesByMonth
+  getMarketPurchasesByMonth,
+  parseQuantity,
+  getItemTotalPrice
 } from './shopping.js';
 import { parseNfceQrCodeText, fetchNfceDetailsOnline } from './nfce.js';
 import { parseCurrency, formatCurrency, formatCurrencyWithSymbol } from './currency.js';
@@ -1542,10 +1544,13 @@ function initComprasModule() {
           document.getElementById('shopping-edit-id').value = item.id;
           document.getElementById('shopping-edit-title').value = item.title || item.name || '';
           document.getElementById('shopping-edit-category').value = item.category || 'outros';
-          document.getElementById('shopping-edit-qty').value = item.quantity || item.qty || '1 un';
-          document.getElementById('shopping-edit-price').value = item.price ? formatCurrency(item.price) : '';
+          const qtyParsed = parseQuantity(item.quantity || item.qty);
+          document.getElementById('shopping-edit-qty').value = qtyParsed.text;
+          const uPrice = item.unitPrice !== undefined ? item.unitPrice : (item.price || 0);
+          document.getElementById('shopping-edit-price').value = uPrice ? formatCurrency(uPrice) : '';
           document.getElementById('shopping-edit-suggested-by').value = item.suggestedBy || 'ambos';
           document.getElementById('shopping-edit-notes').value = item.notes || '';
+          updateShoppingSubtotalPreview('edit');
           openModal('modal-edit-shopping-item');
         }
         return;
@@ -1679,6 +1684,7 @@ function initComprasModule() {
 
         closeModal('modal-add-shopping-item');
         formAddShopping.reset();
+        updateShoppingSubtotalPreview('input');
         showToast('Item adicionado à lista de compras! 🛒', 'success');
         renderComprasTab(state, currentComprasCategory, currentComprasView);
       } catch (err) {
@@ -1728,6 +1734,44 @@ function initComprasModule() {
       }
     });
   }
+
+  // Atualização em tempo real de Subtotal Estimado nos modais de Compra
+  function updateShoppingSubtotalPreview(prefix) {
+    const qtyInput = document.getElementById(`shopping-${prefix}-qty`);
+    const priceInput = document.getElementById(`shopping-${prefix}-price`);
+    const box = document.getElementById(`shopping-${prefix}-subtotal-box`);
+    const valSpan = document.getElementById(`shopping-${prefix}-subtotal-val`);
+    if (!qtyInput || !priceInput || !box || !valSpan) return;
+
+    const rawQty = qtyInput.value;
+    const rawPrice = priceInput.value;
+    const parsedQty = parseQuantity(rawQty);
+    const unitPrice = parseCurrency(rawPrice);
+
+    if (unitPrice > 0) {
+      const total = Math.round(unitPrice * parsedQty.count * 100) / 100;
+      box.style.display = 'block';
+      if (parsedQty.count > 1) {
+        valSpan.textContent = `${parsedQty.text} × ${formatCurrencyWithSymbol(unitPrice)} = ${formatCurrencyWithSymbol(total)}`;
+      } else {
+        valSpan.textContent = `${parsedQty.text} = ${formatCurrencyWithSymbol(total)}`;
+      }
+    } else {
+      box.style.display = 'none';
+    }
+  }
+
+  ['input', 'change', 'keyup'].forEach(evt => {
+    const addQtyEl = document.getElementById('shopping-input-qty');
+    const addPriceEl = document.getElementById('shopping-input-price');
+    if (addQtyEl) addQtyEl.addEventListener(evt, () => updateShoppingSubtotalPreview('input'));
+    if (addPriceEl) addPriceEl.addEventListener(evt, () => updateShoppingSubtotalPreview('input'));
+
+    const editQtyEl = document.getElementById('shopping-edit-qty');
+    const editPriceEl = document.getElementById('shopping-edit-price');
+    if (editQtyEl) editQtyEl.addEventListener(evt, () => updateShoppingSubtotalPreview('edit'));
+    if (editPriceEl) editPriceEl.addEventListener(evt, () => updateShoppingSubtotalPreview('edit'));
+  });
 }
 
 // -------------------------------------------------------------

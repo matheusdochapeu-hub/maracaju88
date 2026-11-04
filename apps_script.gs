@@ -397,7 +397,7 @@ function syncComprasSheet(ss, compras, registros) {
       c.category || "geral",
       c.bought ? "SIM" : "NÃO",
       c.bought ? (c.boughtBy || "") : (c.addedBy || ""),
-      c.price || 0,
+      c.totalPrice || c.price || 0,
       c.createdAt ? c.createdAt.substring(0, 10) : "",
       c.notes || ""
     ]);

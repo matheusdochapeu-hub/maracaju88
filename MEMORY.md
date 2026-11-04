@@ -4,6 +4,35 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-04 18:05] - Clarificação de Quantidades ("6 unidades") e Multiplicação Precisa de Valor Total (v2.0.4)
+
+### 🔍 Problemas Identificados & Causa Raiz
+1. **Ambiguidade na Quantidade de Itens da Lista de Mercado:**
+   - **Causa Raiz:** Quando o usuário digitava apenas um número (ex: `6`), o card exibia uma tag com apenas `6`, sem deixar explícito que se tratavam de "6 unidades".
+2. **Cálculo da Estimativa Total Sem Multiplicação por Quantidade:**
+   - **Causa Raiz:** O campo de preço registrava o preço digitado (ex: R$ 8,00), mas `getShoppingSummary()` somava o preço unitário diretamente sem multiplicar pela quantidade (`price` em vez de `qty * unitPrice`). Se o usuário pedia 6 unidades a R$ 8,00 cada, a estimativa do app mostrava incorretamente R$ 8,00 em vez de R$ 48,00 (6 × R$ 8,00).
+
+---
+
+### 🛠️ Correções Implementadas
+1. **Parser Inteligente de Quantidades (`parseQuantity` em `js/shopping.js`):**
+   - Números isolados agora são normalizados automaticamente com a unidade no plural ou singular (ex: `6` vira `6 unidades`, `1` vira `1 unidade`).
+   - Unidades personalizadas (ex: `6 un`, `2 kg`, `3 caixas`, `4 pct`) mantêm o texto digitado e extraem o multiplicador numérico.
+   - Itens já salvos no dispositivo que possuíam apenas `6` passam imediatamente a exibir `6 unidades` na interface.
+2. **Cálculo de Preço Unitário e Valor Total do Item (`getItemTotalPrice`):**
+   - Se o item tiver quantidade > 1 e preço unitário > 0, o card exibe:
+     - Badge da quantidade: `6 unidades`
+     - Badge do preço unitário: `R$ 8,00/un`
+     - Badge destacado de valor total: `Total: R$ 48,00`
+   - O banner de resumo no topo agora calcula com precisão a estimativa total somando o valor real de cada item ($qtd \times valor\_unitário$).
+3. **Feedback Dinâmico nos Modais de Adicionar e Editar:**
+   - Adicionada prévia em tempo real abaixo dos campos de Quantidade e Preço Unitário:
+     `💰 Subtotal estimado: 6 unidades × R$ 8,00 = R$ 48,00`
+4. **Exportação Atualizada no Google Sheets (`apps_script.gs`):**
+   - A coluna de valor no relatório do Google Sheets agora grava o subtotal total do item (`c.totalPrice || getItemTotalPrice(c)`).
+
+---
+
 ## [2026-11-04 17:47] - Remoção do Histórico, Mercado ao lado de Tarefas, Correção da Lista de Compras e Fotos com Câmera/Galeria (v2.0.3)
 
 ### 🔍 Problemas Identificados & Causa Raiz

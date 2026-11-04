@@ -59,7 +59,9 @@ import {
   addPhotoToShoppingItem,
   removePhotoFromShoppingItem,
   addPhotoToMarketPurchase,
-  removePhotoFromMarketPurchase
+  removePhotoFromMarketPurchase,
+  parseQuantity,
+  getItemTotalPrice
 } from '../js/shopping.js';
 import {
   parseNfceQrCodeText,
@@ -114,18 +116,36 @@ function createMockState() {
 test('Mercado: Lista de Compras do Mês (adicionar itens, marcar comprado, totais com centavos)', () => {
   const state = createMockState();
 
-  // 1. Matheus adiciona itens conforme lembra
-  const { item: i1 } = addShoppingItem(state, {
-    name: 'Leite desnatado',
-    qty: '3 caixas',
-    category: 'frios',
-    price: '16,47'
+  // 0. Validação de parseQuantity: número puro 6 vira 6 unidades, 1 vira 1 unidade
+  const pq6 = parseQuantity('6');
+  assert.equal(pq6.text, '6 unidades');
+  assert.equal(pq6.count, 6);
+  assert.equal(pq6.unit, 'unidades');
+
+  const pq1 = parseQuantity('1');
+  assert.equal(pq1.text, '1 unidade');
+  assert.equal(pq1.count, 1);
+
+  // 1. Matheus adiciona "Chá Matte" com 6 unidades a R$ 8,00 cada
+  const { item: iMatte } = addShoppingItem(state, {
+    title: 'Chá Matte',
+    qty: '6',
+    category: 'bebidas',
+    price: '8,00'
   }, 'matheus');
 
-  assert.equal(i1.name, 'Leite desnatado');
-  assert.equal(i1.price, 16.47);
-  assert.equal(i1.bought, false);
-  assert.equal(i1.addedBy, 'matheus');
+  assert.equal(iMatte.name, 'Chá Matte');
+  assert.equal(iMatte.qty, '6 unidades');
+  assert.equal(iMatte.unitPrice, 8.00);
+  assert.equal(iMatte.totalPrice, 48.00);
+  assert.equal(getItemTotalPrice(iMatte), 48.00);
+  assert.equal(iMatte.bought, false);
+  assert.equal(iMatte.addedBy, 'matheus');
+
+  // Resumo com 1 item (6 unidades x R$ 8,00 = R$ 48,00)
+  let sumMatte = getShoppingSummary(state);
+  assert.equal(sumMatte.totalCount, 1);
+  assert.equal(sumMatte.estimatedTotal, 48.00);
 
   // 2. Scarlet adiciona outro item usando title e quantity
   const { item: i2 } = addShoppingItem(state, {
@@ -139,6 +159,7 @@ test('Mercado: Lista de Compras do Mês (adicionar itens, marcar comprado, totai
   assert.equal(i2.name, 'Detergente neutro');
   assert.equal(i2.title, 'Detergente neutro');
   assert.equal(i2.qty, '2 un');
+  assert.equal(i2.totalPrice, 11.96); // 2 un x 5,98
 
   // Fotos no item de lista de mercado
   assert.ok(Array.isArray(i2.photos));
@@ -149,23 +170,23 @@ test('Mercado: Lista de Compras do Mês (adicionar itens, marcar comprado, totai
   assert.equal(photoRemoved, true);
   assert.equal(i2.photos.length, 0);
 
-  // 3. Resumo da lista
+  // 3. Resumo da lista total (48,00 + 11,96 = 59,96)
   let summary = getShoppingSummary(state);
   assert.equal(summary.total, 2);
   assert.equal(summary.pendingCount, 2);
   assert.equal(summary.boughtCount, 0);
-  assert.equal(summary.estimatedTotal, 22.45);
+  assert.equal(summary.estimatedTotal, 59.96);
 
   // 4. Marcar item como comprado no supermercado
-  const toggled = toggleShoppingItem(state, i1.id, 'scarlet');
+  const toggled = toggleShoppingItem(state, iMatte.id, 'scarlet');
   assert.equal(toggled.bought, true);
   assert.equal(toggled.boughtBy, 'scarlet');
 
   summary = getShoppingSummary(state);
   assert.equal(summary.pendingCount, 1);
   assert.equal(summary.boughtCount, 1);
-  assert.equal(summary.boughtTotal, 16.47);
-  assert.equal(summary.pendingTotal, 5.98);
+  assert.equal(summary.boughtTotal, 48.00);
+  assert.equal(summary.pendingTotal, 11.96);
 });
 
 test('Mercado: Registro de Notas Fiscais (NFC-e QR Code, data da compra e separação por mês)', () => {

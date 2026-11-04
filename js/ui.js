@@ -6,7 +6,7 @@ import { ROOMS, EFFORT_LEVELS, BADGES, FREQUENCIES, CARRO_CATEGORIES } from './c
 import { getCategories, findCategory, QUICK_EMOJIS_LIST } from './categories.js';
 import { getCoupleTotalXp, getCurrentLevel } from './gamification.js';
 import { parseCurrency, formatCurrency, formatCurrencyWithSymbol } from './currency.js';
-import { getShoppingSummary, getMarketPurchasesByMonth, getMonthLabel } from './shopping.js';
+import { getShoppingSummary, getMarketPurchasesByMonth, getMonthLabel, parseQuantity, getItemTotalPrice } from './shopping.js';
 import { isBiometricsSupported, isBiometricsEnabled } from './auth.js';
 import {
   getLocalDateString,
@@ -1007,6 +1007,10 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
         const catObj = findCategory(state, 'compras', item.category);
         const userLabel = item.suggestedBy === 'scarlet' ? '👩‍💼 Scarlet' : (item.suggestedBy === 'matheus' ? '👨‍💻 Matheus' : '👥 Casal');
 
+        const qtyParsed = parseQuantity(item.quantity || item.qty);
+        const unitPrice = item.unitPrice !== undefined ? item.unitPrice : (item.price || 0);
+        const itemTotal = getItemTotalPrice(item);
+
         return `
           <div class="shopping-card ${item.bought ? 'bought' : ''}" data-shopping-id="${item.id}">
             <div class="shopping-main">
@@ -1017,8 +1021,13 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
                 <span class="shopping-title">${item.title || item.name}</span>
                 <div class="shopping-meta">
                   <span class="tag-room">${catObj.icon} ${catObj.label}</span>
-                  ${(item.quantity || item.qty) ? `<span class="shopping-qty-pill">${item.quantity || item.qty}</span>` : ''}
-                  ${item.price > 0 ? `<span class="shopping-price-tag">${formatCurrencyWithSymbol(item.price)}</span>` : ''}
+                  <span class="shopping-qty-pill">${qtyParsed.text}</span>
+                  ${unitPrice > 0 ? (
+                    qtyParsed.count > 1
+                      ? `<span class="shopping-price-tag" title="Preço unitário">${formatCurrencyWithSymbol(unitPrice)}/un</span>
+                         <span class="shopping-price-tag" style="background: var(--brand-moss); color: #fff; font-weight: 700;" title="Subtotal">${formatCurrencyWithSymbol(itemTotal)}</span>`
+                      : `<span class="shopping-price-tag" title="Preço">${formatCurrencyWithSymbol(itemTotal)}</span>`
+                  ) : ''}
                   <span style="color: var(--text-muted); font-size: 0.75rem;">${userLabel}</span>
                 </div>
                 ${item.notes ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">${item.notes}</div>` : ''}

@@ -28,11 +28,11 @@
     }
   </script>
 
-  <!-- Stylesheets (v2.0.3) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.0.3" />
-  <link rel="stylesheet" href="./css/base.css?v=2.0.3" />
-  <link rel="stylesheet" href="./css/components.css?v=2.0.3" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.0.3" />
+  <!-- Stylesheets (v2.0.4) -->
+  <link rel="stylesheet" href="./css/variables.css?v=2.0.4" />
+  <link rel="stylesheet" href="./css/base.css?v=2.0.4" />
+  <link rel="stylesheet" href="./css/components.css?v=2.0.4" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.0.4" />
 </head>
 <body>
 
@@ -119,7 +119,7 @@
       <div class="auth-footer" style="display: flex; flex-direction: column; gap: 0.6rem; align-items: center;">
         <span>🔒 Acesso seguro: Seus dados são mantidos no seu aparelho e sincronizados com a planilha Google do casal.</span>
         <button type="button" id="btn-force-update-login" style="background: none; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem; color: var(--brand-moss); font-size: 0.75rem; cursor: pointer; text-decoration: none;">
-          🔄 App desatualizado ou travado? Toque para Limpar Cache e Atualizar (v2.0.3)
+          🔄 App desatualizado ou travado? Toque para Limpar Cache e Atualizar (v2.0.4)
         </button>
       </div>
     </div>
@@ -511,7 +511,7 @@
         <div class="dash-card">
           <h3 class="dash-title" style="margin-bottom: 0.75rem;">📲 Atualização do Aplicativo</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            Versão instalada: <strong>Maracaju v2.0.3</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
+            Versão instalada: <strong>Maracaju v2.0.4</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
           </p>
           <button type="button" id="btn-force-update-settings" class="btn btn-secondary btn-sm" onclick="window.forceUpdateApp && window.forceUpdateApp()">
             🔄 Limpar Cache e Forçar Atualização
@@ -1004,15 +1004,17 @@
             <select id="shopping-input-category" class="form-control"></select>
           </div>
           <div class="form-group">
-            <label class="form-label">Quantidade / Unidade</label>
-            <input type="text" id="shopping-input-qty" class="form-control" placeholder="Ex: 2 un, 1 kg, 500g" value="1 un" />
+            <label class="form-label">Quantidade</label>
+            <input type="text" id="shopping-input-qty" class="form-control" placeholder="Ex: 6 unidades, 1 kg, 2 pct" value="1 unidade" />
+            <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 2px;">Ex: digite 6 para 6 unidades</span>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label">Preço Estimado (R$)</label>
-            <input type="text" inputmode="decimal" id="shopping-input-price" class="form-control" placeholder="Ex: 18,90" />
+            <label class="form-label">Preço Unitário (R$)</label>
+            <input type="text" inputmode="decimal" id="shopping-input-price" class="form-control" placeholder="Ex: 8,00" />
+            <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 2px;">Valor de cada unidade</span>
           </div>
           <div class="form-group">
             <label class="form-label">Quem Lembrou?</label>
@@ -1022,6 +1024,11 @@
               <option value="ambos" selected>Casal</option>
             </select>
           </div>
+        </div>
+
+        <!-- Feedback dinâmico de Subtotal em tempo real -->
+        <div id="shopping-add-subtotal-box" style="display: none; background: rgba(46, 89, 51, 0.08); border: 1px solid rgba(46, 89, 51, 0.25); border-radius: var(--radius-sm); padding: 0.45rem 0.65rem; margin-bottom: 0.85rem; font-size: 0.82rem; color: var(--brand-moss-dark); font-weight: 600;">
+          💰 Subtotal estimado: <span id="shopping-add-subtotal-val"></span>
         </div>
 
         <div class="form-group">
@@ -1055,14 +1062,16 @@
           </div>
           <div class="form-group">
             <label class="form-label">Quantidade</label>
-            <input type="text" id="shopping-edit-qty" class="form-control" />
+            <input type="text" id="shopping-edit-qty" class="form-control" placeholder="Ex: 6 unidades, 1 kg" />
+            <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 2px;">Ex: digite 6 para 6 unidades</span>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label">Preço (R$)</label>
-            <input type="text" inputmode="decimal" id="shopping-edit-price" class="form-control" placeholder="Ex: 264,33" />
+            <label class="form-label">Preço Unitário (R$)</label>
+            <input type="text" inputmode="decimal" id="shopping-edit-price" class="form-control" placeholder="Ex: 8,00" />
+            <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 2px;">Valor de cada unidade</span>
           </div>
           <div class="form-group">
             <label class="form-label">Quem Lembrou?</label>
@@ -1072,6 +1081,11 @@
               <option value="ambos">Casal</option>
             </select>
           </div>
+        </div>
+
+        <!-- Feedback dinâmico de Subtotal em tempo real no edit -->
+        <div id="shopping-edit-subtotal-box" style="display: none; background: rgba(46, 89, 51, 0.08); border: 1px solid rgba(46, 89, 51, 0.25); border-radius: var(--radius-sm); padding: 0.45rem 0.65rem; margin-bottom: 0.85rem; font-size: 0.82rem; color: var(--brand-moss-dark); font-weight: 600;">
+          💰 Subtotal estimado: <span id="shopping-edit-subtotal-val"></span>
         </div>
 
         <div class="form-group">
@@ -1182,7 +1196,7 @@
     </div>
   </div>
 
-  <!-- Script Principal Modular (v2.0.3) -->
-  <script type="module" src="./js/app.js?v=2.0.3"></script>
+  <!-- Script Principal Modular (v2.0.4) -->
+  <script type="module" src="./js/app.js?v=2.0.4"></script>
 </body>
 </html>

@@ -15,22 +15,74 @@ function normalizeName(name) {
   return (name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+export function parseQuantity(raw) {
+  if (raw === null || raw === undefined) return { text: '1 unidade', count: 1, unit: 'unidade' };
+  const str = String(raw).trim();
+  if (!str) return { text: '1 unidade', count: 1, unit: 'unidade' };
+
+  // Apenas dígitos ou com vírgula/ponto (ex: '6', '1', '6.5', '2,5') -> normaliza para '6 unidades'
+  if (/^[\d]+([.,]\d+)?$/.test(str)) {
+    const num = parseFloat(str.replace(',', '.'));
+    const safeNum = isNaN(num) || num <= 0 ? 1 : num;
+    const unitLabel = safeNum === 1 ? 'unidade' : 'unidades';
+    return { text: `${str} ${unitLabel}`, count: safeNum, unit: unitLabel };
+  }
+
+  // Número seguido da unidade: '6 un', '6 unidades', '2 kg', '500g', '3 caixas'
+  const match = str.match(/^([\d]+(?:[.,]\d+)?)\s*(.*)$/i);
+  if (match) {
+    const num = parseFloat(match[1].replace(',', '.'));
+    const safeNum = isNaN(num) || num <= 0 ? 1 : num;
+    const unitRaw = match[2].trim();
+    const unitLower = unitRaw.toLowerCase();
+
+    // Se a unidade for gramas ou mililitros com valor alto (ex: 500g de café, 200ml de molho), é 1 embalagem
+    if (/^(g|gr|gramas|ml|mls)$/i.test(unitLower) && safeNum > 20) {
+      return { text: str, count: 1, unit: unitRaw };
+    }
+
+    return { text: str, count: safeNum, unit: unitRaw || (safeNum === 1 ? 'unidade' : 'unidades') };
+  }
+
+  return { text: str, count: 1, unit: '' };
+}
+
+export function getItemTotalPrice(item) {
+  if (!item) return 0;
+  if (typeof item.totalPrice === 'number' && item.totalPrice > 0) {
+    return Math.round(item.totalPrice * 100) / 100;
+  }
+  const unitPrice = item.unitPrice !== undefined ? item.unitPrice : (item.price || 0);
+  const { count } = parseQuantity(item.quantity || item.qty);
+  return Math.round(unitPrice * count * 100) / 100;
+}
+
 // Retorna { item, merged } — se já existir um item pendente com o mesmo nome, não duplica
 export function addShoppingItem(state, data, userId = 'matheus') {
   const name = (data.name || data.title || '').trim();
   if (!name) throw new Error('Digite o nome do item.');
 
   const existing = list(state).find(i => !i.bought && normalizeName(i.name || i.title) === normalizeName(name));
-  const qty = (data.qty || data.quantity || '').trim() || '1 un';
+  const parsedQty = parseQuantity(data.qty || data.quantity);
+  const qty = parsedQty.text;
+  const unitPrice = parseCurrency(data.unitPrice !== undefined ? data.unitPrice : data.price);
+  const totalPrice = Math.round(unitPrice * parsedQty.count * 100) / 100;
   const suggested = data.suggestedBy || userId;
 
   if (existing) {
-    if (qty) {
+    if (data.qty !== undefined || data.quantity !== undefined) {
       existing.qty = qty;
       existing.quantity = qty;
     }
     if (data.category) existing.category = data.category;
-    if (data.price !== undefined && data.price !== '') existing.price = parseCurrency(data.price);
+    if (data.price !== undefined || data.unitPrice !== undefined) {
+      existing.unitPrice = unitPrice;
+      existing.price = unitPrice;
+    }
+    const curQty = parseQuantity(existing.quantity || existing.qty);
+    const curUPrice = existing.unitPrice !== undefined ? existing.unitPrice : (existing.price || 0);
+    existing.totalPrice = Math.round(curUPrice * curQty.count * 100) / 100;
+
     if (data.suggestedBy) existing.suggestedBy = data.suggestedBy;
     if (data.notes) existing.notes = data.notes.trim();
     return { item: existing, merged: true };
@@ -43,7 +95,9 @@ export function addShoppingItem(state, data, userId = 'matheus') {
     qty,
     quantity: qty,
     category: data.category || 'outros',
-    price: parseCurrency(data.price),
+    unitPrice,
+    price: unitPrice,
+    totalPrice,
     notes: (data.notes || '').trim(),
     bought: false,
     addedBy: userId,
@@ -67,14 +121,22 @@ export function updateShoppingItem(state, id, data) {
     item.name = n;
     item.title = n;
   }
-  const qty = data.qty !== undefined ? data.qty : data.quantity;
-  if (qty !== undefined) {
-    item.qty = qty.trim();
-    item.quantity = qty.trim();
+  if (data.qty !== undefined || data.quantity !== undefined) {
+    const parsedQty = parseQuantity(data.qty !== undefined ? data.qty : data.quantity);
+    item.qty = parsedQty.text;
+    item.quantity = parsedQty.text;
   }
   if (data.category !== undefined) item.category = data.category;
   if (data.notes !== undefined) item.notes = data.notes.trim();
-  if (data.price !== undefined) item.price = parseCurrency(data.price);
+  if (data.price !== undefined || data.unitPrice !== undefined) {
+    const uPrice = parseCurrency(data.unitPrice !== undefined ? data.unitPrice : data.price);
+    item.unitPrice = uPrice;
+    item.price = uPrice;
+  }
+  const curQty = parseQuantity(item.quantity || item.qty);
+  const curUPrice = item.unitPrice !== undefined ? item.unitPrice : (item.price || 0);
+  item.totalPrice = Math.round(curUPrice * curQty.count * 100) / 100;
+
   if (data.suggestedBy !== undefined) item.suggestedBy = data.suggestedBy;
   if (data.photos !== undefined) item.photos = data.photos;
   return item;
@@ -129,7 +191,7 @@ export function getShoppingSummary(state) {
   const arr = list(state);
   const pending = arr.filter(i => !i.bought);
   const bought = arr.filter(i => i.bought);
-  const sum = (items) => Math.round(items.reduce((acc, i) => acc + (i.price || 0), 0) * 100) / 100;
+  const sum = (items) => Math.round(items.reduce((acc, i) => acc + getItemTotalPrice(i), 0) * 100) / 100;
   return {
     total: arr.length,
     totalCount: arr.length,
