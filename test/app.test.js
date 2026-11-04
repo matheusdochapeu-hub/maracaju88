@@ -546,3 +546,29 @@ test('Tasks: Editar tarefa e alterar periodicidade (diária, semanal, mensal, an
   const notFound = updateTask(state, "inexistente_123", { title: "Nada" });
   assert.equal(notFound, null);
 });
+
+test('History: getRecentDaysSummary aceita string YYYY-MM-DD e objeto Date sem desvios de fuso', () => {
+  const state = createMockState();
+  const summaryDateObj = getRecentDaysSummary(state, 7, new Date('2026-11-04T12:00:00'));
+  assert.equal(summaryDateObj.length, 7);
+  assert.equal(summaryDateObj[6].dateStr, '2026-11-04');
+
+  const summaryDateStr = getRecentDaysSummary(state, 5, '2026-11-04');
+  assert.equal(summaryDateStr.length, 5);
+  assert.equal(summaryDateStr[4].dateStr, '2026-11-04');
+  assert.equal(summaryDateStr[0].dateStr, '2026-10-31');
+});
+
+test('Auth: Definir senha individual, validar PIN e login seguro com credenciais', () => {
+  setUserPassword('matheus', 'segredo123');
+  assert.equal(verifyUserPassword('matheus', 'segredo123'), true);
+  assert.equal(verifyUserPassword('matheus', 'errada'), false);
+
+  const resSucesso = loginWithCredentials('matheusdochapeu@gmail.com', 'segredo123');
+  assert.equal(resSucesso.success, true);
+  assert.equal(resSucesso.user.name, 'Matheus');
+
+  const resFalha = loginWithCredentials('matheusdochapeu@gmail.com', 'senhaInvalida');
+  assert.equal(resFalha.success, false);
+  assert.equal(resFalha.error, 'Senha incorreta. Tente novamente.');
+});

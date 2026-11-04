@@ -47,8 +47,9 @@ export function getHistoryForDate(state, dateStr = getLocalDateString()) {
 
 export function getRecentDaysSummary(state, daysCount = 7, endDate = new Date()) {
   const result = [];
+  const baseDate = typeof endDate === 'string' ? new Date(endDate + 'T12:00:00') : new Date(endDate);
   for (let i = daysCount - 1; i >= 0; i--) {
-    const d = new Date(endDate);
+    const d = new Date(baseDate);
     d.setDate(d.getDate() - i);
     const dateStr = getLocalDateString(d);
     const h = getHistoryForDate(state, dateStr);

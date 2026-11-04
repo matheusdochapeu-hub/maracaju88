@@ -146,6 +146,9 @@ function doPost(e) {
     // 7. Atualiza Aba: Sonhos
     syncSonhosSheet(ss, data.sonhos || []);
 
+    // 8. Atualiza Aba: Mercado_Compras
+    syncComprasSheet(ss, data.compras || [], data.comprasRegistros || []);
+
     return createJsonResponse({
       status: "success",
       message: "Backup realizado com sucesso no Google Sheets!",
@@ -373,6 +376,53 @@ function syncSonhosSheet(ss, sonhos) {
 
   sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
   sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#e11d48").setFontColor("#ffffff");
+  sheet.setFrozenRows(1);
+  for (var col = 1; col <= headers.length; col++) {
+    sheet.autoResizeColumn(col);
+  }
+}
+
+
+function syncComprasSheet(ss, compras, registros) {
+  var sheet = getOrCreateSheet(ss, "Mercado_Compras");
+  sheet.clear();
+  var headers = ["Tipo", "Item / Mercado", "Qtd / Chave NFC-e", "Categoria", "Comprado?", "Quem Registrou", "Valor", "Data", "Notas"];
+  var rows = [headers];
+
+  compras.forEach(function(c) {
+    rows.push([
+      "Item da Lista",
+      c.name || "",
+      c.qty || "1",
+      c.category || "geral",
+      c.bought ? "SIM" : "NÃO",
+      c.bought ? (c.boughtBy || "") : (c.addedBy || ""),
+      c.price || 0,
+      c.createdAt ? c.createdAt.substring(0, 10) : "",
+      c.notes || ""
+    ]);
+  });
+
+  registros.forEach(function(r) {
+    rows.push([
+      "Nota Fiscal (NFC-e)",
+      r.marketName || "Supermercado",
+      r.nfeKey || "-",
+      "Mercado",
+      "SIM",
+      r.registeredBy || "",
+      r.total || 0,
+      r.date || "",
+      r.notes || (r.items && r.items.length ? (r.items.length + " itens extraídos") : "")
+    ]);
+  });
+
+  if (rows.length === 1) {
+    rows.push(["-", "Nenhuma compra ou nota fiscal registrada ainda", "-", "-", "-", "-", 0, "-", "-"]);
+  }
+
+  sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#10b981").setFontColor("#ffffff");
   sheet.setFrozenRows(1);
   for (var col = 1; col <= headers.length; col++) {
     sheet.autoResizeColumn(col);

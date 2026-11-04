@@ -20,14 +20,19 @@
    - **Purga Ativa de Caches Antigos:** Evento `activate` do Service Worker descarta imediatamente qualquer cache de versões legadas (`maracaju-v1.3.3`, `maracaju-v2.0.0`, `maracaju-v2.0.1`).
    - **Auto-Reload via `controllerchange`:** Injetado listener nativo no `<head>` do `index.html` que detecta a ativação do novo Service Worker e recarrega a página automaticamente no celular.
    - **Botões de Escape de Cache:** Adicionado atalho de "Limpar Cache e Atualizar" na tela de login (`auth-gate`) e na aba de Ajustes (`window.forceUpdateApp()`), permitindo reset total e download imediato do app limpo caso o navegador do celular tenha guardado cache estático.
+
+3. **Correção do Fluxo de Autenticação com Senhas & Biometria:**
+   - Centralização de login unificado na função `handleLogin(email, verifiedUser)`, permitindo que o acesso por biometria ou por formulário com senha funcione perfeitamente sem falso-positivo de "senha incorreta".
+
+4. **Sincronização de Compras e Notas Fiscais no Google Sheets:**
+   - Atualizado `apps_script.gs` com a rotina `syncComprasSheet`, criando a aba visual `Mercado_Compras` com todos os itens da lista e notas fiscais escaneadas.
+
+### Versão 2.0.1 (`04/11/2026`) — Correção de Acesso no Celular & Estratégia de Cache PWA
 1. **Desbloqueio Imediato e Acesso sem Travamento:**
    - **Correção da Sessão Legada:** Adicionada verificação de chaves de autenticação de versões anteriores (`MARACAJU88_AUTH_USER_v1` e `MARACAJU_AUTH_USER_v1`) no `localStorage`. Dispositivos que já estavam conectados continuam com a sessão ativa sem deslogar.
    - **Acesso em 1 Toque Restaurado:** Tocar no perfil de **Matheus** ou **Scarlet** na tela de login realiza a entrada direta instantânea caso o usuário ainda não tenha definido uma senha pessoal em Ajustes.
    - **Correção do Fluxo de Validação:** Corrigida a validação de formulário que apresentava erro `undefined` ao submeter credenciais sem senha configurada.
    - **Biometria Segura:** Detecção assíncrona do suporte à biometria do dispositivo (`isBiometricsSupported`), evitando travamentos em navegadores sem WebAuthn ativo.
-
-2. **Estratégia Network-First para o PWA no Celular:**
-   - Atualizado o Service Worker para a versão de cache `maracaju-v2.0.1`.
    - Implementada a estratégia **Network-First** para navegação (`index.html`), garantindo que o celular sempre carregue os arquivos mais recentes publicados no GitHub Pages, sem prender a tela em versões desatualizadas ou em branco.
    - Invocado `reg.update()` automático no carregamento do app para atualização em segundo plano.
 

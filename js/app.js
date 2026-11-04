@@ -165,28 +165,34 @@ function initAuthModule() {
     }
   }
 
-  function handleLogin(email) {
+  function handleLogin(email, verifiedUser = null) {
     if (errorBox) errorBox.style.display = 'none';
 
-    const result = loginWithEmail(email);
-    if (!result.success) {
-      if (errorBox && errorText) {
-        errorText.textContent = result.error;
-        errorBox.style.display = 'flex';
-      } else {
-        alert(result.error);
+    let user = verifiedUser;
+    if (!user) {
+      const pass = passwordInput ? passwordInput.value : '';
+      const result = loginWithCredentials(email, pass);
+      if (!result.success) {
+        if (errorBox && errorText) {
+          errorText.textContent = result.error;
+          errorBox.style.display = 'flex';
+          if (passwordInput) passwordInput.focus();
+        } else {
+          alert(result.error);
+        }
+        return;
       }
-      return;
+      user = result.user;
     }
 
     if (authGate) authGate.style.display = 'none';
     if (passwordInput) passwordInput.value = '';
-    state.activeUserId = result.user.id;
+    state.activeUserId = user.id;
     saveState(state);
 
     playSubtleClick(state.settings.soundEnabled);
     triggerConfetti();
-    showToast(`Bem-vindo(a) ao Maracaju, ${result.user.name}! 🏡✨`, 'success', 3500);
+    showToast(`Bem-vindo(a) ao Maracaju, ${user.name}! 🏡✨`, 'success', 3500);
     refreshAllUI();
   }
 
@@ -205,9 +211,8 @@ function initAuthModule() {
       try {
         const uId = selectedUserInput ? selectedUserInput.value : 'matheus';
         const ok = await authenticateWithBiometrics(uId);
-        if (ok) {
-          const email = (uId === 'scarlet') ? 'scarletsantos7@gmail.com' : 'matheusdochapeu@gmail.com';
-          handleLogin(email);
+        if (ok && ok.user) {
+          handleLogin(ok.user.email, ok.user);
         } else {
           if (errorBox && errorText) {
             errorText.textContent = 'Não foi possível validar a biometria neste aparelho.';
@@ -262,27 +267,10 @@ function initAuthModule() {
     authForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const uId = selectedUserInput ? selectedUserInput.value : 'matheus';
-      const pass = passwordInput ? passwordInput.value : '';
       const email = (uId === 'scarlet') ? 'scarletsantos7@gmail.com' : 'matheusdochapeu@gmail.com';
-
-      const res = loginWithCredentials(email, pass);
-      if (!res.success) {
-        if (errorBox && errorText) {
-          errorText.textContent = res.error || 'Acesso não autorizado.';
-          errorBox.style.display = 'flex';
-        }
-        return;
-      }
-
-      if (authGate) authGate.style.display = 'none';
-      if (passwordInput) passwordInput.value = '';
-      state.activeUserId = res.user.id;
-      saveState(state);
-
-      playSubtleClick(state.settings.soundEnabled);
-      triggerConfetti();
-      showToast(`Bem-vindo(a) ao Maracaju, ${res.user.name}! 🏡✨`, 'success', 3500);
-      refreshAllUI();
+      handleLogin(email);
+    });
+  }
     });
   }
 
