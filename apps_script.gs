@@ -149,6 +149,9 @@ function doPost(e) {
     // 8. Atualiza Aba: Mercado_Compras
     syncComprasSheet(ss, data.compras || [], data.comprasRegistros || []);
 
+    // 9. Atualiza Aba: Categorias
+    syncCategoriasSheet(ss, data.categories || {});
+
     return createJsonResponse({
       status: "success",
       message: "Backup realizado com sucesso no Google Sheets!",
@@ -386,10 +389,12 @@ function syncSonhosSheet(ss, sonhos) {
 function syncComprasSheet(ss, compras, registros) {
   var sheet = getOrCreateSheet(ss, "Mercado_Compras");
   sheet.clear();
-  var headers = ["Tipo", "Item / Mercado", "Qtd / Chave NFC-e", "Categoria", "Comprado?", "Quem Registrou", "Valor", "Data", "Notas"];
+  var headers = ["Tipo", "Item / Mercado", "Qtd / Chave NFC-e", "Categoria", "Comprado?", "Quem Registrou", "Preço Unit. (R$)", "Total (R$)", "Data", "Notas"];
   var rows = [headers];
 
   compras.forEach(function(c) {
+    var unit = c.unitPrice !== undefined ? c.unitPrice : (c.price || 0);
+    var tot = c.totalPrice !== undefined ? c.totalPrice : (c.price || 0);
     rows.push([
       "Item da Lista",
       c.name || "",
@@ -397,7 +402,8 @@ function syncComprasSheet(ss, compras, registros) {
       c.category || "geral",
       c.bought ? "SIM" : "NÃO",
       c.bought ? (c.boughtBy || "") : (c.addedBy || ""),
-      c.totalPrice || c.price || 0,
+      unit,
+      tot,
       c.createdAt ? c.createdAt.substring(0, 10) : "",
       c.notes || ""
     ]);
@@ -411,6 +417,7 @@ function syncComprasSheet(ss, compras, registros) {
       "Mercado",
       "SIM",
       r.registeredBy || "",
+      "-",
       r.total || 0,
       r.date || "",
       r.notes || (r.items && r.items.length ? (r.items.length + " itens extraídos") : "")
@@ -418,11 +425,42 @@ function syncComprasSheet(ss, compras, registros) {
   });
 
   if (rows.length === 1) {
-    rows.push(["-", "Nenhuma compra ou nota fiscal registrada ainda", "-", "-", "-", "-", 0, "-", "-"]);
+    rows.push(["-", "Nenhuma compra ou nota fiscal registrada ainda", "-", "-", "-", "-", "-", 0, "-", "-"]);
   }
 
   sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
   sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#10b981").setFontColor("#ffffff");
+  sheet.setFrozenRows(1);
+  for (var col = 1; col <= headers.length; col++) {
+    sheet.autoResizeColumn(col);
+  }
+}
+
+function syncCategoriasSheet(ss, categories) {
+  if (!categories || typeof categories !== 'object') return;
+  var sheet = getOrCreateSheet(ss, "Categorias");
+  sheet.clear();
+  var headers = ["Módulo", "ID Categoria", "Nome / Rótulo", "Ícone / Emoji"];
+  var rows = [headers];
+
+  Object.keys(categories).forEach(function(mod) {
+    var list = categories[mod] || [];
+    list.forEach(function(cat) {
+      rows.push([
+        mod,
+        cat.id || "",
+        cat.label || "",
+        cat.icon || ""
+      ]);
+    });
+  });
+
+  if (rows.length === 1) {
+    rows.push(["-", "-", "Nenhuma categoria cadastrada", "-"]);
+  }
+
+  sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#8b5cf6").setFontColor("#ffffff");
   sheet.setFrozenRows(1);
   for (var col = 1; col <= headers.length; col++) {
     sheet.autoResizeColumn(col);

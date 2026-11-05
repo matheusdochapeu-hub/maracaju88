@@ -47,11 +47,15 @@ export async function backupToSheets(state) {
       activeUserId: state.activeUserId,
       users: state.users,
       gamification: state.gamification,
-      tasks: state.tasks,
-      history: state.history,
+      tasks: state.tasks || [],
+      history: state.history || {},
       carro: state.carro || [],
-      reformas: state.reformas,
-      sonhos: state.sonhos
+      reformas: state.reformas || [],
+      sonhos: state.sonhos || [],
+      compras: state.compras || [],
+      comprasRegistros: state.comprasRegistros || [],
+      categories: state.categories || {},
+      userPasswords: state.userPasswords || {}
     }
   };
 
@@ -68,11 +72,11 @@ export async function backupToSheets(state) {
   try {
     result = await response.json();
   } catch (err) {
-    // Caso o Apps Script responda redirect ou texto
+    // Caso o Apps Script responda redirect ou texto simples
     result = { status: "success", message: "Backup enviado para processamento." };
   }
 
-  if (result.status === "error") {
+  if (result && result.status === "error") {
     throw new Error(result.message || "Erro desconhecido ao gravar no Google Sheets.");
   }
 
@@ -109,4 +113,70 @@ export async function restoreFromSheets(state) {
   }
 
   return json.data;
+}
+
+/**
+ * Aplica os dados do backup na nuvem com prioridade máxima sobre o estado local,
+ * preservando credenciais locais e garantindo compatibilidade de estruturas.
+ */
+export function applyCloudBackup(currentState, cloudData) {
+  if (!cloudData || typeof cloudData !== 'object') {
+    return currentState;
+  }
+
+  const safeCurrent = currentState || {};
+  const safeCurrentSettings = safeCurrent.settings || {};
+  const safeCloudSettings = (cloudData.settings && typeof cloudData.settings === 'object') ? cloudData.settings : {};
+
+  // Preserva URL e Token locais se já configurados no dispositivo
+  const preservedSheetsUrl = safeCurrentSettings.sheetsUrl || safeCloudSettings.sheetsUrl || "";
+  const preservedSheetsToken = safeCurrentSettings.sheetsToken || safeCloudSettings.sheetsToken || "Maracaju88CasalSegredo2026!";
+
+  const merged = {
+    ...safeCurrent,
+    ...cloudData,
+    version: cloudData.version || safeCurrent.version,
+    lastUpdated: cloudData.lastUpdated || new Date().toISOString(),
+    activeUserId: safeCurrent.activeUserId || cloudData.activeUserId || "matheus",
+    users: { ...(safeCurrent.users || {}), ...(cloudData.users || {}) },
+    gamification: { ...(safeCurrent.gamification || {}), ...(cloudData.gamification || {}) },
+    tasks: Array.isArray(cloudData.tasks) ? cloudData.tasks : (safeCurrent.tasks || []),
+    history: (cloudData.history && typeof cloudData.history === 'object') ? cloudData.history : (safeCurrent.history || {}),
+    carro: Array.isArray(cloudData.carro) ? cloudData.carro : (safeCurrent.carro || []),
+    reformas: Array.isArray(cloudData.reformas) ? cloudData.reformas : (safeCurrent.reformas || []),
+    sonhos: Array.isArray(cloudData.sonhos) ? cloudData.sonhos : (safeCurrent.sonhos || []),
+    compras: Array.isArray(cloudData.compras) ? cloudData.compras : (safeCurrent.compras || []),
+    comprasRegistros: Array.isArray(cloudData.comprasRegistros) ? cloudData.comprasRegistros : (safeCurrent.comprasRegistros || []),
+    categories: {
+      tarefas: (cloudData.categories && Array.isArray(cloudData.categories.tarefas) && cloudData.categories.tarefas.length > 0)
+        ? cloudData.categories.tarefas
+        : ((safeCurrent.categories && safeCurrent.categories.tarefas) || []),
+      carro: (cloudData.categories && Array.isArray(cloudData.categories.carro) && cloudData.categories.carro.length > 0)
+        ? cloudData.categories.carro
+        : ((safeCurrent.categories && safeCurrent.categories.carro) || []),
+      reformas: (cloudData.categories && Array.isArray(cloudData.categories.reformas) && cloudData.categories.reformas.length > 0)
+        ? cloudData.categories.reformas
+        : ((safeCurrent.categories && safeCurrent.categories.reformas) || []),
+      sonhos: (cloudData.categories && Array.isArray(cloudData.categories.sonhos) && cloudData.categories.sonhos.length > 0)
+        ? cloudData.categories.sonhos
+        : ((safeCurrent.categories && safeCurrent.categories.sonhos) || []),
+      compras: (cloudData.categories && Array.isArray(cloudData.categories.compras) && cloudData.categories.compras.length > 0)
+        ? cloudData.categories.compras
+        : ((safeCurrent.categories && safeCurrent.categories.compras) || [])
+    },
+    userPasswords: {
+      ...(safeCurrent.userPasswords || {}),
+      ...(cloudData.userPasswords || {})
+    },
+    settings: {
+      ...safeCurrentSettings,
+      ...safeCloudSettings,
+      sheetsUrl: preservedSheetsUrl,
+      sheetsToken: preservedSheetsToken,
+      autoSync: true, // Prioridade da planilha: auto-sync sempre ativo quando há URL
+      lastSyncTimestamp: new Date().toISOString()
+    }
+  };
+
+  return merged;
 }

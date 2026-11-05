@@ -36,7 +36,7 @@ export function getInitialState() {
     settings: {
       sheetsUrl: "",
       sheetsToken: "Maracaju88CasalSegredo2026!",
-      autoSync: false,
+      autoSync: true,
       soundEnabled: true,
       lastSyncTimestamp: null
     }
@@ -71,7 +71,11 @@ export function loadState() {
       ...parsed,
       users: { ...initial.users, ...(parsed.users || {}) },
       gamification: { ...initial.gamification, ...(parsed.gamification || {}) },
-      settings: { ...initial.settings, ...(parsed.settings || {}) },
+      settings: {
+        ...initial.settings,
+        ...(parsed.settings || {}),
+        autoSync: (parsed.settings && parsed.settings.sheetsUrl) ? true : ((parsed.settings && parsed.settings.autoSync !== undefined) ? parsed.settings.autoSync : true)
+      },
       tasks: Array.isArray(parsed.tasks) && parsed.tasks.length > 0 ? parsed.tasks : initial.tasks,
       history: parsed.history || {},
       carro: Array.isArray(parsed.carro) ? parsed.carro : initial.carro,

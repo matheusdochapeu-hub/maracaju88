@@ -3,11 +3,26 @@
 **Data da última consolidação:** `04/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v2.0.5`
+**Versão Atual:** `v2.0.6`
 
 ---
 
 ## Histórico de Versões
+
+### Versão 2.0.6 (`04/11/2026`) — Prioridade da Planilha Google (Cloud-First) & Sincronização Automática ao Abrir
+1. **Prioridade Absoluta da Nuvem ao Abrir:**
+   - O aplicativo agora busca automaticamente a versão mais recente salva na planilha Google assim que é aberto, seja por Matheus ou por Scarlet.
+   - Puxada em background instantânea no carregamento da página, no login com senha/biometria e ao alternar de volta para o app no celular (`visibilitychange` / `focus`).
+   - Dados locais defasados são atualizados suavemente e a interface reflete as novidades com notificação amigável (`☁️ Dados atualizados da planilha!`).
+2. **Backup Completo de 100% dos Dados:**
+   - O payload do Google Sheets agora inclui `compras` (lista de compras), `comprasRegistros` (notas fiscais NFC-e), `categories` (categorias personalizadas com emojis) e `userPasswords` (senhas individuais criptografadas/armazenadas).
+   - O script `apps_script.gs` recebeu nova aba dedicada `Categorias` e colunas detalhadas de preço unitário e total para o mercado.
+3. **Auto-Sync Instantâneo e Visual:**
+   - Toda alteração feita no app é enviada em segundo plano para o Google Sheets com debounce inteligente e feedback no indicador de status do cabeçalho.
+4. **Atualização PWA:**
+   - Cache atualizado para `maracaju-v2.0.6`.
+
+---
 
 ### Versão 2.0.5 (`04/11/2026`) — Edição Completa de Lançamentos em Todos os Módulos do Aplicativo
 1. **Edição de Cuidados & Peças do Carro (`#tab-carro`):**

@@ -4,7 +4,36 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
-## [2026-11-04 18:20] - Edição Completa de Lançamentos em Todos os Módulos (v2.0.5)
+## [2026-11-04 18:45] - Prioridade da Planilha Google (Cloud-First) & Sincronização Automática ao Abrir (v2.0.6)
+
+### 🔍 Problemas Identificados & Causa Raiz
+1. **Falta de Sincronização ao Abrir em Aparelhos Diferentes:**
+   - **Causa Raiz:** O app carregava unicamente o estado local salvo no `localStorage` daquele aparelho em específico. Se Matheus fizesse compras ou marcasse tarefas no computador ou no celular, e depois Scarlet abrisse o app no aparelho dela, o app mostrava o cache local antigo dela, sem puxar automaticamente a planilha. O usuário precisava ir manualmente em Ajustes > "Restaurar do Google Sheets".
+2. **Payload de Backup Incompleto (`js/sheets.js`):**
+   - **Causa Raiz:** O objeto `data` enviado por `backupToSheets()` gravava apenas `tasks`, `history`, `carro`, `reformas` e `sonhos`. Estavam de fora: `compras` (lista de mercado), `comprasRegistros` (notas fiscais escaneadas), `categories` (categorias customizadas com emojis) e `userPasswords` (senhas individuais). Uma restauração da nuvem podia deixar esses campos vazios.
+3. **Auto-Sync Desabilitado por Padrão:**
+   - **Causa Raiz:** `getInitialState()` continha `autoSync: false`, impedindo que ações cotidianas fossem enviadas imediatamente para a nuvem sem intervenção manual nas configurações.
+
+---
+
+### 🛠️ Correções Implementadas
+1. **Puxada Automática da Planilha ao Abrir o App (Cloud-First Prioritário):**
+   - Implementada a função `syncPullFromSheets(silent)` em [js/app.js](file:///c:/Users/Matheus/Desktop/Matheus/7.%20IA/maracaju88/js/app.js).
+   - O app carrega o cache local instantaneamente (sem tela branca nem espera), e em background puxa a versão mais recente do Google Sheets.
+   - Assim que a resposta da nuvem chega, `applyCloudBackup()` mescla os dados mais recentes, salva no `localStorage` e atualiza a interface com a notificação discreta: `☁️ Dados atualizados da planilha!`.
+   - **Gatilhos automáticos de sincronização:**
+     - Na inicialização (`DOMContentLoaded`).
+     - No momento em que o morador faz login com senha ou biometria (`handleLogin`).
+     - Ao retornar ao aplicativo após minimizar o celular ou alternar abas (`visibilitychange` e `focus`, com debounce inteligente de 10s para economia de dados).
+2. **Backup Integral e Irrestrito (`js/sheets.js` & `apps_script.gs`):**
+   - O payload do `backupToSheets()` agora inclui todos os 12 domínios do app: `tasks`, `history`, `carro`, `reformas`, `sonhos`, `compras`, `comprasRegistros`, `categories`, `userPasswords`, `users`, `gamification`, `version` e `lastUpdated`.
+   - `applyCloudBackup()` garante prioridade absoluta aos dados da planilha, mantendo em segurança as configurações locais de conexão do dispositivo e ativando `autoSync: true`.
+   - `apps_script.gs` atualizado com a aba visual `Categorias` (`syncCategoriasSheet`) e exibição de preço unitário e total em `Mercado_Compras`.
+3. **Auto-Sync Imediato e Visual com Debounce:**
+   - `triggerAutoSyncIfEnabled()` agora aciona sempre que houver `sheetsUrl` configurada, exibindo animação no ponto de status do cabeçalho (`syncDot`: pulsando âmbar durante o envio e verde fixo com tooltip de horário ao concluir).
+4. **Validação:**
+   - 16 testes unitários aprovados em `test/app.test.js`.
+   - Teste automatizado específico de prioridade Cloud-First validando que os dados do Google Sheets sobrescrevem o estado local defasado.
 
 ### 🔍 Problemas Identificados & Causa Raiz
 1. **Ausência de Edição em Lançamentos (Carro, Reformas, Sonhos e Mercado):**

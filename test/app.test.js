@@ -84,6 +84,7 @@ import {
   deleteCategory,
   findCategory
 } from '../js/categories.js';
+import { applyCloudBackup } from '../js/sheets.js';
 
 function createMockState() {
   return {
@@ -715,4 +716,102 @@ test('Edição de Lançamentos: Permitir editar qualquer item em Carro, Reformas
   assert.equal(updatedPurchase.marketName, 'Supermercado Pão de Açúcar');
   assert.equal(updatedPurchase.total, 92.40);
   assert.equal(updatedPurchase.notes, 'Itens de café da manhã');
+});
+
+test('Sheets: Prioridade da planilha Google e sincronização completa dos dados (Cloud-First)', () => {
+  const localState = {
+    version: "2.0.5",
+    activeUserId: "matheus",
+    users: {
+      user1: { id: "matheus", name: "Matheus", xp: 10 },
+      user2: { id: "scarlet", name: "Scarlet", xp: 20 }
+    },
+    tasks: [{ id: "task_1", title: "Lavar louça", frequency: "diaria" }],
+    history: { "2026-11-04": { "task_1": { done: true, doneBy: "matheus" } } },
+    carro: [{ id: "car_1", title: "Óleo antigo", actualCost: 100 }],
+    reformas: [{ id: "ref_1", title: "Pintura antiga", actualCost: 0 }],
+    sonhos: [{ id: "sonho_1", title: "Sonho antigo", savedAmount: 0 }],
+    compras: [{ id: "comp_1", name: "Leite", qty: "1", totalPrice: 5.50, bought: false }],
+    comprasRegistros: [],
+    categories: {
+      tarefas: [{ id: "cozinha", label: "Cozinha", icon: "🍳" }],
+      carro: [],
+      reformas: [],
+      sonhos: [],
+      compras: []
+    },
+    userPasswords: { matheus: "1234" },
+    settings: {
+      sheetsUrl: "https://script.google.com/macros/s/AKfycb.../exec",
+      sheetsToken: "Maracaju88CasalSegredo2026!",
+      autoSync: false,
+      lastSyncTimestamp: null
+    }
+  };
+
+  // Simula snapshot retornado do Google Sheets com alterações feitas no outro aparelho
+  const cloudData = {
+    version: "2.0.6",
+    lastUpdated: "2026-11-04T22:00:00.000Z",
+    activeUserId: "scarlet",
+    users: {
+      user1: { id: "matheus", name: "Matheus", xp: 35 },
+      user2: { id: "scarlet", name: "Scarlet", xp: 50 }
+    },
+    tasks: [
+      { id: "task_1", title: "Lavar louça", frequency: "diaria" },
+      { id: "task_2", title: "Trocar roupas de cama", frequency: "semanal" }
+    ],
+    history: {
+      "2026-11-04": {
+        "task_1": { done: true, doneBy: "matheus" },
+        "task_2": { done: true, doneBy: "scarlet" }
+      }
+    },
+    carro: [{ id: "car_1", title: "Troca de óleo 5W30", actualCost: 320.50, status: "concluido" }],
+    reformas: [{ id: "ref_1", title: "Iluminação LED Sala", actualCost: 450.00, status: "andamento" }],
+    sonhos: [{ id: "sonho_1", title: "Viagem Gramado", savedAmount: 1200.00, status: "poupando" }],
+    compras: [
+      { id: "comp_1", name: "Leite Desnatado", qty: "2 unidades", totalPrice: 11.00, bought: true, boughtBy: "Scarlet" },
+      { id: "comp_2", name: "Chá Matte", qty: "6 unidades", totalPrice: 48.00, bought: false }
+    ],
+    comprasRegistros: [
+      { id: "reg_1", marketName: "Carrefour", date: "2026-11-04", total: 154.20, nfeKey: "3526..." }
+    ],
+    categories: {
+      tarefas: [{ id: "cozinha", label: "Cozinha", icon: "🍳" }, { id: "jardim", label: "Jardim", icon: "🪴" }],
+      carro: [{ id: "oleo", label: "Óleo", icon: "🛢️" }],
+      reformas: [],
+      sonhos: [],
+      compras: [{ id: "bebidas", label: "Bebidas", icon: "🧃" }]
+    },
+    userPasswords: { matheus: "1234", scarlet: "5678" }
+  };
+
+  // Aplica restauração prioritária da nuvem
+  const merged = applyCloudBackup(localState, cloudData);
+
+  // Valida que os dados da planilha prevaleceram absolutamente
+  assert.equal(merged.tasks.length, 2);
+  assert.equal(merged.tasks[1].title, "Trocar roupas de cama");
+  assert.equal(merged.carro[0].status, "concluido");
+  assert.equal(merged.carro[0].actualCost, 320.50);
+  assert.equal(merged.reformas[0].actualCost, 450.00);
+  assert.equal(merged.sonhos[0].savedAmount, 1200.00);
+  assert.equal(merged.compras.length, 2);
+  assert.equal(merged.compras[0].bought, true);
+  assert.equal(merged.compras[0].totalPrice, 11.00);
+  assert.equal(merged.compras[1].name, "Chá Matte");
+  assert.equal(merged.compras[1].totalPrice, 48.00);
+  assert.equal(merged.comprasRegistros.length, 1);
+  assert.equal(merged.comprasRegistros[0].total, 154.20);
+  assert.equal(merged.categories.tarefas.length, 2);
+  assert.equal(merged.categories.compras.length, 1);
+  assert.equal(merged.userPasswords.scarlet, "5678");
+
+  // Valida que a conexão local foi mantida e autoSync foi forçado para true
+  assert.equal(merged.settings.sheetsUrl, localState.settings.sheetsUrl);
+  assert.equal(merged.settings.sheetsToken, localState.settings.sheetsToken);
+  assert.equal(merged.settings.autoSync, true);
+  assert.ok(merged.settings.lastSyncTimestamp);
 });

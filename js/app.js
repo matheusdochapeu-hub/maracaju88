@@ -61,7 +61,7 @@ import {
   removeLinkFromReforma
 } from './reformas.js';
 import { addSonho, updateSonho, deleteSonho, toggleSonhoMilestone, addPhotoToSonho, removePhotoFromSonho } from './sonhos.js';
-import { testSheetsConnection, backupToSheets, restoreFromSheets } from './sheets.js';
+import { testSheetsConnection, backupToSheets, restoreFromSheets, applyCloudBackup } from './sheets.js';
 import {
   getCategories,
   findCategory,
@@ -126,6 +126,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   populateCategorySelects(state);
   refreshAllUI();
+
+  // Prioridade da Planilha: quem abrir o app puxa imediatamente os dados mais recentes
+  syncPullFromSheets(false);
+});
+
+// Ao retornar ao aplicativo (mudança de aba ou desbloqueio de tela no celular), puxa a planilha
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    syncPullFromSheets(true);
+  }
+});
+
+window.addEventListener('focus', () => {
+  syncPullFromSheets(true);
 });
 
 // -------------------------------------------------------------
@@ -202,6 +216,7 @@ function initAuthModule() {
     triggerConfetti();
     showToast(`Bem-vindo(a) ao Maracaju, ${user.name}! 🏡✨`, 'success', 3500);
     refreshAllUI();
+    syncPullFromSheets(false);
   }
 
   // Alterna visibilidade da senha
@@ -1567,25 +1582,24 @@ function initSettingsModule() {
 
   if (btnRestoreSheets) {
     btnRestoreSheets.addEventListener('click', async () => {
-      if (!confirm('Atenção: A restauração substituirá os dados locais atuais pelos dados salvos na planilha. Deseja continuar?')) {
+      if (!confirm('Atenção: A restauração atualizará os dados locais com a versão mais recente salva na planilha. Deseja continuar?')) {
         return;
       }
 
       btnRestoreSheets.disabled = true;
-      btnRestoreSheets.textContent = 'Restaurando...';
+      btnRestoreSheets.textContent = 'Restaurando da planilha...';
 
       try {
-        const restoredData = await restoreFromSheets(state);
-        state = {
-          ...state,
-          ...restoredData,
-          users: { ...state.users, ...(restoredData.users || {}) },
-          gamification: { ...state.gamification, ...(restoredData.gamification || {}) },
-          settings: { ...state.settings, ...(restoredData.settings || {}) }
-        };
-        saveState(state);
-        showToast('Dados restaurados com sucesso do Google Sheets!', 'success', 4000);
-        refreshAllUI();
+        const cloudData = await restoreFromSheets(state);
+        if (cloudData) {
+          state = applyCloudBackup(state, cloudData);
+          saveState(state);
+          populateCategorySelects(state);
+          showToast('☁️ Dados restaurados com sucesso do Google Sheets!', 'success', 4000);
+          refreshAllUI();
+        } else {
+          showToast('Nenhum dado encontrado na planilha.', 'info');
+        }
       } catch (err) {
         showToast(`Erro na restauração: ${err.message}`, 'error', 5000);
       } finally {
@@ -1621,11 +1635,90 @@ function initSettingsModule() {
   }
 }
 
-function triggerAutoSyncIfEnabled() {
-  if (state.settings.autoSync && state.settings.sheetsUrl) {
-    backupToSheets(state).catch(err => {
+// -------------------------------------------------------------
+// SINCRONIZAÇÃO EM NUVEM E PRIORIDADE GOOGLE SHEETS
+// -------------------------------------------------------------
+let autoSyncTimeout = null;
+function triggerAutoSyncIfEnabled(immediate = false) {
+  if (!state.settings.sheetsUrl) return;
+
+  const syncDot = document.getElementById('sync-dot');
+  if (syncDot) {
+    syncDot.className = 'sync-status-indicator syncing';
+    syncDot.title = 'Sincronizando com o Google Sheets...';
+  }
+
+  const runSync = async () => {
+    try {
+      await backupToSheets(state);
+      if (syncDot) {
+        syncDot.className = 'sync-status-indicator synced';
+        syncDot.title = `Sincronizado com Google Sheets às ${new Date().toLocaleTimeString('pt-BR')}`;
+      }
+    } catch (err) {
       console.warn('[Maracaju] Auto-sync falhou em background:', err);
-    });
+      if (syncDot) {
+        syncDot.className = 'sync-status-indicator error';
+        syncDot.title = `Falha ao sincronizar: ${err.message}`;
+      }
+    }
+  };
+
+  if (immediate) {
+    if (autoSyncTimeout) clearTimeout(autoSyncTimeout);
+    runSync();
+  } else {
+    if (autoSyncTimeout) clearTimeout(autoSyncTimeout);
+    autoSyncTimeout = setTimeout(runSync, 400);
+  }
+}
+
+let lastSyncPullTime = 0;
+let isSyncPulling = false;
+
+async function syncPullFromSheets(silent = false) {
+  if (!state.settings.sheetsUrl) return;
+  if (isSyncPulling) return;
+
+  const now = Date.now();
+  if (silent && (now - lastSyncPullTime < 10000)) {
+    return;
+  }
+
+  isSyncPulling = true;
+  lastSyncPullTime = now;
+
+  const syncDot = document.getElementById('sync-dot');
+  if (syncDot) {
+    syncDot.className = 'sync-status-indicator syncing';
+    syncDot.title = 'Buscando versão mais recente na planilha...';
+  }
+
+  try {
+    const cloudData = await restoreFromSheets(state);
+    if (cloudData) {
+      state = applyCloudBackup(state, cloudData);
+      saveState(state);
+      populateCategorySelects(state);
+      refreshAllUI();
+
+      if (syncDot) {
+        syncDot.className = 'sync-status-indicator synced';
+        syncDot.title = `Planilha sincronizada às ${new Date().toLocaleTimeString('pt-BR')}`;
+      }
+
+      if (!silent) {
+        showToast('☁️ Dados atualizados da planilha!', 'success', 3000);
+      }
+    }
+  } catch (err) {
+    console.warn('[Maracaju] Sincronização inicial com Sheets falhou (usando cache local):', err.message);
+    if (syncDot) {
+      syncDot.className = 'sync-status-indicator ' + (state.settings.sheetsUrl ? 'synced' : '');
+      syncDot.title = state.settings.sheetsUrl ? 'Google Sheets Conectado (offline temporário)' : 'Sem sincronização ativa';
+    }
+  } finally {
+    isSyncPulling = false;
   }
 }
 
