@@ -5,6 +5,45 @@
 
 export const FREQUENCY_IDS = ['diaria', 'semanal', 'mensal', 'anual'];
 
+export const WEEK_DAYS = [
+  { id: 0, short: 'Dom', label: 'Domingo' },
+  { id: 1, short: 'Seg', label: 'Segunda' },
+  { id: 2, short: 'Ter', label: 'Terça' },
+  { id: 3, short: 'Qua', label: 'Quarta' },
+  { id: 4, short: 'Qui', label: 'Quinta' },
+  { id: 5, short: 'Sex', label: 'Sexta' },
+  { id: 6, short: 'Sáb', label: 'Sábado' }
+];
+
+export function isTaskScheduledForDate(task, dateStr = getLocalDateString()) {
+  if (!task) return false;
+  if (task.frequency && task.frequency !== 'diaria') {
+    return true;
+  }
+  if (!Array.isArray(task.weekDays) || task.weekDays.length === 0 || task.weekDays.length === 7) {
+    return true;
+  }
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dayOfWeek = new Date(y, m - 1, d).getDay(); // 0 = Dom, 1 = Seg, 2 = Ter, etc.
+  return task.weekDays.includes(dayOfWeek);
+}
+
+export function formatTaskWeekDays(weekDays) {
+  if (!Array.isArray(weekDays) || weekDays.length === 0 || weekDays.length === 7) {
+    return 'Todos os dias';
+  }
+  const sorted = [...new Set(weekDays)].sort((a, b) => a - b);
+  const segASex = [1, 2, 3, 4, 5];
+  if (sorted.length === 5 && sorted.every((d, i) => d === segASex[i])) {
+    return 'Segunda a Sexta';
+  }
+  if (sorted.length === 2 && sorted.includes(0) && sorted.includes(6)) {
+    return 'Fim de semana';
+  }
+  return sorted.map(d => WEEK_DAYS.find(w => w.id === d)?.short || '').filter(Boolean).join(', ');
+}
+
+
 export function getLocalDateString(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -93,7 +132,13 @@ export function toggleTaskDone(state, taskId, dateStr = getLocalDateString(), us
 }
 
 export function getTasksProgressByFrequency(state, frequency = 'diaria', dateStr = getLocalDateString()) {
-  const tasks = (state.tasks || []).filter(t => (t.frequency || 'diaria') === frequency);
+  const tasks = (state.tasks || []).filter(t => {
+    if ((t.frequency || 'diaria') !== frequency) return false;
+    if (frequency === 'diaria') {
+      return isTaskScheduledForDate(t, dateStr) || isTaskDoneOnDate(state, t.id, dateStr);
+    }
+    return true;
+  });
   const completed = tasks.filter(t => isTaskDoneOnDate(state, t.id, dateStr)).length;
   const total = tasks.length;
   return { frequency, total, completed, percent: total > 0 ? Math.round((completed / total) * 100) : 0 };
@@ -119,6 +164,7 @@ export function addTask(state, data) {
     assignedTo: data.assignedTo || 'ambos',
     effort: data.effort || 'media',
     frequency: normalizeFrequency(data.frequency),
+    weekDays: Array.isArray(data.weekDays) ? data.weekDays.map(Number).filter(d => !isNaN(d) && d >= 0 && d <= 6) : [],
     notes: data.notes ? data.notes.trim() : '',
     createdAt: new Date().toISOString()
   };
@@ -140,6 +186,11 @@ export function updateTask(state, taskId, data) {
   if (data.effort !== undefined) task.effort = data.effort;
   if (data.assignedTo !== undefined) task.assignedTo = data.assignedTo;
   if (data.notes !== undefined) task.notes = (data.notes || '').trim();
+  if (data.weekDays !== undefined) {
+    task.weekDays = Array.isArray(data.weekDays)
+      ? data.weekDays.map(Number).filter(d => !isNaN(d) && d >= 0 && d <= 6)
+      : [];
+  }
   task.updatedAt = new Date().toISOString();
   return task;
 }

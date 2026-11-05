@@ -698,6 +698,92 @@ function initHeaderControls() {
 
 
 function initTasksModule() {
+  // Gerenciamento dos Seletores de Dias da Semana (Nova Tarefa e Editar Tarefa)
+  function updateWeekdaysUI(containerId, labelId, activeDays = []) {
+    const container = document.getElementById(containerId);
+    const label = document.getElementById(labelId);
+    if (!container) return;
+
+    const buttons = container.querySelectorAll('.btn-weekday');
+    buttons.forEach(btn => {
+      const day = Number(btn.getAttribute('data-day'));
+      btn.classList.toggle('active', activeDays.includes(day));
+    });
+
+    if (label) {
+      label.textContent = formatTaskWeekDays(activeDays);
+    }
+  }
+
+  function getSelectedWeekdays(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return [];
+    const activeButtons = container.querySelectorAll('.btn-weekday.active');
+    const days = Array.from(activeButtons).map(b => Number(b.getAttribute('data-day'))).sort((a, b) => a - b);
+    return days;
+  }
+
+  // Alternância de botões de dias individuais
+  document.addEventListener('click', (e) => {
+    const dayBtn = e.target.closest('.btn-weekday');
+    if (dayBtn) {
+      dayBtn.classList.toggle('active');
+      const isEdit = dayBtn.closest('#task-edit-weekdays-group');
+      const containerId = isEdit ? 'task-edit-weekdays-buttons' : 'task-weekdays-buttons';
+      const labelId = isEdit ? 'task-edit-weekdays-label' : 'task-weekdays-label';
+      const selected = getSelectedWeekdays(containerId);
+      const label = document.getElementById(labelId);
+      if (label) label.textContent = formatTaskWeekDays(selected);
+      playSubtleClick(state.settings.soundEnabled);
+      return;
+    }
+
+    const presetBtn = e.target.closest('.btn-weekday-preset');
+    if (presetBtn) {
+      const target = presetBtn.getAttribute('data-target'); // 'add' or 'edit'
+      const preset = presetBtn.getAttribute('data-preset');
+      const containerId = target === 'edit' ? 'task-edit-weekdays-buttons' : 'task-weekdays-buttons';
+      const labelId = target === 'edit' ? 'task-edit-weekdays-label' : 'task-weekdays-label';
+
+      let days = [];
+      if (preset === 'all') days = [0, 1, 2, 3, 4, 5, 6];
+      else if (preset === 'trash') days = [2, 4, 6]; // Terça, Quinta, Sábado (Coleta de Lixo)
+      else if (preset === 'weekdays') days = [1, 2, 3, 4, 5]; // Segunda a Sexta
+      else if (preset === 'weekend') days = [0, 6]; // Sábado e Domingo
+
+      updateWeekdaysUI(containerId, labelId, days);
+      playSubtleClick(state.settings.soundEnabled);
+      return;
+    }
+  });
+
+  // Mostrar/ocultar seletor de dias conforme periodicidade
+  const addFreqSelect = document.getElementById('task-input-frequency');
+  const addWeekdaysGroup = document.getElementById('task-weekdays-group');
+  if (addFreqSelect && addWeekdaysGroup) {
+    addFreqSelect.addEventListener('change', () => {
+      addWeekdaysGroup.style.display = addFreqSelect.value === 'diaria' ? 'block' : 'none';
+    });
+  }
+
+  const editFreqSelect = document.getElementById('task-edit-frequency');
+  const editWeekdaysGroup = document.getElementById('task-edit-weekdays-group');
+  if (editFreqSelect && editWeekdaysGroup) {
+    editFreqSelect.addEventListener('change', () => {
+      editWeekdaysGroup.style.display = editFreqSelect.value === 'diaria' ? 'block' : 'none';
+    });
+  }
+
+  // Prepara modal de nova tarefa
+  document.addEventListener('click', (e) => {
+    const openAddBtn = e.target.closest('[data-open-modal="modal-add-task"]');
+    if (openAddBtn) {
+      updateWeekdaysUI('task-weekdays-buttons', 'task-weekdays-label', []);
+      if (addWeekdaysGroup && addFreqSelect) {
+        addWeekdaysGroup.style.display = addFreqSelect.value === 'diaria' ? 'block' : 'none';
+      }
+    }
+  });
   // Controle de Frequência (Diárias, Semanais, Mensais, Anuais)
   const freqBar = document.getElementById('frequency-segmented-bar');
   if (freqBar) {
@@ -816,7 +902,8 @@ function initTasksModule() {
 
       if (!title.trim()) return;
 
-      addTask(state, { title, frequency, room, effort, assignedTo, notes });
+      const weekDays = frequency === 'diaria' ? getSelectedWeekdays('task-weekdays-buttons') : [];
+      addTask(state, { title, frequency, room, effort, assignedTo, notes, weekDays });
       saveState(state);
       triggerAutoSyncIfEnabled();
 

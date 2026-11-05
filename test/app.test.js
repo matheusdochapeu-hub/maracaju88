@@ -15,7 +15,9 @@ import {
   getAllFrequenciesSummary,
   addTask,
   deleteTask,
-  updateTask
+  updateTask,
+  formatTaskWeekDays,
+  isTaskScheduledForDate
 } from '../js/tasks.js';
 import { getHistoryForDate, getRecentDaysSummary } from '../js/history.js';
 import {
@@ -899,4 +901,60 @@ test('Mercado: Lançamento Manual de Compra sem Nota & Comparador de Preços ent
   assert.equal(comp.minMarket, 'Atacadão');
   assert.equal(comp.maxMarket, 'Carrefour');
   assert.equal(comp.priceDiff, 5.40); // 22.90 - 17.50 = 5.40 de economia no Atacadão
+});
+
+test('Tasks: Dias específicos da semana (ex: tirar o lixo ter/qui/sab)', () => {
+  const state = {
+    tasks: [],
+    history: {}
+  };
+
+  // 1. Cadastra tarefa de tirar o lixo para Terça (2), Quinta (4) e Sábado (6)
+  const taskLixo = addTask(state, {
+    title: 'Tirar o lixo para a rua',
+    frequency: 'diaria',
+    weekDays: [2, 4, 6],
+    room: 'cozinha'
+  });
+
+  assert.equal(taskLixo.title, 'Tirar o lixo para a rua');
+  assert.deepEqual(taskLixo.weekDays, [2, 4, 6]);
+  assert.equal(formatTaskWeekDays(taskLixo.weekDays), 'Ter, Qui, Sáb');
+
+  // 2. Validação de formatação de dias
+  assert.equal(formatTaskWeekDays([1, 2, 3, 4, 5]), 'Segunda a Sexta');
+  assert.equal(formatTaskWeekDays([0, 6]), 'Fim de semana');
+  assert.equal(formatTaskWeekDays([]), 'Todos os dias');
+  assert.equal(formatTaskWeekDays([0, 1, 2, 3, 4, 5, 6]), 'Todos os dias');
+
+  // 3. Validação de agendamento por data
+  // 2026-11-03 é Terça-feira (dia 2) -> DEVE rodar
+  assert.equal(isTaskScheduledForDate(taskLixo, '2026-11-03'), true);
+  // 2026-11-04 é Quarta-feira (dia 3) -> NÃO deve rodar
+  assert.equal(isTaskScheduledForDate(taskLixo, '2026-11-04'), false);
+  // 2026-11-05 é Quinta-feira (dia 4) -> DEVE rodar
+  assert.equal(isTaskScheduledForDate(taskLixo, '2026-11-05'), true);
+  // 2026-11-06 é Sexta-feira (dia 5) -> NÃO deve rodar
+  assert.equal(isTaskScheduledForDate(taskLixo, '2026-11-06'), false);
+  // 2026-11-07 é Sábado (dia 6) -> DEVE rodar
+  assert.equal(isTaskScheduledForDate(taskLixo, '2026-11-07'), true);
+  // 2026-11-08 é Domingo (dia 0) -> NÃO deve rodar
+  assert.equal(isTaskScheduledForDate(taskLixo, '2026-11-08'), false);
+
+  // 4. Progresso diário: na Terça a tarefa conta no total; na Quarta não conta
+  const progTerca = getTasksProgressByFrequency(state, 'diaria', '2026-11-03');
+  assert.equal(progTerca.total, 1);
+  assert.equal(progTerca.completed, 0);
+
+  const progQuarta = getTasksProgressByFrequency(state, 'diaria', '2026-11-04');
+  assert.equal(progQuarta.total, 0); // Lixo não passa na quarta, não entra no total!
+
+  // 5. Edição: alterar dias para Seg, Qua, Sex
+  const updated = updateTask(state, taskLixo.id, {
+    weekDays: [1, 3, 5]
+  });
+  assert.deepEqual(updated.weekDays, [1, 3, 5]);
+  assert.equal(formatTaskWeekDays(updated.weekDays), 'Seg, Qua, Sex');
+  assert.equal(isTaskScheduledForDate(updated, '2026-11-04'), true); // Quarta agora é válida
+  assert.equal(isTaskScheduledForDate(updated, '2026-11-03'), false); // Terça não é mais
 });

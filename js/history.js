@@ -3,7 +3,7 @@
 //  "O que foi feito (e por quem) em cada dia"
 // ============================================================
 
-import { getLocalDateString, isTaskDoneOnDate } from './tasks.js';
+import { getLocalDateString, isTaskDoneOnDate, isTaskScheduledForDate } from './tasks.js';
 
 export function getHistoryForDate(state, dateStr = getLocalDateString()) {
   const tasks = state.tasks || [];
@@ -24,7 +24,11 @@ export function getHistoryForDate(state, dateStr = getLocalDateString()) {
     .sort((a, b) => (a.entry.completedAt || '').localeCompare(b.entry.completedAt || ''));
 
   // Tarefas que ainda não foram concluídas no dia
-  const tasksPending = tasks.filter(t => !isTaskDoneOnDate(state, t.id, dateStr));
+  const tasksPending = tasks.filter(t => {
+    if (isTaskDoneOnDate(state, t.id, dateStr)) return false;
+    if (t.frequency === 'diaria') return isTaskScheduledForDate(t, dateStr);
+    return true;
+  });
 
   const total = tasks.length;
   const doneCount = tasksDone.length;

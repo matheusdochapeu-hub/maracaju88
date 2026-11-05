@@ -208,23 +208,15 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
     tasksToDisplay = tasksToDisplay.filter(t => t.room === selectedRoom);
   }
 
-  if (tasksToDisplay.length === 0) {
-    const curFreqObj = FREQUENCIES.find(f => f.id === selectedFrequency) || FREQUENCIES[0];
-    taskListEl.innerHTML = `
-      <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg);">
-        <p style="font-size: 2.2rem; margin-bottom: 0.5rem;">${curFreqObj.icon}</p>
-        <p style="font-weight: 600;">Nenhuma tarefa ${curFreqObj.label.toLowerCase()} cadastrada neste cômodo.</p>
-        <p style="font-size: 0.8rem; margin-top: 0.25rem;">Clique em "+ Nova Tarefa" para adicionar.</p>
-      </div>
-    `;
-    return;
-  }
-
-  taskListEl.innerHTML = tasksToDisplay.map(task => {
+  const renderSingleTaskCard = (task) => {
     const isDone = isTaskDoneOnDate(state, task.id, todayStr);
     const historyEntry = getTaskHistoryEntry(state, task.id, todayStr);
     const room = findCategory(state, 'tarefas', task.room);
     const curFreqObj = FREQUENCIES.find(f => f.id === task.frequency) || FREQUENCIES[0];
+    const hasSpecificWeekDays = Array.isArray(task.weekDays) && task.weekDays.length > 0 && task.weekDays.length < 7;
+    const weekDaysBadge = hasSpecificWeekDays
+      ? `<span class="tag-weekdays" title="Executar em: ${formatTaskWeekDays(task.weekDays)}">📅 ${formatTaskWeekDays(task.weekDays)}</span>`
+      : '';
 
     return `
       <div class="task-card ${isDone ? 'completed' : ''}" data-task-id="${task.id}">
@@ -236,6 +228,7 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
             <span class="task-title" title="${task.title}">${task.title}</span>
             <div class="task-meta">
               <span class="tag-freq">${curFreqObj.icon} ${curFreqObj.label}</span>
+              ${weekDaysBadge}
               <span class="tag-room">${room.icon} ${room.label}</span>
               ${isDone && historyEntry ? `
                 <span style="color: var(--success); font-weight: 600;">
@@ -256,7 +249,55 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
         </div>
       </div>
     `;
-  }).join('');
+  };
+
+  if (tasksToDisplay.length === 0) {
+    const curFreqObj = FREQUENCIES.find(f => f.id === selectedFrequency) || FREQUENCIES[0];
+    taskListEl.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg);">
+        <p style="font-size: 2.2rem; margin-bottom: 0.5rem;">${curFreqObj.icon}</p>
+        <p style="font-weight: 600;">Nenhuma tarefa ${curFreqObj.label.toLowerCase()} cadastrada neste cômodo.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.25rem;">Clique em "+ Nova Tarefa" para adicionar.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Se for visualização diária, separa o que é para HOJE do que está agendado para outros dias
+  if (selectedFrequency === 'diaria') {
+    const todayTasks = tasksToDisplay.filter(t => isTaskScheduledForDate(t, todayStr) || isTaskDoneOnDate(state, t.id, todayStr));
+    const otherDaysTasks = tasksToDisplay.filter(t => !isTaskScheduledForDate(t, todayStr) && !isTaskDoneOnDate(state, t.id, todayStr));
+
+    let html = '';
+    if (todayTasks.length === 0) {
+      html += `
+        <div style="text-align: center; padding: 1.75rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg); margin-bottom: 0.75rem;">
+          <p style="font-size: 1.8rem; margin-bottom: 0.25rem;">✨</p>
+          <p style="font-weight: 700; color: var(--brand-moss-dark);">Tudo livre por hoje neste cômodo!</p>
+          <p style="font-size: 0.8rem; margin-top: 0.25rem;">Não há tarefas agendadas para hoje.</p>
+        </div>
+      `;
+    } else {
+      html += todayTasks.map(renderSingleTaskCard).join('');
+    }
+
+    if (otherDaysTasks.length > 0) {
+      html += `
+        <details class="other-days-tasks-details" style="margin-top: 1rem; background: var(--bg-card); border: 1.5px dashed var(--border-subtle); border-radius: var(--radius-md); padding: 0.65rem 0.85rem;">
+          <summary style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); cursor: pointer; user-select: none;">
+            🗓️ Agendadas para outros dias (${otherDaysTasks.length} ${otherDaysTasks.length === 1 ? 'tarefa' : 'tarefas'})
+          </summary>
+          <div style="margin-top: 0.65rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            ${otherDaysTasks.map(renderSingleTaskCard).join('')}
+          </div>
+        </details>
+      `;
+    }
+
+    taskListEl.innerHTML = html;
+  } else {
+    taskListEl.innerHTML = tasksToDisplay.map(renderSingleTaskCard).join('');
+  }
 }
 
 // -------------------------------------------------------------

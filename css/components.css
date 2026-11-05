@@ -1632,3 +1632,58 @@
   border-radius: var(--radius-full);
   border: 1px solid #bbf7d0;
 }
+
+
+/* ============================================================
+   DIAS DA SEMANA PARA TAREFAS AGENDADAS
+   ============================================================ */
+.task-weekdays-buttons {
+  display: flex;
+  gap: 0.35rem;
+  justify-content: space-between;
+}
+
+.btn-weekday {
+  flex: 1;
+  padding: 0.45rem 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border-subtle);
+  background: #ffffff;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+  user-select: none;
+}
+
+.btn-weekday:hover {
+  border-color: var(--brand-moss);
+}
+
+.btn-weekday.active {
+  background: var(--brand-moss);
+  color: #ffffff;
+  border-color: var(--brand-moss-dark);
+  box-shadow: 0 2px 6px rgba(46, 89, 51, 0.25);
+}
+
+.btn-weekday-preset {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  font-weight: 600;
+}
+
+.tag-weekdays {
+  background: rgba(13, 148, 136, 0.1);
+  color: #0f766e;
+  border: 1px solid rgba(13, 148, 136, 0.25);
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
