@@ -184,13 +184,13 @@ export function parseNfceDanfeText(rawText) {
 
   // 6. Extração de Itens da Compra
   // Padrão identificado na nota Carrefour / NFC-e padrão:
-  // Linha 1: NOME DO ITEM (C ó digo: SS010604 ) Vl. Total
+  // Linha 1: NOME DO ITEM (Código: SS010604) Vl. Total
   // Linha 2: Qtde.: 1 UN: un9 Vl. Unit.: 3,19 3,19
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Procura linha de item com código (com tolerância a espaçamentos do OCR/PDF: "(C ó digo: ...)")
-    const codeMatch = line.match(/^(.*?)\s*\(\s*C\s*[oó]?\s*digo:\s*([A-Za-z0-9_-]+)\s*\)/i);
+    // Procura linha de item com código (com tolerância a espaçamentos e pontuações do OCR/PDF: "(C ó digo: ...)")
+    const codeMatch = line.match(/^(.*?)\s*\(\s*C\s*[oó]?\s*d(?:igo)?\.?:?\s*([A-Za-z0-9_-]+)\s*\)/i);
     if (codeMatch) {
       const rawName = codeMatch[1].trim();
       const code = codeMatch[2].trim();
@@ -205,15 +205,19 @@ export function parseNfceDanfeText(rawText) {
         const nextLine = lines[j];
 
         // Se encontrar o cabeçalho de outro produto, interrompe a busca deste produto
-        if (/\(\s*C\s*[oó]?\s*digo:/i.test(nextLine)) {
+        if (/\(\s*C\s*[oó]?\s*d(?:igo)?\.?:?/i.test(nextLine)) {
           break;
         }
 
-        const qtyMatch = nextLine.match(/Qtde\.:\s*([\d\.,]+)\s*UN:\s*([A-Za-z0-9]+)\s*Vl\.\s*Unit\.:\s*([\d\.,]+)(?:\s+([\d\.,]+))?/i);
+        const qtyMatch = nextLine.match(/(?:Qtde|Qtd|Quant)\.?:?\s*([\d\.,]+)\s*(?:UN\.?:?\s*([A-Za-z0-9]+))?\s*(?:Vl\.?\s*Unit\.?:?\s*([\d\.,]+))?(?:\s+([\d\.,]+))?/i);
         if (qtyMatch) {
           qty = qtyMatch[1].trim();
-          unit = qtyMatch[2].trim().toLowerCase().replace(/[0-9]/g, '');
-          unitPrice = parseCurrency(qtyMatch[3]);
+          if (qtyMatch[2]) {
+            unit = qtyMatch[2].trim().toLowerCase().replace(/[0-9]/g, '');
+          }
+          if (qtyMatch[3]) {
+            unitPrice = parseCurrency(qtyMatch[3]);
+          }
           if (qtyMatch[4]) {
             totalPrice = parseCurrency(qtyMatch[4]);
           }
@@ -256,7 +260,41 @@ export function parseNfceDanfeText(rawText) {
     }
   }
 
-  // Fallback para outros formatos de NFC-e (ex: 001 PRODUTO 1 UN X 12,00)
+  // Fallback 1: Produtos sem "(Código: ...)" no título mas com linha "Qtde: ... Vl. Unit: ..."
+  if (items.length === 0) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const qtyMatch = line.match(/(?:Qtde|Qtd|Quant)\.?:?\s*([\d\.,]+)\s*(?:UN\.?:?\s*([A-Za-z0-9]+))?\s*(?:Vl\.?\s*Unit\.?:?\s*([\d\.,]+))?(?:\s+([\d\.,]+))?/i);
+      if (qtyMatch && i > 0 && qtyMatch[3]) {
+        let rawName = lines[i - 1].replace(/^\d+\s+/, '').trim();
+        // Ignora cabeçalhos
+        if (!/CNPJ|Total|Emissão|Chave|Consumidor|Danfe|NFC-e|Rua|Avenida/i.test(rawName) && rawName.length > 2) {
+          const qty = qtyMatch[1].trim();
+          const unit = qtyMatch[2] ? qtyMatch[2].trim().toLowerCase().replace(/[0-9]/g, '') : 'un';
+          const unitPrice = parseCurrency(qtyMatch[3]);
+          const numQty = parseFloat(qty.replace(',', '.')) || 1;
+          const totalPrice = qtyMatch[4] ? parseCurrency(qtyMatch[4]) : Math.round(unitPrice * numQty * 100) / 100;
+
+          if (unitPrice > 0) {
+            const alias = suggestPopularName(rawName);
+            items.push({
+              code: 'ITEM_' + (items.length + 1),
+              rawName,
+              alias,
+              category: detectCategoryFromItemName(alias || rawName),
+              qty,
+              unit: unit || 'un',
+              unitPrice,
+              totalPrice,
+              selected: true
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Fallback 2 para outros formatos de NFC-e (ex: 001 PRODUTO 1 UN X 12,00)
   if (items.length === 0) {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];

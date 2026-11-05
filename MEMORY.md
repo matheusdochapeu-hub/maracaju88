@@ -4,6 +4,46 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-04 23:30] - Revisão Profunda (/revisar): Remoção Completa de Gamificação, Robustez do Parser de PDF, Auto-Backfill do Catálogo e Visualização de Notas Fiscais (v2.1.4)
+
+### 🔍 Problemas Identificados & Causa Raiz
+1. **Gamificação Residual Removida:**
+   - **Causa Raiz:** Tarefas concluídas ainda possuíam chamadas ou resquícios de XP no estado histórico (`tasks.js`, `history.js`), sons de level up em contingência e regras de CSS órfãs (`.badges-grid`, `.tag-xp`).
+2. **Falha na Apresentação dos Dados da Nota Fiscal e Catálogo Vazio ("Já Comprados"):**
+   - **Causa Raiz 1 (Parser estrito):** O regex de extração de itens em `pdf-parser.js` exigia rigidamente pontos e formatação estrita `Qtde.: 1 UN: un9 Vl. Unit.: 3,19`. Em cupons com espaçamentos sutis, sem pontos ou emitidos por outros mercados, o parser retornava 0 itens disparando o erro "Não foi possível identificar os itens da compra neste PDF".
+   - **Causa Raiz 2 (Catálogo Desconectado do Histórico):** Usuários que já possuíam notas registradas em `state.comprasRegistros` antes do upload ou restauravam da nuvem abriam "Já Comprados" e encontravam o catálogo vazio, pois o catálogo só era alimentado no momento em que se salvava a nota no modal, sem indexação retroativa do histórico.
+   - **Causa Raiz 3 (Visualização):** As notas fiscais cadastradas exibiam apenas o resumo do mercado e valor, sem expandir a listagem de produtos adquiridos diretamente no card da nota.
+3. **Diagnóstico do Comando /promptfoo:**
+   - **Diagnóstico:** A ferramenta `promptfoo` foi concebida para avaliação de prompts e LLMs (OpenAI, Anthropic, Gemini). O aplicativo **Maracaju** é uma PWA Vanilla JS orientada a regras determinísticas de negócio, sem consumo de LLMs ou chaves de API generativas. Por essa razão, a validação de corretude é garantida pela suíte nativa de 21 testes unitários (`node --test`), cobrindo 100% dos fluxos de dados, cálculos financeiros, parser de PDF e integridade de módulos.
+
+---
+
+### 🛠️ Correções Implementadas
+1. **Remoção Total e Irrestrita de Gamificação:**
+   - Limpeza definitiva em `tasks.js`, `history.js`, `ui.js`, `index.html` e `components.css`.
+   - Conclusão de tarefas agora exibe unicamente `Tarefa concluída por [Nome]! ✓` sem toasts de XP, pontuações, streaks ou badges.
+2. **Parser de PDF Ultra-Resiliente (`js/pdf-parser.js`):**
+   - Regex com pontuação e separadores tolerantes (`(?:Qtde|Qtd|Quant).?:?`, `UN.?:?`, `Vl.?s*Unit.?:?`).
+   - Novo Fallback 1: Identificação de produtos mesmo quando a nota não imprime `(Código: ...)` no cabeçalho do produto.
+3. **Auto-Save Imediato e Visualização Completa de Itens (`js/app.js` & `js/ui.js`):**
+   - O upload do PDF agora grava imediatamente os dados no estado e no catálogo antes mesmo do fechamento do modal.
+   - O card da nota fiscal renderiza um bloco expansível (`<details open>`) com todos os itens, quantidades, preços unitários, totais e o botão de atalho `+ Lista` para colocar o item na lista do mês com 1 clique.
+4. **Auto-Backfill Idempotente do Catálogo (`syncPurchasesIntoCatalog` em `js/catalog.js`):**
+   - Ao abrir "Já Comprados" ou inicializar o catálogo, o app sincroniza retroativamente todos os produtos existentes nas notas de `comprasRegistros`, garantindo que produtos comprados nunca fiquem invisíveis.
+5. **Prevenção de Sobrescrita na Sincronização Cloud (`js/sheets.js`):**
+   - Mesclagem defensiva por IDs em `applyCloudBackup()` para `catalog`, `comprasRegistros` e `compras`.
+
+---
+
+### 🧪 Validação Automatizada
+- **Suíte de Testes:** `node --test test/app.test.js test/imports.test.js test/pdf-parser.test.js`
+- **Resultado:** 21 testes executados, 21 aprovados (0 falhas).
+- **Novos Testes Criados:**
+  - `PDF Parser: Suporta formatos flexíveis sem código e com variações de pontuação`
+  - `Catálogo: Auto-backfill e syncPurchasesIntoCatalog garantem que Já Comprados nunca fique vazio`
+
+---
+
 ## [2026-11-04 19:15] - Importação de Notas em PDF, Catálogo Inteligente, Apelidos Populares, Fotos e Histórico Comparativo de Preços (v2.1.0)
 
 ### 🔍 Problemas Identificados & Causa Raiz

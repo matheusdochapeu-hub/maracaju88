@@ -223,7 +223,6 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
   taskListEl.innerHTML = tasksToDisplay.map(task => {
     const isDone = isTaskDoneOnDate(state, task.id, todayStr);
     const historyEntry = getTaskHistoryEntry(state, task.id, todayStr);
-    const effort = EFFORT_LEVELS[task.effort] || EFFORT_LEVELS.media;
     const room = findCategory(state, 'tarefas', task.room);
     const curFreqObj = FREQUENCIES.find(f => f.id === task.frequency) || FREQUENCIES[0];
 

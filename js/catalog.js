@@ -28,6 +28,28 @@ export function ensureCatalog(state) {
 }
 
 /**
+ * Sincroniza todas as notas fiscais e compras registradas no app para o catálogo inteligente.
+ * Garante que produtos comprados nunca fiquem invisíveis no catálogo.
+ */
+export function syncPurchasesIntoCatalog(state) {
+  const catalog = ensureCatalog(state);
+  if (!Array.isArray(state.comprasRegistros) || state.comprasRegistros.length === 0) {
+    return catalog;
+  }
+  state.comprasRegistros.forEach(purchase => {
+    if (Array.isArray(purchase.items) && purchase.items.length > 0) {
+      registerInvoiceInCatalog(state, {
+        marketName: purchase.marketName || 'Supermercado',
+        date: purchase.date,
+        nfeKey: purchase.nfeKey || purchase.accessKey || '',
+        items: purchase.items
+      });
+    }
+  });
+  return state.catalog;
+}
+
+/**
  * Localiza um produto no catálogo por ID, código da nota ou nome
  */
 export function findCatalogProduct(state, criteria = {}) {
@@ -143,17 +165,20 @@ export function upsertCatalogProduct(state, itemData, purchaseInfo = {}) {
       product.minPrice = product.minPrice > 0 ? Math.min(product.minPrice, unitPrice) : unitPrice;
       product.maxPrice = Math.max(product.maxPrice || 0, unitPrice);
 
-      product.priceHistory.push({
-        date: purchaseDate,
-        market,
-        unitPrice,
-        qty,
-        totalPrice: Number(itemData.totalPrice || unitPrice),
-        nfeKey: purchaseInfo.nfeKey || ''
-      });
+      const alreadyHasEntry = purchaseInfo.nfeKey && product.priceHistory.some(h => h.nfeKey && h.nfeKey === purchaseInfo.nfeKey);
+      if (!alreadyHasEntry) {
+        product.priceHistory.push({
+          date: purchaseDate,
+          market,
+          unitPrice,
+          qty,
+          totalPrice: Number(itemData.totalPrice || unitPrice),
+          nfeKey: purchaseInfo.nfeKey || ''
+        });
+        product.timesBought = (product.timesBought || 0) + 1;
+      }
     }
 
-    product.timesBought = (product.timesBought || 0) + 1;
     product.updatedAt = now;
   }
 

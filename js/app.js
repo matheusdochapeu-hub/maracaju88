@@ -64,6 +64,7 @@ import { addSonho, updateSonho, deleteSonho, toggleSonhoMilestone, addPhotoToSon
 import { parseNfceDanfeText, extractTextFromPdfFile, suggestPopularName } from './pdf-parser.js';
 import {
   ensureCatalog,
+  syncPurchasesIntoCatalog,
   findCatalogProduct,
   upsertCatalogProduct,
   registerInvoiceInCatalog,
@@ -2386,6 +2387,7 @@ function initComprasModule() {
   const btnQuickCatalogAdd = document.getElementById('btn-quick-catalog-from-add');
 
   function openCatalogView() {
+    syncPurchasesIntoCatalog(state);
     currentCatalogCategoryFilter = 'todos';
     currentCatalogSearchQuery = '';
     const searchInput = document.getElementById('catalog-search-input');

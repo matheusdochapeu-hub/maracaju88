@@ -233,3 +233,59 @@ test('Catálogo: Memoriza produtos, apelidos, histórico de preços e fotos vinc
   const search2 = searchCatalogProducts(state, 'SS012261');
   assert.equal(search2.length, 1);
 });
+
+test('PDF Parser: Suporta formatos flexíveis sem código e com variações de pontuação', () => {
+  const genericText = `
+MERCADO DO BAIRRO LTDA
+CNPJ: 12.345.678/0001-90
+Emissao: 04/11/2026
+ARROZ BRANCO 5KG
+Qtde: 2 UN: un Vl. Unit: 28,50 57,00
+FEIJAO CARIOCA 1KG
+Qtd: 3 UN: un Vl Unit: 8,90 26,70
+Valor a pagar R$: 83,70
+`;
+  const result = parseNfceDanfeText(genericText);
+  assert.equal(result.items.length, 2);
+  assert.equal(result.total, 83.70);
+  assert.equal(result.items[0].rawName, 'ARROZ BRANCO 5KG');
+  assert.equal(result.items[0].unitPrice, 28.50);
+  assert.equal(result.items[0].totalPrice, 57.00);
+  assert.equal(result.items[1].rawName, 'FEIJAO CARIOCA 1KG');
+  assert.equal(result.items[1].unitPrice, 8.90);
+  assert.equal(result.items[1].totalPrice, 26.70);
+});
+
+test('Catálogo: Auto-backfill e syncPurchasesIntoCatalog garantem que Já Comprados nunca fique vazio', async () => {
+  const { syncPurchasesIntoCatalog } = await import('../js/catalog.js');
+  const state = {
+    catalog: [],
+    comprasRegistros: [
+      {
+        id: 'compra_1',
+        marketName: 'Carrefour',
+        date: '2026-11-03',
+        nfeKey: '35261145543915028000650110001615001748865489',
+        total: 280.66,
+        items: [
+          { code: 'SS010604', rawName: 'ACUCAR REF CARAVELAS', alias: 'Açúcar Refinado Caravelas', category: 'mercearia', qty: '1', unit: 'un', unitPrice: 3.19, totalPrice: 3.19 },
+          { code: 'SS012261', rawName: 'CHA MATE LEAO LIMA T', alias: 'Chá Matte Leão Limão', category: 'bebidas', qty: '1', unit: 'un', unitPrice: 18.29, totalPrice: 18.29 }
+        ]
+      }
+    ]
+  };
+
+  // Estado inicial: catálogo vazio
+  assert.equal(state.catalog.length, 0);
+
+  // syncPurchasesIntoCatalog executado ao abrir "Já Comprados"
+  syncPurchasesIntoCatalog(state);
+  assert.equal(state.catalog.length, 2);
+  assert.equal(state.catalog[0].alias, 'Açúcar Refinado Caravelas');
+  assert.equal(state.catalog[1].alias, 'Chá Matte Leão Limão');
+
+  // Segunda chamada é idempotente (não duplica)
+  syncPurchasesIntoCatalog(state);
+  assert.equal(state.catalog.length, 2);
+  assert.equal(state.catalog[0].priceHistory.length, 1);
+});
