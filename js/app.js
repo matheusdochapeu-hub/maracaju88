@@ -119,6 +119,8 @@ let currentReformasCategory = 'todas';
 let currentSonhosFilter = 'todas';
 let currentComprasCategory = 'todas';
 let currentComprasView = 'lista';
+let currentPurchasesSort = 'date-desc';
+let currentPurchasesSearch = '';
 let currentCatalogCategoryFilter = 'todos';
 let currentCatalogSearchQuery = '';
 let currentCatalogMode = 'comparator';
@@ -370,7 +372,7 @@ function refreshAllUI() {
   } else if (currentTab === 'sonhos') {
     renderSonhosTab(state, currentSonhosFilter);
   } else if (currentTab === 'compras' || currentTab === 'gamificacao') {
-    renderComprasTab(state, currentComprasCategory, currentComprasView);
+    renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
   } else if (currentTab === 'ajustes') {
     renderSettingsTab(state);
   }
@@ -2230,10 +2232,31 @@ function initComprasModule() {
     });
   }
 
-  // Interações nas Notas Fiscais Registradas (Fotos e Exclusão)
+  // Interações nas Notas Fiscais Registradas (Ordenação, Busca, Expandir/Recolher, Fotos e Exclusão)
   const purchasesContainer = document.getElementById('market-purchases-container');
   if (purchasesContainer) {
+    // Busca em tempo real com preservação do foco
+    purchasesContainer.addEventListener('input', (e) => {
+      if (e.target.id === 'purchases-filter-search') {
+        currentPurchasesSearch = e.target.value;
+        renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
+        const newInput = document.getElementById('purchases-filter-search');
+        if (newInput) {
+          newInput.focus();
+          newInput.setSelectionRange(newInput.value.length, newInput.value.length);
+        }
+      }
+    });
+
     purchasesContainer.addEventListener('change', async (e) => {
+      // Ordenação das compras (por data, nome do mercado ou valor)
+      if (e.target.id === 'purchases-sort-select') {
+        currentPurchasesSort = e.target.value;
+        playSubtleClick(state.settings.soundEnabled);
+        renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
+        return;
+      }
+
       // Adicionar foto do cupom fiscal / produtos (câmera ou galeria)
       if (e.target.classList.contains('input-purchase-add-photo')) {
         const purchaseId = e.target.getAttribute('data-purchase-id');
@@ -2255,6 +2278,34 @@ function initComprasModule() {
     });
 
     purchasesContainer.addEventListener('click', (e) => {
+      // Expandir todos os itens de todas as notas
+      const expandAllBtn = e.target.closest('#btn-expand-all-purchases');
+      if (expandAllBtn) {
+        const allDetails = purchasesContainer.querySelectorAll('.market-receipt-items-details');
+        allDetails.forEach(d => { d.open = true; });
+        playSubtleClick(state.settings.soundEnabled);
+        showToast('Itens expandidos', 'info', 1500);
+        return;
+      }
+
+      // Recolher todos os itens de todas as notas
+      const collapseAllBtn = e.target.closest('#btn-collapse-all-purchases');
+      if (collapseAllBtn) {
+        const allDetails = purchasesContainer.querySelectorAll('.market-receipt-items-details');
+        allDetails.forEach(d => { d.open = false; });
+        playSubtleClick(state.settings.soundEnabled);
+        showToast('Itens recolhidos', 'info', 1500);
+        return;
+      }
+
+      // Limpar filtro de busca
+      const clearFilterBtn = e.target.closest('#btn-clear-purchases-filter');
+      if (clearFilterBtn) {
+        currentPurchasesSearch = '';
+        renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
+        return;
+      }
+
       // Visualizar foto em tamanho ampliado
       const thumb = e.target.closest('[data-view-photo]');
       if (thumb && !e.target.classList.contains('carro-thumb-delete')) {

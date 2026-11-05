@@ -5,7 +5,14 @@
 import { ROOMS, EFFORT_LEVELS, BADGES, FREQUENCIES, CARRO_CATEGORIES } from './config.js';
 import { getCategories, findCategory, QUICK_EMOJIS_LIST } from './categories.js';
 import { parseCurrency, formatCurrency, formatCurrencyWithSymbol } from './currency.js';
-import { getShoppingSummary, getMarketPurchasesByMonth, getMonthLabel, parseQuantity, getItemTotalPrice } from './shopping.js';
+import {
+  getShoppingSummary,
+  getMarketPurchasesByMonth,
+  getMarketAnalytics,
+  getMonthLabel,
+  parseQuantity,
+  getItemTotalPrice
+} from './shopping.js';
 import { isBiometricsSupported, isBiometricsEnabled } from './auth.js';
 import {
   getLocalDateString,
@@ -23,6 +30,9 @@ import { getSonhosSummary } from './sonhos.js';
 import { findCatalogProduct, getProductPriceComparison, searchCatalogProducts, ensureCatalog } from './catalog.js';
 
 // -------------------------------------------------------------
+let currentPurchasesSort = 'date-desc';
+let currentPurchasesSearch = '';
+
 // SISTEMA DE CONFETTI NATIVO (HTML5 Canvas Particle Engine)
 // -------------------------------------------------------------
 export function triggerConfetti() {
@@ -971,7 +981,7 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
 // -------------------------------------------------------------
 // RENDERIZAÇÃO DA ABA: MERCADO & LISTA DE COMPRAS
 // -------------------------------------------------------------
-export function renderComprasTab(state, activeCategory = 'todas', activeView = 'lista') {
+export function renderComprasTab(state, activeCategory = 'todas', activeView = 'lista', purchasesSort = null, purchasesSearch = null) {
   const summary = getShoppingSummary(state);
 
   // Banner de Resumo da Lista & Mês
@@ -1190,98 +1200,178 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
     }
   }
 
-  // Compras de Mercado / Notas Fiscais Separadas por Mês (Layout sem truncar nomes)
+  // Compras de Mercado / Notas Fiscais Separadas por Mês com Histórico Completo, Ordenação e Expansão/Recolhimento
   const purchasesContainer = document.getElementById('market-purchases-container');
   if (purchasesContainer) {
-    const monthlyGroups = getMarketPurchasesByMonth(state);
-    const monthKeys = Object.keys(monthlyGroups).sort().reverse();
+    if (purchasesSort) currentPurchasesSort = purchasesSort;
+    if (purchasesSearch !== null && purchasesSearch !== undefined) currentPurchasesSearch = purchasesSearch;
 
-    if (monthKeys.length === 0) {
+    const allPurchases = (state.comprasRegistros || []);
+    let filteredPurchases = allPurchases;
+
+    if (currentPurchasesSearch && currentPurchasesSearch.trim()) {
+      const q = currentPurchasesSearch.trim().toLowerCase();
+      filteredPurchases = filteredPurchases.filter(p => {
+        const mMatch = (p.marketName || '').toLowerCase().includes(q);
+        const nMatch = (p.notes || '').toLowerCase().includes(q);
+        const iMatch = Array.isArray(p.items) && p.items.some(it => 
+          (it.alias || it.rawName || '').toLowerCase().includes(q)
+        );
+        return mMatch || nMatch || iMatch;
+      });
+    }
+
+    const sortedPurchases = [...filteredPurchases].sort((a, b) => {
+      if (currentPurchasesSort === 'date-desc') {
+        return (b.date || '').localeCompare(a.date || '');
+      }
+      if (currentPurchasesSort === 'date-asc') {
+        return (a.date || '').localeCompare(b.date || '');
+      }
+      if (currentPurchasesSort === 'market-asc') {
+        return (a.marketName || '').localeCompare(b.marketName || '', 'pt-BR', { sensitivity: 'base' });
+      }
+      if (currentPurchasesSort === 'market-desc') {
+        return (b.marketName || '').localeCompare(a.marketName || '', 'pt-BR', { sensitivity: 'base' });
+      }
+      if (currentPurchasesSort === 'total-desc') {
+        return (Number(b.total) || 0) - (Number(a.total) || 0);
+      }
+      if (currentPurchasesSort === 'total-asc') {
+        return (Number(a.total) || 0) - (Number(b.total) || 0);
+      }
+      return (b.date || '').localeCompare(a.date || '');
+    });
+
+    const toolbarHtml = `
+      <div class="purchases-history-toolbar" style="display: flex; gap: 0.5rem; margin-bottom: 0.85rem; flex-wrap: wrap; align-items: center; background: #ffffff; padding: 0.65rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div style="flex: 2; min-width: 170px;">
+          <input type="text" id="purchases-filter-search" class="form-input" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; height: 36px; border-radius: var(--radius-sm);" placeholder="🔍 Filtrar por mercado ou produto..." value="${currentPurchasesSearch || ''}" />
+        </div>
+        <div style="flex: 1.5; min-width: 170px;">
+          <select id="purchases-sort-select" class="form-select" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; height: 36px; border-radius: var(--radius-sm); font-weight: 600;">
+            <option value="date-desc" ${currentPurchasesSort === 'date-desc' ? 'selected' : ''}>📅 Data: Mais recentes</option>
+            <option value="date-asc" ${currentPurchasesSort === 'date-asc' ? 'selected' : ''}>📅 Data: Mais antigas</option>
+            <option value="market-asc" ${currentPurchasesSort === 'market-asc' ? 'selected' : ''}>🛒 Mercado (A → Z)</option>
+            <option value="market-desc" ${currentPurchasesSort === 'market-desc' ? 'selected' : ''}>🛒 Mercado (Z → A)</option>
+            <option value="total-desc" ${currentPurchasesSort === 'total-desc' ? 'selected' : ''}>💰 Maior valor</option>
+            <option value="total-asc" ${currentPurchasesSort === 'total-asc' ? 'selected' : ''}>💰 Menor valor</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 0.35rem; align-items: center;">
+          <button type="button" class="btn btn-secondary btn-xs" id="btn-expand-all-purchases" title="Expandir itens de todas as notas" style="font-size: 0.75rem; padding: 0.4rem 0.6rem; font-weight: 700; white-space: nowrap; border-radius: var(--radius-sm);">
+            📂 Expandir
+          </button>
+          <button type="button" class="btn btn-secondary btn-xs" id="btn-collapse-all-purchases" title="Recolher itens de todas as notas" style="font-size: 0.75rem; padding: 0.4rem 0.6rem; font-weight: 700; white-space: nowrap; border-radius: var(--radius-sm);">
+            📁 Recolher
+          </button>
+        </div>
+      </div>
+    `;
+
+    if (allPurchases.length === 0) {
       purchasesContainer.innerHTML = `
-        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg);">
+        ${toolbarHtml}
+        <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-subtle);">
           <p style="font-size: 2.2rem; margin-bottom: 0.5rem;">🧾</p>
-          <p style="font-weight: 600;">Nenhuma compra de mercado registrada ainda.</p>
-          <p style="font-size: 0.8rem; margin-top: 0.25rem;">Toque em "📝 Lançar Compra", escaneie um QR Code ou envie um PDF de cupom fiscal!</p>
+          <p style="font-weight: 700; font-size: 1.05rem; color: var(--brand-moss-dark);">Nenhuma compra ou nota fiscal registrada ainda.</p>
+          <p style="font-size: 0.85rem; margin-top: 0.35rem;">Toque em "📝 Lançar Compra", escaneie um QR Code de NFC-e ou envie um PDF de cupom fiscal!</p>
+        </div>
+      `;
+    } else if (sortedPurchases.length === 0) {
+      purchasesContainer.innerHTML = `
+        ${toolbarHtml}
+        <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-subtle);">
+          <p style="font-size: 1.8rem; margin-bottom: 0.35rem;">🔍</p>
+          <p style="font-weight: 700; color: var(--brand-moss-dark);">Nenhuma compra encontrada para "${currentPurchasesSearch}".</p>
+          <p style="font-size: 0.82rem; margin-top: 0.25rem;">Tente buscar por outro termo ou limpe o filtro.</p>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-purchases-filter" style="margin-top: 0.65rem; font-weight: 600;">Limpar Busca</button>
         </div>
       `;
     } else {
-      purchasesContainer.innerHTML = monthKeys.map(mKey => {
-        const group = monthlyGroups[mKey];
+      purchasesContainer.innerHTML = toolbarHtml + sortedPurchases.map(p => {
+        const isInvoice = !!(p.nfeKey || p.accessKey || (Array.isArray(p.items) && p.items.some(it => it.code)));
+        const originLabel = isInvoice ? '📄 Nota Fiscal' : '📝 Lançamento Manual';
+        const originStyle = isInvoice 
+          ? 'background: rgba(13, 148, 136, 0.12); color: var(--brand-teal-dark); border: 1px solid rgba(13, 148, 136, 0.25);'
+          : 'background: rgba(21, 128, 61, 0.12); color: var(--brand-moss-dark); border: 1px solid rgba(21, 128, 61, 0.25);';
+
+        const dateFormatted = p.date ? p.date.split('-').reverse().join('/') : 'Data não informada';
+        const itemsCount = Array.isArray(p.items) ? p.items.length : 0;
+
         return `
-          <div class="month-group-card">
-            <div class="month-group-header">
-              <span class="month-group-title">📅 ${getMonthLabel(group.monthKey)}</span>
-              <span class="month-group-total">${formatCurrencyWithSymbol(group.total)} (${group.count} ${group.count === 1 ? 'compra' : 'compras'})</span>
-            </div>
-            <div class="month-purchases-list">
-              ${group.purchases.map(p => `
-                <div class="market-receipt-card" data-purchase-id="${p.id}">
-                  <div class="market-receipt-header-row">
-                    <div class="market-receipt-title-box">
-                      <div class="market-name">🛒 ${p.marketName || 'Supermercado'}</div>
-                      <div class="market-meta">
-                        <span>📅 ${p.date ? p.date.split('-').reverse().join('/') : 'Data da compra'}</span>
-                        ${p.items && p.items.length ? `<span>• <strong>${p.items.length} itens</strong></span>` : ''}
-                        ${(p.nfeKey || p.accessKey) ? `<span style="font-size: 0.7rem; color: var(--text-muted);" title="${p.nfeKey || p.accessKey}">Chave: ${(p.nfeKey || p.accessKey).slice(0, 10)}...</span>` : ''}
-                      </div>
-                    </div>
-                    <div class="market-receipt-actions-box">
-                      <div class="market-receipt-total-badge">${formatCurrencyWithSymbol(p.total || p.totalAmount || 0)}</div>
-                      <button class="btn btn-icon btn-sm" data-edit-purchase="${p.id}" title="Editar Registro de Compra">✏️</button>
-                      <button class="btn btn-icon btn-sm" data-delete-purchase="${p.id}" title="Excluir Registro de Compra">🗑️</button>
-                    </div>
-                  </div>
-
-                  ${p.notes ? `<div style="font-size: 0.78rem; color: var(--text-secondary); background: var(--bg-tertiary); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm);">📝 ${p.notes}</div>` : ''}
-
-                  <!-- Lista Expansível de Produtos Comprados nesta Nota (100% largura, sem truncar nomes) -->
-                  ${(p.items && p.items.length > 0) ? `
-                    <details class="market-receipt-items-details" style="margin-top: 0.25rem; background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; width: 100%;" open>
-                      <summary style="font-size: 0.8rem; font-weight: 700; color: var(--brand-moss-dark); cursor: pointer; user-select: none;">
-                        📦 ${p.items.length} produtos comprados nesta nota:
-                      </summary>
-                      <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem;">
-                        ${p.items.map(it => `
-                          <div class="receipt-product-row">
-                            <div class="receipt-product-info">
-                              <strong class="receipt-product-name">${it.alias || it.rawName}</strong>
-                              <div class="receipt-product-sub">${it.qty} ${it.unit || 'un'} × ${formatCurrencyWithSymbol(it.unitPrice)}</div>
-                            </div>
-                            <div class="receipt-product-side">
-                              <strong class="receipt-product-price">${formatCurrencyWithSymbol(it.totalPrice || it.unitPrice)}</strong>
-                              <button type="button" class="btn btn-secondary btn-xs" data-quick-add-receipt-item="${it.code || it.rawName}" style="padding: 0.15rem 0.45rem; font-size: 0.72rem; white-space: nowrap;" title="Colocar na lista de compras do mês">+ Lista</button>
-                            </div>
-                          </div>
-                        `).join('')}
-                      </div>
-                    </details>
-                  ` : ''}
-
-                  <!-- Fotos do Cupom / Comprovante -->
-                  <div style="margin-top: 0.25rem;">
-                    <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--text-muted); flex-wrap: wrap;">
-                      <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin: 0;" title="Bater foto do cupom fiscal ou recibo">
-                        📸 Câmera
-                        <input type="file" accept="image/*" capture="environment" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
-                      </label>
-                      <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin: 0;" title="Escolher foto da galeria">
-                        🖼️ Galeria
-                        <input type="file" accept="image/*" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
-                      </label>
-                    </div>
-                    ${(p.photos && p.photos.length > 0) ? `
-                      <div class="carro-photos-container" style="margin-top: 0.35rem;">
-                        ${p.photos.map((src, pIdx) => `
-                          <div class="carro-thumb-wrapper" style="width: 58px; height: 58px;" data-view-photo="${src}">
-                            <img src="${src}" alt="Cupom ${p.marketName}" class="carro-thumb-img" />
-                            <button class="carro-thumb-delete" data-del-purchase-photo="${p.id}" data-photo-idx="${pIdx}" title="Excluir foto">✕</button>
-                          </div>
-                        `).join('')}
-                      </div>
-                    ` : ''}
-                  </div>
+          <div class="market-receipt-card" data-purchase-id="${p.id}">
+            <div class="market-receipt-header-row">
+              <div class="market-receipt-title-box">
+                <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                  <span class="market-name" style="font-size: 1.05rem; font-weight: 800; color: var(--brand-forest);">🛒 ${p.marketName || 'Supermercado'}</span>
+                  <span style="font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: var(--radius-full); ${originStyle}">
+                    ${originLabel}
+                  </span>
                 </div>
-              `).join('')}
+                <div class="market-meta" style="margin-top: 0.25rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-muted);">
+                  <span>📅 <strong>${dateFormatted}</strong></span>
+                  ${itemsCount > 0 ? `<span>• 📦 <strong>${itemsCount} ${itemsCount === 1 ? 'item' : 'itens'}</strong></span>` : ''}
+                  ${(p.nfeKey || p.accessKey) ? `<span style="font-size: 0.7rem; color: var(--text-muted);" title="${p.nfeKey || p.accessKey}">Chave: ${(p.nfeKey || p.accessKey).slice(0, 10)}...</span>` : ''}
+                </div>
+              </div>
+              <div class="market-receipt-actions-box">
+                <div class="market-receipt-total-badge" style="font-size: 1.15rem; font-weight: 800; color: var(--brand-moss-dark);">
+                  ${formatCurrencyWithSymbol(p.total || p.totalAmount || 0)}
+                </div>
+                <button class="btn btn-icon btn-sm" data-edit-purchase="${p.id}" title="Editar Registro de Compra">✏️</button>
+                <button class="btn btn-icon btn-sm" data-delete-purchase="${p.id}" title="Excluir Registro de Compra">🗑️</button>
+              </div>
+            </div>
+
+            ${p.notes ? `<div style="font-size: 0.78rem; color: var(--text-secondary); background: var(--bg-tertiary); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); border-left: 3px solid var(--brand-moss); margin-top: 0.25rem;">📝 ${p.notes}</div>` : ''}
+
+            <!-- Lista Expansível e Recolhível de Itens -->
+            ${itemsCount > 0 ? `
+              <details class="market-receipt-items-details" style="margin-top: 0.4rem; background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.5rem 0.75rem; width: 100%;" open>
+                <summary style="font-size: 0.82rem; font-weight: 700; color: var(--brand-moss-dark); cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;">
+                  <span>📦 ${itemsCount} produtos nesta compra</span>
+                  <span class="details-chevron" style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">Toque para expandir/recolher ▾</span>
+                </summary>
+                <div style="margin-top: 0.55rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                  ${p.items.map(it => `
+                    <div class="receipt-product-row">
+                      <div class="receipt-product-info">
+                        <strong class="receipt-product-name">${it.alias || it.rawName}</strong>
+                        <div class="receipt-product-sub">${it.qty} ${it.unit || 'un'} × ${formatCurrencyWithSymbol(it.unitPrice)}</div>
+                      </div>
+                      <div class="receipt-product-side">
+                        <strong class="receipt-product-price">${formatCurrencyWithSymbol(it.totalPrice || it.unitPrice)}</strong>
+                        <button type="button" class="btn btn-secondary btn-xs" data-quick-add-receipt-item="${it.code || it.rawName}" style="padding: 0.15rem 0.45rem; font-size: 0.72rem; white-space: nowrap;" title="Colocar na lista de compras do mês">+ Lista</button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </details>
+            ` : ''}
+
+            <!-- Fotos do Cupom / Comprovante -->
+            <div style="margin-top: 0.35rem;">
+              <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--text-muted); flex-wrap: wrap;">
+                <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin: 0;" title="Bater foto do cupom fiscal ou recibo">
+                  📸 Câmera
+                  <input type="file" accept="image/*" capture="environment" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
+                </label>
+                <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin: 0;" title="Escolher foto da galeria">
+                  🖼️ Galeria
+                  <input type="file" accept="image/*" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
+                </label>
+              </div>
+              ${(p.photos && p.photos.length > 0) ? `
+                <div class="carro-photos-container" style="margin-top: 0.35rem;">
+                  ${p.photos.map((src, pIdx) => `
+                    <div class="carro-thumb-wrapper" style="width: 58px; height: 58px;" data-view-photo="${src}">
+                      <img src="${src}" alt="Cupom ${p.marketName}" class="carro-thumb-img" />
+                      <button class="carro-thumb-delete" data-del-purchase-photo="${p.id}" data-photo-idx="${pIdx}" title="Excluir foto">✕</button>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
             </div>
           </div>
         `;

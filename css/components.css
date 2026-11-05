@@ -1687,3 +1687,35 @@
   align-items: center;
   gap: 0.2rem;
 }
+
+
+/* Barra de Ferramentas do Histórico de Compras */
+.purchases-history-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+  align-items: center;
+  background: var(--bg-card);
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+.market-receipt-items-details {
+  transition: all var(--transition-fast);
+}
+
+.market-receipt-items-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.market-receipt-items-details summary {
+  list-style: none;
+  transition: background var(--transition-fast);
+}
+
+.market-receipt-items-details[open] summary .details-chevron {
+  color: var(--brand-forest);
+}
