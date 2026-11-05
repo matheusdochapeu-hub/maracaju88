@@ -18,13 +18,19 @@ export const DEFAULT_BENEFITS_CONFIG = {
     "2026-11": "2026-11-06"
   },
   monthlyEndingBalances: {
-    // Ciclo de Outubro encerrado: sobrou R$ 9,84 de VA e R$ 0,16 de VR
+    // Ciclo de Outubro encerrado: VA fixado em R$ 9,84 (compras diversas já trouxeram a R$ 9,84)
+    // O VR NÃO é fixado aqui, permitindo que o usuário faça os lançamentos retroativos e veja o saldo bater nos R$ 0,16!
     "2026-10": {
-      vaEndingBalance: 9.84,
-      vrEndingBalance: 0.16
+      vaEndingBalance: 9.84
     }
   },
-  monthlyRolloverOverrides: {}
+  monthlyRolloverOverrides: {
+    // Novembro recebe as sobras de Outubro: R$ 9,84 de VA e R$ 0,16 de VR acumulados
+    "2026-11": {
+      vaRollover: 9.84,
+      vrRollover: 0.16
+    }
+  }
 };
 
 export const PAYMENT_METHODS = [
@@ -234,7 +240,29 @@ export function getWorkingDaysInMonth(year, month) {
 export function getBenefitsConfig(state) {
   if (!state.settings) state.settings = {};
   if (!state.settings.benefits) {
-    state.settings.benefits = JSON.parse(JSON.stringify(DEFAULT_BENEFITS_CONFIG));
+    state.settings.benefits = {
+      ...DEFAULT_BENEFITS_CONFIG,
+      monthlyDays: { ...DEFAULT_BENEFITS_CONFIG.monthlyDays },
+      monthlyCreditDates: { ...DEFAULT_BENEFITS_CONFIG.monthlyCreditDates },
+      monthlyEndingBalances: { ...DEFAULT_BENEFITS_CONFIG.monthlyEndingBalances },
+      monthlyRolloverOverrides: { ...DEFAULT_BENEFITS_CONFIG.monthlyRolloverOverrides }
+    };
+  } else {
+    const b = state.settings.benefits;
+    if (b.vaFixedAmount === undefined) b.vaFixedAmount = DEFAULT_BENEFITS_CONFIG.vaFixedAmount;
+    if (b.vrDailyAmount === undefined) b.vrDailyAmount = DEFAULT_BENEFITS_CONFIG.vrDailyAmount;
+    if (b.creditBusinessDay === undefined) b.creditBusinessDay = DEFAULT_BENEFITS_CONFIG.creditBusinessDay;
+    if (!b.city) b.city = DEFAULT_BENEFITS_CONFIG.city;
+    if (!b.monthlyDays) b.monthlyDays = { ...DEFAULT_BENEFITS_CONFIG.monthlyDays };
+    if (!b.monthlyCreditDates) b.monthlyCreditDates = { ...DEFAULT_BENEFITS_CONFIG.monthlyCreditDates };
+    if (!b.monthlyEndingBalances) b.monthlyEndingBalances = { ...DEFAULT_BENEFITS_CONFIG.monthlyEndingBalances };
+    if (!b.monthlyRolloverOverrides) b.monthlyRolloverOverrides = { ...DEFAULT_BENEFITS_CONFIG.monthlyRolloverOverrides };
+    if (!b.monthlyEndingBalances["2026-10"]) {
+      b.monthlyEndingBalances["2026-10"] = { ...DEFAULT_BENEFITS_CONFIG.monthlyEndingBalances["2026-10"] };
+    }
+    if (!b.monthlyRolloverOverrides["2026-11"]) {
+      b.monthlyRolloverOverrides["2026-11"] = { ...DEFAULT_BENEFITS_CONFIG.monthlyRolloverOverrides["2026-11"] };
+    }
   }
   return state.settings.benefits;
 }
@@ -537,4 +565,46 @@ export function updateMonthlyBenefitsConfig(state, monthKey, {
     if (vrEndingBalance !== undefined) config.monthlyEndingBalances[monthKey].vrEndingBalance = Number(vrEndingBalance);
   }
   return getMonthlyBenefitDetails(state, monthKey);
+}
+
+/**
+ * Encerra o ciclo de benefícios (antecipadamente ou com atraso).
+ * Permite registrar a data de disponibilização do novo ciclo e carregar sobras.
+ */
+export function closeBenefitCycleEarly(state, fromCycleKey, effectiveNewDateStr, manualLeftovers = {}) {
+  const config = getBenefitsConfig(state);
+  if (!config.monthlyCreditDates) config.monthlyCreditDates = {};
+  if (!config.monthlyEndingBalances) config.monthlyEndingBalances = {};
+  if (!config.monthlyRolloverOverrides) config.monthlyRolloverOverrides = {};
+
+  const fromDetails = getMonthlyBenefitDetails(state, fromCycleKey);
+  const vaFinal = manualLeftovers.vaEndingBalance !== undefined
+    ? Number(manualLeftovers.vaEndingBalance)
+    : Math.max(0, fromDetails.vaBalance);
+  const vrFinal = manualLeftovers.vrEndingBalance !== undefined
+    ? Number(manualLeftovers.vrEndingBalance)
+    : Math.max(0, fromDetails.vrBalance);
+
+  config.monthlyEndingBalances[fromCycleKey] = {
+    vaEndingBalance: Math.round(vaFinal * 100) / 100,
+    vrEndingBalance: Math.round(vrFinal * 100) / 100
+  };
+
+  const cleanDate = (effectiveNewDateStr || new Date().toISOString().slice(0, 10)).substring(0, 10);
+  const nextCycleKey = cleanDate.substring(0, 7);
+
+  config.monthlyCreditDates[nextCycleKey] = cleanDate;
+
+  config.monthlyRolloverOverrides[nextCycleKey] = {
+    vaRollover: Math.round(vaFinal * 100) / 100,
+    vrRollover: Math.round(vrFinal * 100) / 100
+  };
+
+  return {
+    fromCycleKey,
+    nextCycleKey,
+    creditDate: cleanDate,
+    vaRollover: config.monthlyRolloverOverrides[nextCycleKey].vaRollover,
+    vrRollover: config.monthlyRolloverOverrides[nextCycleKey].vrRollover
+  };
 }

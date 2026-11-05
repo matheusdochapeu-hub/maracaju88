@@ -1037,9 +1037,12 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
               </div>
             </div>
           </div>
-          <div style="display: flex; gap: 0.35rem; align-items: center;">
+          <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-xs" data-open-modal="modal-benefits-history" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 700; border-radius: var(--radius-sm);" title="Ver histórico completo de VA e VR">
               📜 Histórico VA/VR
+            </button>
+            <button type="button" class="btn btn-secondary btn-xs" data-action="close-benefit-cycle" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 700; border-radius: var(--radius-sm); color: #b91c1c; border-color: rgba(185, 28, 28, 0.3); background: rgba(254, 242, 242, 0.8);" title="Encerrar período de vales se cair antes ou depois">
+              🏁 Encerrar Ciclo
             </button>
             <button type="button" class="btn btn-secondary btn-xs" data-open-modal="modal-adjust-benefits" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 700; border-radius: var(--radius-sm);" title="Ajustar dias trabalhados ou valores de VA/VR">
               ⚙️ Ajustar

@@ -1,6 +1,8 @@
 import {
   getMonthlyBenefitDetails,
-  updateMonthlyBenefitsConfig
+  updateMonthlyBenefitsConfig,
+  closeBenefitCycleEarly,
+  getCurrentBenefitCycleKey
 } from './benefits.js';
 // ============================================================
 //  MARACAJU - APP CONTROLLER PRINCIPAL (v1.3.3)
@@ -171,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
   safeInit(initSettingsModule, 'initSettingsModule');
   safeInit(initCategoryManagement, 'initCategoryManagement');
   safeInit(initModals, 'initModals');
+  safeInit(initGlobalEditDelegation, 'initGlobalEditDelegation');
 
   try {
     populateCategorySelects(state);
@@ -3520,6 +3523,8 @@ function initGlobalEditDelegation() {
     // 0. Alternar Ciclo de Benefícios VA / VR
     const cycleBtn = e.target.closest('[data-benefits-cycle]');
     if (cycleBtn) {
+      e.preventDefault();
+      e.stopPropagation();
       const cycleKey = cycleBtn.getAttribute('data-benefits-cycle');
       if (cycleKey && typeof setBenefitsCycle === 'function') {
         setBenefitsCycle(cycleKey);
@@ -3529,7 +3534,16 @@ function initGlobalEditDelegation() {
       return;
     }
 
-    // 0.1 Abrir Modal de Histórico de Benefícios VA / VR
+    // 0.1 Encerrar ciclo de benefícios antecipadamente ou com atraso
+    const closeCycleBtn = e.target.closest('[data-action="close-benefit-cycle"]');
+    if (closeCycleBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleCloseBenefitCycle();
+      return;
+    }
+
+    // 0.2 Abrir Modal de Histórico de Benefícios VA / VR
     const histBtn = e.target.closest('[data-open-modal="modal-benefits-history"]');
     if (histBtn) {
       if (typeof renderBenefitsHistoryModal === 'function') {
@@ -3603,6 +3617,38 @@ function initGlobalEditDelegation() {
       return;
     }
   });
+}
+
+function handleCloseBenefitCycle() {
+  const cycleKey = currentBenefitsCycle || getCurrentBenefitCycleKey(state);
+  const details = getMonthlyBenefitDetails(state, cycleKey);
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const confirmMsg = `Deseja encerrar o ${details.cycleLabel} e transferir as sobras para o próximo período?\n\n` +
+    `• VA restante: ${formatCurrencyWithSymbol(details.vaBalance)}\n` +
+    `• VR restante: ${formatCurrencyWithSymbol(details.vrBalance)}\n\n` +
+    `Esses saldos residuais serão somados ao próximo mês como crédito acumulado.`;
+
+  if (!confirm(confirmMsg)) return;
+
+  const newDateStr = prompt('Informe a data de início/crédito do novo ciclo (AAAA-MM-DD):', todayStr);
+  if (!newDateStr) return;
+
+  try {
+    const res = closeBenefitCycleEarly(state, cycleKey, newDateStr.trim(), {
+      vaEndingBalance: details.vaBalance,
+      vrEndingBalance: details.vrBalance
+    });
+    if (res.nextCycleKey && typeof setBenefitsCycle === 'function') {
+      setBenefitsCycle(res.nextCycleKey);
+    }
+    saveState(state);
+    triggerAutoSyncIfEnabled();
+    showToast(`Ciclo encerrado com sucesso! Sobras transferidas para o novo ciclo. 🎉`, 'success', 4500);
+    refreshAllUI();
+  } catch (err) {
+    showToast('Erro ao encerrar ciclo: ' + err.message, 'error');
+  }
 }
 
 function initModals() {

@@ -289,8 +289,26 @@ export function applyCloudBackup(currentState, cloudData) {
       if (cloudList.length === 0) return localList;
       if (localList.length === 0) return cloudList;
       const map = new Map();
-      localList.forEach(p => { if (p && p.id) map.set(p.id, p); });
+      // 1. Carrega registros vindos da nuvem
       cloudList.forEach(p => { if (p && p.id) map.set(p.id, p); });
+      // 2. Mescla registros locais (preservando lançamentos novos e edições recentes de pagamento/totais)
+      localList.forEach(localItem => {
+        if (localItem && localItem.id) {
+          const cloudItem = map.get(localItem.id);
+          if (!cloudItem) {
+            map.set(localItem.id, localItem);
+          } else {
+            map.set(localItem.id, {
+              ...cloudItem,
+              ...localItem,
+              paymentMethod: localItem.paymentMethod || cloudItem.paymentMethod || 'va',
+              total: (localItem.total !== undefined && localItem.total !== null) ? localItem.total : cloudItem.total,
+              notes: localItem.notes || cloudItem.notes || '',
+              date: localItem.date || cloudItem.date
+            });
+          }
+        }
+      });
       return Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     })(),
     catalog: (() => {
@@ -368,6 +386,26 @@ export function applyCloudBackup(currentState, cloudData) {
     settings: {
       ...safeCurrentSettings,
       ...safeCloudSettings,
+      benefits: {
+        ...(safeCloudSettings.benefits || {}),
+        ...(safeCurrentSettings.benefits || {}),
+        monthlyDays: {
+          ...((safeCloudSettings.benefits && safeCloudSettings.benefits.monthlyDays) || {}),
+          ...((safeCurrentSettings.benefits && safeCurrentSettings.benefits.monthlyDays) || {})
+        },
+        monthlyCreditDates: {
+          ...((safeCloudSettings.benefits && safeCloudSettings.benefits.monthlyCreditDates) || {}),
+          ...((safeCurrentSettings.benefits && safeCurrentSettings.benefits.monthlyCreditDates) || {})
+        },
+        monthlyEndingBalances: {
+          ...((safeCloudSettings.benefits && safeCloudSettings.benefits.monthlyEndingBalances) || {}),
+          ...((safeCurrentSettings.benefits && safeCurrentSettings.benefits.monthlyEndingBalances) || {})
+        },
+        monthlyRolloverOverrides: {
+          ...((safeCloudSettings.benefits && safeCloudSettings.benefits.monthlyRolloverOverrides) || {}),
+          ...((safeCurrentSettings.benefits && safeCurrentSettings.benefits.monthlyRolloverOverrides) || {})
+        }
+      },
       sheetsUrl: preservedSheetsUrl,
       sheetsToken: preservedSheetsToken,
       autoSync: true,

@@ -4,7 +4,7 @@
 
 export const APP_CONFIG = {
   appName: "Maracaju",
-  version: "2.2.6",
+  version: "2.2.8",
   storageKey: "MARACAJU_STATE_v1",
   legacyStorageKeys: ["MARACAJU88_STATE_v1"],
   deviceStorageKey: "MARACAJU_DEVICE_v1",

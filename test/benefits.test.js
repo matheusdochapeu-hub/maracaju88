@@ -14,6 +14,7 @@ import {
   getBenefitsHistory,
   getMonthlyBenefitDetails,
   updateMonthlyBenefitsConfig,
+  closeBenefitCycleEarly,
   PAYMENT_METHODS,
   getPaymentMethodInfo
 } from '../js/benefits.js';
@@ -87,6 +88,14 @@ test('Formas de Pagamento e Rollover: Sobras de Outubro (VA R$ 9,84 e VR R$ 0,16
     paymentMethod: 'va'
   });
 
+  // 4. Lançamento retroativo de VR em Outubro (refeições de trabalho)
+  addMarketPurchase(state, {
+    marketName: 'Refeições Outubro',
+    date: '2026-10-20',
+    total: '1104,84',
+    paymentMethod: 'vr'
+  });
+
   // Total lançado recente em VA = 270.41 + 35.00 + 85.00 = 390.41
   // Ciclo de Outubro (encerra em 05/11):
   const detailsOutubro = getMonthlyBenefitDetails(state, '2026-10');
@@ -126,7 +135,8 @@ test('Histórico de Benefícios VA e VR: getBenefitsHistory consolida ciclos pas
     settings: {},
     comprasRegistros: [
       { id: '1', marketName: 'Mercado 03/11', date: '2026-11-03', total: 100, paymentMethod: 'va' },
-      { id: '2', marketName: 'Mercado 06/11', date: '2026-11-06', total: 50, paymentMethod: 'va' }
+      { id: '2', marketName: 'Mercado 06/11', date: '2026-11-06', total: 50, paymentMethod: 'va' },
+      { id: '3', marketName: 'Almoço 20/10', date: '2026-10-20', total: 1104.84, paymentMethod: 'vr' }
     ]
   };
 
@@ -170,6 +180,31 @@ test('Ajuste de Benefícios do mês: Personalizar dias ou valores e rollover', (
   assert.equal(details.vaRollover, 15.50);
   assert.equal(details.vaTotal, 2065.50);
   assert.equal(details.totalBenefit, 3370.50);
+});
+
+test('Benefícios: closeBenefitCycleEarly encerra ciclo antecipadamente e transfere sobras', () => {
+  const state = {
+    settings: {},
+    comprasRegistros: [
+      { id: 'p1', date: '2026-10-15', total: 1000, paymentMethod: 'vr' }
+    ]
+  };
+
+  const result = closeBenefitCycleEarly(state, '2026-10', '2026-11-05', {
+    vaEndingBalance: 9.84,
+    vrEndingBalance: 0.16
+  });
+
+  assert.equal(result.fromCycleKey, '2026-10');
+  assert.equal(result.nextCycleKey, '2026-11');
+  assert.equal(result.creditDate, '2026-11-05');
+  assert.equal(result.vaRollover, 9.84);
+  assert.equal(result.vrRollover, 0.16);
+
+  const novDetails = getMonthlyBenefitDetails(state, '2026-11');
+  assert.equal(novDetails.creditDateFormatted, '05/11/2026');
+  assert.equal(novDetails.vaRollover, 9.84);
+  assert.equal(novDetails.vrRollover, 0.16);
 });
 
 test('HTML: Modais de Compra, Ajuste e Histórico de Benefícios com Rollover', async () => {
