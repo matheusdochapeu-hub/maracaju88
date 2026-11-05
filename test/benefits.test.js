@@ -155,3 +155,16 @@ test('Ajuste de Benefícios do mês: Personalizar dias ou valores', () => {
   assert.equal(details.vaTotal, 2050.00);
   assert.equal(details.totalBenefit, 3350.00);
 });
+
+test('HTML: Modais de Compra contêm seletor de Forma de Pagamento', async () => {
+  const fs = await import('fs');
+  const path = await import('path');
+  const { fileURLToPath } = await import('url');
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+
+  assert.ok(html.includes('id="modal-edit-purchase"'));
+  assert.ok(html.includes('id="purchase-edit-payment-method"'));
+  assert.ok(html.includes('id="manual-purchase-payment-method"'));
+  assert.ok(html.includes('id="pdf-invoice-payment-method"'));
+});

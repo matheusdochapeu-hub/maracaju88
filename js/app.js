@@ -645,7 +645,28 @@ function initHeaderControls() {
       if (dateInput) {
         dateInput.value = new Date().toISOString().substring(0, 10);
       }
-      const paySelect = document.getElementById('manual-purchase-payment-method');
+      let paySelect = document.getElementById('manual-purchase-payment-method');
+      if (!paySelect) {
+        const notesGroup = document.getElementById('manual-purchase-notes')?.closest('.form-group');
+        if (notesGroup) {
+          const payGroup = document.createElement('div');
+          payGroup.className = 'form-group';
+          payGroup.id = 'manual-purchase-payment-group';
+          payGroup.innerHTML = `
+            <label class="form-label">Forma de Pagamento</label>
+            <select id="manual-purchase-payment-method" class="form-control" style="font-weight: 600;">
+              <option value="va" selected>🥗 Vale Alimentação (VA) - Saldo R$ 2.050</option>
+              <option value="vr">🍽️ Vale Refeição (VR) - R$ 65/dia</option>
+              <option value="pix">💠 Pix</option>
+              <option value="credito">💳 Cartão de Crédito</option>
+              <option value="debito">💳 Cartão de Débito</option>
+              <option value="dinheiro">💵 Dinheiro</option>
+            </select>
+          `;
+          notesGroup.parentNode.insertBefore(payGroup, notesGroup);
+          paySelect = document.getElementById('manual-purchase-payment-method');
+        }
+      }
       if (paySelect) {
         paySelect.value = 'va';
       }
@@ -2356,7 +2377,28 @@ function initComprasModule() {
           document.getElementById('purchase-edit-date').value = p.date || '';
           document.getElementById('purchase-edit-total').value = p.total ? formatCurrency(p.total) : '';
           document.getElementById('purchase-edit-notes').value = p.notes || '';
-          const paySelect = document.getElementById('purchase-edit-payment-method');
+          let paySelect = document.getElementById('purchase-edit-payment-method');
+          if (!paySelect) {
+            const notesGroup = document.getElementById('purchase-edit-notes')?.closest('.form-group');
+            if (notesGroup) {
+              const payGroup = document.createElement('div');
+              payGroup.className = 'form-group';
+              payGroup.id = 'purchase-edit-payment-group';
+              payGroup.innerHTML = `
+                <label class="form-label">Forma de Pagamento</label>
+                <select id="purchase-edit-payment-method" class="form-control" style="font-weight: 600;">
+                  <option value="va">🥗 Vale Alimentação (VA)</option>
+                  <option value="vr">🍽️ Vale Refeição (VR)</option>
+                  <option value="pix">💠 Pix</option>
+                  <option value="credito">💳 Cartão de Crédito</option>
+                  <option value="debito">💳 Cartão de Débito</option>
+                  <option value="dinheiro">💵 Dinheiro</option>
+                </select>
+              `;
+              notesGroup.parentNode.insertBefore(payGroup, notesGroup);
+              paySelect = document.getElementById('purchase-edit-payment-method');
+            }
+          }
           if (paySelect) {
             paySelect.value = p.paymentMethod || 'va';
           }
@@ -2736,6 +2778,8 @@ function initComprasModule() {
       const marketInput = document.getElementById('pdf-invoice-market-name');
       const marketName = (marketInput ? marketInput.value : '').trim() || currentPendingPdfInvoice.marketName || 'Supermercado';
       currentPendingPdfInvoice.marketName = marketName;
+      const pdfPayMethod = document.getElementById('pdf-invoice-payment-method')?.value || 'va';
+      currentPendingPdfInvoice.paymentMethod = pdfPayMethod;
 
       const container = document.getElementById('pdf-extracted-items-list');
       const itemCards = container ? container.querySelectorAll('.pdf-item-card') : [];
@@ -2775,6 +2819,7 @@ function initComprasModule() {
       const regIdx = (state.comprasRegistros || []).findIndex(p => p.nfeKey && p.nfeKey === currentPendingPdfInvoice.nfeKey);
       if (regIdx >= 0) {
         state.comprasRegistros[regIdx].marketName = marketName;
+        state.comprasRegistros[regIdx].paymentMethod = pdfPayMethod;
         state.comprasRegistros[regIdx].items = itemsToKeep;
       }
 
