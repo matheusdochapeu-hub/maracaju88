@@ -2,15 +2,46 @@
 //  MARACAJU - GESTÃO DE CATEGORIAS & EMOJIS DE FILTRO
 // ============================================================
 
+export const DEFAULT_ROOM_CATEGORIES = [
+  { id: "suite", label: "Suite", icon: "🛏️" },
+  { id: "corredor", label: "Corredor", icon: "🚪" },
+  { id: "banheiro_azul", label: "Banheiro Azul", icon: "🚿" },
+  { id: "banheiro_rosa", label: "Banheiro Rosa", icon: "🧼" },
+  { id: "cozinha", label: "Cozinha", icon: "🍳" },
+  { id: "lavanderia", label: "Lavanderia", icon: "🧺" },
+  { id: "quintal", label: "Quintal", icon: "🌿" },
+  { id: "sala", label: "Sala", icon: "🛋️" },
+  { id: "escritorio", label: "Escritório", icon: "💻" },
+  { id: "alpendre", label: "Alpendre", icon: "🏡" },
+  { id: "area_externa_garagem", label: "Área Externa - Garagem", icon: "🚗" }
+];
+
 export const DEFAULT_CATEGORIES = {
   tarefas: [
+    { id: "suite", label: "Suite", icon: "🛏️" },
+    { id: "corredor", label: "Corredor", icon: "🚪" },
+    { id: "banheiro_azul", label: "Banheiro Azul", icon: "🚿" },
+    { id: "banheiro_rosa", label: "Banheiro Rosa", icon: "🧼" },
     { id: "cozinha", label: "Cozinha", icon: "🍳" },
-    { id: "sala", label: "Sala", icon: "🛋️" },
-    { id: "quartos", label: "Quartos", icon: "🛏️" },
-    { id: "banheiros", label: "Banheiros", icon: "🚿" },
     { id: "lavanderia", label: "Lavanderia", icon: "🧺" },
-    { id: "cuidados", label: "Cuidados & Plantas", icon: "🪴" },
-    { id: "garagem", label: "Garagem", icon: "🚗" }
+    { id: "quintal", label: "Quintal", icon: "🌿" },
+    { id: "sala", label: "Sala", icon: "🛋️" },
+    { id: "escritorio", label: "Escritório", icon: "💻" },
+    { id: "alpendre", label: "Alpendre", icon: "🏡" },
+    { id: "area_externa_garagem", label: "Área Externa - Garagem", icon: "🚗" }
+  ],
+  reformas: [
+    { id: "suite", label: "Suite", icon: "🛏️" },
+    { id: "corredor", label: "Corredor", icon: "🚪" },
+    { id: "banheiro_azul", label: "Banheiro Azul", icon: "🚿" },
+    { id: "banheiro_rosa", label: "Banheiro Rosa", icon: "🧼" },
+    { id: "cozinha", label: "Cozinha", icon: "🍳" },
+    { id: "lavanderia", label: "Lavanderia", icon: "🧺" },
+    { id: "quintal", label: "Quintal", icon: "🌿" },
+    { id: "sala", label: "Sala", icon: "🛋️" },
+    { id: "escritorio", label: "Escritório", icon: "💻" },
+    { id: "alpendre", label: "Alpendre", icon: "🏡" },
+    { id: "area_externa_garagem", label: "Área Externa - Garagem", icon: "🚗" }
   ],
   carro: [
     { id: "oleo_revisao", label: "Revisão & Óleo", icon: "🛢️" },
@@ -19,14 +50,6 @@ export const DEFAULT_CATEGORIES = {
     { id: "estetica", label: "Estética & Lavagem", icon: "✨" },
     { id: "eletrica", label: "Elétrica & Acessórios", icon: "🔌" },
     { id: "outros", label: "Outros & Documentos", icon: "📦" }
-  ],
-  reformas: [
-    { id: "cozinha", label: "Cozinha", icon: "🍳" },
-    { id: "sala", label: "Sala", icon: "🛋️" },
-    { id: "quartos", label: "Quartos", icon: "🛏️" },
-    { id: "banheiros", label: "Banheiros", icon: "🚿" },
-    { id: "varanda", label: "Varanda & Quintal", icon: "🌿" },
-    { id: "geral", label: "Geral da Casa", icon: "🏡" }
   ],
   sonhos: [
     { id: "viagem", label: "Viagens", icon: "✈️" },
@@ -50,19 +73,27 @@ export const DEFAULT_CATEGORIES = {
 
 export const CATEGORY_MODULES = [
   { id: "tarefas", label: "Tarefas", icon: "🧹" },
-  { id: "carro", label: "Carro", icon: "🚗" },
   { id: "reformas", label: "Reformas", icon: "🔨" },
-  { id: "sonhos", label: "Sonhos", icon: "✨" },
-  { id: "compras", label: "Compras", icon: "🛒" }
+  { id: "compras", label: "Mercado", icon: "🛒" },
+  { id: "carro", label: "Carro", icon: "🚗" },
+  { id: "sonhos", label: "Sonhos", icon: "✨" }
 ];
 
 export const QUICK_EMOJIS_LIST = [
-  "🍳", "🛋️", "🛏️", "🚿", "🧺", "🪴", "🚗", "🌿", "💻", "🍖", 
-  "🐶", "🐱", "🏊", "🥫", "🎨", "🧹", "🔧", "🛢️", "🛞", "🔌", 
-  "✨", "📦", "✈️", "🏡", "💖", "💡", "📐", "🛠️", "🎯", "🛒",
-  "📱", "☕", "🍺", "🍷", "🍕", "🍔", "📚", "🎮", "🎸", "🚲",
-  "🥦", "🥩", "🧀", "🥖", "🥤", "🧽", "🧴", "🐾", "👶", "💊"
+  "🛏️", "🚪", "🚿", "🧼", "🍳", "🧺", "🌿", "🛋️", "💻", "🏡", "🚗",
+  "🪴", "📦", "✨", "🔧", "🛢️", "🛞", "🔌", "✈️", "💖", "💡", "📐",
+  "🛠️", "🎯", "🛒", "🥦", "🥩", "🧀", "🥖", "🥫", "🥤", "🧽", "🧴",
+  "🐾", "👶", "💊", "☕", "🍺", "🍷", "🍕", "🍔", "📚", "🎮", "🎸"
 ];
+
+export const LEGACY_ROOM_MAP = {
+  quartos: { id: "suite", label: "Suite", icon: "🛏️" },
+  banheiros: { id: "banheiro_azul", label: "Banheiro Azul", icon: "🚿" },
+  cuidados: { id: "quintal", label: "Quintal", icon: "🌿" },
+  garagem: { id: "area_externa_garagem", label: "Área Externa - Garagem", icon: "🚗" },
+  varanda: { id: "alpendre", label: "Alpendre", icon: "🏡" },
+  geral: { id: "area_externa_garagem", label: "Área Externa - Garagem", icon: "🚗" }
+};
 
 export function slugify(text) {
   if (!text) return `cat_${Date.now()}`;
@@ -77,12 +108,26 @@ export function slugify(text) {
 }
 
 export function ensureStateCategories(state) {
+  if (!state) return {};
   if (!state.categories) {
     state.categories = {};
   }
   for (const mod of Object.keys(DEFAULT_CATEGORIES)) {
     if (!Array.isArray(state.categories[mod]) || state.categories[mod].length === 0) {
       state.categories[mod] = DEFAULT_CATEGORIES[mod].map(c => ({ ...c }));
+    } else if (mod === 'tarefas' || mod === 'reformas') {
+      const currentIds = new Set(state.categories[mod].map(c => c.id));
+      // Se não possui as categorias padrão como 'suite' ou 'alpendre', substitui pelas 11 oficiais
+      if (!currentIds.has('suite') && !currentIds.has('alpendre')) {
+        state.categories[mod] = DEFAULT_ROOM_CATEGORIES.map(c => ({ ...c }));
+      } else {
+        // Assegura que todas as 11 categorias padrão estejam presentes
+        DEFAULT_ROOM_CATEGORIES.forEach(defCat => {
+          if (!currentIds.has(defCat.id)) {
+            state.categories[mod].push({ ...defCat });
+          }
+        });
+      }
     }
   }
   return state.categories;
@@ -97,6 +142,13 @@ export function findCategory(state, moduleName, id) {
   const list = getCategories(state, moduleName);
   const found = list.find(c => c.id === id);
   if (found) return found;
+
+  // Fallback para IDs legados da casa
+  if ((moduleName === 'tarefas' || moduleName === 'reformas') && id && LEGACY_ROOM_MAP[id]) {
+    const mapped = list.find(c => c.id === LEGACY_ROOM_MAP[id].id);
+    if (mapped) return mapped;
+    return LEGACY_ROOM_MAP[id];
+  }
 
   // Fallback caso o item tenha id livre ou antigo
   return {
@@ -123,7 +175,7 @@ export function addCategory(state, moduleName, { label, icon, id }) {
   const newCat = {
     id: finalId,
     label: cleanLabel,
-    icon: (icon || "").trim() || (moduleName === "carro" ? "🚗" : "🏷️")
+    icon: icon ? icon.trim() : "🏷️"
   };
 
   list.push(newCat);
@@ -134,28 +186,24 @@ export function addCategory(state, moduleName, { label, icon, id }) {
 export function updateCategory(state, moduleName, id, { label, icon }) {
   ensureStateCategories(state);
   const list = state.categories[moduleName] || [];
-  const index = list.findIndex(c => c.id === id);
-  if (index === -1) throw new Error("Categoria não encontrada.");
+  const cat = list.find(c => c.id === id);
+  if (!cat) throw new Error("Categoria não encontrada.");
 
-  const cleanLabel = (label || "").trim();
-  if (!cleanLabel) throw new Error("O nome da categoria é obrigatório.");
-
-  list[index] = {
-    ...list[index],
-    label: cleanLabel,
-    icon: (icon || "").trim() || list[index].icon || "🏷️"
-  };
-
-  return list[index];
+  if (label !== undefined) {
+    const cleanLabel = (label || "").trim();
+    if (!cleanLabel) throw new Error("O nome da categoria é obrigatório.");
+    cat.label = cleanLabel;
+  }
+  if (icon !== undefined) {
+    cat.icon = (icon || "").trim() || "🏷️";
+  }
+  return cat;
 }
 
 export function deleteCategory(state, moduleName, id) {
   ensureStateCategories(state);
   const list = state.categories[moduleName] || [];
-  if (list.length <= 1) {
-    throw new Error("Não é possível excluir todas as categorias. Mantenha ao menos uma.");
-  }
-
-  state.categories[moduleName] = list.filter(c => c.id !== id);
-  return true;
+  const idx = list.findIndex(c => c.id === id);
+  if (idx === -1) return null;
+  return list.splice(idx, 1)[0];
 }

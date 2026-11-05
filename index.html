@@ -152,13 +152,13 @@
 
       <div class="header-actions">
         <!-- Botão de Instalar App no Celular (Visível no navegador) -->
-        <button id="btn-install-app" class="install-app-btn" title="Baixar e instalar aplicativo no celular">
+        <button type="button" id="btn-install-app" class="install-app-btn" title="Baixar e instalar aplicativo no celular">
           <span>📲</span>
           <span>Instalar App</span>
         </button>
 
         <!-- Seletor Rápido de Quem está Usando (Matheus / Scarlet) -->
-        <button id="active-user-btn" class="active-user-toggle" title="Alternar quem está marcando as tarefas">
+        <button type="button" id="active-user-btn" class="active-user-toggle" title="Alternar quem está marcando as tarefas">
           <span class="user-avatar-sm">👨‍💻</span>
           <span>Matheus</span>
         </button>
@@ -171,27 +171,27 @@
 
   <!-- Barra de Navegação Desktop / Topo Alternativo / Mobile Bottom Nav -->
   <nav class="bottom-nav" id="main-navigation">
-    <button class="nav-item active" data-tab="tarefas">
+    <button type="button" class="nav-item active" data-tab="tarefas">
       <span class="nav-icon">🧹</span>
       <span>Tarefas</span>
     </button>
-    <button class="nav-item" data-tab="compras">
+    <button type="button" class="nav-item" data-tab="compras">
       <span class="nav-icon">🛒</span>
       <span>Mercado</span>
     </button>
-    <button class="nav-item" data-tab="carro">
+    <button type="button" class="nav-item" data-tab="carro">
       <span class="nav-icon">🚗</span>
       <span>Carro</span>
     </button>
-    <button class="nav-item" data-tab="reformas">
+    <button type="button" class="nav-item" data-tab="reformas">
       <span class="nav-icon">🔨</span>
       <span>Reformas</span>
     </button>
-    <button class="nav-item" data-tab="sonhos">
+    <button type="button" class="nav-item" data-tab="sonhos">
       <span class="nav-icon">✨</span>
       <span>Sonhos</span>
     </button>
-    <button class="nav-item" data-tab="ajustes">
+    <button type="button" class="nav-item" data-tab="ajustes">
       <span class="nav-icon">⚙️</span>
       <span>Ajustes</span>
     </button>
@@ -299,11 +299,11 @@
 
       <!-- Filtros por Status -->
       <div class="chips-scroll" style="margin-top: -0.25rem;">
-        <button class="chip active" data-carro-status-filter="todas">Todos Status</button>
-        <button class="chip" data-carro-status-filter="pendente">⏳ Pendentes</button>
-        <button class="chip" data-carro-status-filter="orcamento">📐 Em Orçamento</button>
-        <button class="chip" data-carro-status-filter="andamento">🛠️ Em Andamento</button>
-        <button class="chip" data-carro-status-filter="concluido">✅ Concluídas</button>
+        <button type="button" class="chip active" data-carro-status-filter="todas">Todos Status</button>
+        <button type="button" class="chip" data-carro-status-filter="pendente">⏳ Pendentes</button>
+        <button type="button" class="chip" data-carro-status-filter="orcamento">📐 Em Orçamento</button>
+        <button type="button" class="chip" data-carro-status-filter="andamento">🛠️ Em Andamento</button>
+        <button type="button" class="chip" data-carro-status-filter="concluido">✅ Concluídas</button>
       </div>
 
       <!-- Barra de Ações -->
@@ -332,11 +332,11 @@
 
       <!-- Filtros por Status -->
       <div class="chips-scroll" style="margin-top: -0.25rem;">
-        <button class="chip active" data-reforma-filter="todas">Todos Status</button>
-        <button class="chip" data-reforma-filter="ideia">💡 Ideias</button>
-        <button class="chip" data-reforma-filter="orcamento">📐 Em Orçamento</button>
-        <button class="chip" data-reforma-filter="andamento">🛠️ Em Andamento</button>
-        <button class="chip" data-reforma-filter="concluido">✅ Concluídas</button>
+        <button type="button" class="chip active" data-reforma-filter="todas">Todos Status</button>
+        <button type="button" class="chip" data-reforma-filter="ideia">💡 Ideias</button>
+        <button type="button" class="chip" data-reforma-filter="orcamento">📐 Em Orçamento</button>
+        <button type="button" class="chip" data-reforma-filter="andamento">🛠️ Em Andamento</button>
+        <button type="button" class="chip" data-reforma-filter="concluido">✅ Concluídas</button>
       </div>
 
       <div class="section-action-bar">
@@ -538,7 +538,7 @@
         <div class="dash-card">
           <h3 class="dash-title" style="margin-bottom: 0.75rem;">📲 Atualização do Aplicativo</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            Versão instalada: <strong>Maracaju v2.2.0</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
+            Versão instalada: <strong>Maracaju v2.2.1</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
           </p>
           <button type="button" id="btn-force-update-settings" class="btn btn-secondary btn-sm" onclick="window.forceUpdateApp && window.forceUpdateApp()">
             🔄 Limpar Cache e Forçar Atualização
@@ -562,7 +562,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Nova Tarefa do Lar</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-task">
         <div class="form-group">
@@ -582,13 +582,17 @@
           <div class="form-group">
             <label class="form-label">Cômodo / Área</label>
             <select id="task-input-room" class="form-control">
-              <option value="cozinha">🍳 Cozinha</option>
-              <option value="sala">🛋️ Sala</option>
-              <option value="quartos">🛏️ Quartos</option>
-              <option value="banheiros">🚿 Banheiros</option>
+              <option value="suite">🛏️ Suite</option>
+              <option value="corredor">🚪 Corredor</option>
+              <option value="banheiro_azul">🚿 Banheiro Azul</option>
+              <option value="banheiro_rosa">🧼 Banheiro Rosa</option>
+              <option value="cozinha" selected>🍳 Cozinha</option>
               <option value="lavanderia">🧺 Lavanderia</option>
-              <option value="cuidados">🪴 Cuidados & Plantas</option>
-              <option value="garagem">🚗 Garagem</option>
+              <option value="quintal">🌿 Quintal</option>
+              <option value="sala">🛋️ Sala</option>
+              <option value="escritorio">💻 Escritório</option>
+              <option value="alpendre">🏡 Alpendre</option>
+              <option value="area_externa_garagem">🚗 Área Externa - Garagem</option>
             </select>
           </div>
         </div>
@@ -647,7 +651,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">✏️ Editar Tarefa do Lar</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-task">
         <input type="hidden" id="task-edit-id" value="" />
@@ -728,7 +732,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Nova Manutenção ou Cuidado do Carro</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-carro">
         <div class="form-group">
@@ -814,7 +818,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">✏️ Editar Manutenção do Carro</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-carro">
         <input type="hidden" id="carro-edit-id" value="" />
@@ -889,7 +893,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Cadastrar Reforma ou Melhoria</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-reforma">
         <div class="form-group">
@@ -959,7 +963,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">✏️ Editar Projeto de Reforma</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-reforma">
         <input type="hidden" id="reforma-edit-id" value="" />
@@ -1029,7 +1033,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Novo Sonho do Casal</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-sonho">
         <div class="form-group">
@@ -1069,7 +1073,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">✏️ Editar Sonho do Casal</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-sonho">
         <input type="hidden" id="sonho-edit-id" value="" />
@@ -1132,7 +1136,7 @@
   <div id="modal-photo-viewer" class="modal-overlay">
     <div class="modal-content" style="max-width: 650px; text-align: center; padding: 1rem;">
       <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem;">
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <img id="photo-viewer-target" src="" alt="Foto Ampliada" class="photo-viewer-img" />
     </div>
@@ -1143,7 +1147,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">📲 Como Instalar no Celular</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
 
       <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 1.25rem;">
@@ -1179,7 +1183,7 @@
 
       </div>
 
-      <button class="btn btn-primary" style="width: 100%; margin-top: 1.25rem;" data-close-modal>Entendido!</button>
+      <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 1.25rem;" data-close-modal>Entendido!</button>
     </div>
   </div>
 
@@ -1196,7 +1200,7 @@
             Carregando detalhes da nota fiscal...
           </p>
         </div>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
 
       <div style="background: rgba(13, 148, 136, 0.08); border: 1px solid rgba(13, 148, 136, 0.25); border-radius: var(--radius-md); padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
@@ -1240,7 +1244,7 @@
             Compare preços entre mercados, encontre onde é mais barato e adicione à lista com 1 toque!
           </p>
         </div>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
 
       <!-- Abas Internas do Catálogo / Comparador -->
@@ -1286,7 +1290,7 @@
           <h3 id="product-history-title" class="modal-title">📊 Histórico do Produto</h3>
           <p id="product-history-rawname" style="font-size: 0.75rem; color: var(--text-muted);"></p>
         </div>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
 
       <div id="product-history-summary-box" style="margin-bottom: 1rem;"></div>
@@ -1307,7 +1311,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Configurar Backup no Google Sheets</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <div style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary);">
         <ol style="padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;">
@@ -1325,7 +1329,7 @@
           <li>Copie a <strong>URL do App da Web</strong> (termina com <code>/exec</code>) e cole no campo de URL na aba Ajustes do app.</li>
         </ol>
       </div>
-      <button class="btn btn-primary" style="width: 100%; margin-top: 1.25rem;" data-close-modal>Entendi</button>
+      <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 1.25rem;" data-close-modal>Entendi</button>
     </div>
   </div>
 
@@ -1334,7 +1338,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title" id="category-modal-title">Nova Categoria</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-category-editor">
         <input type="hidden" id="category-edit-id" value="" />
@@ -1391,7 +1395,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">🛒 Novo Item para o Mercado</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-shopping-item">
         <div class="form-group">
@@ -1453,7 +1457,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">✏️ Editar Item de Compra</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-shopping-item">
         <input type="hidden" id="shopping-edit-id" value="" />
@@ -1521,7 +1525,7 @@
             Lance compras manuais mesmo sem cupom fiscal ou QR Code.
           </p>
         </div>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-manual-purchase">
         <div class="form-group">
@@ -1601,7 +1605,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">✏️ Editar Compra de Mercado</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-purchase">
         <input type="hidden" id="purchase-edit-id" value="" />
@@ -1639,7 +1643,7 @@
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
         <h3 class="modal-title">📷 Ler QR Code da Nota Fiscal</h3>
-        <button class="btn btn-icon btn-sm" id="btn-close-qr-scanner" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" id="btn-close-qr-scanner" data-close-modal>✕</button>
       </div>
 
       <div class="qr-scanner-wrapper">
@@ -1701,7 +1705,7 @@
     <div class="modal-content" style="max-width: 400px;">
       <div class="modal-header">
         <h3 class="modal-title" id="pass-modal-title">Definir Senha de Acesso</h3>
-        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-change-password">
         <input type="hidden" id="pass-modal-user-id" value="" />

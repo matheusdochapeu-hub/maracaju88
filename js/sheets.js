@@ -1,3 +1,4 @@
+import { DEFAULT_ROOM_CATEGORIES } from './categories.js';
 // ============================================================
 //  MARACAJU - GOOGLE SHEETS SYNC & BACKUP CLIENT
 // ============================================================
@@ -322,23 +323,44 @@ export function applyCloudBackup(currentState, cloudData) {
       });
       return Array.from(map.values());
     })(),
-    categories: {
-      tarefas: (cloudData.categories && Array.isArray(cloudData.categories.tarefas) && cloudData.categories.tarefas.length > 0)
-        ? cloudData.categories.tarefas
-        : ((safeCurrent.categories && safeCurrent.categories.tarefas) || []),
-      carro: (cloudData.categories && Array.isArray(cloudData.categories.carro) && cloudData.categories.carro.length > 0)
-        ? cloudData.categories.carro
-        : ((safeCurrent.categories && safeCurrent.categories.carro) || []),
-      reformas: (cloudData.categories && Array.isArray(cloudData.categories.reformas) && cloudData.categories.reformas.length > 0)
-        ? cloudData.categories.reformas
-        : ((safeCurrent.categories && safeCurrent.categories.reformas) || []),
-      sonhos: (cloudData.categories && Array.isArray(cloudData.categories.sonhos) && cloudData.categories.sonhos.length > 0)
-        ? cloudData.categories.sonhos
-        : ((safeCurrent.categories && safeCurrent.categories.sonhos) || []),
-      compras: (cloudData.categories && Array.isArray(cloudData.categories.compras) && cloudData.categories.compras.length > 0)
-        ? cloudData.categories.compras
-        : ((safeCurrent.categories && safeCurrent.categories.compras) || [])
-    },
+    categories: (() => {
+      const mergedCats = {};
+      const allModules = ['tarefas', 'carro', 'reformas', 'sonhos', 'compras'];
+      const legacyRoomIds = new Set(['quartos', 'banheiros', 'cuidados', 'varanda', 'geral']);
+
+      allModules.forEach(mod => {
+        const isRoomModule = (mod === 'tarefas' || mod === 'reformas');
+        const localList = (safeCurrent.categories && Array.isArray(safeCurrent.categories[mod])) ? safeCurrent.categories[mod] : [];
+        const cloudList = (cloudData.categories && Array.isArray(cloudData.categories[mod])) ? cloudData.categories[mod] : [];
+
+        const map = new Map();
+
+        // Se for módulo de cômodos (tarefas/reformas), inicia com os 11 cômodos padrão
+        if (isRoomModule) {
+          DEFAULT_ROOM_CATEGORIES.forEach(c => map.set(c.id, { ...c }));
+        }
+
+        // Adiciona categorias da nuvem (filtrando IDs legados obsoletos)
+        cloudList.forEach(c => {
+          if (c && c.id) {
+            if (isRoomModule && legacyRoomIds.has(c.id)) return;
+            map.set(c.id, c);
+          }
+        });
+
+        // Adiciona categorias locais (prioridade para personalizações recentes)
+        localList.forEach(c => {
+          if (c && c.id) {
+            if (isRoomModule && legacyRoomIds.has(c.id)) return;
+            map.set(c.id, c);
+          }
+        });
+
+        mergedCats[mod] = Array.from(map.values());
+      });
+
+      return mergedCats;
+    })(),
     userPasswords: {
       ...(safeCurrent.userPasswords || {}),
       ...(cloudData.userPasswords || {})

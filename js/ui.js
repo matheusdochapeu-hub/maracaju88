@@ -1387,7 +1387,7 @@ export function renderGamificationTab(state) {
 // -------------------------------------------------------------
 // RENDERIZAÇÃO DA ABA 7: AJUSTES & GOOGLE SHEETS
 // -------------------------------------------------------------
-export function renderSettingsTab(state) {
+export function renderSettingsTab(state, activeCategoryModule = 'tarefas') {
   const urlInput = document.getElementById('settings-sheets-url');
   const tokenInput = document.getElementById('settings-sheets-token');
   const autoSyncCheck = document.getElementById('settings-autosync-toggle');
@@ -1395,12 +1395,13 @@ export function renderSettingsTab(state) {
   const user1Name = document.getElementById('settings-user1-name');
   const user2Name = document.getElementById('settings-user2-name');
 
-  if (urlInput) urlInput.value = state.settings.sheetsUrl || '';
-  if (tokenInput) tokenInput.value = state.settings.sheetsToken || '';
+  // Não sobrescreve campos caso o usuário esteja ativamente digitando neles
+  if (urlInput && document.activeElement !== urlInput) urlInput.value = state.settings.sheetsUrl || '';
+  if (tokenInput && document.activeElement !== tokenInput) tokenInput.value = state.settings.sheetsToken || '';
   if (autoSyncCheck) autoSyncCheck.checked = !!state.settings.autoSync;
   if (soundCheck) soundCheck.checked = !!state.settings.soundEnabled;
-  if (user1Name) user1Name.value = state.users.user1.name || 'Matheus';
-  if (user2Name) user2Name.value = state.users.user2.name || 'Scarlet';
+  if (user1Name && document.activeElement !== user1Name) user1Name.value = state.users.user1.name || 'Matheus';
+  if (user2Name && document.activeElement !== user2Name) user2Name.value = state.users.user2.name || 'Scarlet';
 
   const lastSyncEl = document.getElementById('settings-last-sync-label');
   if (lastSyncEl) {
@@ -1444,8 +1445,15 @@ export function renderSettingsTab(state) {
     }
   }
 
-  // Renderiza Gerenciador de Categorias em Ajustes
-  renderCategoriesManager(state, 'tarefas');
+  // Sincroniza estado visual do seletor de módulos de categoria
+  const moduleChips = document.querySelectorAll('#categories-module-selector [data-manage-module]');
+  moduleChips.forEach(chip => {
+    const mod = chip.getAttribute('data-manage-module');
+    chip.classList.toggle('active', mod === activeCategoryModule);
+  });
+
+  // Renderiza Gerenciador de Categorias em Ajustes para o módulo correto
+  renderCategoriesManager(state, activeCategoryModule);
 }
 
 // -------------------------------------------------------------

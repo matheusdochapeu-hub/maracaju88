@@ -374,7 +374,7 @@ function refreshAllUI() {
   } else if (currentTab === 'compras' || currentTab === 'gamificacao') {
     renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
   } else if (currentTab === 'ajustes') {
-    renderSettingsTab(state);
+    renderSettingsTab(state, currentCategoryManageModule);
   }
 }
 
@@ -3238,7 +3238,8 @@ function initCategoryManagement() {
 
   // Alternador de módulo na aba Ajustes
   moduleChips.forEach(chip => {
-    chip.addEventListener('click', () => {
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
       moduleChips.forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       currentCategoryManageModule = chip.getAttribute('data-manage-module') || 'tarefas';
@@ -3300,9 +3301,8 @@ function initCategoryManagement() {
           saveState(state);
           triggerAutoSyncIfEnabled();
           showToast('Categoria excluída', 'info');
-          renderCategoriesManager(state, mod);
           populateCategorySelects(state);
-          refreshAllUI();
+          renderCategoriesManager(state, mod);
         }
       }
     });
@@ -3332,8 +3332,10 @@ function initCategoryManagement() {
       closeModal('modal-category-editor');
       formEditor.reset();
       populateCategorySelects(state);
+      currentCategoryManageModule = mod;
       renderCategoriesManager(state, mod);
-      refreshAllUI();
+      const mChips = document.querySelectorAll('#categories-module-selector [data-manage-module]');
+      mChips.forEach(c => c.classList.toggle('active', c.getAttribute('data-manage-module') === mod));
     });
   }
 }
@@ -3343,14 +3345,21 @@ function initCategoryManagement() {
 // -------------------------------------------------------------
 function initModals() {
   document.querySelectorAll('[data-open-modal]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      try {
+        if (typeof populateCategorySelects === 'function' && state) {
+          populateCategorySelects(state);
+        }
+      } catch (err) {}
       const modalId = btn.getAttribute('data-open-modal');
       openModal(modalId);
     });
   });
 
   document.querySelectorAll('[data-close-modal]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
       const modal = btn.closest('.modal-overlay');
       if (modal) modal.classList.remove('active');
     });

@@ -517,8 +517,8 @@ test('Categories: Definir categorias personalizadas e emojis para filtro', () =>
   // 1. Obter categorias padrão de tarefas
   const taskCats = getCategories(state, 'tarefas');
   assert.ok(taskCats.length >= 7);
-  assert.equal(taskCats[0].id, 'cozinha');
-  assert.equal(taskCats[0].icon, '🍳');
+  assert.equal(taskCats[0].id, 'suite');
+  assert.equal(taskCats[0].icon, '🛏️');
 
   // 2. Adicionar nova categoria com emoji (ex: Varanda Gourmet)
   const newCat = addCategory(state, 'tarefas', { label: 'Varanda Gourmet', icon: '🌿' });
@@ -542,7 +542,8 @@ test('Categories: Definir categorias personalizadas e emojis para filtro', () =>
 
   // 5. Excluir categoria
   const deleted = deleteCategory(state, 'tarefas', 'varanda_gourmet');
-  assert.equal(deleted, true);
+  assert.ok(deleted);
+  assert.equal(deleted.id, 'varanda_gourmet');
   const afterDelete = getCategories(state, 'tarefas');
   assert.equal(afterDelete.some(c => c.id === 'varanda_gourmet'), false);
 
@@ -804,7 +805,9 @@ test('Sheets: Prioridade da planilha Google e sincronização completa dos dados
   assert.equal(merged.compras[1].totalPrice, 48.00);
   assert.equal(merged.comprasRegistros.length, 1);
   assert.equal(merged.comprasRegistros[0].total, 154.20);
-  assert.equal(merged.categories.tarefas.length, 2);
+  assert.ok(merged.categories.tarefas.length >= 11);
+  assert.ok(merged.categories.tarefas.some(c => c.id === 'suite'));
+  assert.ok(merged.categories.tarefas.some(c => c.id === 'jardim'));
   assert.equal(merged.categories.compras.length, 1);
   assert.equal(merged.userPasswords.scarlet, "5678");
 

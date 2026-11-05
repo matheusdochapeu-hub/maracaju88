@@ -4,7 +4,7 @@
 
 export const APP_CONFIG = {
   appName: "Maracaju",
-  version: "2.2.0",
+  version: "2.2.1",
   storageKey: "MARACAJU_STATE_v1",
   legacyStorageKeys: ["MARACAJU88_STATE_v1"],
   deviceStorageKey: "MARACAJU_DEVICE_v1",
@@ -40,15 +40,19 @@ export const FREQUENCIES = [
   { id: "anual", label: "Anuais", single: "Anual", icon: "🎯", period: "este ano" }
 ];
 
-// Compatibilidade retroativa com versões e telas legadas
+// Cômodos padrão oficiais da casa
 export const ROOMS = [
+  { id: "suite", label: "Suite", icon: "🛏️" },
+  { id: "corredor", label: "Corredor", icon: "🚪" },
+  { id: "banheiro_azul", label: "Banheiro Azul", icon: "🚿" },
+  { id: "banheiro_rosa", label: "Banheiro Rosa", icon: "🧼" },
   { id: "cozinha", label: "Cozinha", icon: "🍳" },
-  { id: "sala", label: "Sala", icon: "🛋️" },
-  { id: "quartos", label: "Quartos", icon: "🛏️" },
-  { id: "banheiros", label: "Banheiros", icon: "🚿" },
   { id: "lavanderia", label: "Lavanderia", icon: "🧺" },
-  { id: "cuidados", label: "Cuidados", icon: "🪴" },
-  { id: "garagem", label: "Garagem", icon: "🚗" }
+  { id: "quintal", label: "Quintal", icon: "🌿" },
+  { id: "sala", label: "Sala", icon: "🛋️" },
+  { id: "escritorio", label: "Escritório", icon: "💻" },
+  { id: "alpendre", label: "Alpendre", icon: "🏡" },
+  { id: "area_externa_garagem", label: "Área Externa - Garagem", icon: "🚗" }
 ];
 
 export const EFFORT_LEVELS = {
