@@ -397,3 +397,159 @@ export function getMarketAnalytics(state, selectedMonthKey = null) {
     paymentBreakdown
   };
 }
+
+// -------------------------------------------------------------
+// CONCILIAÇÃO INTELIGENTE DE ITENS COMPRADOS COM A LISTA
+// -------------------------------------------------------------
+
+const RECONCILIATION_STOPWORDS = new Set([
+  'de', 'da', 'do', 'das', 'dos', 'em', 'no', 'na', 'nos', 'nas', 'com', 'sem', 'para', 'por', 'e', 'a', 'o',
+  'kg', 'g', 'gr', 'gramas', 'l', 'lt', 'litro', 'litros', 'ml', 'un', 'unidade', 'unidades', 'und',
+  'pct', 'pacote', 'cx', 'caixa', 'fd', 'fardo', 'tp', 'uht', 't1', 'tipo', '1kg', '5kg', '1l', '500g', '200g'
+]);
+
+function normalizeReconciliationStr(str) {
+  return String(str || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractReconciliationTokens(str) {
+  return normalizeReconciliationStr(str)
+    .split(' ')
+    .filter(w => w.length >= 2 && !RECONCILIATION_STOPWORDS.has(w));
+}
+
+export function computeTextSimilarity(s1, s2) {
+  const norm1 = normalizeReconciliationStr(s1);
+  const norm2 = normalizeReconciliationStr(s2);
+
+  if (!norm1 || !norm2) return 0;
+  if (norm1 === norm2) return 1.0;
+
+  // Substring direta (ex: "arroz" em "arroz tio joao")
+  if (norm2.includes(norm1) || norm1.includes(norm2)) {
+    return 0.90;
+  }
+
+  const tokens1 = extractReconciliationTokens(s1);
+  const tokens2 = extractReconciliationTokens(s2);
+
+  if (tokens1.length === 0 || tokens2.length === 0) return 0;
+
+  if (tokens1.length === 1) {
+    const t = tokens1[0];
+    const match = tokens2.some(t2 => t2 === t || (t.length >= 4 && (t2.startsWith(t) || t.startsWith(t2))));
+    if (match) return 0.85;
+  }
+
+  let matchCount = 0;
+  tokens1.forEach(t1 => {
+    const found = tokens2.some(t2 => t2 === t1 || (t1.length >= 4 && (t2.startsWith(t1) || t1.startsWith(t2))));
+    if (found) matchCount++;
+  });
+
+  const ratio = matchCount / tokens1.length;
+  if (ratio >= 0.5) {
+    return Math.max(0.65, ratio);
+  }
+
+  return 0;
+}
+
+/**
+ * Compara os itens da compra efetuada (ou notas) com os itens pendentes da lista de compras.
+ * Retorna lista de similaridades encontradas para confirmação pelo usuário.
+ */
+export function findMatchingShoppingItems(state, purchaseData) {
+  if (!state || !Array.isArray(state.compras)) return [];
+
+  // Considera apenas itens da lista que ainda NÃO foram comprados
+  const pendingItems = state.compras.filter(item => !item.bought);
+  if (pendingItems.length === 0) return [];
+
+  // Coleta os textos/itens da compra efetuada
+  const purchaseTexts = [];
+
+  if (Array.isArray(purchaseData?.items)) {
+    purchaseData.items.forEach(it => {
+      const name = it.name || it.title || it.rawName || it.description;
+      if (name) purchaseTexts.push(String(name).trim());
+    });
+  }
+
+  if (purchaseData?.notes) {
+    const noteLines = String(purchaseData.notes).split(/[\n,;]+/);
+    noteLines.forEach(l => {
+      const trimmed = l.trim();
+      if (trimmed.length >= 3) purchaseTexts.push(trimmed);
+    });
+  }
+
+  if (purchaseTexts.length === 0) return [];
+
+  const matched = [];
+  const matchedShoppingIds = new Set();
+
+  pendingItems.forEach(shopItem => {
+    if (matchedShoppingIds.has(shopItem.id)) return;
+    const shopName = shopItem.name || shopItem.title || '';
+    if (!shopName) return;
+
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const purText of purchaseTexts) {
+      const score = computeTextSimilarity(shopName, purText);
+      if (score >= 0.55 && score > bestScore) {
+        bestScore = score;
+        bestMatch = purText;
+      }
+    }
+
+    if (bestMatch && bestScore >= 0.55) {
+      matchedShoppingIds.add(shopItem.id);
+      matched.push({
+        shoppingItem: shopItem,
+        matchedWith: bestMatch,
+        score: Math.round(bestScore * 100) / 100
+      });
+    }
+  });
+
+  return matched;
+}
+
+/**
+ * Marca como comprados os itens da lista informados
+ */
+export function markShoppingItemsAsBought(state, itemIds, userId = 'matheus') {
+  if (!Array.isArray(state.compras) || !Array.isArray(itemIds) || itemIds.length === 0) return 0;
+  const idSet = new Set(itemIds);
+  let count = 0;
+  const now = new Date().toISOString();
+  state.compras.forEach(item => {
+    if (idSet.has(item.id)) {
+      item.bought = true;
+      item.boughtAt = now;
+      item.boughtBy = userId;
+      count++;
+    }
+  });
+  return count;
+}
+
+/**
+ * Exclui permanentemente da lista de compras os itens informados
+ */
+export function removeShoppingItemsFromList(state, itemIds) {
+  if (!Array.isArray(state.compras) || !Array.isArray(itemIds) || itemIds.length === 0) return 0;
+  const idSet = new Set(itemIds);
+  const before = state.compras.length;
+  state.compras = state.compras.filter(item => !idSet.has(item.id));
+  return before - state.compras.length;
+}

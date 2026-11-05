@@ -41,7 +41,10 @@ import {
   getMarketPurchasesByMonth,
   parseQuantity,
   getItemTotalPrice,
-  updateMarketPurchase
+  updateMarketPurchase,
+  findMatchingShoppingItems,
+  markShoppingItemsAsBought,
+  removeShoppingItemsFromList
 } from './shopping.js';
 import { parseNfceQrCodeText, fetchNfceDetailsOnline } from './nfce.js';
 import { parseCurrency, formatCurrency, formatCurrencyWithSymbol } from './currency.js';
@@ -686,6 +689,79 @@ function initHeaderControls() {
 
   // Salvar compra manual
   if (formManualPurchase) {
+
+  // -----------------------------------------------------------
+  // CONCILIAÇÃO INTELIGENTE DE ITENS DA LISTA COM A COMPRA FEITA
+  // -----------------------------------------------------------
+  function checkAndPromptMatchedShoppingItems(purchase) {
+    if (!purchase) return false;
+    const matches = findMatchingShoppingItems(state, purchase);
+    if (!matches || matches.length === 0) return false;
+
+    const listContainer = document.getElementById('match-shopping-items-list');
+    if (!listContainer) return false;
+
+    listContainer.innerHTML = matches.map((m) => `
+      <label style="display: flex; align-items: center; gap: 0.65rem; background: rgba(22, 163, 74, 0.06); border: 1px solid rgba(22, 163, 74, 0.25); border-radius: var(--radius-md); padding: 0.6rem 0.75rem; cursor: pointer;">
+        <input type="checkbox" class="match-item-checkbox" data-match-id="${m.shoppingItem.id}" checked style="width: 1.15rem; height: 1.15rem; accent-color: #16a34a; cursor: pointer;" />
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 0.88rem; color: var(--text-primary);">${m.shoppingItem.name || m.shoppingItem.title}</strong>
+            ${m.shoppingItem.quantity ? `<span class="badge" style="font-size: 0.7rem; background: rgba(0,0,0,0.06);">${m.shoppingItem.quantity}</span>` : ''}
+          </div>
+          <div style="font-size: 0.73rem; color: #15803d; margin-top: 0.15rem;">
+            🧾 Identificado na compra: <em>${m.matchedWith}</em>
+          </div>
+        </div>
+      </label>
+    `).join('');
+
+    setTimeout(() => {
+      openModal('modal-match-shopping-items');
+    }, 250);
+    return true;
+  }
+
+  const btnMatchBought = document.getElementById('btn-match-mark-bought');
+  const btnMatchDelete = document.getElementById('btn-match-delete-items');
+
+  if (btnMatchBought) {
+    btnMatchBought.addEventListener('click', () => {
+      const checkedBoxes = document.querySelectorAll('#match-shopping-items-list .match-item-checkbox:checked');
+      const ids = Array.from(checkedBoxes).map(cb => cb.getAttribute('data-match-id')).filter(Boolean);
+      if (ids.length === 0) {
+        showToast('Nenhum item selecionado.', 'info');
+        closeModal('modal-match-shopping-items');
+        return;
+      }
+      const count = markShoppingItemsAsBought(state, ids, state.activeUserId || 'matheus');
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      closeModal('modal-match-shopping-items');
+      showToast(`✅ ${count} ${count === 1 ? 'item marcado' : 'itens marcados'} como comprado(s) na lista!`, 'success');
+      playTaskCompleteSound(state?.settings?.soundEnabled);
+      refreshAllUI();
+    });
+  }
+
+  if (btnMatchDelete) {
+    btnMatchDelete.addEventListener('click', () => {
+      const checkedBoxes = document.querySelectorAll('#match-shopping-items-list .match-item-checkbox:checked');
+      const ids = Array.from(checkedBoxes).map(cb => cb.getAttribute('data-match-id')).filter(Boolean);
+      if (ids.length === 0) {
+        showToast('Nenhum item selecionado.', 'info');
+        closeModal('modal-match-shopping-items');
+        return;
+      }
+      const count = removeShoppingItemsFromList(state, ids);
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      closeModal('modal-match-shopping-items');
+      showToast(`🗑️ ${count} ${count === 1 ? 'item removido' : 'itens removidos'} da lista de mercado!`, 'info');
+      refreshAllUI();
+    });
+  }
+
     formManualPurchase.addEventListener('submit', (e) => {
       e.preventDefault();
       const marketName = (document.getElementById('manual-purchase-market')?.value || 'Supermercado').trim();
@@ -753,6 +829,7 @@ function initHeaderControls() {
 
       playTaskCompleteSound(state.settings.soundEnabled);
       showToast(`🎉 Compra no ${marketName} (${formatCurrencyWithSymbol(total)}) registrada com sucesso!`, 'success', 3500);
+      checkAndPromptMatchedShoppingItems(purchase);
     });
   }
 
@@ -2857,6 +2934,9 @@ function initComprasModule() {
 
       updateCatalogDatalist(state);
       refreshAllUI();
+      if (currentPendingPdfInvoice) {
+        checkAndPromptMatchedShoppingItems(currentPendingPdfInvoice);
+      }
       currentPendingPdfInvoice = null;
     });
   }

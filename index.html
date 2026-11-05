@@ -14,9 +14,9 @@
 
   <!-- Icons & Manifest -->
   <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=2.2.9" />
-  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png?v=2.2.9" />
-  <link rel="shortcut icon" href="./favicon.ico?v=2.2.9" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=2.3.0" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png?v=2.3.0" />
+  <link rel="shortcut icon" href="./favicon.ico?v=2.3.0" />
 
   <!-- Auto-update PWA e escape de cache -->
   <script>
@@ -41,10 +41,10 @@
   </script>
 
   <!-- Stylesheets (v2.1.3) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.2.9" />
-  <link rel="stylesheet" href="./css/base.css?v=2.2.9" />
-  <link rel="stylesheet" href="./css/components.css?v=2.2.9" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.2.9" />
+  <link rel="stylesheet" href="./css/variables.css?v=2.3.0" />
+  <link rel="stylesheet" href="./css/base.css?v=2.3.0" />
+  <link rel="stylesheet" href="./css/components.css?v=2.3.0" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.3.0" />
 </head>
 <body>
 
@@ -58,7 +58,7 @@
     <div class="auth-card">
       <div class="auth-header">
         <div class="auth-logo-wrapper">
-          <img src="./icons/icon-192.png?v=2.2.9" alt="Maracaju" class="auth-logo" />
+          <img src="./icons/icon-192.png?v=2.3.0" alt="Maracaju" class="auth-logo" />
         </div>
         <h2 class="auth-title">Maracaju</h2>
         <span class="auth-badge">Área Restrita aos Moradores</span>
@@ -144,7 +144,7 @@
   <header class="app-header">
     <div class="header-container">
       <div class="brand-wrapper">
-        <img src="./icons/icon-192.png?v=2.2.9" alt="Maracaju" class="brand-logo" />
+        <img src="./icons/icon-192.png?v=2.3.0" alt="Maracaju" class="brand-logo" />
         <div class="brand-text">
           <h1>Maracaju</h1>
         </div>
@@ -545,7 +545,7 @@
         <div class="dash-card">
           <h3 class="dash-title" style="margin-bottom: 0.75rem;">📲 Atualização do Aplicativo</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            Versão instalada: <strong>Maracaju v2.2.9</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
+            Versão instalada: <strong>Maracaju v2.3.0</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
           </p>
           <button type="button" id="btn-force-update-settings" class="btn btn-secondary btn-sm" onclick="window.forceUpdateApp && window.forceUpdateApp()">
             🔄 Limpar Cache e Forçar Atualização
@@ -1775,6 +1775,35 @@
     </div>
   </div>
 
+  <!-- Modal: Conciliação Inteligente de Itens da Lista de Mercado -->
+  <div id="modal-match-shopping-items" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🛒 Itens Encontrados na Lista!</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+        Identificamos que produtos desta compra coincidem com itens pendentes na sua <strong>Lista de Mercado</strong>. O que deseja fazer com eles?
+      </p>
+
+      <div id="match-shopping-items-list" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+        <!-- Inserido dinamicamente via JS -->
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button type="button" id="btn-match-mark-bought" class="btn btn-primary" style="flex: 1; min-width: 150px; justify-content: center; background: linear-gradient(135deg, #15803d, #166534);">
+          ✅ Marcar Comprados
+        </button>
+        <button type="button" id="btn-match-delete-items" class="btn btn-danger" style="flex: 1; min-width: 140px; justify-content: center;">
+          🗑️ Excluir da Lista
+        </button>
+        <button type="button" class="btn btn-secondary" data-close-modal style="flex: 1; min-width: 100px; justify-content: center;">
+          Manter na Lista
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Leitor de QR Code de Nota Fiscal (NFC-e) -->
   <div id="modal-qr-scanner" class="modal-overlay">
     <div class="modal-content" style="max-width: 480px;">
@@ -1871,6 +1900,6 @@
   </div>
 
   <!-- Script Principal Modular (v2.1.0) -->
-  <script type="module" src="./js/app.js?v=2.2.9"></script>
+  <script type="module" src="./js/app.js?v=2.3.0"></script>
 </body>
 </html>
