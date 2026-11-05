@@ -16,7 +16,7 @@ import {
   verifyUserPassword,
   hasUserCustomPassword
 } from './auth.js';
-import { playTaskCompleteSound, playLevelUpSound, playSubtleClick } from './audio.js';
+import { playTaskCompleteSound, playSubtleClick } from './audio.js';
 import { toggleTaskDone, addTask, deleteTask, updateTask, getLocalDateString } from './tasks.js';
 import {
   addShoppingItem,
@@ -531,18 +531,10 @@ function initTasksModule() {
 
         if (res && res.status === 'completed') {
           playTaskCompleteSound(state.settings.soundEnabled);
-          triggerConfetti();
-          showToast(`+${res.xpAwarded} XP para ${res.doneBy}! 🎉`, 'success');
-
-          if (res.newlyUnlocked && res.newlyUnlocked.length > 0) {
-            playLevelUpSound(state.settings.soundEnabled);
-            res.newlyUnlocked.forEach(b => {
-              showToast(`Nova Conquista: ${b.icon} ${b.name}!`, 'success', 4000);
-            });
-          }
+          showToast(`Tarefa concluída por ${res.doneBy}! ✓`, 'success');
         } else if (res && res.status === 'uncompleted') {
           playSubtleClick(state.settings.soundEnabled);
-          showToast(`Tarefa desmarcada (-${res.xpRemoved} XP)`, 'info');
+          showToast('Tarefa desmarcada', 'info');
         }
 
         saveState(state);

@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Maracaju" />
-  <meta name="description" content="App do casal: tarefas diárias e periódicas gamificadas, carro, reformas, sonhos e backup no Google Sheets" />
+  <meta name="description" content="App do casal: tarefas diárias e periódicas, mercado com leitor de nota fiscal, carro, reformas, sonhos e backup no Google Sheets" />
 
   <!-- Icons & Manifest -->
   <link rel="manifest" href="./manifest.json" />
@@ -40,11 +40,11 @@
     }
   </script>
 
-  <!-- Stylesheets (v2.1.1) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.1.1" />
-  <link rel="stylesheet" href="./css/base.css?v=2.1.1" />
-  <link rel="stylesheet" href="./css/components.css?v=2.1.1" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.1.1" />
+  <!-- Stylesheets (v2.1.2) -->
+  <link rel="stylesheet" href="./css/variables.css?v=2.1.2" />
+  <link rel="stylesheet" href="./css/base.css?v=2.1.2" />
+  <link rel="stylesheet" href="./css/components.css?v=2.1.2" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.1.2" />
 </head>
 <body>
 
@@ -131,7 +131,7 @@
       <div class="auth-footer" style="display: flex; flex-direction: column; gap: 0.6rem; align-items: center;">
         <span>🔒 Acesso seguro: Seus dados são mantidos no seu aparelho e sincronizados com a planilha Google do casal.</span>
         <button type="button" id="btn-force-update-login" style="background: none; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem; color: var(--brand-moss); font-size: 0.75rem; cursor: pointer; text-decoration: none;">
-          🔄 App desatualizado ou travado? Toque para Limpar Cache e Atualizar (v2.1.0)
+          🔄 App desatualizado ou travado? Toque para Limpar Cache e Atualizar (v2.1.2)
         </button>
       </div>
     </div>
@@ -507,7 +507,7 @@
           <h3 class="dash-title" style="margin-bottom: 0.75rem;">🔊 Preferências</h3>
           <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
             <input type="checkbox" id="settings-sound-toggle" checked />
-            <span>Ativar sons de conclusão e comemorações gamificadas</span>
+            <span>Ativar sons de conclusão de tarefas</span>
           </label>
         </div>
 
@@ -586,11 +586,11 @@
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label">Nível de Esforço (XP)</label>
+            <label class="form-label">Dificuldade / Esforço</label>
             <select id="task-input-effort" class="form-control">
-              <option value="leve">⚡ Leve (+10 XP)</option>
-              <option value="media" selected>⚡⚡ Média (+25 XP)</option>
-              <option value="pesada">⚡⚡⚡ Pesada (+50 XP)</option>
+              <option value="leve">⚡ Leve</option>
+              <option value="media" selected>⚡⚡ Média</option>
+              <option value="pesada">⚡⚡⚡ Pesada</option>
             </select>
           </div>
           <div class="form-group">
@@ -641,11 +641,11 @@
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label">Nível de Esforço (XP)</label>
+            <label class="form-label">Dificuldade / Esforço</label>
             <select id="task-edit-effort" class="form-control">
-              <option value="leve">⚡ Leve (+10 XP)</option>
-              <option value="media">⚡⚡ Média (+25 XP)</option>
-              <option value="pesada">⚡⚡⚡ Pesada (+50 XP)</option>
+              <option value="leve">⚡ Leve</option>
+              <option value="media">⚡⚡ Média</option>
+              <option value="pesada">⚡⚡⚡ Pesada</option>
             </select>
           </div>
           <div class="form-group">

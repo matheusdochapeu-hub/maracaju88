@@ -8,19 +8,17 @@ import { getLocalDateString, isTaskDoneOnDate } from './tasks.js';
 export function getHistoryForDate(state, dateStr = getLocalDateString()) {
   const tasks = state.tasks || [];
   const dayLog = (state.history && state.history[dateStr]) || {};
-  const userStats = { matheus: { count: 0, xp: 0 }, scarlet: { count: 0, xp: 0 } };
+  const userStats = { matheus: { count: 0 }, scarlet: { count: 0 } };
 
   // Tudo o que foi concluído neste dia (qualquer periodicidade)
   const tasksDone = Object.entries(dayLog)
     .filter(([, entry]) => entry && entry.done)
     .map(([taskId, entry]) => {
       const task = tasks.find(t => t.id === taskId) || {
-        id: taskId, title: entry.title || 'Tarefa removida', room: entry.room, frequency: entry.frequency, xp: entry.xp || 10
+        id: taskId, title: entry.title || 'Tarefa removida', room: entry.room, frequency: entry.frequency
       };
       const uid = (entry.userId === 'scarlet' || entry.userId === 'esposa') ? 'scarlet' : 'matheus';
-      const xpVal = entry.xp || task.xp || 10;
       userStats[uid].count++;
-      userStats[uid].xp = (userStats[uid].xp || 0) + xpVal;
       return { task, entry };
     })
     .sort((a, b) => (a.entry.completedAt || '').localeCompare(b.entry.completedAt || ''));

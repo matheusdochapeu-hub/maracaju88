@@ -274,13 +274,11 @@ test('Tasks: Frequências Diárias, Semanais, Mensais e Anuais', () => {
   // 1. Concluir tarefa diária
   const resD = toggleTaskDone(state, "task_d1", today, "matheus");
   assert.equal(resD.status, "completed");
-  assert.equal(resD.xpAwarded, 25);
   assert.equal(isTaskDoneOnDate(state, "task_d1", today), true);
 
   // 2. Concluir tarefa semanal
   const resS = toggleTaskDone(state, "task_s1", today, "esposa");
   assert.equal(resS.status, "completed");
-  assert.equal(resS.xpAwarded, 50);
   assert.equal(isTaskDoneOnDate(state, "task_s1", today), true);
 
   // 3. Concluir tarefa mensal
@@ -326,7 +324,6 @@ test('History: Verificação detalhada de tarefas feitas e pendentes no dia', ()
   assert.equal(hist.pendingCount, 3);
   assert.equal(hist.tasksDone[0].task.id, "task_d1");
   assert.equal(hist.userStats.matheus.count, 1);
-  assert.equal(hist.userStats.matheus.xp, 25);
 
   const recent = getRecentDaysSummary(state, 7);
   assert.equal(recent.length, 7);
@@ -559,7 +556,6 @@ test('Tasks: Editar tarefa e alterar periodicidade (diária, semanal, mensal, an
     title: "Limpar fogão",
     room: "cozinha",
     effort: "leve",
-    xp: 10,
     assignedTo: "matheus",
     frequency: "diaria",
     notes: "Usar desengordurante"
@@ -576,7 +572,6 @@ test('Tasks: Editar tarefa e alterar periodicidade (diária, semanal, mensal, an
   });
   assert.equal(updated1.title, "Limpar e desengordurar fogão e forno");
   assert.equal(updated1.effort, "pesada");
-  assert.equal(updated1.xp, 50); // XP atualizado de acordo com o esforço
   assert.equal(updated1.notes, "Cuidado com o vidro do forno");
 
   // 2. Mudar periodicidade de 'diaria' para 'semanal'

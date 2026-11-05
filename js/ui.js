@@ -4,7 +4,6 @@
 
 import { ROOMS, EFFORT_LEVELS, BADGES, FREQUENCIES, CARRO_CATEGORIES } from './config.js';
 import { getCategories, findCategory, QUICK_EMOJIS_LIST } from './categories.js';
-import { getCoupleTotalXp, getCurrentLevel } from './gamification.js';
 import { parseCurrency, formatCurrency, formatCurrencyWithSymbol } from './currency.js';
 import { getShoppingSummary, getMarketPurchasesByMonth, getMonthLabel, parseQuantity, getItemTotalPrice } from './shopping.js';
 import { isBiometricsSupported, isBiometricsEnabled } from './auth.js';
@@ -109,17 +108,9 @@ export function showToast(message, type = 'info', duration = 3000) {
 }
 
 // -------------------------------------------------------------
-// RENDERIZAÇÃO DO CABEÇALHO & PLACAR RÁPIDO
+// RENDERIZAÇÃO DO CABEÇALHO & MORADOR ATIVO
 // -------------------------------------------------------------
 export function renderHeaderStats(state) {
-  const totalXp = getCoupleTotalXp(state);
-  const lvl = getCurrentLevel(totalXp);
-  const streak = state.gamification.streak || 0;
-
-  // Streak Pill
-  const streakEl = document.getElementById('header-streak-count');
-  if (streakEl) streakEl.textContent = `${streak} ${streak === 1 ? 'dia' : 'dias'}`;
-
   // Active User Toggle
   const activeId = state.activeUserId || 'matheus';
   const activeUser = (activeId === 'esposa' || activeId === 'scarlet') ? state.users.user2 : state.users.user1;
@@ -146,8 +137,6 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
   const todayStr = getLocalDateString();
   const freqSummary = getAllFrequenciesSummary(state, todayStr);
   const currentProg = getTasksProgressByFrequency(state, selectedFrequency, todayStr);
-  const totalXp = getCoupleTotalXp(state);
-  const lvl = getCurrentLevel(totalXp);
 
   // Barra Segmentada de Frequências (Diárias, Semanais, Mensais, Anuais)
   const freqBar = document.getElementById('frequency-segmented-bar');
@@ -318,11 +307,11 @@ export function renderHistoryTab(state, targetDateStr = getLocalDateString()) {
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem; font-size: 0.85rem;">
         <div style="background: var(--bg-secondary); padding: 0.5rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
           <span style="color: var(--text-muted);">👨‍💻 ${state.users.user1.name}:</span>
-          <strong>${historyData.userStats.matheus.count} tarefas (${historyData.userStats.matheus.xp} XP)</strong>
+          <strong>${historyData.userStats.matheus.count} tarefas</strong>
         </div>
         <div style="background: var(--bg-secondary); padding: 0.5rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
           <span style="color: var(--text-muted);">👩‍💼 ${state.users.user2.name}:</span>
-          <strong>${(historyData.userStats.scarlet || historyData.userStats.esposa || {count: 0}).count} tarefas (${(historyData.userStats.scarlet || historyData.userStats.esposa || {xp: 0}).xp} XP)</strong>
+          <strong>${(historyData.userStats.scarlet || historyData.userStats.esposa || {count: 0}).count} tarefas</strong>
         </div>
       </div>
     `;
@@ -350,7 +339,7 @@ export function renderHistoryTab(state, targetDateStr = getLocalDateString()) {
             Feito por <strong>${entry.doneBy}</strong> às ${entry.completedAt || '--:--'} • Cômodo: ${task.room}
           </div>
         </div>
-        <span class="tag-xp">+${entry.xp} XP</span>
+        <span style="color: var(--success); font-weight: 600; font-size: 0.85rem;">✓ Concluída</span>
       </div>
     `).join('');
   }

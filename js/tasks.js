@@ -89,7 +89,7 @@ export function toggleTaskDone(state, taskId, dateStr = getLocalDateString(), us
     frequency: task.frequency || 'diaria',
     completedAt: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   };
-  return { status: 'completed', doneBy: user.name, xpAwarded: task.xp || 10 };
+  return { status: 'completed', doneBy: user.name };
 }
 
 export function getTasksProgressByFrequency(state, frequency = 'diaria', dateStr = getLocalDateString()) {
@@ -118,7 +118,6 @@ export function addTask(state, data) {
     room: data.room || 'geral',
     assignedTo: data.assignedTo || 'ambos',
     effort: data.effort || 'media',
-    xp: data.xp || (data.effort === 'pesada' ? 50 : (data.effort === 'leve' ? 10 : 25)),
     frequency: normalizeFrequency(data.frequency),
     notes: data.notes ? data.notes.trim() : '',
     createdAt: new Date().toISOString()
@@ -138,13 +137,7 @@ export function updateTask(state, taskId, data) {
   }
   if (data.room !== undefined) task.room = data.room;
   if (data.frequency !== undefined) task.frequency = normalizeFrequency(data.frequency);
-  if (data.effort !== undefined) {
-    task.effort = data.effort;
-    if (data.xp === undefined) {
-      task.xp = data.effort === 'pesada' ? 50 : (data.effort === 'leve' ? 10 : 25);
-    }
-  }
-  if (data.xp !== undefined) task.xp = Number(data.xp);
+  if (data.effort !== undefined) task.effort = data.effort;
   if (data.assignedTo !== undefined) task.assignedTo = data.assignedTo;
   if (data.notes !== undefined) task.notes = (data.notes || '').trim();
   task.updatedAt = new Date().toISOString();

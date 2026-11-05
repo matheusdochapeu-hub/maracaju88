@@ -4,7 +4,7 @@
 
 export const APP_CONFIG = {
   appName: "Maracaju",
-  version: "2.1.1",
+  version: "2.1.2",
   storageKey: "MARACAJU_STATE_v1",
   legacyStorageKeys: ["MARACAJU88_STATE_v1"],
   deviceStorageKey: "MARACAJU_DEVICE_v1",
@@ -52,14 +52,12 @@ export const ROOMS = [
 ];
 
 export const EFFORT_LEVELS = {
-  leve: { label: "Leve", xp: 10, icon: "⚡" },
-  media: { label: "Média", xp: 25, icon: "⚡⚡" },
-  pesada: { label: "Pesada", xp: 50, icon: "⚡⚡⚡" }
+  leve: { label: "Leve", icon: "⚡" },
+  media: { label: "Média", icon: "⚡⚡" },
+  pesada: { label: "Pesada", icon: "⚡⚡⚡" }
 };
 
-export const LEVELS = [
-  { level: 1, minXp: 0, title: "Iniciantes do Lar", icon: "🌱" }
-];
+export const LEVELS = [];
 
 export const BADGES = [];
 
