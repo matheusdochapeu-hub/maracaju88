@@ -1719,3 +1719,40 @@
 .market-receipt-items-details[open] summary .details-chevron {
   color: var(--brand-forest);
 }
+
+
+/* Grupo de botões flutuantes empilhados verticalmente */
+.fab-stack {
+  position: fixed;
+  right: max(1.25rem, calc((100vw - var(--max-content-width)) / 2 + 1.25rem));
+  bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 16px) + 0.85rem);
+  z-index: 850;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.55rem;
+  pointer-events: none;
+}
+
+.fab-stack .fab-btn {
+  position: static;
+  pointer-events: auto;
+  padding: 0.72rem 1.2rem;
+  font-size: 0.875rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+.fab-btn-purchase {
+  background: linear-gradient(135deg, #15803d, #166534) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(21, 128, 61, 0.45), 0 3px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.fab-btn-purchase:hover {
+  background: linear-gradient(135deg, #16a34a, #15803d) !important;
+  transform: translateY(-2px) scale(1.03);
+}
+
+.fab-btn-purchase .fab-icon {
+  color: #ffffff !important;
+}
