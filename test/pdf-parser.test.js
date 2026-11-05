@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
-import { parseNfceDanfeText, suggestPopularName, detectCategoryFromItemName } from '../js/pdf-parser.js';
+import { parseNfceDanfeText, suggestPopularName, detectCategoryFromItemName, reconstructSpatialLines } from '../js/pdf-parser.js';
 import {
   ensureCatalog,
   upsertCatalogProduct,
@@ -144,6 +145,36 @@ test('PDF Parser: Extrai com perfeição a nota fiscal Carrefour enviada pelo us
   assert.ok(itemQueijo);
   assert.equal(itemQueijo.alias, 'Queijo Mussarela Interfolhado');
   assert.equal(itemQueijo.category, 'frios');
+});
+
+test('PDF Parser: Extrai com perfeição o texto real fragmentado extraído do PDF do Carrefour', () => {
+  const realText = fs.readFileSync(new URL('./real-extracted-text.txt', import.meta.url), 'utf8');
+  const result = parseNfceDanfeText(realText);
+
+  assert.equal(result.marketName, 'Carrefour');
+  assert.equal(result.date, '2026-11-03');
+  assert.equal(result.total, 280.66);
+  assert.equal(result.nfeKey, '35261145543915028000650110001615001748865489');
+  assert.equal(result.items.length, 18);
+
+  const item1 = result.items[0];
+  assert.equal(item1.rawName, 'ACUCAR REF CARAVELAS');
+  assert.equal(item1.code, 'SS010604');
+  assert.equal(item1.unitPrice, 3.19);
+  assert.equal(item1.totalPrice, 3.19);
+  assert.equal(item1.alias, 'Açúcar Refinado Caravelas');
+  assert.equal(item1.category, 'mercearia');
+
+  const cha = result.items.find(i => i.code === 'SS012261');
+  assert.ok(cha);
+  assert.equal(cha.unitPrice, 18.29);
+  assert.equal(cha.totalPrice, 18.29);
+
+  const mamao = result.items.find(i => i.code === 'SS044641');
+  assert.ok(mamao);
+  assert.equal(mamao.qty, '1,335');
+  assert.equal(mamao.unitPrice, 8.99);
+  assert.equal(mamao.totalPrice, 12.00);
 });
 
 test('Catálogo: Memoriza produtos, apelidos, histórico de preços e fotos vinculadas', () => {

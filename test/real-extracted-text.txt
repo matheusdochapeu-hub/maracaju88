@@ -1,0 +1,58 @@
+CARREFOUR COMERCIO E INDUSTRIA LTDA
+CNPJ: 45.543.915/0280-00
+RUA MUNICIPAL , 252 , , IPIRANGA , RIBEIRAO PRETO , SP
+ACUCAR REF CARAVELAS (C ó digo: SS010604 ) Vl. Total
+Qtde.: 1 UN: un9 Vl. Unit.: 3,19 3,19
+CHA MATE LEAO LIMA T (C ó digo: SS012261 ) Vl. Total
+Qtde.: 1 UN: un9 Vl. Unit.: 18,29 18,29
+MAIONESE RECEITA CAS (C ó digo: SS013381 ) Vl. Total
+Qtde.: 2 UN: un9 Vl. Unit.: 12,29 24,58
+MEL ORG CARREFOUR BI (C ó digo: SS014682 ) Vl. Total
+Qtde.: 1 UN: un9 Vl. Unit.: 21,59 21,59
+TOMATE GRAPE CRFO ME (C ó digo: SS016283 ) Vl. Total
+Qtde.: 1 UN: un9 Vl. Unit.: 14,89 14,89
+ABACAXI PEROLA CRFO (C ó digo: SS028678 ) Vl. Total
+Qtde.: 1 UN: un9 Vl. Unit.: 8,99 8,99
+CHA CAMOMILA DR OETK (C ó digo: SS032018 ) Vl. Total
+Qtde.: 1 UN: un9 Vl. Unit.: 10,99 10,99
+BEB LAC ZL PROFORCE (C ó digo: SS038128 ) Vl. Total
+Qtde.: 4 UN: un9 Vl. Unit.: 8,79 35,16
+BEB LAC ZL PROFORCE (C ó digo: SS038146 ) Vl. Total
+Qtde.: 4 UN: un9 Vl. Unit.: 8,79 35,16
+OVO GDE BRANCO BULNE (C ó digo: SS045293 ) Vl. Total
+Qtde.: 1 UN: un9 Vl. Unit.: 13,29 13,29
+MAMAO FORMOSA ORG (C ó digo: SS044641 ) Vl. Total
+Qtde.: 1,335 UN: kg9 Vl. Unit.: 8,99 12,00
+BANANA NANICA CRF Kg (C ó digo: SS028686 ) Vl. Total
+Qtde.: 0,865 UN: kg9 Vl. Unit.: 7,49 6,48
+QJ MUSSARELA INTERFO (C ó digo: SS049427 ) Vl. Total
+Qtde.: 0,29 UN: kg9 Vl. Unit.: 66,99 19,43
+QJ MUSSARELA INTERFO (C ó digo: SS049427 ) Vl. Total
+Qtde.: 0,308 UN: kg9 Vl. Unit.: 66,99 20,63
+ESPONJA DE ACO BOMBR (C ó digo: SS005161 ) Vl. Total
+Qtde.: 1 UN: un9 Vl. Unit.: 2,79 2,79
+MIX FOLHAS LA VITA (C ó digo: SS053386 ) Vl. Total
+Qtde.: 1 UN: un9 Vl. Unit.: 12,39 12,39
+BEB LAC ZL PROFORCE (C ó digo: SS006326 ) Vl. Total
+Qtde.: 4 UN: un9 Vl. Unit.: 8,79 35,16
+REQUEIJAO CREMOSO LI (C ó digo: SS006531 ) Vl. Total
+Qtde.: 2 UN: un9 Vl. Unit.: 8,89 17,78
+Qtd. total de itens: 18
+Valor total R$: 312,79
+Descontos R$: 32,13
+Valor a pagar R$:
+280,66
+Forma de pagamento: Valor pago R$:
+Vale Alimenta çã o 280,66
+Troco NaN
+Informa çã o dos Tributos Totais Incidentes (Lei Federal
+12.741/2012) R$ 81,84
+Informa ç õ es gerais da Nota
+EMISS Ã O NORMAL
+N ú mero: 161500 S é rie: 11 Emiss ã o: 03/11/2026 09:41:43 - Via Consumidor
+Protocolo de Autoriza çã o: 13526007558043250 03/11/2026 09:41:42
+Ambiente de Produ çã o - Vers ã o XML: 4.00 - Vers ã o XSLT: 2.05
+Chave de acesso
+Consulte pela Chave de Acesso em https://www.nfce.fazenda.sp.gov.br/consulta
+Chave de acesso:
+3526 1145 5439 1502 8000 6501 1000 1615 0017 4886 5489

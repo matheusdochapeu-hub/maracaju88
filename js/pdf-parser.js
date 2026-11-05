@@ -141,8 +141,8 @@ export function parseNfceDanfeText(rawText) {
   }
 
   // 3. Extração da Data da Compra
-  // Formato: 03/11/2026 09:41:43 ou 03/11/2026
-  const dateMatch = fullText.match(/(?:Emiss[aã]o|Data\/Hora):\s*(\d{2})\/(\d{2})\/(\d{4})/i) ||
+  // Formato: 03/11/2026 09:41:43 ou Emiss ã o: 03/11/2026
+  const dateMatch = fullText.match(/(?:Emiss\s*[aã]\s*o|Data\/Hora):\s*(\d{2})\/(\d{2})\/(\d{4})/i) ||
                     fullText.match(/(\d{2})\/(\d{2})\/(\d{4})\s+\d{2}:\d{2}/);
   if (dateMatch) {
     const day = dateMatch[1];
@@ -184,14 +184,13 @@ export function parseNfceDanfeText(rawText) {
 
   // 6. Extração de Itens da Compra
   // Padrão identificado na nota Carrefour / NFC-e padrão:
-  // Linha 1: NOME DO ITEM (Código: SS010604 )
-  // Linha 2: Qtde.:1 UN: un9 Vl. Unit.: 3,19
-  // Linha 3 ou 4: Vl. Total \n 3,19
+  // Linha 1: NOME DO ITEM (C ó digo: SS010604 ) Vl. Total
+  // Linha 2: Qtde.: 1 UN: un9 Vl. Unit.: 3,19 3,19
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Procura linha de item com código ou linha de quantidade
-    const codeMatch = line.match(/^(.*?)\s*\(C[oó]digo:\s*([A-Za-z0-9]+)\s*\)$/i);
+    // Procura linha de item com código (com tolerância a espaçamentos do OCR/PDF: "(C ó digo: ...)")
+    const codeMatch = line.match(/^(.*?)\s*\(\s*C\s*[oó]?\s*digo:\s*([A-Za-z0-9_-]+)\s*\)/i);
     if (codeMatch) {
       const rawName = codeMatch[1].trim();
       const code = codeMatch[2].trim();
@@ -201,15 +200,24 @@ export function parseNfceDanfeText(rawText) {
       let unitPrice = 0;
       let totalPrice = 0;
 
-      // Inspeciona as próximas 4 linhas para achar Qtde e Valor
-      for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+      // Inspeciona as próximas linhas procurando quantidade e valores até encontrar o próximo item
+      for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
         const nextLine = lines[j];
 
-        const qtyMatch = nextLine.match(/Qtde\.:\s*([\d\.,]+)\s*UN:\s*([A-Za-z0-9]+)\s*Vl\.\s*Unit\.:\s*([\d\.,]+)/i);
+        // Se encontrar o cabeçalho de outro produto, interrompe a busca deste produto
+        if (/\(\s*C\s*[oó]?\s*digo:/i.test(nextLine)) {
+          break;
+        }
+
+        const qtyMatch = nextLine.match(/Qtde\.:\s*([\d\.,]+)\s*UN:\s*([A-Za-z0-9]+)\s*Vl\.\s*Unit\.:\s*([\d\.,]+)(?:\s+([\d\.,]+))?/i);
         if (qtyMatch) {
           qty = qtyMatch[1].trim();
           unit = qtyMatch[2].trim().toLowerCase().replace(/[0-9]/g, '');
           unitPrice = parseCurrency(qtyMatch[3]);
+          if (qtyMatch[4]) {
+            totalPrice = parseCurrency(qtyMatch[4]);
+          }
+          break;
         }
 
         const totalRowMatch = nextLine.match(/^Vl\.\s*Total$/i);
@@ -248,6 +256,35 @@ export function parseNfceDanfeText(rawText) {
     }
   }
 
+  // Fallback para outros formatos de NFC-e (ex: 001 PRODUTO 1 UN X 12,00)
+  if (items.length === 0) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const altQtyMatch = line.match(/(\d+[\.,]?\d*)\s*(?:UN|KG|LT|CX|PC)\s*(?:[xX]|\*)\s*([\d\.,]+)/i);
+      if (altQtyMatch && i > 0) {
+        const rawName = lines[i - 1].replace(/^\d+\s+/, '').trim();
+        const qty = altQtyMatch[1];
+        const unitPrice = parseCurrency(altQtyMatch[2]);
+        const numQty = parseFloat(qty.replace(',', '.')) || 1;
+        const totalPrice = Math.round(unitPrice * numQty * 100) / 100;
+        if (rawName.length > 2 && unitPrice > 0) {
+          const alias = suggestPopularName(rawName);
+          items.push({
+            code: 'ITEM_' + (items.length + 1),
+            rawName,
+            alias,
+            category: detectCategoryFromItemName(alias || rawName),
+            qty,
+            unit: 'un',
+            unitPrice,
+            totalPrice,
+            selected: true
+          });
+        }
+      }
+    }
+  }
+
   // Se não extraiu o total pelo regex ou deu 0, soma os itens extraídos
   if (total === 0 && items.length > 0) {
     total = Math.round(items.reduce((sum, it) => sum + (it.totalPrice || 0), 0) * 100) / 100;
@@ -264,11 +301,75 @@ export function parseNfceDanfeText(rawText) {
 }
 
 /**
- * Lê o arquivo PDF no navegador usando pdf.js e extrai todo o texto.
+ * Reconstrói linhas de texto respeitando a posição espacial (coordenadas X e Y)
+ * de cada fragmento extraído pelo PDF.js.
+ */
+export function reconstructSpatialLines(items) {
+  if (!items || !items.length) return '';
+
+  const validItems = items
+    .filter(it => it && typeof it.str === 'string' && it.str.length > 0 && it.transform)
+    .map(it => ({
+      str: it.str,
+      x: it.transform[4],
+      y: it.transform[5]
+    }));
+
+  if (validItems.length === 0) {
+    return items.map(it => (it && it.str) || '').join('\n');
+  }
+
+  // Agrupa itens que estão na mesma linha horizontal (mesmo Y com tolerância de até 3.5 pontos)
+  const rows = [];
+  for (const item of validItems) {
+    let matchedRow = null;
+    for (const row of rows) {
+      if (Math.abs(row.y - item.y) <= 3.5) {
+        matchedRow = row;
+        break;
+      }
+    }
+    if (matchedRow) {
+      matchedRow.items.push(item);
+    } else {
+      rows.push({
+        y: item.y,
+        items: [item]
+      });
+    }
+  }
+
+  // Ordena linhas do topo para a base (Y decrescente)
+  rows.sort((a, b) => b.y - a.y);
+
+  // Para cada linha, ordena da esquerda para a direita (X crescente)
+  const lineStrings = rows.map(row => {
+    row.items.sort((a, b) => a.x - b.x);
+    return row.items
+      .map(it => it.str)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }).filter(line => line.length > 0);
+
+  return lineStrings.join('\n');
+}
+
+/**
+ * Lê o arquivo PDF no navegador usando pdf.js e extrai todo o texto com reconstrução espacial.
  */
 export async function extractTextFromPdfFile(fileOrBlob) {
   if (typeof window === 'undefined' || !window.pdfjsLib) {
     throw new Error('A biblioteca de leitura de PDF (PDF.js) não está carregada no navegador.');
+  }
+
+  // Garante que o worker do PDF.js esteja configurado com URL absoluta compatível com PWA
+  if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    try {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('js/vendor/pdf.worker.min.js', window.location.href).href;
+    } catch {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = './js/vendor/pdf.worker.min.js';
+    }
   }
 
   const arrayBuffer = await fileOrBlob.arrayBuffer();
@@ -279,8 +380,8 @@ export async function extractTextFromPdfFile(fileOrBlob) {
   for (let p = 1; p <= numPages; p++) {
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
-    const pageLines = content.items.map(item => item.str).join('\n');
-    fullText += pageLines + '\n';
+    const pageText = reconstructSpatialLines(content.items);
+    fullText += pageText + '\n';
   }
 
   return fullText;
