@@ -54,6 +54,7 @@ export async function backupToSheets(state) {
       sonhos: state.sonhos || [],
       compras: state.compras || [],
       comprasRegistros: state.comprasRegistros || [],
+      catalog: state.catalog || [],
       categories: state.categories || {},
       userPasswords: state.userPasswords || {}
     }
@@ -147,6 +148,7 @@ export function applyCloudBackup(currentState, cloudData) {
     sonhos: Array.isArray(cloudData.sonhos) ? cloudData.sonhos : (safeCurrent.sonhos || []),
     compras: Array.isArray(cloudData.compras) ? cloudData.compras : (safeCurrent.compras || []),
     comprasRegistros: Array.isArray(cloudData.comprasRegistros) ? cloudData.comprasRegistros : (safeCurrent.comprasRegistros || []),
+    catalog: Array.isArray(cloudData.catalog) ? cloudData.catalog : (safeCurrent.catalog || []),
     categories: {
       tarefas: (cloudData.categories && Array.isArray(cloudData.categories.tarefas) && cloudData.categories.tarefas.length > 0)
         ? cloudData.categories.tarefas

@@ -3,11 +3,32 @@
 **Data da última consolidação:** `04/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v2.0.6`
+**Versão Atual:** `v2.1.0`
 
 ---
 
 ## Histórico de Versões
+
+### Versão 2.1.0 (`04/11/2026`) — Upload de Notas Fiscais em PDF, Catálogo Inteligente, Apelidos Populares, Fotos e Histórico Comparativo de Preços
+1. **Upload e Leitor de Notas em PDF (`#tab-compras`):**
+   - Adicionado botão `📄 Subir PDF` na barra de ações do Mercado.
+   - Extrai automaticamente todos os dados de comprovantes de NFC-e / Danfe via PDF.js offline: Razão Social do mercado, data da compra, total pago, chave de acesso de 44 dígitos e lista completa de itens.
+2. **Modal Interativo de Apelidos Populares e Conferência (`#modal-confirm-pdf-invoice`):**
+   - Transforma automaticamente nomes codificados e abreviações estranhas de supermercados (ex: `CHA MATE LEAO LIMA T`) em nomes populares (ex: `Chá Matte Leão Limão`).
+   - Permite que você e a Scarlet alterem e personalizem qualquer apelido, escolham a categoria correta e batam fotos do produto na hora (`📸 Câmera` / `🖼️ Galeria`).
+   - Opção para adicionar itens da nota fiscal diretamente à lista de compras do mês com 1 clique.
+3. **Catálogo de Produtos & Histórico Comparativo de Preços (`#modal-catalog-products`):**
+   - O app agora memoriza todos os produtos já comprados.
+   - Apresenta métricas de inteligência de preço: Último Preço Pago, Menor Preço Histórico e Variação Recente (ex: `↓ 7.6%`).
+   - Modal com busca instantânea por apelido, nome original ou código.
+   - Botão `+ Adicionar à Lista`: insere qualquer produto frequente na lista do mês com 1 toque, trazendo foto e preço memorizados.
+   - Autocomplete no formulário de novo item de compras: conforme você digita, o app sugere os produtos já comprados e autopreenche categoria e valor.
+4. **Sincronização com Google Sheets:**
+   - O catálogo de produtos é sincronizado na aba `Catalogo_Produtos` da planilha compartilhada do casal.
+5. **Atualização PWA:**
+   - Cache e Service Worker atualizados para `maracaju-v2.1.0`.
+
+---
 
 ### Versão 2.0.6 (`04/11/2026`) — Prioridade da Planilha Google (Cloud-First) & Sincronização Automática ao Abrir
 1. **Prioridade Absoluta da Nuvem ao Abrir:**

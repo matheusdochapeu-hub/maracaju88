@@ -152,6 +152,9 @@ function doPost(e) {
     // 9. Atualiza Aba: Categorias
     syncCategoriasSheet(ss, data.categories || {});
 
+    // 10. Atualiza Aba: Catalogo_Produtos
+    syncCatalogoSheet(ss, data.catalog || []);
+
     return createJsonResponse({
       status: "success",
       message: "Backup realizado com sucesso no Google Sheets!",
@@ -461,6 +464,39 @@ function syncCategoriasSheet(ss, categories) {
 
   sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
   sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#8b5cf6").setFontColor("#ffffff");
+  sheet.setFrozenRows(1);
+  for (var col = 1; col <= headers.length; col++) {
+    sheet.autoResizeColumn(col);
+  }
+}
+
+function syncCatalogoSheet(ss, catalog) {
+  if (!catalog || !Array.isArray(catalog)) return;
+  var sheet = getOrCreateSheet(ss, "Catalogo_Produtos");
+  sheet.clear();
+  var headers = ["Código", "Apelido Popular", "Nome na Nota Fiscal", "Categoria", "Último Preço (R$)", "Menor Preço (R$)", "Último Mercado", "Última Data", "Vezes Comprado"];
+  var rows = [headers];
+
+  catalog.forEach(function(p) {
+    rows.push([
+      p.code || "",
+      p.alias || "",
+      p.rawName || "",
+      p.category || "geral",
+      p.lastPrice || 0,
+      p.minPrice || 0,
+      p.lastMarket || "",
+      p.lastDate || "",
+      p.timesBought || 1
+    ]);
+  });
+
+  if (rows.length === 1) {
+    rows.push(["-", "Nenhum produto catalogado ainda", "-", "-", 0, 0, "-", "-", 0]);
+  }
+
+  sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#0d9488").setFontColor("#ffffff");
   sheet.setFrozenRows(1);
   for (var col = 1; col <= headers.length; col++) {
     sheet.autoResizeColumn(col);

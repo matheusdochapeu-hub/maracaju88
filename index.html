@@ -28,11 +28,19 @@
     }
   </script>
 
-  <!-- Stylesheets (v2.0.6) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.0.6" />
-  <link rel="stylesheet" href="./css/base.css?v=2.0.6" />
-  <link rel="stylesheet" href="./css/components.css?v=2.0.6" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.0.6" />
+  <!-- PDF.js para Leitura de Notas Fiscais em PDF -->
+  <script src="./js/vendor/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = './js/vendor/pdf.worker.min.js';
+    }
+  </script>
+
+  <!-- Stylesheets (v2.1.0) -->
+  <link rel="stylesheet" href="./css/variables.css?v=2.1.0" />
+  <link rel="stylesheet" href="./css/base.css?v=2.1.0" />
+  <link rel="stylesheet" href="./css/components.css?v=2.1.0" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.1.0" />
 </head>
 <body>
 
@@ -119,7 +127,7 @@
       <div class="auth-footer" style="display: flex; flex-direction: column; gap: 0.6rem; align-items: center;">
         <span>🔒 Acesso seguro: Seus dados são mantidos no seu aparelho e sincronizados com a planilha Google do casal.</span>
         <button type="button" id="btn-force-update-login" style="background: none; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem; color: var(--brand-moss); font-size: 0.75rem; cursor: pointer; text-decoration: none;">
-          🔄 App desatualizado ou travado? Toque para Limpar Cache e Atualizar (v2.0.6)
+          🔄 App desatualizado ou travado? Toque para Limpar Cache e Atualizar (v2.1.0)
         </button>
       </div>
     </div>
@@ -229,13 +237,20 @@
         <button type="button" class="chip" data-compras-view="notas">🧾 Notas & Compras Mensais</button>
       </div>
 
-      <!-- Barra de Ações: Leitor de QR Code de Nota Fiscal + Limpar Comprados -->
+      <!-- Barra de Ações: QR Code, Subir PDF da Nota, Catálogo/Já Comprados e Limpar -->
       <div class="compras-actions-row" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
-        <button type="button" class="btn btn-primary" id="btn-scan-nfce-qr" style="flex: 1; min-width: 180px; justify-content: center; background: linear-gradient(135deg, var(--brand-moss), #1e3a24);">
-          <span>📷</span> Ler QR Code da Nota Fiscal
+        <button type="button" class="btn btn-primary" id="btn-scan-nfce-qr" style="flex: 1; min-width: 130px; justify-content: center; background: linear-gradient(135deg, var(--brand-moss), #1e3a24);">
+          <span>📷</span> QR Code
         </button>
-        <button type="button" class="btn btn-secondary" id="btn-clear-bought-items" title="Limpar itens marcados como comprados">
-          <span>🧹</span> Limpar Comprados
+        <label class="btn btn-primary" style="flex: 1; min-width: 130px; justify-content: center; background: linear-gradient(135deg, #0d9488, #115e59); cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.4rem;">
+          <span>📄</span> Subir PDF
+          <input type="file" id="input-upload-pdf-nfce" accept="application/pdf,.pdf" style="display: none;" />
+        </label>
+        <button type="button" class="btn btn-secondary" id="btn-open-catalog" title="Produtos já comprados e comparativo de preços" style="flex: 1; min-width: 140px; justify-content: center;">
+          <span>✨</span> Já Comprados
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-bought-items" title="Limpar itens marcados como comprados">
+          <span>🧹</span> Limpar
         </button>
       </div>
 
@@ -511,7 +526,7 @@
         <div class="dash-card">
           <h3 class="dash-title" style="margin-bottom: 0.75rem;">📲 Atualização do Aplicativo</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            Versão instalada: <strong>Maracaju v2.0.6</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
+            Versão instalada: <strong>Maracaju v2.1.0</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
           </p>
           <button type="button" id="btn-force-update-settings" class="btn btn-secondary btn-sm" onclick="window.forceUpdateApp && window.forceUpdateApp()">
             🔄 Limpar Cache e Forçar Atualização
@@ -1110,6 +1125,111 @@ v>
     </div>
   </div>
 
+
+  <!-- ========================================== -->
+  <!-- MODAL: CONFERIR & APELIDAR ITENS DO PDF    -->
+  <!-- ========================================== -->
+  <div id="modal-confirm-pdf-invoice" class="modal-overlay">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">🧾 Nota Fiscal Importada</h3>
+          <p id="pdf-invoice-header-meta" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+            Carregando detalhes da nota fiscal...
+          </p>
+        </div>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+
+      <div style="background: rgba(13, 148, 136, 0.08); border: 1px solid rgba(13, 148, 136, 0.25); border-radius: var(--radius-md); padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">Mercado / Local</span>
+          <input type="text" id="pdf-invoice-market-name" class="form-control" style="font-weight: 700; padding: 0.2rem 0.4rem; height: auto;" />
+        </div>
+        <div style="text-align: right;">
+          <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">Total Pago</span>
+          <span id="pdf-invoice-total-display" style="font-size: 1.15rem; font-weight: 800; color: #0d9488;">R$ 0,00</span>
+        </div>
+      </div>
+
+      <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.65rem;">
+        💡 <strong>Dica:</strong> Como os mercados lançam nomes estranhos na nota fiscal, você pode <strong>dar apelidos populares aos itens</strong>, alterar categorias e até tirar fotos dos produtos para achá-los facilmente no futuro!
+      </p>
+
+      <!-- Lista de itens encontrados no PDF -->
+      <div id="pdf-extracted-items-list" class="pdf-items-container"></div>
+
+      <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem;">
+        <button type="button" id="btn-save-pdf-invoice" class="btn btn-primary" style="flex: 2; justify-content: center; background: linear-gradient(135deg, #0d9488, #115e59);">
+          ✅ Salvar Nota & Atualizar Catálogo
+        </button>
+        <button type="button" class="btn btn-secondary" style="flex: 1;" data-close-modal>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: CATÁLOGO DE PRODUTOS & HISTÓRICO    -->
+  <!-- ========================================== -->
+  <div id="modal-catalog-products" class="modal-overlay">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">✨ Catálogo & Já Comprados</h3>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+            Itens que vocês já compraram: adicione à lista do mês com 1 toque e veja os menores preços!
+          </p>
+        </div>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+
+      <!-- Barra de busca no catálogo -->
+      <div style="margin-bottom: 0.75rem;">
+        <input type="text" id="catalog-search-input" class="form-control" placeholder="🔍 Buscar por nome popular, nome da nota ou código..." />
+      </div>
+
+      <!-- Filtro de categorias do catálogo -->
+      <div id="catalog-category-chips" class="chips-scroll" style="margin-bottom: 0.75rem;"></div>
+
+      <!-- Lista de produtos memorizados -->
+      <div id="catalog-products-container" class="catalog-grid"></div>
+
+      <div style="margin-top: 1rem; text-align: center;">
+        <button type="button" class="btn btn-secondary" style="width: 100%;" data-close-modal>
+          Fechar Catálogo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: DETALHES & HISTÓRICO DE UM PRODUTO  -->
+  <!-- ========================================== -->
+  <div id="modal-product-history" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h3 id="product-history-title" class="modal-title">📊 Histórico do Produto</h3>
+          <p id="product-history-rawname" style="font-size: 0.75rem; color: var(--text-muted);"></p>
+        </div>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+
+      <div id="product-history-summary-box" style="margin-bottom: 1rem;"></div>
+
+      <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">Histórico de Compras Registradas:</h4>
+      <div id="product-history-records-list" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 40vh; overflow-y: auto;"></div>
+
+      <div style="margin-top: 1.25rem;">
+        <button type="button" id="btn-add-to-list-from-history" class="btn btn-primary" style="width: 100%; justify-content: center;">
+          + Colocar na Lista de Compras do Mês
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Ajuda Google Sheets -->
   <div id="modal-sheets-help" class="modal-overlay">
     <div class="modal-content">
@@ -1204,7 +1324,13 @@ v>
       <form id="form-add-shopping-item">
         <div class="form-group">
           <label class="form-label">O que precisamos comprar?</label>
-          <input type="text" id="shopping-input-title" class="form-control" placeholder="Ex: Café moído 500g, Tomate, Detergente" required />
+          <div style="display: flex; gap: 0.35rem; align-items: center;">
+            <input type="text" id="shopping-input-title" list="catalog-suggestions-list" class="form-control" placeholder="Ex: Café moído 500g, Tomate, Chá Matte" required autocomplete="off" />
+            <button type="button" id="btn-quick-catalog-from-add" class="btn btn-secondary btn-sm" title="Escolher dos já comprados" style="white-space: nowrap; padding: 0.45rem 0.65rem;">
+              ✨ Catálogo
+            </button>
+          </div>
+          <datalist id="catalog-suggestions-list"></datalist>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
@@ -1443,7 +1569,7 @@ v>
     </div>
   </div>
 
-  <!-- Script Principal Modular (v2.0.6) -->
-  <script type="module" src="./js/app.js?v=2.0.6"></script>
+  <!-- Script Principal Modular (v2.1.0) -->
+  <script type="module" src="./js/app.js?v=2.1.0"></script>
 </body>
 </html>

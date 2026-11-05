@@ -1306,3 +1306,135 @@
   width: 100%;
 }
 
+/* Modal Amplo para Revisão de Nota Fiscal e Catálogo */
+.modal-content.modal-large {
+  max-width: 680px;
+  width: 95%;
+}
+
+/* Itens Extraídos do PDF */
+.pdf-items-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.pdf-item-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color var(--transition-fast);
+}
+
+.pdf-item-card:hover {
+  border-color: var(--brand-moss);
+}
+
+.pdf-item-card.unselected {
+  opacity: 0.5;
+  background: var(--bg-secondary);
+}
+
+.pdf-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.pdf-raw-name {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.pdf-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+/* Catálogo & Histórico Comparativo de Preços */
+.catalog-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 58vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.catalog-card {
+  background: #ffffff;
+  border: 1px solid rgba(46, 89, 51, 0.15);
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.catalog-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.catalog-product-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.price-compare-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.price-compare-badge.cheaper {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.price-compare-badge.expensive {
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+}
+
+.price-compare-badge.stable {
+  background: rgba(148, 163, 184, 0.2);
+  color: #475569;
+}
+
+.product-photo-preview-sm {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+

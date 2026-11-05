@@ -92,6 +92,7 @@ export function addShoppingItem(state, data, userId = 'matheus') {
     id: makeId('cmp'),
     name,
     title: name,
+    catalogId: data.catalogId || null,
     qty,
     quantity: qty,
     category: data.category || 'outros',

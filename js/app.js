@@ -61,6 +61,24 @@ import {
   removeLinkFromReforma
 } from './reformas.js';
 import { addSonho, updateSonho, deleteSonho, toggleSonhoMilestone, addPhotoToSonho, removePhotoFromSonho } from './sonhos.js';
+import { parseNfceDanfeText, extractTextFromPdfFile, suggestPopularName } from './pdf-parser.js';
+import {
+  ensureCatalog,
+  findCatalogProduct,
+  upsertCatalogProduct,
+  registerInvoiceInCatalog,
+  getProductPriceComparison,
+  addCatalogProductToShoppingList,
+  addPhotoToCatalogProduct,
+  updateCatalogProductDetails,
+  searchCatalogProducts
+} from './catalog.js';
+import {
+  updateCatalogDatalist,
+  renderCatalogModal,
+  renderProductHistoryModal,
+  renderPdfInvoiceConfirmation
+} from './ui.js';
 import { testSheetsConnection, backupToSheets, restoreFromSheets, applyCloudBackup } from './sheets.js';
 import {
   getCategories,
@@ -99,6 +117,9 @@ let currentReformasCategory = 'todas';
 let currentSonhosFilter = 'todas';
 let currentComprasCategory = 'todas';
 let currentComprasView = 'lista';
+let currentCatalogCategoryFilter = 'todos';
+let currentCatalogSearchQuery = '';
+let currentPendingPdfInvoice = null;
 let currentCategoryManageModule = 'tarefas';
 let deferredInstallPrompt = null;
 
@@ -125,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initModals();
 
   populateCategorySelects(state);
+  updateCatalogDatalist(state);
   refreshAllUI();
 
   // Prioridade da Planilha: quem abrir o app puxa imediatamente os dados mais recentes
@@ -2114,6 +2136,336 @@ function initComprasModule() {
 // -------------------------------------------------------------
 // LEITOR DE NOTAS FISCAIS (NFC-e QR CODE) & REGISTRO AUTOMÁTICO
 // -------------------------------------------------------------
+
+  // -----------------------------------------------------------
+  // UPLOAD E PROCESSAMENTO DE NOTA FISCAL EM PDF
+  // -----------------------------------------------------------
+  const inputPdf = document.getElementById('input-upload-pdf-nfce');
+  if (inputPdf) {
+    inputPdf.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      try {
+        showToast('Lendo e analisando nota fiscal em PDF... 📄🔍', 'info', 3000);
+        const pdfText = await extractTextFromPdfFile(file);
+        const invoiceData = parseNfceDanfeText(pdfText);
+
+        if (!invoiceData || invoiceData.items.length === 0) {
+          throw new Error('Não foi possível identificar os itens da compra neste PDF.');
+        }
+
+        // Se algum item já tiver sido apelidado no catálogo anteriormente, reaproveita o apelido!
+        invoiceData.items.forEach(it => {
+          const known = findCatalogProduct(state, { code: it.code, rawName: it.rawName });
+          if (known && known.alias) {
+            it.alias = known.alias;
+            if (known.category) it.category = known.category;
+            if (known.photos && known.photos.length > 0) it.photos = [...known.photos];
+          }
+        });
+
+        currentPendingPdfInvoice = invoiceData;
+        renderPdfInvoiceConfirmation(state, invoiceData);
+        openModal('modal-confirm-pdf-invoice');
+        showToast(`${invoiceData.items.length} itens extraídos da nota fiscal!`, 'success');
+      } catch (err) {
+        console.error('Erro ao ler PDF:', err);
+        showToast('Erro ao processar PDF da nota: ' + err.message, 'error', 5000);
+      } finally {
+        inputPdf.value = '';
+      }
+    });
+  }
+
+  // Interações no Modal de Confirmação do PDF (Fotos e Checkbox)
+  const pdfContainer = document.getElementById('pdf-extracted-items-list');
+  if (pdfContainer) {
+    pdfContainer.addEventListener('change', async (e) => {
+      // Bater foto ou carregar imagem para item da nota
+      if (e.target.classList.contains('input-pdf-item-photo')) {
+        const idx = parseInt(e.target.getAttribute('data-idx'), 10);
+        const file = e.target.files && e.target.files[0];
+        if (!file || !currentPendingPdfInvoice) return;
+
+        try {
+          showToast('Anexando foto do produto...', 'info', 1500);
+          const compressed = await compressImageFile(file, 800, 0.72);
+          const item = currentPendingPdfInvoice.items[idx];
+          if (item) {
+            if (!item.photos) item.photos = [];
+            item.photos.push(compressed);
+            const ind = document.getElementById(`pdf-photo-indicator-${idx}`);
+            if (ind) ind.style.display = 'inline';
+            showToast('Foto vinculada ao item! 📷', 'success');
+          }
+        } catch (err) {
+          showToast('Erro na foto: ' + err.message, 'error');
+        }
+      }
+
+      if (e.target.classList.contains('pdf-item-include')) {
+        const card = e.target.closest('.pdf-item-card');
+        if (card) {
+          card.classList.toggle('unselected', !e.target.checked);
+        }
+      }
+    });
+  }
+
+  // Salvar Nota Fiscal em PDF & Gravar no Catálogo
+  const btnSavePdf = document.getElementById('btn-save-pdf-invoice');
+  if (btnSavePdf) {
+    btnSavePdf.addEventListener('click', () => {
+      if (!currentPendingPdfInvoice) return;
+
+      const marketInput = document.getElementById('pdf-invoice-market-name');
+      const marketName = (marketInput ? marketInput.value : '').trim() || currentPendingPdfInvoice.marketName || 'Supermercado';
+      currentPendingPdfInvoice.marketName = marketName;
+
+      const container = document.getElementById('pdf-extracted-items-list');
+      const itemCards = container ? container.querySelectorAll('.pdf-item-card') : [];
+
+      const itemsToKeep = [];
+      const itemsToAddToList = [];
+
+      itemCards.forEach(card => {
+        const idx = parseInt(card.getAttribute('data-pdf-item-idx'), 10);
+        const it = currentPendingPdfInvoice.items[idx];
+        if (!it) return;
+
+        const checkInc = card.querySelector('.pdf-item-include');
+        if (checkInc && !checkInc.checked) return;
+
+        const aliasInput = card.querySelector('.pdf-item-alias');
+        if (aliasInput && aliasInput.value.trim()) {
+          it.alias = aliasInput.value.trim();
+        }
+
+        const catSelect = card.querySelector('.pdf-item-category');
+        if (catSelect && catSelect.value) {
+          it.category = catSelect.value;
+        }
+
+        const addToListCheck = card.querySelector('.pdf-item-add-to-list');
+        if (addToListCheck && addToListCheck.checked) {
+          itemsToAddToList.push(it);
+        }
+
+        itemsToKeep.push(it);
+      });
+
+      currentPendingPdfInvoice.items = itemsToKeep;
+
+      // 1. Registra no histórico de notas fiscais do casal
+      addMarketPurchase(state, {
+        marketName: currentPendingPdfInvoice.marketName,
+        date: currentPendingPdfInvoice.date,
+        total: currentPendingPdfInvoice.total,
+        nfeKey: currentPendingPdfInvoice.nfeKey,
+        notes: `${itemsToKeep.length} itens (importados via PDF)`
+      });
+
+      // 2. Grava e memoriza todos os itens no Catálogo Inteligente
+      registerInvoiceInCatalog(state, currentPendingPdfInvoice);
+
+      // 3. Coloca na lista do mês os itens que o usuário solicitou
+      itemsToAddToList.forEach(it => {
+        const res = addShoppingItem(state, {
+          name: it.alias || it.rawName,
+          category: it.category || 'mercearia',
+          qty: `${it.qty} ${it.unit || 'un'}`,
+          unitPrice: it.unitPrice,
+          price: it.unitPrice,
+          notes: `Comprado em ${marketName}`
+        });
+        const createdItem = res.item || res;
+        if (it.photos && it.photos.length > 0) {
+          createdItem.photos = [...it.photos];
+        }
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      closeModal('modal-confirm-pdf-invoice');
+
+      playTaskCompleteSound(state.settings.soundEnabled);
+      triggerConfetti();
+      showToast(`🎉 Nota do ${marketName} registrada e ${itemsToKeep.length} produtos salvos no catálogo!`, 'success', 4000);
+
+      updateCatalogDatalist(state);
+      refreshAllUI();
+      currentPendingPdfInvoice = null;
+    });
+  }
+
+  // -----------------------------------------------------------
+  // MODAL DO CATÁLOGO DE PRODUTOS & HISTÓRICO DE PREÇOS
+  // -----------------------------------------------------------
+  const btnOpenCatalog = document.getElementById('btn-open-catalog');
+  const btnQuickCatalogAdd = document.getElementById('btn-quick-catalog-from-add');
+
+  function openCatalogView() {
+    currentCatalogCategoryFilter = 'todos';
+    currentCatalogSearchQuery = '';
+    const searchInput = document.getElementById('catalog-search-input');
+    if (searchInput) searchInput.value = '';
+    renderCatalogModal(state, '', 'todos');
+    openModal('modal-catalog-products');
+  }
+
+  if (btnOpenCatalog) btnOpenCatalog.addEventListener('click', openCatalogView);
+  if (btnQuickCatalogAdd) btnQuickCatalogAdd.addEventListener('click', openCatalogView);
+
+  // Busca em tempo real no catálogo
+  const catalogSearchInput = document.getElementById('catalog-search-input');
+  if (catalogSearchInput) {
+    catalogSearchInput.addEventListener('input', (e) => {
+      currentCatalogSearchQuery = e.target.value.trim();
+      renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter);
+    });
+  }
+
+  // Filtro de categorias no catálogo
+  const catalogChipsContainer = document.getElementById('catalog-category-chips');
+  if (catalogChipsContainer) {
+    catalogChipsContainer.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-catalog-cat]');
+      if (!chip) return;
+      currentCatalogCategoryFilter = chip.getAttribute('data-catalog-cat') || 'todos';
+      playSubtleClick(state.settings.soundEnabled);
+      renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter);
+    });
+  }
+
+  // Ações dentro do grid do catálogo (+ Adicionar, Foto, Apelidar, Histórico)
+  const catalogContainer = document.getElementById('catalog-products-container');
+  if (catalogContainer) {
+    // Adicionar foto a produto do catálogo
+    catalogContainer.addEventListener('change', async (e) => {
+      if (e.target.classList.contains('input-catalog-add-photo')) {
+        const prodId = e.target.getAttribute('data-catalog-id');
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        try {
+          showToast('Processando foto do produto...', 'info', 1500);
+          const compressed = await compressImageFile(file, 800, 0.72);
+          addPhotoToCatalogProduct(state, prodId, compressed);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          showToast('Foto vinculada ao produto e à lista! 📷', 'success');
+          renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter);
+          renderComprasTab(state, currentComprasCategory, currentComprasView);
+        } catch (err) {
+          showToast('Erro na foto: ' + err.message, 'error');
+        }
+      }
+    });
+
+    catalogContainer.addEventListener('click', (e) => {
+      // 1. + Adicionar à lista de compras
+      const addBtn = e.target.closest('[data-add-catalog-to-list]');
+      if (addBtn) {
+        const prodId = addBtn.getAttribute('data-add-catalog-to-list');
+        try {
+          const item = addCatalogProductToShoppingList(state, prodId);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          playSubtleClick(state.settings.soundEnabled);
+          showToast(`"${item.name}" adicionado à lista de compras! 🛒`, 'success');
+          renderComprasTab(state, currentComprasCategory, currentComprasView);
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+        return;
+      }
+
+      // 2. Apelidar produto
+      const aliasBtn = e.target.closest('[data-edit-catalog-alias]');
+      if (aliasBtn) {
+        const prodId = aliasBtn.getAttribute('data-edit-catalog-alias');
+        const prod = (state.catalog || []).find(p => p.id === prodId);
+        if (prod) {
+          const newAlias = prompt(`Como você e a Scarlet costumam chamar este item?\n(Nome na nota: "${prod.rawName}")`, prod.alias || prod.rawName);
+          if (newAlias && newAlias.trim()) {
+            updateCatalogProductDetails(state, prodId, { alias: newAlias.trim() });
+            saveState(state);
+            triggerAutoSyncIfEnabled();
+            showToast('Apelido do produto atualizado!', 'success');
+            renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter);
+            renderComprasTab(state, currentComprasCategory, currentComprasView);
+            updateCatalogDatalist(state);
+          }
+        }
+        return;
+      }
+
+      // 3. Ver histórico de preços
+      const histBtn = e.target.closest('[data-view-product-history]');
+      if (histBtn) {
+        const prodId = histBtn.getAttribute('data-view-product-history');
+        renderProductHistoryModal(state, prodId);
+        openModal('modal-product-history');
+        return;
+      }
+    });
+  }
+
+  // Clique em "Ver Histórico" a partir de qualquer lugar (ex: card da lista de compras)
+  document.addEventListener('click', (e) => {
+    const histBtn = e.target.closest('[data-view-product-history]');
+    if (histBtn && !catalogContainer.contains(histBtn)) {
+      const prodId = histBtn.getAttribute('data-view-product-history');
+      renderProductHistoryModal(state, prodId);
+      openModal('modal-product-history');
+    }
+  });
+
+  // Botão "+ Colocar na Lista" dentro do modal de histórico
+  const btnAddFromHist = document.getElementById('btn-add-to-list-from-history');
+  if (btnAddFromHist) {
+    btnAddFromHist.addEventListener('click', () => {
+      const prodId = btnAddFromHist.getAttribute('data-add-catalog-to-list');
+      if (prodId) {
+        try {
+          const item = addCatalogProductToShoppingList(state, prodId);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          playSubtleClick(state.settings.soundEnabled);
+          showToast(`"${item.name}" adicionado à lista de compras! 🛒`, 'success');
+          closeModal('modal-product-history');
+          renderComprasTab(state, currentComprasCategory, currentComprasView);
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      }
+    });
+  }
+
+  // Preenchimento automático ao selecionar sugestão do catálogo no formulário de adicionar
+  const inputShoppingTitle = document.getElementById('shopping-input-title');
+  if (inputShoppingTitle) {
+    inputShoppingTitle.addEventListener('change', () => {
+      const val = inputShoppingTitle.value.trim();
+      if (!val) return;
+
+      const prod = findCatalogProduct(state, { alias: val, rawName: val });
+      if (prod) {
+        const catSelect = document.getElementById('shopping-input-category');
+        const priceInput = document.getElementById('shopping-input-price');
+
+        if (catSelect && prod.category) {
+          catSelect.value = prod.category;
+        }
+        if (priceInput && prod.lastPrice && !priceInput.value) {
+          priceInput.value = formatCurrency(prod.lastPrice);
+          updateShoppingSubtotalPreview('input');
+        }
+      }
+    });
+  }
+
 function initQrCodeScanner() {
   const btnScan = document.getElementById('btn-scan-nfce-qr');
   const videoEl = document.getElementById('qr-video');

@@ -32,6 +32,7 @@ export function getInitialState() {
     sonhos: [...INITIAL_SONHOS],
     compras: [],
     comprasRegistros: [],
+    catalog: [],
     categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)),
     settings: {
       sheetsUrl: "",
@@ -83,6 +84,7 @@ export function loadState() {
       sonhos: Array.isArray(parsed.sonhos) ? parsed.sonhos : initial.sonhos,
       compras: Array.isArray(parsed.compras) ? parsed.compras : initial.compras,
       comprasRegistros: Array.isArray(parsed.comprasRegistros) ? parsed.comprasRegistros : initial.comprasRegistros,
+      catalog: Array.isArray(parsed.catalog) ? parsed.catalog : [],
       categories: {
         tarefas: (parsed.categories && Array.isArray(parsed.categories.tarefas) && parsed.categories.tarefas.length > 0)
           ? parsed.categories.tarefas

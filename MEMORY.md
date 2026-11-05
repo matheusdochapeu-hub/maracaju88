@@ -4,6 +4,40 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-04 19:15] - Importação de Notas em PDF, Catálogo Inteligente, Apelidos Populares, Fotos e Histórico Comparativo de Preços (v2.1.0)
+
+### 🔍 Problemas Identificados & Causa Raiz
+1. **Ausência de Upload de Notas em PDF:**
+   - **Causa Raiz:** O app suportava apenas escaneamento de QR Code via câmera, impedindo que o usuário fizesse upload de comprovantes digitais (como PDFs do Carrefour, Pão de Açúcar ou Danfe NFC-e).
+2. **Nomes Incompreensíveis dos Cupons Fiscais:**
+   - **Causa Raiz:** Os mercados imprimem abreviações truncadas e códigos (ex: `ACUCAR REF CARAVELAS`, `CHA MATE LEAO LIMA T`, `BEB LAC ZL PROFORCE`), dificultando a busca posterior e a criação de listas de compras cotidianas.
+3. **Falta de Memória de Produtos e Comparativo de Preços:**
+   - **Causa Raiz:** Os itens eram apenas registrados no histórico geral da nota, sem um catálogo persistente que comparasse o menor preço pago, último preço, variação percentual ou permitisse adicionar itens já comprados de volta à lista com um toque.
+
+---
+
+### 🛠️ Correções Implementadas
+1. **Parser de Notas Fiscais em PDF (`js/pdf-parser.js` & `js/vendor/pdf.min.js`):**
+   - Integração da biblioteca PDF.js instalada localmente no repositório (garantindo funcionamento 100% offline em PWA).
+   - Parser especializado em Danfe NFC-e brasileira que extrai: Razão Social/Mercado, CNPJ, Data, Chave de Acesso de 44 dígitos, Total e itens detalhados (nome original, código, quantidade, unidade, preço unitário e subtotal).
+2. **Modal Interativo de Conferência e Apelidos Populares (`#modal-confirm-pdf-invoice`):**
+   - Sugestão inteligente de apelidos populares (ex: `Chá Matte Leão Limão`, `Açúcar Refinado Caravelas`, `Mamão Formosa Orgânico`).
+   - Campo editável para apelidar qualquer item da nota, selecionar categoria e bater fotos com câmera (`capture="environment"`) ou galeria.
+   - Opção de colocar itens da nota imediatamente na lista de compras do mês.
+3. **Catálogo Inteligente & Memória Persistente de Produtos (`js/catalog.js`):**
+   - Registra todos os produtos comprados, guardando: apelido, nome original, código, fotos, histórico de preços por data e mercado.
+   - Calcula automaticamente: Último Preço, Menor Preço Histórico e Variação Percentual (ex: `↓ 7.6%`).
+4. **Criação Rápida de Listas a Partir dos Já Comprados (`#modal-catalog-products`):**
+   - Modal com busca instantânea e filtros por categoria.
+   - Botão `+ Adicionar à Lista`: coloca o item na lista do mês com 1 clique, preservando preço e foto.
+   - Autocomplete no formulário de adicionar item: sugere itens do catálogo enquanto o usuário digita.
+5. **Sincronização com Google Sheets (`apps_script.gs` & `js/sheets.js`):**
+   - O catálogo completo é sincronizado para a nova aba `Catalogo_Produtos` na planilha Google e guardado no snapshot de backup.
+6. **Validação:**
+   - 18 testes unitários aprovados em `test/app.test.js` e `test/pdf-parser.test.js`.
+
+---
+
 ## [2026-11-04 18:45] - Prioridade da Planilha Google (Cloud-First) & Sincronização Automática ao Abrir (v2.0.6)
 
 ### 🔍 Problemas Identificados & Causa Raiz

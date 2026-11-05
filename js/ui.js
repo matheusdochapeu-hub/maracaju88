@@ -19,6 +19,7 @@ import { getHistoryForDate, getRecentDaysSummary } from './history.js';
 import { getCarroSummary } from './carro.js';
 import { getReformasSummary } from './reformas.js';
 import { getSonhosSummary } from './sonhos.js';
+import { findCatalogProduct, getProductPriceComparison, searchCatalogProducts, ensureCatalog } from './catalog.js';
 
 // -------------------------------------------------------------
 // SISTEMA DE CONFETTI NATIVO (HTML5 Canvas Particle Engine)
@@ -1025,6 +1026,21 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
                 <div class="shopping-meta">
                   <span class="tag-room">${catObj.icon} ${catObj.label}</span>
                   <span class="shopping-qty-pill">${qtyParsed.text}</span>
+                  ${(() => {
+                    const prod = findCatalogProduct(state, { id: item.catalogId, alias: item.title || item.name, rawName: item.title || item.name });
+                    if (!prod) return '';
+                    const comp = getProductPriceComparison(prod);
+                    let badge = '';
+                    if (comp && comp.totalPurchases > 1 && comp.minPrice > 0) {
+                      badge = `<span class="price-compare-badge cheaper" title="Menor preço histórico pago neste produto" style="cursor: pointer;" data-view-product-history="${prod.id}">Menor: ${formatCurrencyWithSymbol(comp.minPrice)}</span>`;
+                    }
+                    return `
+                      <button type="button" class="btn btn-secondary btn-xs" data-view-product-history="${prod.id}" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; font-weight: 700; border-radius: var(--radius-sm);" title="Ver histórico comparativo de preços">
+                        📊 Histórico (${comp ? comp.totalPurchases : 1})
+                      </button>
+                      ${badge}
+                    `;
+                  })()}
                   ${unitPrice > 0 ? (
                     qtyParsed.count > 1
                       ? `<span class="shopping-price-tag" title="Preço unitário">${formatCurrencyWithSymbol(unitPrice)}/un</span>
@@ -1337,4 +1353,272 @@ export function renderQuickEmojis() {
       ${emoji}
     </button>
   `).join('');
+}
+
+// -------------------------------------------------------------
+// CATÁLOGO DE PRODUTOS & HISTÓRICO COMPARATIVO DE PREÇOS
+// -------------------------------------------------------------
+
+export function updateCatalogDatalist(state) {
+  const datalist = document.getElementById('catalog-suggestions-list');
+  if (!datalist) return;
+
+  const catalog = ensureCatalog(state);
+  datalist.innerHTML = catalog.map(p => {
+    const alias = p.alias || p.rawName;
+    const priceText = p.lastPrice ? ` - R$ ${formatCurrency(p.lastPrice)}` : '';
+    return `<option value="${alias}">${alias}${priceText} (${p.lastMarket || 'Mercado'})</option>`;
+  }).join('');
+}
+
+export function renderCatalogModal(state, query = '', categoryFilter = 'todos') {
+  const container = document.getElementById('catalog-products-container');
+  const chipsContainer = document.getElementById('catalog-category-chips');
+  if (!container) return;
+
+  const userCats = getCategories(state, 'compras');
+  if (chipsContainer) {
+    chipsContainer.innerHTML = `
+      <button type="button" class="chip ${categoryFilter === 'todos' ? 'active' : ''}" data-catalog-cat="todos">Todos (${(state.catalog || []).length})</button>
+      ${userCats.map(c => `
+        <button type="button" class="chip ${categoryFilter === c.id ? 'active' : ''}" data-catalog-cat="${c.id}">${c.icon} ${c.label}</button>
+      `).join('')}
+    `;
+  }
+
+  const products = searchCatalogProducts(state, query, categoryFilter);
+
+  if (products.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg);">
+        <p style="font-size: 2.2rem; margin-bottom: 0.5rem;">✨</p>
+        <p style="font-weight: 700; color: var(--text-primary);">Nenhum produto encontrado no catálogo.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.25rem;">
+          Suba notas fiscais em PDF ou escaneie QR Codes para que o app memorize os produtos automaticamente!
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = products.map(prod => {
+    const catObj = findCategory(state, 'compras', prod.category);
+    const comp = getProductPriceComparison(prod);
+    const thumbSrc = (prod.photos && prod.photos.length > 0) ? prod.photos[0] : null;
+
+    let variationBadge = '';
+    if (comp && comp.previousPrice && comp.priceDiffPercent !== 0) {
+      const isCheaper = comp.priceDiff < 0;
+      variationBadge = `
+        <span class="price-compare-badge ${isCheaper ? 'cheaper' : 'expensive'}" title="Comparado à compra anterior (${formatCurrencyWithSymbol(comp.previousPrice)})">
+          ${isCheaper ? '↓' : '↑'} ${Math.abs(comp.priceDiffPercent)}%
+        </span>
+      `;
+    }
+
+    return `
+      <div class="catalog-card" data-catalog-id="${prod.id}">
+        <div class="catalog-card-header">
+          <div style="display: flex; gap: 0.65rem; align-items: flex-start; flex: 1;">
+            ${thumbSrc ? `
+              <img src="${thumbSrc}" alt="${prod.alias}" class="product-photo-preview-sm" data-view-photo="${thumbSrc}" />
+            ` : `
+              <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(46, 89, 51, 0.08); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0;">
+                ${catObj.icon}
+              </div>
+            `}
+            <div style="flex: 1; min-width: 0;">
+              <div class="catalog-product-title">
+                <span>${prod.alias || prod.rawName}</span>
+              </div>
+              ${prod.rawName && prod.rawName !== prod.alias ? `
+                <div class="pdf-raw-name" title="Nome original no cupom fiscal">${prod.rawName} ${prod.code ? `(${prod.code})` : ''}</div>
+              ` : ''}
+              <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; margin-top: 0.25rem;">
+                <span class="tag-room">${catObj.icon} ${catObj.label}</span>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">Comprado ${prod.timesBought || 1}x</span>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" data-add-catalog-to-list="${prod.id}" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; white-space: nowrap;">
+            + Adicionar
+          </button>
+        </div>
+
+        <!-- Linha Comparativa de Preços -->
+        <div style="background: var(--bg-primary); border-radius: var(--radius-sm); padding: 0.45rem 0.65rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem; font-size: 0.78rem;">
+          <div>
+            <span style="color: var(--text-muted); font-size: 0.7rem;">Último preço:</span>
+            <strong style="color: var(--brand-moss-dark); font-size: 0.85rem;">${formatCurrencyWithSymbol(prod.lastPrice || 0)}</strong>
+            <span style="color: var(--text-muted); font-size: 0.68rem;">(${prod.lastMarket || 'Mercado'})</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.35rem;">
+            ${comp && comp.minPrice > 0 ? `
+              <span class="price-compare-badge stable" title="Menor preço já registrado">
+                Menor: ${formatCurrencyWithSymbol(comp.minPrice)}
+              </span>
+            ` : ''}
+            ${variationBadge}
+          </div>
+        </div>
+
+        <!-- Ações do Produto (Fotos, Apelidar e Histórico) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.15rem; gap: 0.5rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.3rem;">
+            <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Bater foto da embalagem com a câmera">
+              📸 Foto
+              <input type="file" accept="image/*" capture="environment" class="input-catalog-add-photo" data-catalog-id="${prod.id}" style="display: none;" />
+            </label>
+            <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Escolher da galeria">
+              🖼️ Galeria
+              <input type="file" accept="image/*" class="input-catalog-add-photo" data-catalog-id="${prod.id}" style="display: none;" />
+            </label>
+          </div>
+
+          <div style="display: flex; gap: 0.35rem;">
+            <button type="button" class="btn btn-secondary btn-xs" data-edit-catalog-alias="${prod.id}" style="padding: 0.15rem 0.45rem; font-size: 0.7rem;">
+              ✏️ Apelidar
+            </button>
+            <button type="button" class="btn btn-secondary btn-xs" data-view-product-history="${prod.id}" style="padding: 0.15rem 0.45rem; font-size: 0.7rem;">
+              📊 Histórico
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+export function renderProductHistoryModal(state, catalogId) {
+  const prod = (state.catalog || []).find(p => p.id === catalogId);
+  if (!prod) return;
+
+  const titleEl = document.getElementById('product-history-title');
+  const rawNameEl = document.getElementById('product-history-rawname');
+  const summaryBox = document.getElementById('product-history-summary-box');
+  const recordsList = document.getElementById('product-history-records-list');
+  const btnAdd = document.getElementById('btn-add-to-list-from-history');
+
+  if (titleEl) titleEl.textContent = `📊 ${prod.alias || prod.rawName}`;
+  if (rawNameEl) rawNameEl.textContent = prod.rawName ? `Nota fiscal: ${prod.rawName} ${prod.code ? `(${prod.code})` : ''}` : '';
+  if (btnAdd) btnAdd.setAttribute('data-add-catalog-to-list', prod.id);
+
+  const comp = getProductPriceComparison(prod);
+  if (summaryBox && comp) {
+    summaryBox.innerHTML = `
+      <div style="background: rgba(46, 89, 51, 0.08); border: 1px solid rgba(46, 89, 51, 0.2); border-radius: var(--radius-md); padding: 0.75rem 0.85rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; text-align: center;">
+        <div>
+          <span style="font-size: 0.7rem; color: var(--text-muted); display: block;">Último Preço</span>
+          <strong style="font-size: 0.95rem; color: var(--brand-moss-dark);">${formatCurrencyWithSymbol(comp.lastPrice)}</strong>
+        </div>
+        <div>
+          <span style="font-size: 0.7rem; color: var(--text-muted); display: block;">Menor Preço</span>
+          <strong style="font-size: 0.95rem; color: #16a34a;">${formatCurrencyWithSymbol(comp.minPrice)}</strong>
+        </div>
+        <div>
+          <span style="font-size: 0.7rem; color: var(--text-muted); display: block;">Preço Médio</span>
+          <strong style="font-size: 0.95rem; color: var(--text-primary);">${formatCurrencyWithSymbol(comp.avgPrice)}</strong>
+        </div>
+      </div>
+    `;
+  }
+
+  if (recordsList && comp) {
+    if (comp.history.length === 0) {
+      recordsList.innerHTML = `<p style="font-size: 0.82rem; color: var(--text-muted); text-align: center; padding: 1rem;">Nenhum registro detalhado ainda.</p>`;
+    } else {
+      recordsList.innerHTML = comp.history.map((h, idx) => {
+        const isLowest = h.unitPrice === comp.minPrice;
+        return `
+          <div style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong style="font-size: 0.82rem; color: var(--text-primary);">${h.market || 'Supermercado'}</strong>
+              <div style="font-size: 0.7rem; color: var(--text-muted);">Data: ${h.date ? h.date.split('-').reverse().join('/') : '-'} | Qtd: ${h.qty || '1'}</div>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 0.9rem; font-weight: 800; color: ${isLowest ? '#16a34a' : 'var(--text-primary)'};">${formatCurrencyWithSymbol(h.unitPrice)}</span>
+              ${isLowest ? '<span style="display: block; font-size: 0.65rem; color: #16a34a; font-weight: 700;">★ Menor Preço</span>' : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
+export function renderPdfInvoiceConfirmation(state, invoiceData) {
+  const container = document.getElementById('pdf-extracted-items-list');
+  const marketInput = document.getElementById('pdf-invoice-market-name');
+  const totalDisplay = document.getElementById('pdf-invoice-total-display');
+  const headerMeta = document.getElementById('pdf-invoice-header-meta');
+  if (!container) return;
+
+  if (marketInput) marketInput.value = invoiceData.marketName || 'Supermercado';
+  if (totalDisplay) totalDisplay.textContent = formatCurrencyWithSymbol(invoiceData.total || 0);
+
+  const formattedDate = invoiceData.date ? invoiceData.date.split('-').reverse().join('/') : 'Hoje';
+  if (headerMeta) {
+    headerMeta.textContent = `Data: ${formattedDate} • ${invoiceData.items.length} itens identificados no cupom fiscal`;
+  }
+
+  const userCats = getCategories(state, 'compras');
+
+  container.innerHTML = invoiceData.items.map((item, idx) => {
+    return `
+      <div class="pdf-item-card" data-pdf-item-idx="${idx}">
+        <div class="pdf-item-header">
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.85rem; cursor: pointer; flex: 1;">
+            <input type="checkbox" class="pdf-item-include" data-idx="${idx}" checked />
+            <span style="color: var(--text-primary);">Item #${idx + 1}</span>
+          </label>
+          <span style="font-weight: 800; color: var(--brand-moss-dark); font-size: 0.95rem;">
+            ${formatCurrencyWithSymbol(item.totalPrice || item.unitPrice)}
+          </span>
+        </div>
+
+        <div class="pdf-raw-name">
+          Nota: ${item.rawName} ${item.code ? `[Cód: ${item.code}]` : ''}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.5rem;">
+          <div>
+            <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">Apelido Popular (como você chama):</label>
+            <input type="text" class="form-control pdf-item-alias" data-idx="${idx}" value="${item.alias || item.rawName}" style="padding: 0.35rem 0.5rem; font-size: 0.85rem; font-weight: 600;" />
+          </div>
+
+          <div>
+            <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">Categoria:</label>
+            <select class="form-control pdf-item-category" data-idx="${idx}" style="padding: 0.35rem 0.5rem; font-size: 0.82rem;">
+              ${userCats.map(c => `
+                <option value="${c.id}" ${c.id === item.category ? 'selected' : ''}>${c.icon} ${c.label}</option>
+              `).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="pdf-item-meta" style="justify-content: space-between;">
+          <span>Qtd: <strong>${item.qty} ${item.unit || 'un'}</strong> × ${formatCurrencyWithSymbol(item.unitPrice)}</span>
+
+          <!-- Fotos do Produto -->
+          <div style="display: flex; align-items: center; gap: 0.35rem;">
+            <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Bater foto do produto com a câmera">
+              📸 Foto
+              <input type="file" accept="image/*" capture="environment" class="input-pdf-item-photo" data-idx="${idx}" style="display: none;" />
+            </label>
+            <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Escolher da galeria">
+              🖼️ Galeria
+              <input type="file" accept="image/*" class="input-pdf-item-photo" data-idx="${idx}" style="display: none;" />
+            </label>
+            <span id="pdf-photo-indicator-${idx}" style="display: ${(item.photos && item.photos.length > 0) ? 'inline' : 'none'}; font-size: 0.75rem;">📷✓</span>
+          </div>
+        </div>
+
+        <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--text-secondary); cursor: pointer; margin-top: 0.2rem;">
+          <input type="checkbox" class="pdf-item-add-to-list" data-idx="${idx}" />
+          <span>Colocar também na <strong>Lista de Compras do Mês</strong> (para comprar de novo)</span>
+        </label>
+      </div>
+    `;
+  }).join('');
 }
