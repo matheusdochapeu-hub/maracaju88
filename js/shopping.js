@@ -238,6 +238,7 @@ export function addMarketPurchase(state, data, userId = 'matheus') {
   const dateStr = data.date ? String(data.date).substring(0, 10) : new Date().toISOString().substring(0, 10);
   const monthKey = formatMonthKey(dateStr);
   const total = parseCurrency(data.total);
+  const paymentMethod = (data.paymentMethod || 'va').toLowerCase();
 
   const purchase = {
     id: makeId('nfe'),
@@ -245,6 +246,7 @@ export function addMarketPurchase(state, data, userId = 'matheus') {
     date: dateStr,
     monthKey,
     total,
+    paymentMethod,
     items: Array.isArray(data.items) ? data.items : [],
     photos: Array.isArray(data.photos) ? data.photos : [],
     nfeKey: (data.nfeKey || '').trim(),
@@ -282,6 +284,7 @@ export function updateMarketPurchase(state, id, data) {
     p.monthKey = formatMonthKey(p.date);
   }
   if (data.total !== undefined) p.total = parseCurrency(data.total);
+  if (data.paymentMethod !== undefined) p.paymentMethod = String(data.paymentMethod).toLowerCase();
   if (data.notes !== undefined) p.notes = data.notes.trim();
   p.updatedAt = new Date().toISOString();
   return p;
@@ -360,6 +363,29 @@ export function getMarketAnalytics(state, selectedMonthKey = null) {
   // Total de itens registrados
   const itemsCount = purchases.reduce((sum, p) => sum + (Array.isArray(p.items) ? p.items.length : 0), 0);
 
+  // Resumo por Forma de Pagamento
+  const paymentBreakdown = {
+    va: 0,
+    vr: 0,
+    pix: 0,
+    credito: 0,
+    debito: 0,
+    dinheiro: 0,
+    outro: 0
+  };
+  purchases.forEach(p => {
+    const m = (p.paymentMethod || 'va').toLowerCase();
+    const val = Number(p.total) || 0;
+    if (paymentBreakdown[m] !== undefined) {
+      paymentBreakdown[m] += val;
+    } else {
+      paymentBreakdown.outro += val;
+    }
+  });
+  Object.keys(paymentBreakdown).forEach(k => {
+    paymentBreakdown[k] = Math.round(paymentBreakdown[k] * 100) / 100;
+  });
+
   return {
     total,
     count,
@@ -367,6 +393,7 @@ export function getMarketAnalytics(state, selectedMonthKey = null) {
     itemsCount,
     recurrentMarkets,
     uniqueMarketsList,
-    selectedMonthKey
+    selectedMonthKey,
+    paymentBreakdown
   };
 }

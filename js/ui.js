@@ -1,3 +1,8 @@
+import {
+  getMonthlyBenefitDetails,
+  getPaymentMethodInfo,
+  PAYMENT_METHODS
+} from './benefits.js';
 // ============================================================
 //  MARACAJU - INTERFACE, RENDERIZAÇÃO & MODAIS
 // ============================================================
@@ -984,6 +989,72 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
 export function renderComprasTab(state, activeCategory = 'todas', activeView = 'lista', purchasesSort = null, purchasesSearch = null) {
   const summary = getShoppingSummary(state);
 
+  // -----------------------------------------------------------
+  // PAINEL DE BENEFÍCIOS (VA & VR - SÃO CARLOS / SP)
+  // -----------------------------------------------------------
+  const benefitsBannerEl = document.getElementById('compras-benefits-banner');
+  if (benefitsBannerEl) {
+    const benefits = getMonthlyBenefitDetails(state);
+    benefitsBannerEl.innerHTML = `
+      <div class="benefits-card" style="background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(13, 148, 136, 0.08)); border: 1px solid rgba(22, 163, 74, 0.25); border-radius: var(--radius-lg); padding: 0.85rem 1rem; margin-bottom: 0.85rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.4rem; line-height: 1;">🥗</span>
+            <div>
+              <strong style="font-size: 0.95rem; color: var(--brand-forest);">Benefícios Alimentação (São Carlos - SP)</strong>
+              <div style="font-size: 0.72rem; color: var(--text-muted);">
+                Crédito no <strong>4º dia útil</strong> (${benefits.creditDateFormatted}) • Total: <strong>${formatCurrencyWithSymbol(benefits.totalBenefit)}</strong>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-xs" data-open-modal="modal-adjust-benefits" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 700; border-radius: var(--radius-sm);" title="Ajustar dias trabalhados ou valores de VA/VR">
+            ⚙️ Ajustar VA / VR
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
+          <!-- Card VA -->
+          <div style="background: #ffffff; border: 1px solid rgba(22, 163, 74, 0.2); border-radius: var(--radius-md); padding: 0.65rem 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #15803d;">🥗 Vale Alimentação (VA)</span>
+              <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600;">Fixo</span>
+            </div>
+            <div style="font-size: 1.2rem; font-weight: 800; color: #15803d; margin-top: 0.2rem;">
+              ${formatCurrencyWithSymbol(benefits.vaBalance)}
+              <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">saldo livre</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.35rem;">
+              <span>Gasto: <strong>${formatCurrencyWithSymbol(benefits.vaSpent)}</strong></span>
+              <span>Total: ${formatCurrencyWithSymbol(benefits.vaTotal)}</span>
+            </div>
+            <div style="background: rgba(0,0,0,0.06); border-radius: var(--radius-full); height: 6px; overflow: hidden; margin-top: 0.35rem;">
+              <div style="background: #16a34a; height: 100%; width: ${benefits.vaUsagePercent}%; border-radius: var(--radius-full);"></div>
+            </div>
+          </div>
+
+          <!-- Card VR -->
+          <div style="background: #ffffff; border: 1px solid rgba(234, 88, 12, 0.2); border-radius: var(--radius-md); padding: 0.65rem 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #c2410c;">🍽️ Vale Refeição (VR)</span>
+              <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600;">${benefits.vrDays}d × R$ ${formatCurrency(benefits.vrDaily)}</span>
+            </div>
+            <div style="font-size: 1.2rem; font-weight: 800; color: #c2410c; margin-top: 0.2rem;">
+              ${formatCurrencyWithSymbol(benefits.vrBalance)}
+              <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">saldo livre</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.35rem;">
+              <span>Gasto: <strong>${formatCurrencyWithSymbol(benefits.vrSpent)}</strong></span>
+              <span>Total: ${formatCurrencyWithSymbol(benefits.vrTotal)}</span>
+            </div>
+            <div style="background: rgba(0,0,0,0.06); border-radius: var(--radius-full); height: 6px; overflow: hidden; margin-top: 0.35rem;">
+              <div style="background: #ea580c; height: 100%; width: ${benefits.vrUsagePercent}%; border-radius: var(--radius-full);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   // Banner de Resumo da Lista & Mês
   const bannerEl = document.getElementById('compras-summary-banner');
   if (bannerEl) {
@@ -1195,6 +1266,21 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
               </div>
             </div>
           ` : ''}
+
+          ${analytics.paymentBreakdown ? `
+            <div style="margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px solid var(--border-subtle);">
+              <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.4rem; text-transform: uppercase;">
+                💳 Gastos por Forma de Pagamento no Mês:
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                ${PAYMENT_METHODS.filter(m => (analytics.paymentBreakdown[m.id] || 0) > 0).map(m => `
+                  <span style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: var(--radius-full); background: ${m.bg}; color: ${m.color}; border: 1px solid ${m.color}30;">
+                    <span>${m.icon}</span> ${m.shortLabel}: ${formatCurrencyWithSymbol(analytics.paymentBreakdown[m.id])}
+                  </span>
+                `).join('') || '<span style="font-size: 0.75rem; color: var(--text-muted);">Nenhum pagamento registrado ainda.</span>'}
+              </div>
+            </div>
+          ` : ''}
         </div>
       `;
     }
@@ -1298,6 +1384,7 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
 
         const dateFormatted = p.date ? p.date.split('-').reverse().join('/') : 'Data não informada';
         const itemsCount = Array.isArray(p.items) ? p.items.length : 0;
+        const pm = getPaymentMethodInfo(p.paymentMethod || 'va');
 
         return `
           <div class="market-receipt-card" data-purchase-id="${p.id}">
@@ -1307,6 +1394,9 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
                   <span class="market-name" style="font-size: 1.05rem; font-weight: 800; color: var(--brand-forest);">🛒 ${p.marketName || 'Supermercado'}</span>
                   <span style="font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: var(--radius-full); ${originStyle}">
                     ${originLabel}
+                  </span>
+                  <span style="font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: var(--radius-full); background: ${pm.bg}; color: ${pm.color}; border: 1px solid ${pm.color}40;">
+                    ${pm.icon} ${pm.shortLabel}
                   </span>
                 </div>
                 <div class="market-meta" style="margin-top: 0.25rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-muted);">

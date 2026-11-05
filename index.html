@@ -233,6 +233,7 @@
     <!-- ========================================== -->
     <section id="tab-compras" class="tab-content">
       <!-- Banner de Resumo da Lista & Mês -->
+      <div id="compras-benefits-banner"></div>
       <div id="compras-summary-banner" class="dash-card"></div>
 
       <!-- Alternador de Visão: Lista de Compras vs Notas Fiscais Registradas -->
@@ -538,7 +539,7 @@
         <div class="dash-card">
           <h3 class="dash-title" style="margin-bottom: 0.75rem;">📲 Atualização do Aplicativo</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            Versão instalada: <strong>Maracaju v2.2.1</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
+            Versão instalada: <strong>Maracaju v2.2.2</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
           </p>
           <button type="button" id="btn-force-update-settings" class="btn btn-secondary btn-sm" onclick="window.forceUpdateApp && window.forceUpdateApp()">
             🔄 Limpar Cache e Forçar Atualização
@@ -1555,6 +1556,17 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label class="form-label">Forma de Pagamento</label>
+          <select id="manual-purchase-payment-method" class="form-control" style="font-weight: 600;">
+            <option value="va" selected>🥗 Vale Alimentação (VA) - Saldo R$ 2.050</option>
+            <option value="vr">🍽️ Vale Refeição (VR) - R$ 65/dia</option>
+            <option value="pix">💠 Pix</option>
+            <option value="credito">💳 Cartão de Crédito</option>
+            <option value="debito">💳 Cartão de Débito</option>
+            <option value="dinheiro">💵 Dinheiro</option>
+          </select>
+
         <!-- Produtos comprados (opcional, para alimentar o comparador de preços) -->
         <div class="form-group" style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
@@ -1624,6 +1636,17 @@
             <input type="text" inputmode="decimal" id="purchase-edit-total" class="form-control" placeholder="Ex: 264,33" required />
           </div>
         </div>
+
+        <div class="form-group">
+          <label class="form-label">Forma de Pagamento</label>
+          <select id="purchase-edit-payment-method" class="form-control" style="font-weight: 600;">
+            <option value="va">🥗 Vale Alimentação (VA)</option>
+            <option value="vr">🍽️ Vale Refeição (VR)</option>
+            <option value="pix">💠 Pix</option>
+            <option value="credito">💳 Cartão de Crédito</option>
+            <option value="debito">💳 Cartão de Débito</option>
+            <option value="dinheiro">💵 Dinheiro</option>
+          </select>
 
         <div class="form-group">
           <label class="form-label">Observações / Detalhes</label>

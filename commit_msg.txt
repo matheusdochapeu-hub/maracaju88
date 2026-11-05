@@ -1,0 +1,11 @@
+v2.2.2: Destrava botao de lancar compras, adiciona formas de pagamento e gestao de VA/VR (Sao Carlos)
+
+- Corrige o travamento do botao '+ Lancar Compra' tornando os gatilhos de modais 100% delegados no documento
+- Adiciona suporte a Formas de Pagamento em compras manuais, notas e edicao (Dinheiro, Cartao de Credito, Debito, Pix, Vale Alimentacao e Vale Refeicao)
+- Adiciona Painel de Beneficios do Mes (VA & VR) para Sao Carlos - SP:
+  * Vale Alimentacao fixo de R$ 2.050,00 com credito no 4º dia util
+  * Vale Refeicao com R$ 65,00/dia trabalhado (R$ 1.105,00 / 17 dias de Outubro) com credito no 4º dia util
+  * Controle de saldos livres restantes em tempo real e barras de consumo
+  * Feriados municipais e estaduais de Sao Carlos SP
+  * Modal para personalizacao dos dias trabalhados e valores de cada mes
+- Exibe badges coloridas da forma de pagamento em cada compra e resumo por pagamento na Analise de Gastos

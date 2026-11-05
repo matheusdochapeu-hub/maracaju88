@@ -1,3 +1,7 @@
+import {
+  getMonthlyBenefitDetails,
+  updateMonthlyBenefitsConfig
+} from './benefits.js';
 // ============================================================
 //  MARACAJU - APP CONTROLLER PRINCIPAL (v1.3.3)
 // ============================================================
@@ -641,7 +645,15 @@ function initHeaderControls() {
       if (dateInput) {
         dateInput.value = new Date().toISOString().substring(0, 10);
       }
+      const paySelect = document.getElementById('manual-purchase-payment-method');
+      if (paySelect) {
+        paySelect.value = 'va';
+      }
       updateRecurrentMarketsDatalist(state);
+      setTimeout(() => {
+        const marketInput = document.getElementById('manual-purchase-market');
+        if (marketInput) marketInput.focus();
+      }, 100);
     }
   });
 
@@ -654,6 +666,7 @@ function initHeaderControls() {
       const totalRaw = document.getElementById('manual-purchase-total')?.value || '0';
       const notes = (document.getElementById('manual-purchase-notes')?.value || '').trim();
       const total = parseCurrency(totalRaw);
+      const paymentMethod = document.getElementById('manual-purchase-payment-method')?.value || 'va';
 
       if (total <= 0) {
         showToast('Informe o valor total da compra.', 'warning');
@@ -688,6 +701,7 @@ function initHeaderControls() {
         marketName,
         date,
         total,
+        paymentMethod,
         notes: notes || (items.length > 0 ? `${items.length} itens registrados manualmente` : 'Lançamento manual'),
         items,
         photos: [...currentManualPurchasePhotos]
@@ -2342,6 +2356,10 @@ function initComprasModule() {
           document.getElementById('purchase-edit-date').value = p.date || '';
           document.getElementById('purchase-edit-total').value = p.total ? formatCurrency(p.total) : '';
           document.getElementById('purchase-edit-notes').value = p.notes || '';
+          const paySelect = document.getElementById('purchase-edit-payment-method');
+          if (paySelect) {
+            paySelect.value = p.paymentMethod || 'va';
+          }
           openModal('modal-edit-purchase');
         }
         return;
@@ -2373,6 +2391,7 @@ function initComprasModule() {
         const date = document.getElementById('purchase-edit-date').value;
         const total = document.getElementById('purchase-edit-total').value;
         const notes = document.getElementById('purchase-edit-notes').value.trim();
+        const paymentMethod = document.getElementById('purchase-edit-payment-method')?.value || 'va';
 
         if (!id || !marketName) return;
 
@@ -2380,7 +2399,8 @@ function initComprasModule() {
           marketName,
           date,
           total,
-          notes
+          notes,
+          paymentMethod
         });
 
         saveState(state);
@@ -3344,33 +3364,33 @@ function initCategoryManagement() {
 // CONTROLE DE MODAIS
 // -------------------------------------------------------------
 function initModals() {
-  document.querySelectorAll('[data-open-modal]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+  document.addEventListener('click', (e) => {
+    const openBtn = e.target.closest('[data-open-modal]');
+    if (openBtn) {
       e.preventDefault();
       try {
         if (typeof populateCategorySelects === 'function' && state) {
           populateCategorySelects(state);
         }
       } catch (err) {}
-      const modalId = btn.getAttribute('data-open-modal');
-      openModal(modalId);
-    });
-  });
-
-  document.querySelectorAll('[data-close-modal]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const modal = btn.closest('.modal-overlay');
-      if (modal) modal.classList.remove('active');
-    });
-  });
-
-  document.querySelectorAll('.modal-overlay').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        modal.classList.remove('active');
+      const modalId = openBtn.getAttribute('data-open-modal');
+      if (modalId) {
+        openModal(modalId);
       }
-    });
+      return;
+    }
+
+    const closeBtn = e.target.closest('[data-close-modal]');
+    if (closeBtn) {
+      e.preventDefault();
+      const modal = closeBtn.closest('.modal-overlay');
+      if (modal) modal.classList.remove('active');
+      return;
+    }
+
+    if (e.target.classList.contains('modal-overlay')) {
+      e.target.classList.remove('active');
+    }
   });
 }
 
