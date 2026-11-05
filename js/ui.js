@@ -1016,9 +1016,9 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
 
     let cycleNotice = '';
     if (isOct) {
-      cycleNotice = '📅 <strong>Ciclo Outubro/2026 (06/10 a 05/11):</strong> Vigente até hoje! Os gastos de 03/11, padaria e açougue foram abatidos daqui. Novo crédito de Novembro cai amanhã (06/11).';
+      cycleNotice = '📅 <strong>Ciclo Outubro/2026 (06/10 a 05/11):</strong> Encerrado! Os gastos com Carrefour, padaria e açougue trouxeram o VA a R$ 9,84 e o VR a R$ 0,16. Essas sobras foram acumuladas e somadas automaticamente a Novembro.';
     } else if (isNov) {
-      cycleNotice = '✨ <strong>Ciclo Novembro/2026 (06/11 a 03/12):</strong> Crédito disponibilizado amanhã (06/11)! Gastos antes de 06/11 pertencem ao ciclo de Outubro.';
+      cycleNotice = '✨ <strong>Ciclo Novembro/2026 (06/11 a 03/12):</strong> Crédito disponibilizado amanhã (06/11)! Inclui + R$ 9,84 de VA e + R$ 0,16 de VR acumulados de Outubro (Total R$ 3.165,00 livre).';
     } else {
       cycleNotice = `📍 <strong>${benefits.cycleLabel}:</strong> Período de vigência: ${benefits.cycleRange}.`;
     }
@@ -1066,38 +1066,54 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
           <div style="background: #ffffff; border: 1px solid rgba(22, 163, 74, 0.2); border-radius: var(--radius-md); padding: 0.65rem 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: 0.75rem; font-weight: 700; color: #15803d;">🥗 Vale Alimentação (VA)</span>
-              <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600;">Fixo</span>
+              <span style="font-size: 0.68rem; color: ${benefits.vaRollover > 0 ? '#15803d' : 'var(--text-muted)'}; font-weight: 700;">
+                ${benefits.vaRollover > 0 ? `+ ${formatCurrencyWithSymbol(benefits.vaRollover)} acumulado` : (isOct ? 'Encerrado' : 'Fixo')}
+              </span>
             </div>
-            <div style="font-size: 1.2rem; font-weight: 800; color: #15803d; margin-top: 0.2rem;">
+            <div style="font-size: 1.25rem; font-weight: 800; color: #15803d; margin-top: 0.2rem;">
               ${formatCurrencyWithSymbol(benefits.vaBalance)}
-              <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">saldo livre</span>
+              <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">${isOct ? 'sobrou no ciclo' : 'saldo livre'}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.35rem;">
               <span>Gasto: <strong>${formatCurrencyWithSymbol(benefits.vaSpent)}</strong></span>
               <span>Total: ${formatCurrencyWithSymbol(benefits.vaTotal)}</span>
             </div>
-            <div style="background: rgba(0,0,0,0.06); border-radius: var(--radius-full); height: 6px; overflow: hidden; margin-top: 0.35rem;">
-              <div style="background: #16a34a; height: 100%; width: ${benefits.vaUsagePercent}%; border-radius: var(--radius-full);"></div>
-            </div>
+            ${isOct ? `
+              <div style="font-size: 0.68rem; color: #15803d; font-weight: 700; margin-top: 0.25rem;">
+                ↳ R$ 9,84 acumulado transferido para Novembro!
+              </div>
+            ` : `
+              <div style="background: rgba(0,0,0,0.06); border-radius: var(--radius-full); height: 6px; overflow: hidden; margin-top: 0.35rem;">
+                <div style="background: #16a34a; height: 100%; width: ${benefits.vaUsagePercent}%; border-radius: var(--radius-full);"></div>
+              </div>
+            `}
           </div>
 
           <!-- Card VR -->
           <div style="background: #ffffff; border: 1px solid rgba(234, 88, 12, 0.2); border-radius: var(--radius-md); padding: 0.65rem 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: 0.75rem; font-weight: 700; color: #c2410c;">🍽️ Vale Refeição (VR)</span>
-              <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600;">${benefits.vrDays}d × R$ ${formatCurrency(benefits.vrDaily)}</span>
+              <span style="font-size: 0.68rem; color: ${benefits.vrRollover > 0 ? '#c2410c' : 'var(--text-muted)'}; font-weight: 700;">
+                ${benefits.vrRollover > 0 ? `+ ${formatCurrencyWithSymbol(benefits.vrRollover)} acumulado` : (isOct ? 'Encerrado' : `${benefits.vrDays}d × R$ ${formatCurrency(benefits.vrDaily)}`)}
+              </span>
             </div>
-            <div style="font-size: 1.2rem; font-weight: 800; color: #c2410c; margin-top: 0.2rem;">
+            <div style="font-size: 1.25rem; font-weight: 800; color: #c2410c; margin-top: 0.2rem;">
               ${formatCurrencyWithSymbol(benefits.vrBalance)}
-              <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">saldo livre</span>
+              <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">${isOct ? 'sobrou no ciclo' : 'saldo livre'}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.35rem;">
               <span>Gasto: <strong>${formatCurrencyWithSymbol(benefits.vrSpent)}</strong></span>
               <span>Total: ${formatCurrencyWithSymbol(benefits.vrTotal)}</span>
             </div>
-            <div style="background: rgba(0,0,0,0.06); border-radius: var(--radius-full); height: 6px; overflow: hidden; margin-top: 0.35rem;">
-              <div style="background: #ea580c; height: 100%; width: ${benefits.vrUsagePercent}%; border-radius: var(--radius-full);"></div>
-            </div>
+            ${isOct ? `
+              <div style="font-size: 0.68rem; color: #c2410c; font-weight: 700; margin-top: 0.25rem;">
+                ↳ R$ 0,16 acumulado transferido para Novembro!
+              </div>
+            ` : `
+              <div style="background: rgba(0,0,0,0.06); border-radius: var(--radius-full); height: 6px; overflow: hidden; margin-top: 0.35rem;">
+                <div style="background: #ea580c; height: 100%; width: ${benefits.vrUsagePercent}%; border-radius: var(--radius-full);"></div>
+              </div>
+            `}
           </div>
         </div>
 

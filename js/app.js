@@ -3062,14 +3062,19 @@ function initComprasModule() {
   const benefitsVaInput = document.getElementById('benefits-input-va-fixed');
   const benefitsVrDailyInput = document.getElementById('benefits-input-vr-daily');
   const benefitsVrDaysInput = document.getElementById('benefits-input-vr-days');
+  const benefitsVaRolloverInput = document.getElementById('benefits-input-va-rollover');
+  const benefitsVrRolloverInput = document.getElementById('benefits-input-vr-rollover');
 
   function updateBenefitsLivePreview() {
     const vaVal = benefitsVaInput ? parseCurrency(benefitsVaInput.value) : 2050;
     const vrDailyVal = benefitsVrDailyInput ? parseCurrency(benefitsVrDailyInput.value) : 65;
     const vrDaysVal = benefitsVrDaysInput ? (parseInt(benefitsVrDaysInput.value, 10) || 0) : 0;
+    const vaRollVal = benefitsVaRolloverInput ? parseCurrency(benefitsVaRolloverInput.value) : 0;
+    const vrRollVal = benefitsVrRolloverInput ? parseCurrency(benefitsVrRolloverInput.value) : 0;
 
-    const vrTotal = Math.round(vrDailyVal * vrDaysVal * 100) / 100;
-    const combinedTotal = Math.round((vaVal + vrTotal) * 100) / 100;
+    const vrTotal = Math.round((vrDailyVal * vrDaysVal + vrRollVal) * 100) / 100;
+    const vaTotal = Math.round((vaVal + vaRollVal) * 100) / 100;
+    const combinedTotal = Math.round((vaTotal + vrTotal) * 100) / 100;
 
     const vrPreview = document.getElementById('benefits-preview-vr-total');
     const combinedPreview = document.getElementById('benefits-preview-combined-total');
@@ -3086,7 +3091,7 @@ function initComprasModule() {
     });
   }
 
-  [benefitsVaInput, benefitsVrDailyInput, benefitsVrDaysInput].forEach(inp => {
+  [benefitsVaInput, benefitsVrDailyInput, benefitsVrDaysInput, benefitsVaRolloverInput, benefitsVrRolloverInput].forEach(inp => {
     if (inp) {
       inp.addEventListener('input', updateBenefitsLivePreview);
       inp.addEventListener('change', updateBenefitsLivePreview);
@@ -3101,11 +3106,15 @@ function initComprasModule() {
         const vaFixed = benefitsVaInput ? parseCurrency(benefitsVaInput.value) : 2050;
         const vrDaily = benefitsVrDailyInput ? parseCurrency(benefitsVrDailyInput.value) : 65;
         const vrDays = benefitsVrDaysInput ? (parseInt(benefitsVrDaysInput.value, 10) || 0) : 0;
+        const vaRollover = benefitsVaRolloverInput ? parseCurrency(benefitsVaRolloverInput.value) : 0;
+        const vrRollover = benefitsVrRolloverInput ? parseCurrency(benefitsVrRolloverInput.value) : 0;
 
         updateMonthlyBenefitsConfig(state, monthKey, {
           vaFixed,
           vrDaily,
-          vrDays
+          vrDays,
+          vaRollover,
+          vrRollover
         });
 
         saveState(state);
@@ -3489,12 +3498,16 @@ function prepareBenefitsModal(monthKey) {
   const vaInput = document.getElementById('benefits-input-va-fixed');
   const vrDailyInput = document.getElementById('benefits-input-vr-daily');
   const vrDaysInput = document.getElementById('benefits-input-vr-days');
+  const vaRolloverInput = document.getElementById('benefits-input-va-rollover');
+  const vrRolloverInput = document.getElementById('benefits-input-vr-rollover');
   const vrTotalPreview = document.getElementById('benefits-preview-vr-total');
   const combinedTotalPreview = document.getElementById('benefits-preview-combined-total');
 
-  if (vaInput) vaInput.value = formatCurrency(details.vaTotal);
+  if (vaInput) vaInput.value = formatCurrency(details.vaDeposit || details.vaBaseFixed || 2050);
   if (vrDailyInput) vrDailyInput.value = formatCurrency(details.vrDaily);
   if (vrDaysInput) vrDaysInput.value = details.vrDays;
+  if (vaRolloverInput) vaRolloverInput.value = details.vaRollover ? formatCurrency(details.vaRollover) : '0,00';
+  if (vrRolloverInput) vrRolloverInput.value = details.vrRollover ? formatCurrency(details.vrRollover) : '0,00';
   if (vrTotalPreview) vrTotalPreview.textContent = formatCurrencyWithSymbol(details.vrTotal);
   if (combinedTotalPreview) combinedTotalPreview.textContent = formatCurrencyWithSymbol(details.totalBenefit);
 }

@@ -16,7 +16,15 @@ export const DEFAULT_BENEFITS_CONFIG = {
     // Crédito de outubro (06/10/2026) e novembro (06/11/2026)
     "2026-10": "2026-10-06",
     "2026-11": "2026-11-06"
-  }
+  },
+  monthlyEndingBalances: {
+    // Ciclo de Outubro encerrado: sobrou R$ 9,84 de VA e R$ 0,16 de VR
+    "2026-10": {
+      vaEndingBalance: 9.84,
+      vrEndingBalance: 0.16
+    }
+  },
+  monthlyRolloverOverrides: {}
 };
 
 export const PAYMENT_METHODS = [
@@ -326,7 +334,7 @@ export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
   const pad = n => String(n).padStart(2, '0');
 
   const config = getBenefitsConfig(state);
-  const vaFixed = Number(config.vaFixedAmount) || 2050.00;
+  const vaBaseFixed = Number(config.vaFixedAmount) || 2050.00;
   const vrDaily = Number(config.vrDailyAmount) || 65.00;
 
   // Dias trabalhados
@@ -339,8 +347,29 @@ export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
     vrDays = prevMonthWorkingDays > 0 ? prevMonthWorkingDays : 17;
   }
 
-  const vrTotal = Math.round(vrDays * vrDaily * 100) / 100;
-  const vaTotal = Math.round(vaFixed * 100) / 100;
+  const vrDeposit = Math.round(vrDays * vrDaily * 100) / 100;
+  const vaDeposit = Math.round(vaBaseFixed * 100) / 100;
+
+  // Saldo Acumulado do Mês Anterior (Rollover para o mês subsequente)
+  let vaRollover = 0;
+  let vrRollover = 0;
+
+  if (config.monthlyRolloverOverrides && config.monthlyRolloverOverrides[cycleKey]) {
+    const ov = config.monthlyRolloverOverrides[cycleKey];
+    if (ov.vaRollover !== undefined) vaRollover = Number(ov.vaRollover);
+    if (ov.vrRollover !== undefined) vrRollover = Number(ov.vrRollover);
+  } else {
+    const prevMonthDate = new Date(year, month - 2, 1);
+    const prevCycleKey = `${prevMonthDate.getFullYear()}-${pad(prevMonthDate.getMonth() + 1)}`;
+    if (config.monthlyEndingBalances && config.monthlyEndingBalances[prevCycleKey]) {
+      const prevEnding = config.monthlyEndingBalances[prevCycleKey];
+      if (prevEnding.vaEndingBalance !== undefined) vaRollover = Number(prevEnding.vaEndingBalance);
+      if (prevEnding.vrEndingBalance !== undefined) vrRollover = Number(prevEnding.vrEndingBalance);
+    }
+  }
+
+  const vaTotal = Math.round((vaDeposit + vaRollover) * 100) / 100;
+  const vrTotal = Math.round((vrDeposit + vrRollover) * 100) / 100;
   const totalBenefit = Math.round((vaTotal + vrTotal) * 100) / 100;
 
   const cycleRange = getBenefitCycleRange(cycleKey, state);
@@ -375,12 +404,29 @@ export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
     paymentBreakdown[k] = Math.round(paymentBreakdown[k] * 100) / 100;
   });
 
-  const vaSpent = paymentBreakdown.va;
-  const vrSpent = paymentBreakdown.vr;
-  const vaBalance = Math.round((vaTotal - vaSpent) * 100) / 100;
-  const vrBalance = Math.round((vrTotal - vrSpent) * 100) / 100;
+  let vaSpent = paymentBreakdown.va;
+  let vrSpent = paymentBreakdown.vr;
+  let vaBalance = 0;
+  let vrBalance = 0;
+
+  // Se o ciclo tiver saldo residual/final fixado (ex: Outubro/2026 com R$ 9,84 de VA e R$ 0,16 de VR):
+  const fixedEnding = config.monthlyEndingBalances && config.monthlyEndingBalances[cycleKey];
+  if (fixedEnding && fixedEnding.vaEndingBalance !== undefined) {
+    vaBalance = Math.round(Number(fixedEnding.vaEndingBalance) * 100) / 100;
+    vaSpent = Math.max(vaSpent, Math.round((vaTotal - vaBalance) * 100) / 100);
+  } else {
+    vaBalance = Math.round((vaTotal - vaSpent) * 100) / 100;
+  }
+
+  if (fixedEnding && fixedEnding.vrEndingBalance !== undefined) {
+    vrBalance = Math.round(Number(fixedEnding.vrEndingBalance) * 100) / 100;
+    vrSpent = Math.max(vrSpent, Math.round((vrTotal - vrBalance) * 100) / 100);
+  } else {
+    vrBalance = Math.round((vrTotal - vrSpent) * 100) / 100;
+  }
+
   const totalFoodSpent = Math.round((vaSpent + vrSpent) * 100) / 100;
-  const totalFoodBalance = Math.round((totalBenefit - totalFoodSpent) * 100) / 100;
+  const totalFoodBalance = Math.round((vaBalance + vrBalance) * 100) / 100;
 
   const vaUsagePercent = vaTotal > 0 ? Math.min(100, Math.round((vaSpent / vaTotal) * 100)) : 0;
   const vrUsagePercent = vrTotal > 0 ? Math.min(100, Math.round((vrSpent / vrTotal) * 100)) : 0;
@@ -400,17 +446,23 @@ export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
     creditDay: cycleRange.startIso ? parseInt(cycleRange.startIso.slice(8, 10), 10) : 4,
     creditDateFormatted: cycleRange.startFormatted,
     nextCreditDateFormatted: cycleRange.nextCreditFormatted,
-    vaFixed,
+    vaBaseFixed,
+    vaDeposit,
+    vaRollover,
     vaTotal,
     vaSpent,
     vaBalance,
     vaUsagePercent,
     vrDaily,
     vrDays,
+    vrDeposit,
+    vrRollover,
     vrTotal,
     vrSpent,
     vrBalance,
     vrUsagePercent,
+    totalDeposit: Math.round((vaDeposit + vrDeposit) * 100) / 100,
+    totalRollover: Math.round((vaRollover + vrRollover) * 100) / 100,
     totalBenefit,
     totalFoodSpent,
     totalFoodBalance,
@@ -453,7 +505,16 @@ export function getBenefitsHistory(state) {
   return sortedKeys.map(k => getMonthlyBenefitDetails(state, k));
 }
 
-export function updateMonthlyBenefitsConfig(state, monthKey, { vrDays, vaFixed, vrDaily, creditDate }) {
+export function updateMonthlyBenefitsConfig(state, monthKey, {
+  vrDays,
+  vaFixed,
+  vrDaily,
+  creditDate,
+  vaRollover,
+  vrRollover,
+  vaEndingBalance,
+  vrEndingBalance
+}) {
   const config = getBenefitsConfig(state);
   if (!config.monthlyDays) config.monthlyDays = {};
   if (vrDays !== undefined) config.monthlyDays[monthKey] = Number(vrDays);
@@ -462,6 +523,18 @@ export function updateMonthlyBenefitsConfig(state, monthKey, { vrDays, vaFixed, 
   if (creditDate !== undefined) {
     if (!config.monthlyCreditDates) config.monthlyCreditDates = {};
     config.monthlyCreditDates[monthKey] = creditDate;
+  }
+  if (vaRollover !== undefined || vrRollover !== undefined) {
+    if (!config.monthlyRolloverOverrides) config.monthlyRolloverOverrides = {};
+    if (!config.monthlyRolloverOverrides[monthKey]) config.monthlyRolloverOverrides[monthKey] = {};
+    if (vaRollover !== undefined) config.monthlyRolloverOverrides[monthKey].vaRollover = Number(vaRollover);
+    if (vrRollover !== undefined) config.monthlyRolloverOverrides[monthKey].vrRollover = Number(vrRollover);
+  }
+  if (vaEndingBalance !== undefined || vrEndingBalance !== undefined) {
+    if (!config.monthlyEndingBalances) config.monthlyEndingBalances = {};
+    if (!config.monthlyEndingBalances[monthKey]) config.monthlyEndingBalances[monthKey] = {};
+    if (vaEndingBalance !== undefined) config.monthlyEndingBalances[monthKey].vaEndingBalance = Number(vaEndingBalance);
+    if (vrEndingBalance !== undefined) config.monthlyEndingBalances[monthKey].vrEndingBalance = Number(vrEndingBalance);
   }
   return getMonthlyBenefitDetails(state, monthKey);
 }

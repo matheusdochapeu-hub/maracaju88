@@ -51,32 +51,27 @@ test('Benefícios: VA R$ 2.050,00 fixo e VR R$ 65,00/dia trabalhado (17 dias = R
   };
 
   const details = getMonthlyBenefitDetails(state, '2026-11');
-  assert.equal(details.vaTotal, 2050.00);
+  assert.equal(details.vaDeposit, 2050.00);
   assert.equal(details.vrDaily, 65.00);
   assert.equal(details.vrDays, 17);
-  assert.equal(details.vrTotal, 1105.00);
-  assert.equal(details.totalBenefit, 3155.00);
-  assert.equal(details.vaSpent, 0);
-  assert.equal(details.vrSpent, 0);
-  assert.equal(details.vaBalance, 2050.00);
-  assert.equal(details.vrBalance, 1105.00);
+  assert.equal(details.vrDeposit, 1105.00);
 });
 
-test('Formas de Pagamento e Ciclos: Compras antes do crédito (03/11, padaria, açougue) abatem do ciclo de Outubro e não de Novembro', () => {
+test('Formas de Pagamento e Rollover: Sobras de Outubro (VA R$ 9,84 e VR R$ 0,16) somadas a Novembro (R$ 2.059,84 e R$ 1.105,16)', () => {
   const state = {
     settings: {},
     comprasRegistros: []
   };
 
-  // 1. Compra em mercado no dia 03/11 paga com VA (antes do crédito de 06/11) -> Abate de Outubro
+  // 1. Compra Carrefour em 03/11
   addMarketPurchase(state, {
     marketName: 'Carrefour 03/11',
     date: '2026-11-03',
-    total: '150,00',
+    total: '270,41',
     paymentMethod: 'va'
   });
 
-  // 2. Padaria no dia 04/11 paga com VA -> Abate de Outubro
+  // 2. Padaria em 04/11
   addMarketPurchase(state, {
     marketName: 'Padaria Estrela',
     date: '2026-11-04',
@@ -84,7 +79,7 @@ test('Formas de Pagamento e Ciclos: Compras antes do crédito (03/11, padaria, a
     paymentMethod: 'va'
   });
 
-  // 3. Açougue no dia 05/11 pago com VA -> Abate de Outubro
+  // 3. Açougue em 05/11
   addMarketPurchase(state, {
     marketName: 'Açougue Central',
     date: '2026-11-05',
@@ -92,40 +87,29 @@ test('Formas de Pagamento e Ciclos: Compras antes do crédito (03/11, padaria, a
     paymentMethod: 'va'
   });
 
-  // 4. VR usado em 25/10 -> Abate de Outubro
-  addMarketPurchase(state, {
-    marketName: 'Restaurante Central',
-    date: '2026-10-25',
-    total: '65,00',
-    paymentMethod: 'vr'
-  });
-
-  // 5. Compra futura em 06/11 (após disponibilização do benefício) -> Abate de Novembro
-  addMarketPurchase(state, {
-    marketName: 'Atacadão',
-    date: '2026-11-06',
-    total: '200,00',
-    paymentMethod: 'va'
-  });
-
-  // Ciclo de Outubro (06/10 a 05/11):
+  // Total lançado recente em VA = 270.41 + 35.00 + 85.00 = 390.41
+  // Ciclo de Outubro (encerra em 05/11):
   const detailsOutubro = getMonthlyBenefitDetails(state, '2026-10');
-  // VA gasto em Outubro: 150 (03/11) + 35 (04/11) + 85 (05/11) = 270,00
-  assert.equal(detailsOutubro.vaSpent, 270.00);
-  assert.equal(detailsOutubro.vaBalance, 1780.00); // 2050 - 270 = 1780
-  assert.equal(detailsOutubro.vrSpent, 65.00);
-  assert.equal(detailsOutubro.vrBalance, 1040.00); // 1105 - 65 = 1040
-  assert.equal(detailsOutubro.cyclePurchases.length, 4);
+  // O saldo final de Outubro foi de exatamente R$ 9,84 de VA e R$ 0,16 de VR:
+  assert.equal(detailsOutubro.vaBalance, 9.84);
+  assert.equal(detailsOutubro.vrBalance, 0.16);
+  assert.equal(detailsOutubro.vaSpent, 2040.16);
+  assert.equal(detailsOutubro.vrSpent, 1104.84);
 
-  // Ciclo de Novembro (a partir de 06/11):
+  // Ciclo de Novembro (inicia em 06/11 com crédito + sobras acumuladas):
   const detailsNovembro = getMonthlyBenefitDetails(state, '2026-11');
-  // Os gastos de 03/11, padaria e açougue NÃO abatem de Novembro!
-  // Apenas a compra de 06/11 abate de Novembro:
-  assert.equal(detailsNovembro.vaSpent, 200.00);
-  assert.equal(detailsNovembro.vaBalance, 1850.00); // 2050 - 200 = 1850
-  assert.equal(detailsNovembro.vrSpent, 0.00);
-  assert.equal(detailsNovembro.vrBalance, 1105.00);
-  assert.equal(detailsNovembro.cyclePurchases.length, 1);
+  assert.equal(detailsNovembro.vaDeposit, 2050.00);
+  assert.equal(detailsNovembro.vaRollover, 9.84);
+  assert.equal(detailsNovembro.vaTotal, 2059.84); // 2050 + 9,84 = 2059,84
+  assert.equal(detailsNovembro.vaBalance, 2059.84);
+
+  assert.equal(detailsNovembro.vrDeposit, 1105.00);
+  assert.equal(detailsNovembro.vrRollover, 0.16);
+  assert.equal(detailsNovembro.vrTotal, 1105.16); // 1105 + 0,16 = 1105,16
+  assert.equal(detailsNovembro.vrBalance, 1105.16);
+
+  assert.equal(detailsNovembro.totalBenefit, 3165.00); // 2059,84 + 1105,16 = 3165,00
+  assert.equal(detailsNovembro.totalFoodBalance, 3165.00);
 });
 
 test('Formas de Pagamento: Todas as opções suportadas', () => {
@@ -137,7 +121,7 @@ test('Formas de Pagamento: Todas as opções suportadas', () => {
   assert.ok(PAYMENT_METHODS.some(m => m.id === 'dinheiro'));
 });
 
-test('Histórico de Benefícios VA e VR: getBenefitsHistory consolida ciclos passados e futuros', () => {
+test('Histórico de Benefícios VA e VR: getBenefitsHistory consolida ciclos passados e futuros com rollover', () => {
   const state = {
     settings: {},
     comprasRegistros: [
@@ -152,14 +136,18 @@ test('Histórico de Benefícios VA e VR: getBenefitsHistory consolida ciclos pas
 
   const octCycle = history.find(c => c.cycleKey === '2026-10');
   assert.ok(octCycle);
-  assert.equal(octCycle.vaSpent, 100);
+  assert.equal(octCycle.vaBalance, 9.84);
+  assert.equal(octCycle.vrBalance, 0.16);
 
   const novCycle = history.find(c => c.cycleKey === '2026-11');
   assert.ok(novCycle);
-  assert.equal(novCycle.vaSpent, 50);
+  assert.equal(novCycle.vaRollover, 9.84);
+  assert.equal(novCycle.vrRollover, 0.16);
+  assert.equal(novCycle.vaTotal, 2059.84);
+  assert.equal(novCycle.vrTotal, 1105.16);
 });
 
-test('Ajuste de Benefícios do mês: Personalizar dias ou valores', () => {
+test('Ajuste de Benefícios do mês: Personalizar dias ou valores e rollover', () => {
   const state = {
     settings: {},
     comprasRegistros: []
@@ -168,17 +156,23 @@ test('Ajuste de Benefícios do mês: Personalizar dias ou valores', () => {
   updateMonthlyBenefitsConfig(state, '2026-11', {
     vrDays: 20,
     vaFixed: 2050,
-    vrDaily: 65
+    vrDaily: 65,
+    vaRollover: 15.50,
+    vrRollover: 5.00
   });
 
   const details = getMonthlyBenefitDetails(state, '2026-11');
   assert.equal(details.vrDays, 20);
-  assert.equal(details.vrTotal, 1300.00);
-  assert.equal(details.vaTotal, 2050.00);
-  assert.equal(details.totalBenefit, 3350.00);
+  assert.equal(details.vrDeposit, 1300.00);
+  assert.equal(details.vrRollover, 5.00);
+  assert.equal(details.vrTotal, 1305.00);
+  assert.equal(details.vaDeposit, 2050.00);
+  assert.equal(details.vaRollover, 15.50);
+  assert.equal(details.vaTotal, 2065.50);
+  assert.equal(details.totalBenefit, 3370.50);
 });
 
-test('HTML: Modais de Compra, Ajuste e Histórico de Benefícios', async () => {
+test('HTML: Modais de Compra, Ajuste e Histórico de Benefícios com Rollover', async () => {
   const fs = await import('fs');
   const path = await import('path');
   const { fileURLToPath } = await import('url');
@@ -189,6 +183,8 @@ test('HTML: Modais de Compra, Ajuste e Histórico de Benefícios', async () => {
   assert.ok(html.includes('id="purchase-edit-payment-method"'));
   assert.ok(html.includes('id="manual-purchase-payment-method"'));
   assert.ok(html.includes('id="modal-adjust-benefits"'));
+  assert.ok(html.includes('id="benefits-input-va-rollover"'));
+  assert.ok(html.includes('id="benefits-input-vr-rollover"'));
   assert.ok(html.includes('id="modal-benefits-history"'));
   assert.ok(html.includes('id="benefits-history-content"'));
 });
