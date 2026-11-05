@@ -30,9 +30,9 @@ export async function testSheetsConnection(url, token) {
   return json;
 }
 
-export async function backupToSheets(state) {
-  const url = state.settings.sheetsUrl;
-  const token = state.settings.sheetsToken;
+export async function backupToSheets(state, overrideUrl = null, overrideToken = null) {
+  const url = overrideUrl || (state && state.settings && state.settings.sheetsUrl);
+  const token = overrideToken !== null ? overrideToken : (state && state.settings && state.settings.sheetsToken);
 
   if (!url || !url.trim()) {
     throw new Error("URL do Google Apps Script não configurada.");
@@ -85,9 +85,9 @@ export async function backupToSheets(state) {
   return result;
 }
 
-export async function restoreFromSheets(state) {
-  const url = state.settings.sheetsUrl;
-  const token = state.settings.sheetsToken;
+export async function restoreFromSheets(state, overrideUrl = null, overrideToken = null) {
+  const url = overrideUrl || (state && state.settings && state.settings.sheetsUrl);
+  const token = overrideToken !== null ? overrideToken : (state && state.settings && state.settings.sheetsToken);
 
   if (!url || !url.trim()) {
     throw new Error("URL do Google Apps Script não configurada.");

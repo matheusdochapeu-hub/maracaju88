@@ -1476,6 +1476,42 @@ function initSettingsModule() {
   const btnExportJson = document.getElementById('btn-export-json');
   const inputImportJson = document.getElementById('input-import-json');
 
+  const inputSheetsUrl = document.getElementById('settings-sheets-url');
+  const inputSheetsToken = document.getElementById('settings-sheets-token');
+  const autoSyncToggle = document.getElementById('settings-autosync-toggle');
+  const soundToggle = document.getElementById('settings-sound-toggle');
+
+  function syncSheetsInputsToState() {
+    if (inputSheetsUrl) {
+      state.settings.sheetsUrl = inputSheetsUrl.value.trim();
+    }
+    if (inputSheetsToken) {
+      state.settings.sheetsToken = inputSheetsToken.value.trim();
+    }
+    if (autoSyncToggle) {
+      state.settings.autoSync = autoSyncToggle.checked;
+    }
+    if (soundToggle) {
+      state.settings.soundEnabled = soundToggle.checked;
+    }
+    saveState(state);
+  }
+
+  if (inputSheetsUrl) {
+    inputSheetsUrl.addEventListener('input', syncSheetsInputsToState);
+    inputSheetsUrl.addEventListener('change', syncSheetsInputsToState);
+  }
+  if (inputSheetsToken) {
+    inputSheetsToken.addEventListener('input', syncSheetsInputsToState);
+    inputSheetsToken.addEventListener('change', syncSheetsInputsToState);
+  }
+  if (autoSyncToggle) {
+    autoSyncToggle.addEventListener('change', syncSheetsInputsToState);
+  }
+  if (soundToggle) {
+    soundToggle.addEventListener('change', syncSheetsInputsToState);
+  }
+
   if (formSettings) {
     formSettings.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -1556,6 +1592,7 @@ function initSettingsModule() {
 
   if (btnTestSheets) {
     btnTestSheets.addEventListener('click', async () => {
+      syncSheetsInputsToState();
       const url = document.getElementById('settings-sheets-url').value;
       const token = document.getElementById('settings-sheets-token').value;
       btnTestSheets.disabled = true;
@@ -1575,6 +1612,7 @@ function initSettingsModule() {
 
   if (btnSyncNow) {
     btnSyncNow.addEventListener('click', async () => {
+      syncSheetsInputsToState();
       btnSyncNow.disabled = true;
       btnSyncNow.textContent = 'Enviando...';
       const syncDot = document.getElementById('sync-dot');
@@ -1597,6 +1635,7 @@ function initSettingsModule() {
 
   if (btnRestoreSheets) {
     btnRestoreSheets.addEventListener('click', async () => {
+      syncSheetsInputsToState();
       if (!confirm('Atenção: A restauração atualizará os dados locais com a versão mais recente salva na planilha. Deseja continuar?')) {
         return;
       }

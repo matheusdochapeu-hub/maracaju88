@@ -35,7 +35,7 @@ export function getInitialState() {
     catalog: [],
     categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)),
     settings: {
-      sheetsUrl: "",
+      sheetsUrl: "https://script.google.com/macros/s/AKfycbywJvIREiTE3wO1J_8dE-vSXWHk4SzsU2XCvL7ktlj1CkF5T24aXMvkLa3XCadNG0sxWg/exec",
       sheetsToken: "Maracaju88CasalSegredo2026!",
       autoSync: true,
       soundEnabled: true,
@@ -75,7 +75,9 @@ export function loadState() {
       settings: {
         ...initial.settings,
         ...(parsed.settings || {}),
-        autoSync: (parsed.settings && parsed.settings.sheetsUrl) ? true : ((parsed.settings && parsed.settings.autoSync !== undefined) ? parsed.settings.autoSync : true)
+        sheetsUrl: (parsed.settings && parsed.settings.sheetsUrl && parsed.settings.sheetsUrl.trim()) ? parsed.settings.sheetsUrl.trim() : initial.settings.sheetsUrl,
+        sheetsToken: (parsed.settings && parsed.settings.sheetsToken && parsed.settings.sheetsToken.trim()) ? parsed.settings.sheetsToken.trim() : initial.settings.sheetsToken,
+        autoSync: true
       },
       tasks: Array.isArray(parsed.tasks) && parsed.tasks.length > 0 ? parsed.tasks : initial.tasks,
       history: parsed.history || {},

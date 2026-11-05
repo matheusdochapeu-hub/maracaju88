@@ -2,7 +2,7 @@
 //  MARACAJU - SERVICE WORKER (PWA Offline Cache)
 // ============================================================
 
-const CACHE_NAME = 'maracaju-v2.1.4';
+const CACHE_NAME = 'maracaju-v2.1.5';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -96,7 +96,7 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => {
-          return caches.match('./index.html') || caches.match('./');
+          return caches.match('./index.html', { ignoreSearch: true }) || caches.match('./', { ignoreSearch: true });
         })
     );
     return;
@@ -116,7 +116,7 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => {
-          return caches.match(event.request);
+          return caches.match(event.request, { ignoreSearch: true });
         })
     );
     return;
@@ -124,7 +124,7 @@ self.addEventListener('fetch', (event) => {
 
   // 3. Demais assets (ícones, imagens): Cache First, fallback Network
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
