@@ -1,5 +1,8 @@
 import {
   getMonthlyBenefitDetails,
+  getBenefitsHistory,
+  getCurrentBenefitCycleKey,
+  getBenefitCycleRange,
   getPaymentMethodInfo,
   PAYMENT_METHODS
 } from './benefits.js';
@@ -37,6 +40,18 @@ import { findCatalogProduct, getProductPriceComparison, searchCatalogProducts, e
 // -------------------------------------------------------------
 let currentPurchasesSort = 'date-desc';
 let currentPurchasesSearch = '';
+
+export let currentBenefitsCycle = null;
+export function setBenefitsCycle(cycleKey) {
+  currentBenefitsCycle = cycleKey;
+}
+export function getActiveBenefitsCycle() {
+  if (!currentBenefitsCycle) {
+    currentBenefitsCycle = getCurrentBenefitCycleKey();
+  }
+  return currentBenefitsCycle;
+}
+
 
 // SISTEMA DE CONFETTI NATIVO (HTML5 Canvas Particle Engine)
 // -------------------------------------------------------------
@@ -990,26 +1005,60 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
   const summary = getShoppingSummary(state);
 
   // -----------------------------------------------------------
-  // PAINEL DE BENEFÍCIOS (VA & VR - SÃO CARLOS / SP)
+  // PAINEL DE BENEFÍCIOS (VA & VR - SÃO CARLOS / SP COM CICLOS E HISTÓRICO)
   // -----------------------------------------------------------
   const benefitsBannerEl = document.getElementById('compras-benefits-banner');
   if (benefitsBannerEl) {
-    const benefits = getMonthlyBenefitDetails(state);
+    const activeCycle = getActiveBenefitsCycle();
+    const benefits = getMonthlyBenefitDetails(state, activeCycle);
+    const isOct = benefits.cycleKey === '2026-10';
+    const isNov = benefits.cycleKey === '2026-11';
+
+    let cycleNotice = '';
+    if (isOct) {
+      cycleNotice = '📅 <strong>Ciclo Outubro/2026 (06/10 a 05/11):</strong> Vigente até hoje! Os gastos de 03/11, padaria e açougue foram abatidos daqui. Novo crédito de Novembro cai amanhã (06/11).';
+    } else if (isNov) {
+      cycleNotice = '✨ <strong>Ciclo Novembro/2026 (06/11 a 03/12):</strong> Crédito disponibilizado amanhã (06/11)! Gastos antes de 06/11 pertencem ao ciclo de Outubro.';
+    } else {
+      cycleNotice = `📍 <strong>${benefits.cycleLabel}:</strong> Período de vigência: ${benefits.cycleRange}.`;
+    }
+
+    const purchasesCount = benefits.cyclePurchases ? benefits.cyclePurchases.length : 0;
+
     benefitsBannerEl.innerHTML = `
       <div class="benefits-card" style="background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(13, 148, 136, 0.08)); border: 1px solid rgba(22, 163, 74, 0.25); border-radius: var(--radius-lg); padding: 0.85rem 1rem; margin-bottom: 0.85rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             <span style="font-size: 1.4rem; line-height: 1;">🥗</span>
             <div>
-              <strong style="font-size: 0.95rem; color: var(--brand-forest);">Benefícios Alimentação (São Carlos - SP)</strong>
+              <strong style="font-size: 0.95rem; color: var(--brand-forest);">Benefícios Alimentação (${benefits.cycleLabel})</strong>
               <div style="font-size: 0.72rem; color: var(--text-muted);">
                 Crédito no <strong>4º dia útil</strong> (${benefits.creditDateFormatted}) • Total: <strong>${formatCurrencyWithSymbol(benefits.totalBenefit)}</strong>
               </div>
             </div>
           </div>
-          <button type="button" class="btn btn-secondary btn-xs" data-open-modal="modal-adjust-benefits" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 700; border-radius: var(--radius-sm);" title="Ajustar dias trabalhados ou valores de VA/VR">
-            ⚙️ Ajustar VA / VR
+          <div style="display: flex; gap: 0.35rem; align-items: center;">
+            <button type="button" class="btn btn-secondary btn-xs" data-open-modal="modal-benefits-history" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 700; border-radius: var(--radius-sm);" title="Ver histórico completo de VA e VR">
+              📜 Histórico VA/VR
+            </button>
+            <button type="button" class="btn btn-secondary btn-xs" data-open-modal="modal-adjust-benefits" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 700; border-radius: var(--radius-sm);" title="Ajustar dias trabalhados ou valores de VA/VR">
+              ⚙️ Ajustar
+            </button>
+          </div>
+        </div>
+
+        <!-- Seletor Rápido de Ciclos (Abas) -->
+        <div style="display: flex; gap: 0.35rem; margin-bottom: 0.65rem; flex-wrap: wrap;">
+          <button type="button" class="btn btn-xs ${isOct ? 'btn-primary' : 'btn-secondary'}" data-benefits-cycle="2026-10" style="font-size: 0.7rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.2rem 0.55rem;">
+            📅 Ciclo Outubro ${isOct ? '(Ativo)' : ''}
           </button>
+          <button type="button" class="btn btn-xs ${isNov ? 'btn-primary' : 'btn-secondary'}" data-benefits-cycle="2026-11" style="font-size: 0.7rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.2rem 0.55rem;">
+            ✨ Ciclo Novembro (Amanhã) ${isNov ? '(Ativo)' : ''}
+          </button>
+        </div>
+
+        <div style="background: rgba(22, 163, 74, 0.08); border-left: 3px solid #16a34a; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.72rem; color: var(--brand-forest); margin-bottom: 0.65rem;">
+          ${cycleNotice}
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
@@ -1051,6 +1100,40 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
             </div>
           </div>
         </div>
+
+        <!-- Detalhamento de Compras Computadas no Ciclo -->
+        ${purchasesCount > 0 ? `
+          <div style="margin-top: 0.65rem; background: #ffffff; border: 1px solid rgba(22, 163, 74, 0.2); border-radius: var(--radius-md); padding: 0.5rem 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; font-size: 0.75rem;">
+              <strong style="color: var(--brand-forest);">🧾 Compras abatidas no ${benefits.cycleLabel} (${purchasesCount}):</strong>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Total: <strong>${formatCurrencyWithSymbol(benefits.totalFoodSpent)}</strong></span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+              ${benefits.cyclePurchases.map(p => {
+                const pm = getPaymentMethodInfo(p.paymentMethod || 'va');
+                const pDate = p.date ? p.date.split('-').reverse().join('/') : '';
+                return `
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.2rem 0; border-bottom: 1px dashed var(--border-subtle); font-size: 0.73rem;">
+                    <span style="font-weight: 600; color: var(--text-primary);">
+                      ${p.marketName || 'Mercado'}
+                      <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: normal; margin-left: 0.25rem;">(${pDate})</span>
+                    </span>
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                      <span style="font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.35rem; border-radius: var(--radius-full); background: ${pm.bg}; color: ${pm.color};">
+                        ${pm.icon} ${pm.shortLabel}
+                      </span>
+                      <strong style="color: var(--brand-moss-dark); font-size: 0.75rem;">${formatCurrencyWithSymbol(p.total || 0)}</strong>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : `
+          <div style="margin-top: 0.55rem; font-size: 0.72rem; color: var(--text-muted); text-align: center; background: rgba(255,255,255,0.6); padding: 0.4rem; border-radius: var(--radius-sm);">
+            ✨ Nenhuma despesa em VA ou VR computada ainda neste ciclo. Saldo 100% disponível!
+          </div>
+        `}
       </div>
     `;
   }
@@ -2092,4 +2175,122 @@ export function renderPdfInvoiceConfirmation(state, invoiceData) {
       </div>
     `;
   }).join('');
+}
+
+// -------------------------------------------------------------
+// RENDERIZAÇÃO DO MODAL DE HISTÓRICO DE BENEFÍCIOS (VA & VR)
+// -------------------------------------------------------------
+export function renderBenefitsHistoryModal(state) {
+  const container = document.getElementById('benefits-history-content');
+  if (!container) return;
+
+  const history = getBenefitsHistory(state);
+
+  if (history.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted);">
+        <p style="font-size: 2rem; margin-bottom: 0.5rem;">🥗</p>
+        <p style="font-weight: 700;">Nenhum histórico de ciclo registrado ainda.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+      <div style="background: rgba(22, 163, 74, 0.08); border-left: 3px solid #16a34a; padding: 0.55rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.75rem; color: var(--brand-forest);">
+        📍 <strong>Regra de Ciclos:</strong> Os benefícios são creditados no <strong>4º dia útil</strong>. As compras realizadas antes do crédito (ex: 03/11) abatem do ciclo de Outubro. O ciclo de Novembro entra em vigor amanhã (06/11).
+      </div>
+
+      ${history.map(c => {
+        const isCurrent = c.isCurrentCycle;
+        const isUpcoming = c.isUpcomingCycle;
+        const badgeLabel = isCurrent ? '🟢 Vigente' : (isUpcoming ? '✨ Próximo (Amanhã)' : '📁 Encerrado');
+        const badgeStyle = isCurrent
+          ? 'background: rgba(22, 163, 74, 0.15); color: #15803d; border: 1px solid rgba(22, 163, 74, 0.3);'
+          : (isUpcoming
+            ? 'background: rgba(2, 132, 199, 0.15); color: #0369a1; border: 1px solid rgba(2, 132, 199, 0.3);'
+            : 'background: rgba(100, 116, 139, 0.15); color: #475569; border: 1px solid rgba(100, 116, 139, 0.3);');
+
+        const pCount = c.cyclePurchases ? c.cyclePurchases.length : 0;
+
+        return `
+          <div style="background: #ffffff; border: 1px solid ${isCurrent ? 'rgba(22, 163, 74, 0.4)' : 'var(--border-subtle)'}; border-radius: var(--radius-md); padding: 0.75rem 0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; flex-wrap: wrap; gap: 0.35rem;">
+              <div>
+                <strong style="font-size: 0.95rem; color: var(--brand-forest);">${c.cycleLabel}</strong>
+                <div style="font-size: 0.7rem; color: var(--text-muted);">
+                  Período: <strong>${c.cycleRange}</strong> • Crédito: <strong>${c.creditDateFormatted}</strong>
+                </div>
+              </div>
+              <span style="font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: var(--radius-full); ${badgeStyle}">
+                ${badgeLabel}
+              </span>
+            </div>
+
+            <!-- Balanço do Ciclo -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+              <!-- VA -->
+              <div style="background: rgba(22, 163, 74, 0.05); border: 1px solid rgba(22, 163, 74, 0.15); border-radius: var(--radius-sm); padding: 0.45rem 0.6rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 700; color: #15803d;">
+                  <span>🥗 Vale Alimentação</span>
+                  <span>${formatCurrencyWithSymbol(c.vaTotal)}</span>
+                </div>
+                <div style="font-size: 0.85rem; font-weight: 800; color: #15803d; margin-top: 0.15rem;">
+                  ${formatCurrencyWithSymbol(c.vaBalance)} <span style="font-size: 0.68rem; font-weight: normal; color: var(--text-muted);">livre</span>
+                </div>
+                <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 0.15rem;">
+                  Gasto: <strong>${formatCurrencyWithSymbol(c.vaSpent)}</strong>
+                </div>
+              </div>
+
+              <!-- VR -->
+              <div style="background: rgba(234, 88, 12, 0.05); border: 1px solid rgba(234, 88, 12, 0.15); border-radius: var(--radius-sm); padding: 0.45rem 0.6rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 700; color: #c2410c;">
+                  <span>🍽️ Vale Refeição</span>
+                  <span>${formatCurrencyWithSymbol(c.vrTotal)}</span>
+                </div>
+                <div style="font-size: 0.85rem; font-weight: 800; color: #c2410c; margin-top: 0.15rem;">
+                  ${formatCurrencyWithSymbol(c.vrBalance)} <span style="font-size: 0.68rem; font-weight: normal; color: var(--text-muted);">livre</span>
+                </div>
+                <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 0.15rem;">
+                  Gasto: <strong>${formatCurrencyWithSymbol(c.vrSpent)}</strong> (${c.vrDays}d)
+                </div>
+              </div>
+            </div>
+
+            <!-- Total Combinado -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.45rem; padding-top: 0.35rem; border-top: 1px dashed var(--border-subtle); font-size: 0.72rem;">
+              <span style="color: var(--text-secondary);">Total Alimentação (VA+VR): <strong>${formatCurrencyWithSymbol(c.totalBenefit)}</strong></span>
+              <strong style="color: var(--brand-forest); font-size: 0.8rem;">Saldo Restante: ${formatCurrencyWithSymbol(c.totalFoodBalance)}</strong>
+            </div>
+
+            <!-- Compras do Ciclo -->
+            ${pCount > 0 ? `
+              <details style="margin-top: 0.5rem; background: var(--bg-tertiary); border-radius: var(--radius-sm); padding: 0.35rem 0.55rem;">
+                <summary style="font-size: 0.72rem; font-weight: 700; color: var(--brand-forest); cursor: pointer;">
+                  📦 ${pCount} compras abatidas deste ciclo (Ver detalhes)
+                </summary>
+                <div style="margin-top: 0.35rem; display: flex; flex-direction: column; gap: 0.2rem;">
+                  ${c.cyclePurchases.map(p => {
+                    const pm = getPaymentMethodInfo(p.paymentMethod || 'va');
+                    const pDate = p.date ? p.date.split('-').reverse().join('/') : '';
+                    return `
+                      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; padding: 0.15rem 0;">
+                        <span>${p.marketName || 'Mercado'} <span style="color: var(--text-muted);">(${pDate})</span></span>
+                        <div style="display: flex; align-items: center; gap: 0.3rem;">
+                          <span style="font-size: 0.62rem; font-weight: 700; padding: 0.05rem 0.3rem; border-radius: var(--radius-full); background: ${pm.bg}; color: ${pm.color};">${pm.icon} ${pm.shortLabel}</span>
+                          <strong>${formatCurrencyWithSymbol(p.total || 0)}</strong>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </details>
+            ` : ''}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
 }

@@ -83,7 +83,10 @@ import {
   updateRecurrentMarketsDatalist,
   renderCatalogModal,
   renderProductHistoryModal,
-  renderPdfInvoiceConfirmation
+  renderPdfInvoiceConfirmation,
+  renderBenefitsHistoryModal,
+  setBenefitsCycle,
+  getActiveBenefitsCycle
 } from './ui.js';
 import { testSheetsConnection, backupToSheets, restoreFromSheets, applyCloudBackup } from './sheets.js';
 import {
@@ -3478,7 +3481,7 @@ function initCategoryManagement() {
 // -------------------------------------------------------------
 function prepareBenefitsModal(monthKey) {
   if (!state) return;
-  const targetMonth = monthKey || (typeof getLocalDateString === 'function' ? getLocalDateString().slice(0, 7) : new Date().toISOString().slice(0, 7));
+  const targetMonth = monthKey || (typeof getActiveBenefitsCycle === 'function' ? getActiveBenefitsCycle() : (typeof getCurrentBenefitCycleKey === 'function' ? getCurrentBenefitCycleKey() : '2026-10'));
   const monthInput = document.getElementById('benefits-input-month');
   if (monthInput) monthInput.value = targetMonth;
 
@@ -3501,6 +3504,28 @@ function prepareBenefitsModal(monthKey) {
 // -------------------------------------------------------------
 function initGlobalEditDelegation() {
   document.addEventListener('click', (e) => {
+    // 0. Alternar Ciclo de Benefícios VA / VR
+    const cycleBtn = e.target.closest('[data-benefits-cycle]');
+    if (cycleBtn) {
+      const cycleKey = cycleBtn.getAttribute('data-benefits-cycle');
+      if (cycleKey && typeof setBenefitsCycle === 'function') {
+        setBenefitsCycle(cycleKey);
+        playSubtleClick(state?.settings?.soundEnabled);
+        renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
+      }
+      return;
+    }
+
+    // 0.1 Abrir Modal de Histórico de Benefícios VA / VR
+    const histBtn = e.target.closest('[data-open-modal="modal-benefits-history"]');
+    if (histBtn) {
+      if (typeof renderBenefitsHistoryModal === 'function') {
+        renderBenefitsHistoryModal(state);
+      }
+      openModal('modal-benefits-history');
+      return;
+    }
+
     // 1. Abrir Modal de Ajuste de Benefícios VA / VR
     const benBtn = e.target.closest('[data-open-modal="modal-adjust-benefits"]');
     if (benBtn) {
@@ -3600,6 +3625,7 @@ function initModals() {
 
 function openModal(id) {
   if (id === 'modal-adjust-benefits') prepareBenefitsModal();
+  if (id === 'modal-benefits-history' && typeof renderBenefitsHistoryModal === 'function') renderBenefitsHistoryModal(state);
   const modal = document.getElementById(id);
   if (modal) {
     modal.classList.add('active');

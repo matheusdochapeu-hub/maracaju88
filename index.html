@@ -14,9 +14,9 @@
 
   <!-- Icons & Manifest -->
   <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=2.2.4" />
-  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png?v=2.2.4" />
-  <link rel="shortcut icon" href="./favicon.ico?v=2.2.4" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=2.2.5" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png?v=2.2.5" />
+  <link rel="shortcut icon" href="./favicon.ico?v=2.2.5" />
 
   <!-- Auto-update PWA e escape de cache -->
   <script>
@@ -41,10 +41,10 @@
   </script>
 
   <!-- Stylesheets (v2.1.3) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.2.4" />
-  <link rel="stylesheet" href="./css/base.css?v=2.2.4" />
-  <link rel="stylesheet" href="./css/components.css?v=2.2.4" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.2.4" />
+  <link rel="stylesheet" href="./css/variables.css?v=2.2.5" />
+  <link rel="stylesheet" href="./css/base.css?v=2.2.5" />
+  <link rel="stylesheet" href="./css/components.css?v=2.2.5" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.2.5" />
 </head>
 <body>
 
@@ -58,7 +58,7 @@
     <div class="auth-card">
       <div class="auth-header">
         <div class="auth-logo-wrapper">
-          <img src="./icons/icon-192.png?v=2.2.4" alt="Maracaju" class="auth-logo" />
+          <img src="./icons/icon-192.png?v=2.2.5" alt="Maracaju" class="auth-logo" />
         </div>
         <h2 class="auth-title">Maracaju</h2>
         <span class="auth-badge">Área Restrita aos Moradores</span>
@@ -144,7 +144,7 @@
   <header class="app-header">
     <div class="header-container">
       <div class="brand-wrapper">
-        <img src="./icons/icon-192.png?v=2.2.4" alt="Maracaju" class="brand-logo" />
+        <img src="./icons/icon-192.png?v=2.2.5" alt="Maracaju" class="brand-logo" />
         <div class="brand-text">
           <h1>Maracaju</h1>
         </div>
@@ -539,7 +539,7 @@
         <div class="dash-card">
           <h3 class="dash-title" style="margin-bottom: 0.75rem;">📲 Atualização do Aplicativo</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            Versão instalada: <strong>Maracaju v2.2.4</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
+            Versão instalada: <strong>Maracaju v2.2.5</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
           </p>
           <button type="button" id="btn-force-update-settings" class="btn btn-secondary btn-sm" onclick="window.forceUpdateApp && window.forceUpdateApp()">
             🔄 Limpar Cache e Forçar Atualização
@@ -1624,7 +1624,23 @@
     </div>
   </div>
 
-    <!-- Modal: Ajustar Benefícios VA / VR (São Carlos SP) -->
+      <!-- Modal: Histórico de Benefícios VA & VR -->
+  <div id="modal-benefits-history" class="modal-overlay">
+    <div class="modal-content" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 class="modal-title">📜 Histórico de Benefícios VA & VR</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <div id="benefits-history-content" style="max-height: 70vh; overflow-y: auto;">
+        <!-- Conteúdo gerado dinamicamente -->
+      </div>
+      <div style="margin-top: 1rem; text-align: right;">
+        <button type="button" class="btn btn-secondary" data-close-modal>Fechar</button>
+      </div>
+    </div>
+  </div>
+
+<!-- Modal: Ajustar Benefícios VA / VR (São Carlos SP) -->
   <div id="modal-adjust-benefits" class="modal-overlay">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
@@ -1830,6 +1846,6 @@
   </div>
 
   <!-- Script Principal Modular (v2.1.0) -->
-  <script type="module" src="./js/app.js?v=2.2.4"></script>
+  <script type="module" src="./js/app.js?v=2.2.5"></script>
 </body>
 </html>

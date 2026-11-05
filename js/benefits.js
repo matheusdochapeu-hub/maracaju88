@@ -9,7 +9,13 @@ export const DEFAULT_BENEFITS_CONFIG = {
   city: "São Carlos - SP",
   monthlyDays: {
     // Referente a Outubro (crédito no 4º dia útil de Novembro): 17 dias = R$ 1.105,00
+    "2026-10": 17,
     "2026-11": 17
+  },
+  monthlyCreditDates: {
+    // Crédito de outubro (06/10/2026) e novembro (06/11/2026)
+    "2026-10": "2026-10-06",
+    "2026-11": "2026-11-06"
   }
 };
 
@@ -22,6 +28,16 @@ export const PAYMENT_METHODS = [
   { id: 'dinheiro', label: 'Dinheiro', shortLabel: 'Dinheiro', icon: '💵', color: '#65a30d', bg: 'rgba(101, 163, 13, 0.12)' },
   { id: 'outro', label: 'Outro', shortLabel: 'Outro', icon: '🏷️', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' }
 ];
+
+export const MONTH_NAMES_PT = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+export function getMonthNamePt(monthNum) {
+  const idx = (parseInt(monthNum, 10) - 1) % 12;
+  return MONTH_NAMES_PT[idx] || '';
+}
 
 export function getPaymentMethodInfo(methodId) {
   return PAYMENT_METHODS.find(m => m.id === methodId) || {
@@ -53,7 +69,37 @@ export function getEasterDate(year) {
   return new Date(year, month - 1, day);
 }
 
-// Conjunto de feriados Nacionais, Estaduais (SP) e Municipais (São Carlos - SP)
+// Feriados Nacionais Bancários (FEBRABAN) - utilizados para compensação de benefícios e folha
+export function getNationalBankingHolidays(year) {
+  const holidays = new Set();
+  const pad = n => String(n).padStart(2, '0');
+  const addDate = (m, d) => holidays.add(`${year}-${pad(m)}-${pad(d)}`);
+
+  addDate(1, 1);   // Ano Novo
+  addDate(4, 21);  // Tiradentes
+  addDate(5, 1);   // Dia do Trabalho
+  addDate(9, 7);   // Independência do Brasil
+  addDate(10, 12); // Nossa Senhora Aparecida
+  addDate(11, 2);  // Finados
+  addDate(11, 15); // Proclamação da República
+  addDate(11, 20); // Dia da Consciência Negra
+  addDate(12, 25); // Natal
+
+  const easter = getEasterDate(year);
+  const addOffset = (days) => {
+    const d = new Date(easter.getTime());
+    d.setDate(d.getDate() + days);
+    holidays.add(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+  };
+
+  addOffset(-47); // Carnaval (terça-feira)
+  addOffset(-2);  // Sexta-feira Santa
+  addOffset(60);  // Corpus Christi
+
+  return holidays;
+}
+
+// Conjunto completo de feriados Nacionais, Estaduais (SP) e Municipais (São Carlos - SP)
 export function getHolidaysSaoCarlos(year) {
   const holidays = new Set();
   const pad = n => String(n).padStart(2, '0');
@@ -96,7 +142,31 @@ export function isBusinessDay(date, holidaysSet) {
   return !holidaysSet.has(iso);
 }
 
-// Retorna a data do 4º dia útil de um mês/ano específico
+// Retorna a data do 4º dia útil bancário nacional (padrão de depósito de benefícios)
+export function getFourthBankingDay(year, month) {
+  const holidays = getNationalBankingHolidays(year);
+  let count = 0;
+  const pad = n => String(n).padStart(2, '0');
+
+  for (let d = 1; d <= 31; d++) {
+    const date = new Date(year, month - 1, d);
+    if (date.getMonth() !== month - 1) break;
+    if (isBusinessDay(date, holidays)) {
+      count++;
+      if (count === 4) {
+        return {
+          day: d,
+          date,
+          dateString: `${year}-${pad(month)}-${pad(d)}`,
+          formatted: `${pad(d)}/${pad(month)}/${year}`
+        };
+      }
+    }
+  }
+  return null;
+}
+
+// Retorna a data do 4º dia útil (mantém compatibilidade com calendário municipal)
 export function getFourthBusinessDay(year, month) {
   const holidays = getHolidaysSaoCarlos(year);
   let businessDayCount = 0;
@@ -118,6 +188,24 @@ export function getFourthBusinessDay(year, month) {
     }
   }
   return null;
+}
+
+// Retorna a data efetiva de crédito do benefício para um mês/ano
+export function getBenefitCreditDate(year, month, state = null) {
+  const pad = n => String(n).padStart(2, '0');
+  const monthKey = `${year}-${pad(month)}`;
+  const configured = state?.settings?.benefits?.monthlyCreditDates?.[monthKey];
+  if (configured) {
+    const [y, m, d] = configured.split('-').map(Number);
+    return {
+      day: d,
+      date: new Date(y, m - 1, d),
+      dateString: configured,
+      formatted: `${pad(d)}/${pad(m)}/${y}`
+    };
+  }
+  // Padrão: 4º dia útil bancário nacional
+  return getFourthBankingDay(year, month) || getFourthBusinessDay(year, month);
 }
 
 // Conta o total de dias úteis em um mês/ano na cidade de São Carlos SP
@@ -143,28 +231,109 @@ export function getBenefitsConfig(state) {
   return state.settings.benefits;
 }
 
-// Calcula todos os detalhes de VA e VR para um mês selecionado
-export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
+/**
+ * Determina o ciclo de benefícios de uma compra com base na data do crédito.
+ * Se uma compra for efetuada antes da data do crédito do mês (ex: 03/11 antes de 06/11),
+ * ela pertence ao ciclo do mês ANTERIOR (Outubro)!
+ */
+export function getBenefitCycleKey(dateStr, state = null) {
+  if (!dateStr) return getCurrentBenefitCycleKey(state);
+  const clean = String(dateStr).substring(0, 10);
+  const [yStr, mStr] = clean.split('-');
+  const year = parseInt(yStr, 10);
+  const month = parseInt(mStr, 10);
+  if (isNaN(year) || isNaN(month)) return getCurrentBenefitCycleKey(state);
+
+  const creditInfo = getBenefitCreditDate(year, month, state);
+  if (creditInfo && clean < creditInfo.dateString) {
+    // A compra ocorreu ANTES da disponibilização do benefício deste mês.
+    // Pertence ao saldo do ciclo do mês anterior!
+    const prevDate = new Date(year, month - 2, 1);
+    const pad = n => String(n).padStart(2, '0');
+    return `${prevDate.getFullYear()}-${pad(prevDate.getMonth() + 1)}`;
+  }
+
+  const pad = n => String(n).padStart(2, '0');
+  return `${year}-${pad(month)}`;
+}
+
+/**
+ * Retorna o ciclo de benefícios atualmente em vigor hoje.
+ */
+export function getCurrentBenefitCycleKey(state = null) {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
-  const currentMonthKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
-  const monthKey = targetMonthKey && targetMonthKey !== 'todos' ? targetMonthKey : currentMonthKey;
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return getBenefitCycleKey(todayStr, state);
+}
 
-  const [yearStr, monthStr] = monthKey.split('-');
-  const year = parseInt(yearStr, 10) || now.getFullYear();
-  const month = parseInt(monthStr, 10) || (now.getMonth() + 1);
+/**
+ * Retorna as datas de início e fim de um ciclo de benefícios.
+ */
+export function getBenefitCycleRange(cycleKey, state = null) {
+  const [yStr, mStr] = cycleKey.split('-');
+  const year = parseInt(yStr, 10);
+  const month = parseInt(mStr, 10);
+  const pad = n => String(n).padStart(2, '0');
+
+  const startCredit = getBenefitCreditDate(year, month, state);
+  const nextMonthDate = new Date(year, month, 1);
+  const nextY = nextMonthDate.getFullYear();
+  const nextM = nextMonthDate.getMonth() + 1;
+  const nextCredit = getBenefitCreditDate(nextY, nextM, state);
+
+  // O ciclo encerra no dia imediatamente anterior ao próximo crédito
+  const endLimitDate = new Date(nextCredit.date.getTime() - 24 * 60 * 60 * 1000);
+  const endIso = `${endLimitDate.getFullYear()}-${pad(endLimitDate.getMonth() + 1)}-${pad(endLimitDate.getDate())}`;
+  const endFormatted = `${pad(endLimitDate.getDate())}/${pad(endLimitDate.getMonth() + 1)}/${endLimitDate.getFullYear()}`;
+
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const isCurrent = todayStr >= startCredit.dateString && todayStr <= endIso;
+  const isUpcoming = todayStr < startCredit.dateString;
+  const isPast = todayStr > endIso;
+
+  const monthName = getMonthNamePt(month);
+  const label = `Ciclo ${monthName}/${year}`;
+
+  return {
+    cycleKey,
+    year,
+    month,
+    monthName,
+    label,
+    startIso: startCredit.dateString,
+    startFormatted: startCredit.formatted,
+    endIso,
+    endFormatted,
+    rangeFormatted: `${startCredit.formatted} a ${endFormatted}`,
+    isCurrent,
+    isUpcoming,
+    isPast,
+    nextCreditFormatted: nextCredit.formatted
+  };
+}
+
+// Calcula todos os detalhes de VA e VR para um ciclo selecionado
+export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
+  const cycleKey = targetMonthKey && targetMonthKey !== 'todos'
+    ? targetMonthKey
+    : getCurrentBenefitCycleKey(state);
+
+  const [yearStr, monthStr] = cycleKey.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const pad = n => String(n).padStart(2, '0');
 
   const config = getBenefitsConfig(state);
   const vaFixed = Number(config.vaFixedAmount) || 2050.00;
   const vrDaily = Number(config.vrDailyAmount) || 65.00;
 
-  // Dias trabalhados: busca override manual do mês ou padrão
+  // Dias trabalhados
   let vrDays = 17;
-  if (config.monthlyDays && config.monthlyDays[monthKey] !== undefined) {
-    vrDays = Number(config.monthlyDays[monthKey]);
+  if (config.monthlyDays && config.monthlyDays[cycleKey] !== undefined) {
+    vrDays = Number(config.monthlyDays[cycleKey]);
   } else {
-    // Padrão: se for 2026-11, o usuário trabalha 17 dias (referente a outubro).
-    // Nos demais meses, calcula os dias úteis do mês anterior ou 17
     const prevMonthDate = new Date(year, month - 2, 1);
     const prevMonthWorkingDays = getWorkingDaysInMonth(prevMonthDate.getFullYear(), prevMonthDate.getMonth() + 1);
     vrDays = prevMonthWorkingDays > 0 ? prevMonthWorkingDays : 17;
@@ -174,14 +343,13 @@ export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
   const vaTotal = Math.round(vaFixed * 100) / 100;
   const totalBenefit = Math.round((vaTotal + vrTotal) * 100) / 100;
 
-  // 4º dia útil deste mês
-  const fourthDayInfo = getFourthBusinessDay(year, month);
+  const cycleRange = getBenefitCycleRange(cycleKey, state);
 
-  // Calcula gastos no mês por forma de pagamento
+  // Filtra as compras computadas neste ciclo de benefícios (gastos que abatem deste ciclo)
   const purchases = (state.comprasRegistros || []).filter(p => {
-    const pMonthKey = p.monthKey || (p.date ? p.date.substring(0, 7) : '');
-    return pMonthKey === monthKey;
-  });
+    const pCycle = getBenefitCycleKey(p.date || p.createdAt, state);
+    return pCycle === cycleKey;
+  }).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   const paymentBreakdown = {
     va: 0,
@@ -203,7 +371,6 @@ export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
     }
   });
 
-  // Arredonda valores
   Object.keys(paymentBreakdown).forEach(k => {
     paymentBreakdown[k] = Math.round(paymentBreakdown[k] * 100) / 100;
   });
@@ -220,9 +387,19 @@ export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
   const totalUsagePercent = totalBenefit > 0 ? Math.min(100, Math.round((totalFoodSpent / totalBenefit) * 100)) : 0;
 
   return {
-    monthKey,
+    monthKey: cycleKey,
+    cycleKey,
+    cycleLabel: cycleRange.label,
+    cycleRange: cycleRange.rangeFormatted,
     year,
     month,
+    monthName: cycleRange.monthName,
+    isCurrentCycle: cycleRange.isCurrent,
+    isUpcomingCycle: cycleRange.isUpcoming,
+    isPastCycle: cycleRange.isPast,
+    creditDay: cycleRange.startIso ? parseInt(cycleRange.startIso.slice(8, 10), 10) : 4,
+    creditDateFormatted: cycleRange.startFormatted,
+    nextCreditDateFormatted: cycleRange.nextCreditFormatted,
     vaFixed,
     vaTotal,
     vaSpent,
@@ -238,18 +415,53 @@ export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
     totalFoodSpent,
     totalFoodBalance,
     totalUsagePercent,
-    creditDay: fourthDayInfo ? fourthDayInfo.day : 4,
-    creditDateFormatted: fourthDayInfo ? fourthDayInfo.formatted : `04/${pad(month)}/${year}`,
     paymentBreakdown,
+    purchases,
+    cyclePurchases: purchases,
     city: config.city || "São Carlos - SP"
   };
 }
 
-export function updateMonthlyBenefitsConfig(state, monthKey, { vrDays, vaFixed, vrDaily }) {
+/**
+ * Retorna o histórico consolidado de todos os ciclos de benefícios (passados, atual e próximo).
+ */
+export function getBenefitsHistory(state) {
+  const currentKey = getCurrentBenefitCycleKey(state);
+  const [curY, curM] = currentKey.split('-').map(Number);
+  const pad = n => String(n).padStart(2, '0');
+
+  const nextMonthDate = new Date(curY, curM, 1);
+  const nextKey = `${nextMonthDate.getFullYear()}-${pad(nextMonthDate.getMonth() + 1)}`;
+
+  const prevMonthDate = new Date(curY, curM - 2, 1);
+  const prevKey = `${prevMonthDate.getFullYear()}-${pad(prevMonthDate.getMonth() + 1)}`;
+
+  const keysSet = new Set(['2026-10', '2026-11', currentKey, nextKey, prevKey]);
+
+  (state.comprasRegistros || []).forEach(p => {
+    if (p.date) {
+      keysSet.add(getBenefitCycleKey(p.date, state));
+    }
+  });
+
+  const config = getBenefitsConfig(state);
+  if (config.monthlyDays) {
+    Object.keys(config.monthlyDays).forEach(k => keysSet.add(k));
+  }
+
+  const sortedKeys = Array.from(keysSet).sort().reverse();
+  return sortedKeys.map(k => getMonthlyBenefitDetails(state, k));
+}
+
+export function updateMonthlyBenefitsConfig(state, monthKey, { vrDays, vaFixed, vrDaily, creditDate }) {
   const config = getBenefitsConfig(state);
   if (!config.monthlyDays) config.monthlyDays = {};
   if (vrDays !== undefined) config.monthlyDays[monthKey] = Number(vrDays);
   if (vaFixed !== undefined) config.vaFixedAmount = Number(vaFixed);
   if (vrDaily !== undefined) config.vrDailyAmount = Number(vrDaily);
+  if (creditDate !== undefined) {
+    if (!config.monthlyCreditDates) config.monthlyCreditDates = {};
+    config.monthlyCreditDates[monthKey] = creditDate;
+  }
   return getMonthlyBenefitDetails(state, monthKey);
 }

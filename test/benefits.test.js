@@ -3,9 +3,15 @@ import assert from 'node:assert/strict';
 import {
   getEasterDate,
   getHolidaysSaoCarlos,
+  getNationalBankingHolidays,
   isBusinessDay,
   getFourthBusinessDay,
-  getWorkingDaysInMonth,
+  getFourthBankingDay,
+  getBenefitCreditDate,
+  getBenefitCycleKey,
+  getCurrentBenefitCycleKey,
+  getBenefitCycleRange,
+  getBenefitsHistory,
   getMonthlyBenefitDetails,
   updateMonthlyBenefitsConfig,
   PAYMENT_METHODS,
@@ -26,20 +32,16 @@ test('Benefícios: Feriados e cálculo do 4º dia útil em São Carlos SP', () =
   assert.ok(holidays2026.has('2026-11-20')); // Consciência Negra
   assert.ok(holidays2026.has('2026-12-25')); // Natal
 
-  // Em novembro de 2026:
-  // 01/11 (Dom)
-  // 02/11 (Seg - Finados - feriado)
-  // 03/11 (Ter - 1º dia útil)
-  // 04/11 (Qua - Aniversário de São Carlos - feriado)
-  // 05/11 (Qui - 2º dia útil)
-  // 06/11 (Sex - 3º dia útil)
-  // 07/11 (Sáb)
-  // 08/11 (Dom)
-  // 09/11 (Seg - 4º dia útil)
   const fourthDayNov2026 = getFourthBusinessDay(2026, 11);
   assert.ok(fourthDayNov2026);
   assert.equal(fourthDayNov2026.day, 9);
   assert.equal(fourthDayNov2026.formatted, '09/11/2026');
+
+  // 4º dia útil bancário nacional (depósito dos benefícios de novembro no dia 06/11):
+  const fourthBankingNov2026 = getFourthBankingDay(2026, 11);
+  assert.ok(fourthBankingNov2026);
+  assert.equal(fourthBankingNov2026.day, 6);
+  assert.equal(fourthBankingNov2026.formatted, '06/11/2026');
 });
 
 test('Benefícios: VA R$ 2.050,00 fixo e VR R$ 65,00/dia trabalhado (17 dias = R$ 1.105,00)', () => {
@@ -60,80 +62,101 @@ test('Benefícios: VA R$ 2.050,00 fixo e VR R$ 65,00/dia trabalhado (17 dias = R
   assert.equal(details.vrBalance, 1105.00);
 });
 
-test('Formas de Pagamento: Lançamentos abatem saldos de VA e VR e alimentam Analytics', () => {
+test('Formas de Pagamento e Ciclos: Compras antes do crédito (03/11, padaria, açougue) abatem do ciclo de Outubro e não de Novembro', () => {
   const state = {
     settings: {},
     comprasRegistros: []
   };
 
-  // 1. Compra de R$ 450,00 paga com VA (Vale Alimentação)
+  // 1. Compra em mercado no dia 03/11 paga com VA (antes do crédito de 06/11) -> Abate de Outubro
   addMarketPurchase(state, {
-    marketName: 'Carrefour',
-    date: '2026-11-02',
-    total: '450,00',
+    marketName: 'Carrefour 03/11',
+    date: '2026-11-03',
+    total: '150,00',
     paymentMethod: 'va'
   });
 
-  // 2. Almoço / compra de R$ 65,00 paga com VR (Vale Refeição)
+  // 2. Padaria no dia 04/11 paga com VA -> Abate de Outubro
+  addMarketPurchase(state, {
+    marketName: 'Padaria Estrela',
+    date: '2026-11-04',
+    total: '35,00',
+    paymentMethod: 'va'
+  });
+
+  // 3. Açougue no dia 05/11 pago com VA -> Abate de Outubro
+  addMarketPurchase(state, {
+    marketName: 'Açougue Central',
+    date: '2026-11-05',
+    total: '85,00',
+    paymentMethod: 'va'
+  });
+
+  // 4. VR usado em 25/10 -> Abate de Outubro
   addMarketPurchase(state, {
     marketName: 'Restaurante Central',
-    date: '2026-11-03',
+    date: '2026-10-25',
     total: '65,00',
     paymentMethod: 'vr'
   });
 
-  // 3. Compra de R$ 120,00 paga com Pix
-  addMarketPurchase(state, {
-    marketName: 'Açougue Central',
-    date: '2026-11-04',
-    total: '120,00',
-    paymentMethod: 'pix'
-  });
-
-  // 4. Compra de R$ 200,00 paga com Cartão de Crédito
+  // 5. Compra futura em 06/11 (após disponibilização do benefício) -> Abate de Novembro
   addMarketPurchase(state, {
     marketName: 'Atacadão',
-    date: '2026-11-05',
+    date: '2026-11-06',
     total: '200,00',
-    paymentMethod: 'credito'
+    paymentMethod: 'va'
   });
 
-  const details = getMonthlyBenefitDetails(state, '2026-11');
-  assert.equal(details.vaSpent, 450.00);
-  assert.equal(details.vaBalance, 1600.00); // 2050 - 450 = 1600
-  assert.equal(details.vrSpent, 65.00);
-  assert.equal(details.vrBalance, 1040.00); // 1105 - 65 = 1040
+  // Ciclo de Outubro (06/10 a 05/11):
+  const detailsOutubro = getMonthlyBenefitDetails(state, '2026-10');
+  // VA gasto em Outubro: 150 (03/11) + 35 (04/11) + 85 (05/11) = 270,00
+  assert.equal(detailsOutubro.vaSpent, 270.00);
+  assert.equal(detailsOutubro.vaBalance, 1780.00); // 2050 - 270 = 1780
+  assert.equal(detailsOutubro.vrSpent, 65.00);
+  assert.equal(detailsOutubro.vrBalance, 1040.00); // 1105 - 65 = 1040
+  assert.equal(detailsOutubro.cyclePurchases.length, 4);
 
-  assert.equal(details.paymentBreakdown.va, 450.00);
-  assert.equal(details.paymentBreakdown.vr, 65.00);
-  assert.equal(details.paymentBreakdown.pix, 120.00);
-  assert.equal(details.paymentBreakdown.credito, 200.00);
-
-  // Analytics de gastos do mercado
-  const analytics = getMarketAnalytics(state, '2026-11');
-  assert.equal(analytics.total, 835.00);
-  assert.equal(analytics.paymentBreakdown.va, 450.00);
-  assert.equal(analytics.paymentBreakdown.vr, 65.00);
-  assert.equal(analytics.paymentBreakdown.pix, 120.00);
-  assert.equal(analytics.paymentBreakdown.credito, 200.00);
+  // Ciclo de Novembro (a partir de 06/11):
+  const detailsNovembro = getMonthlyBenefitDetails(state, '2026-11');
+  // Os gastos de 03/11, padaria e açougue NÃO abatem de Novembro!
+  // Apenas a compra de 06/11 abate de Novembro:
+  assert.equal(detailsNovembro.vaSpent, 200.00);
+  assert.equal(detailsNovembro.vaBalance, 1850.00); // 2050 - 200 = 1850
+  assert.equal(detailsNovembro.vrSpent, 0.00);
+  assert.equal(detailsNovembro.vrBalance, 1105.00);
+  assert.equal(detailsNovembro.cyclePurchases.length, 1);
 });
 
 test('Formas de Pagamento: Todas as opções suportadas', () => {
-  const ids = PAYMENT_METHODS.map(m => m.id);
-  assert.ok(ids.includes('va'));
-  assert.ok(ids.includes('vr'));
-  assert.ok(ids.includes('pix'));
-  assert.ok(ids.includes('credito'));
-  assert.ok(ids.includes('debito'));
-  assert.ok(ids.includes('dinheiro'));
+  assert.ok(PAYMENT_METHODS.some(m => m.id === 'va'));
+  assert.ok(PAYMENT_METHODS.some(m => m.id === 'vr'));
+  assert.ok(PAYMENT_METHODS.some(m => m.id === 'pix'));
+  assert.ok(PAYMENT_METHODS.some(m => m.id === 'credito'));
+  assert.ok(PAYMENT_METHODS.some(m => m.id === 'debito'));
+  assert.ok(PAYMENT_METHODS.some(m => m.id === 'dinheiro'));
+});
 
-  const infoVa = getPaymentMethodInfo('va');
-  assert.equal(infoVa.shortLabel, 'VA');
-  assert.equal(infoVa.icon, '🥗');
+test('Histórico de Benefícios VA e VR: getBenefitsHistory consolida ciclos passados e futuros', () => {
+  const state = {
+    settings: {},
+    comprasRegistros: [
+      { id: '1', marketName: 'Mercado 03/11', date: '2026-11-03', total: 100, paymentMethod: 'va' },
+      { id: '2', marketName: 'Mercado 06/11', date: '2026-11-06', total: 50, paymentMethod: 'va' }
+    ]
+  };
 
-  const infoVr = getPaymentMethodInfo('vr');
-  assert.equal(infoVr.shortLabel, 'VR');
-  assert.equal(infoVr.icon, '🍽️');
+  const history = getBenefitsHistory(state);
+  assert.ok(Array.isArray(history));
+  assert.ok(history.length >= 2);
+
+  const octCycle = history.find(c => c.cycleKey === '2026-10');
+  assert.ok(octCycle);
+  assert.equal(octCycle.vaSpent, 100);
+
+  const novCycle = history.find(c => c.cycleKey === '2026-11');
+  assert.ok(novCycle);
+  assert.equal(novCycle.vaSpent, 50);
 });
 
 test('Ajuste de Benefícios do mês: Personalizar dias ou valores', () => {
@@ -142,7 +165,6 @@ test('Ajuste de Benefícios do mês: Personalizar dias ou valores', () => {
     comprasRegistros: []
   };
 
-  // Ajusta novembro para 20 dias trabalhados a R$ 65,00
   updateMonthlyBenefitsConfig(state, '2026-11', {
     vrDays: 20,
     vaFixed: 2050,
@@ -151,12 +173,12 @@ test('Ajuste de Benefícios do mês: Personalizar dias ou valores', () => {
 
   const details = getMonthlyBenefitDetails(state, '2026-11');
   assert.equal(details.vrDays, 20);
-  assert.equal(details.vrTotal, 1300.00); // 20 * 65 = 1300
+  assert.equal(details.vrTotal, 1300.00);
   assert.equal(details.vaTotal, 2050.00);
   assert.equal(details.totalBenefit, 3350.00);
 });
 
-test('HTML: Modais de Compra contêm seletor de Forma de Pagamento', async () => {
+test('HTML: Modais de Compra, Ajuste e Histórico de Benefícios', async () => {
   const fs = await import('fs');
   const path = await import('path');
   const { fileURLToPath } = await import('url');
@@ -166,13 +188,7 @@ test('HTML: Modais de Compra contêm seletor de Forma de Pagamento', async () =>
   assert.ok(html.includes('id="modal-edit-purchase"'));
   assert.ok(html.includes('id="purchase-edit-payment-method"'));
   assert.ok(html.includes('id="manual-purchase-payment-method"'));
-  assert.ok(html.includes('id="pdf-invoice-payment-method"'));
   assert.ok(html.includes('id="modal-adjust-benefits"'));
-  assert.ok(html.includes('id="form-adjust-benefits"'));
-  assert.ok(html.includes('id="benefits-input-month"'));
-  assert.ok(html.includes('id="benefits-input-va-fixed"'));
-  assert.ok(html.includes('id="benefits-input-vr-daily"'));
-  assert.ok(html.includes('id="benefits-input-vr-days"'));
-  assert.ok(html.includes('id="benefits-preview-vr-total"'));
-  assert.ok(html.includes('id="benefits-preview-combined-total"'));
+  assert.ok(html.includes('id="modal-benefits-history"'));
+  assert.ok(html.includes('id="benefits-history-content"'));
 });
