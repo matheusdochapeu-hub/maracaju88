@@ -76,6 +76,7 @@ import {
 } from './catalog.js';
 import {
   updateCatalogDatalist,
+  updateRecurrentMarketsDatalist,
   renderCatalogModal,
   renderProductHistoryModal,
   renderPdfInvoiceConfirmation
@@ -120,6 +121,9 @@ let currentComprasCategory = 'todas';
 let currentComprasView = 'lista';
 let currentCatalogCategoryFilter = 'todos';
 let currentCatalogSearchQuery = '';
+let currentCatalogMode = 'comparator';
+let currentCatalogSort = 'economy';
+let currentManualPurchasePhotos = [];
 let currentPendingPdfInvoice = null;
 let currentCategoryManageModule = 'tarefas';
 let deferredInstallPrompt = null;
@@ -148,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   populateCategorySelects(state);
   updateCatalogDatalist(state);
+  updateRecurrentMarketsDatalist(state);
   refreshAllUI();
 
   // Prioridade da Planilha: quem abrir o app puxa imediatamente os dados mais recentes
@@ -487,6 +492,211 @@ function initHeaderControls() {
 // -------------------------------------------------------------
 // MÓDULO DE TAREFAS (DIÁRIAS, SEMANAIS, MENSAIS, ANUAIS)
 // -------------------------------------------------------------
+
+  // -----------------------------------------------------------
+  // LANÇAR COMPRA DE MERCADO MANUALMENTE (SEM NOTA)
+  // -----------------------------------------------------------
+  const modalManualPurchase = document.getElementById('modal-add-manual-purchase');
+  const formManualPurchase = document.getElementById('form-add-manual-purchase');
+  const btnAddManualItem = document.getElementById('btn-add-manual-item-row');
+  const manualItemsContainer = document.getElementById('manual-purchase-items-container');
+  const manualCameraInput = document.getElementById('manual-purchase-camera');
+  const manualGalleryInput = document.getElementById('manual-purchase-gallery');
+  const manualPhotosPreview = document.getElementById('manual-purchase-photos-preview');
+
+  function renderManualPhotosPreview() {
+    if (!manualPhotosPreview) return;
+    manualPhotosPreview.innerHTML = currentManualPurchasePhotos.map((src, idx) => `
+      <div class="carro-thumb-wrapper" style="width: 58px; height: 58px;">
+        <img src="${src}" alt="Comprovante" class="carro-thumb-img" />
+        <button type="button" class="carro-thumb-delete" data-del-manual-photo="${idx}">✕</button>
+      </div>
+    `).join('');
+  }
+
+  if (manualPhotosPreview) {
+    manualPhotosPreview.addEventListener('click', (e) => {
+      const delBtn = e.target.closest('[data-del-manual-photo]');
+      if (delBtn) {
+        const idx = Number(delBtn.getAttribute('data-del-manual-photo'));
+        currentManualPurchasePhotos.splice(idx, 1);
+        renderManualPhotosPreview();
+      }
+    });
+  }
+
+  async function handleManualPhotoFile(file) {
+    if (!file) return;
+    try {
+      showToast('Processando foto da compra...', 'info', 1500);
+      const compressed = await compressImageFile(file, 900, 0.75);
+      currentManualPurchasePhotos.push(compressed);
+      renderManualPhotosPreview();
+      showToast('Foto anexada!', 'success', 1800);
+    } catch (err) {
+      showToast('Erro ao processar foto: ' + err.message, 'error');
+    }
+  }
+
+  if (manualCameraInput) {
+    manualCameraInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) handleManualPhotoFile(file);
+      manualCameraInput.value = '';
+    });
+  }
+
+  if (manualGalleryInput) {
+    manualGalleryInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) handleManualPhotoFile(file);
+      manualGalleryInput.value = '';
+    });
+  }
+
+  // Adicionar linha de item dinâmica
+  function addManualItemRow(name = '', qty = '1', price = '') {
+    if (!manualItemsContainer) return;
+    const rowId = 'manual-item-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
+    const rowEl = document.createElement('div');
+    rowEl.className = 'manual-item-row';
+    rowEl.id = rowId;
+    rowEl.style.cssText = 'display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.4rem; align-items: center; background: var(--bg-card); padding: 0.4rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);';
+    rowEl.innerHTML = `
+      <input type="text" class="form-control manual-item-name" placeholder="Nome do Produto" list="catalog-suggestions-list" value="${name}" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" required />
+      <input type="text" class="form-control manual-item-qty" placeholder="Qtd" value="${qty}" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" />
+      <input type="text" inputmode="decimal" class="form-control manual-item-price" placeholder="R$ Unit" value="${price}" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" />
+      <button type="button" class="btn btn-icon btn-xs btn-remove-item-row" style="color: var(--danger); font-size: 0.85rem;" title="Remover item">✕</button>
+    `;
+    rowEl.querySelector('.btn-remove-item-row').addEventListener('click', () => {
+      rowEl.remove();
+      recalcManualTotal();
+    });
+
+    const priceInput = rowEl.querySelector('.manual-item-price');
+    if (priceInput) {
+      priceInput.addEventListener('input', recalcManualTotal);
+    }
+    const qtyInput = rowEl.querySelector('.manual-item-qty');
+    if (qtyInput) {
+      qtyInput.addEventListener('input', recalcManualTotal);
+    }
+
+    manualItemsContainer.appendChild(rowEl);
+  }
+
+  function recalcManualTotal() {
+    const totalInput = document.getElementById('manual-purchase-total');
+    if (!totalInput || !manualItemsContainer) return;
+    const rows = manualItemsContainer.querySelectorAll('.manual-item-row');
+    if (rows.length === 0) return;
+
+    let sum = 0;
+    rows.forEach(r => {
+      const pInput = r.querySelector('.manual-item-price');
+      const qInput = r.querySelector('.manual-item-qty');
+      const p = parseCurrency(pInput ? pInput.value : 0);
+      const qParsed = parseQuantity(qInput ? qInput.value : 1);
+      sum += (p * qParsed.count);
+    });
+
+    if (sum > 0) {
+      totalInput.value = formatCurrency(Math.round(sum * 100) / 100);
+    }
+  }
+
+  if (btnAddManualItem) {
+    btnAddManualItem.addEventListener('click', () => addManualItemRow());
+  }
+
+  // Prepara formulário ao abrir modal
+  document.addEventListener('click', (e) => {
+    const openBtn = e.target.closest('[data-open-modal="modal-add-manual-purchase"]');
+    if (openBtn) {
+      currentManualPurchasePhotos = [];
+      if (manualPhotosPreview) manualPhotosPreview.innerHTML = '';
+      if (manualItemsContainer) manualItemsContainer.innerHTML = '';
+      if (formManualPurchase) formManualPurchase.reset();
+
+      const dateInput = document.getElementById('manual-purchase-date');
+      if (dateInput) {
+        dateInput.value = new Date().toISOString().substring(0, 10);
+      }
+      updateRecurrentMarketsDatalist(state);
+    }
+  });
+
+  // Salvar compra manual
+  if (formManualPurchase) {
+    formManualPurchase.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const marketName = (document.getElementById('manual-purchase-market')?.value || 'Supermercado').trim();
+      const date = document.getElementById('manual-purchase-date')?.value || new Date().toISOString().substring(0, 10);
+      const totalRaw = document.getElementById('manual-purchase-total')?.value || '0';
+      const notes = (document.getElementById('manual-purchase-notes')?.value || '').trim();
+      const total = parseCurrency(totalRaw);
+
+      if (total <= 0) {
+        showToast('Informe o valor total da compra.', 'warning');
+        return;
+      }
+
+      // Extrai itens adicionados
+      const items = [];
+      if (manualItemsContainer) {
+        const rows = manualItemsContainer.querySelectorAll('.manual-item-row');
+        rows.forEach(r => {
+          const nInput = r.querySelector('.manual-item-name');
+          const qInput = r.querySelector('.manual-item-qty');
+          const pInput = r.querySelector('.manual-item-price');
+          const name = nInput ? nInput.value.trim() : '';
+          if (name) {
+            const qParsed = parseQuantity(qInput ? qInput.value : '1');
+            const uPrice = parseCurrency(pInput ? pInput.value : 0);
+            items.push({
+              rawName: name,
+              alias: name,
+              qty: qParsed.count,
+              unit: qParsed.unit || 'un',
+              unitPrice: uPrice,
+              totalPrice: Math.round(uPrice * qParsed.count * 100) / 100
+            });
+          }
+        });
+      }
+
+      const purchase = addMarketPurchase(state, {
+        marketName,
+        date,
+        total,
+        notes: notes || (items.length > 0 ? `${items.length} itens registrados manualmente` : 'Lançamento manual'),
+        items,
+        photos: [...currentManualPurchasePhotos]
+      });
+
+      if (items.length > 0) {
+        registerInvoiceInCatalog(state, {
+          marketName,
+          date,
+          items
+        });
+      }
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      updateRecurrentMarketsDatalist(state);
+      updateCatalogDatalist(state);
+
+      currentComprasView = 'notas';
+      refreshAllUI();
+      closeModal('modal-add-manual-purchase');
+
+      playTaskCompleteSound(state.settings.soundEnabled);
+      showToast(`🎉 Compra no ${marketName} (${formatCurrencyWithSymbol(total)}) registrada com sucesso!`, 'success', 3500);
+    });
+  }
+
+
 function initTasksModule() {
   // Controle de Frequência (Diárias, Semanais, Mensais, Anuais)
   const freqBar = document.getElementById('frequency-segmented-bar');
@@ -2425,14 +2635,42 @@ function initComprasModule() {
   const btnOpenCatalog = document.getElementById('btn-open-catalog');
   const btnQuickCatalogAdd = document.getElementById('btn-quick-catalog-from-add');
 
-  function openCatalogView() {
+  function openCatalogView(initialMode = 'comparator') {
     syncPurchasesIntoCatalog(state);
+    currentCatalogMode = initialMode;
     currentCatalogCategoryFilter = 'todos';
     currentCatalogSearchQuery = '';
     const searchInput = document.getElementById('catalog-search-input');
     if (searchInput) searchInput.value = '';
-    renderCatalogModal(state, '', 'todos');
+    renderCatalogModal(state, '', 'todos', currentCatalogMode, currentCatalogSort);
     openModal('modal-catalog-products');
+  }
+
+  const btnOpenPriceComparator = document.getElementById('btn-open-price-comparator');
+  if (btnOpenPriceComparator) {
+    btnOpenPriceComparator.addEventListener('click', () => openCatalogView('comparator'));
+  }
+
+  // Alternador de modo (Comparador vs Já Comprados) e ordenação no modal do catálogo
+  const catalogModalEl = document.getElementById('modal-catalog-products');
+  if (catalogModalEl) {
+    catalogModalEl.addEventListener('click', (e) => {
+      const modeBtn = e.target.closest('[data-catalog-mode]');
+      if (modeBtn) {
+        currentCatalogMode = modeBtn.getAttribute('data-catalog-mode') || 'comparator';
+        playSubtleClick(state.settings.soundEnabled);
+        renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter, currentCatalogMode, currentCatalogSort);
+        return;
+      }
+
+      const sortBtn = e.target.closest('[data-catalog-sort]');
+      if (sortBtn) {
+        currentCatalogSort = sortBtn.getAttribute('data-catalog-sort') || 'economy';
+        playSubtleClick(state.settings.soundEnabled);
+        renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter, currentCatalogMode, currentCatalogSort);
+        return;
+      }
+    });
   }
 
   if (btnOpenCatalog) btnOpenCatalog.addEventListener('click', openCatalogView);
@@ -2443,7 +2681,7 @@ function initComprasModule() {
   if (catalogSearchInput) {
     catalogSearchInput.addEventListener('input', (e) => {
       currentCatalogSearchQuery = e.target.value.trim();
-      renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter);
+      renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter, currentCatalogMode, currentCatalogSort);
     });
   }
 
@@ -2455,7 +2693,7 @@ function initComprasModule() {
       if (!chip) return;
       currentCatalogCategoryFilter = chip.getAttribute('data-catalog-cat') || 'todos';
       playSubtleClick(state.settings.soundEnabled);
-      renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter);
+      renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter, currentCatalogMode, currentCatalogSort);
     });
   }
 
@@ -2476,7 +2714,7 @@ function initComprasModule() {
           saveState(state);
           triggerAutoSyncIfEnabled();
           showToast('Foto vinculada ao produto e à lista! 📷', 'success');
-          renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter);
+          renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter, currentCatalogMode, currentCatalogSort);
           renderComprasTab(state, currentComprasCategory, currentComprasView);
         } catch (err) {
           showToast('Erro na foto: ' + err.message, 'error');
@@ -2514,7 +2752,7 @@ function initComprasModule() {
             saveState(state);
             triggerAutoSyncIfEnabled();
             showToast('Apelido do produto atualizado!', 'success');
-            renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter);
+            renderCatalogModal(state, currentCatalogSearchQuery, currentCatalogCategoryFilter, currentCatalogMode, currentCatalogSort);
             renderComprasTab(state, currentComprasCategory, currentComprasView);
             updateCatalogDatalist(state);
           }

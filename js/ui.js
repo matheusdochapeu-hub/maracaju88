@@ -1074,7 +1074,66 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
     }
   }
 
-  // Compras de Mercado / Notas Fiscais Separadas por Mês
+  // Painel de Análise de Gastos e Mercados Recorrentes
+  const analyticsContainer = document.getElementById('market-analytics-container');
+  if (analyticsContainer) {
+    const analytics = getMarketAnalytics(state);
+    if (analytics.count === 0) {
+      analyticsContainer.innerHTML = '';
+    } else {
+      analyticsContainer.innerHTML = `
+        <div class="market-analytics-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
+            <div>
+              <strong style="font-size: 0.95rem; color: var(--brand-moss-dark);">📊 Análise de Gastos & Mercados</strong>
+              <div style="font-size: 0.72rem; color: var(--text-muted);">Histórico de compras e estabelecimentos mais frequentados</div>
+            </div>
+            <button type="button" class="btn btn-primary btn-xs" data-open-modal="modal-add-manual-purchase" style="font-weight: 700; background: linear-gradient(135deg, #15803d, #166534);">
+              + Lançar Compra
+            </button>
+          </div>
+
+          <div class="analytics-stats-grid">
+            <div class="analytics-stat-box">
+              <div class="analytics-stat-label">Total Gasto</div>
+              <div class="analytics-stat-value">${formatCurrencyWithSymbol(analytics.total)}</div>
+            </div>
+            <div class="analytics-stat-box">
+              <div class="analytics-stat-label">Ticket Médio</div>
+              <div class="analytics-stat-value">${formatCurrencyWithSymbol(analytics.avgTicket)}</div>
+            </div>
+            <div class="analytics-stat-box">
+              <div class="analytics-stat-label">Idas ao Mercado</div>
+              <div class="analytics-stat-value">${analytics.count} ${analytics.count === 1 ? 'compra' : 'compras'}</div>
+            </div>
+          </div>
+
+          ${analytics.recurrentMarkets.length > 0 ? `
+            <div style="margin-top: 0.25rem;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.4rem; text-transform: uppercase;">
+                🏪 Mercados Mais Frequentados (Gastos Recorrentes):
+              </div>
+              <div class="recurrent-markets-container">
+                ${analytics.recurrentMarkets.slice(0, 5).map(m => `
+                  <div class="market-spend-row">
+                    <div class="market-spend-header">
+                      <span><strong>🛒 ${m.marketName}</strong> <span style="font-size: 0.72rem; color: var(--text-muted);">(${m.count}x • média ${formatCurrencyWithSymbol(m.avgTicket)})</span></span>
+                      <span><strong>${formatCurrencyWithSymbol(m.total)}</strong> <span style="font-size: 0.72rem; color: var(--brand-moss); font-weight: 700;">${m.percentage}%</span></span>
+                    </div>
+                    <div class="market-spend-bar-bg">
+                      <div class="market-spend-bar-fill" style="width: ${m.percentage}%;"></div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+  }
+
+  // Compras de Mercado / Notas Fiscais Separadas por Mês (Layout sem truncar nomes)
   const purchasesContainer = document.getElementById('market-purchases-container');
   if (purchasesContainer) {
     const monthlyGroups = getMarketPurchasesByMonth(state);
@@ -1084,8 +1143,8 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
       purchasesContainer.innerHTML = `
         <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg);">
           <p style="font-size: 2.2rem; margin-bottom: 0.5rem;">🧾</p>
-          <p style="font-weight: 600;">Nenhuma nota fiscal de mercado registrada ainda.</p>
-          <p style="font-size: 0.8rem; margin-top: 0.25rem;">Toque no botão "📷 Ler QR Code da Nota Fiscal" para registrar sua compra!</p>
+          <p style="font-weight: 600;">Nenhuma compra de mercado registrada ainda.</p>
+          <p style="font-size: 0.8rem; margin-top: 0.25rem;">Toque em "📝 Lançar Compra", escaneie um QR Code ou envie um PDF de cupom fiscal!</p>
         </div>
       `;
     } else {
@@ -1099,66 +1158,70 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
             </div>
             <div class="month-purchases-list">
               ${group.purchases.map(p => `
-                <div class="market-receipt-row" data-purchase-id="${p.id}">
-                  <div class="market-receipt-info" style="flex: 1;">
-                    <div class="market-receipt-name">🛒 ${p.marketName || 'Supermercado'}</div>
-                    <div class="market-receipt-meta">
-                      <span>📅 ${p.date || 'Data da compra'}</span>
-                      ${p.items && p.items.length ? `<span>• <strong>${p.items.length} itens</strong></span>` : ''}
-                      ${(p.nfeKey || p.accessKey) ? `<span style="font-size: 0.7rem; color: var(--text-muted);" title="${p.nfeKey || p.accessKey}">Chave: ${(p.nfeKey || p.accessKey).slice(0, 10)}...</span>` : ''}
-                    </div>
-
-                    <!-- Lista Expansível de Produtos Comprados nesta Nota -->
-                    ${(p.items && p.items.length > 0) ? `
-                      <details class="market-receipt-items-details" style="margin-top: 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.4rem 0.6rem;" open>
-                        <summary style="font-size: 0.8rem; font-weight: 700; color: var(--brand-moss-dark); cursor: pointer; user-select: none;">
-                          📦 ${p.items.length} produtos comprados nesta nota:
-                        </summary>
-                        <div style="margin-top: 0.45rem; display: flex; flex-direction: column; gap: 0.35rem;">
-                          ${p.items.map(it => `
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.06); padding: 0.25rem 0; font-size: 0.8rem; gap: 0.5rem;">
-                              <div style="flex: 1; min-width: 0;">
-                                <strong style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary);">${it.alias || it.rawName}</strong>
-                                <span style="font-size: 0.7rem; color: var(--text-muted);">${it.qty} ${it.unit || 'un'} × ${formatCurrencyWithSymbol(it.unitPrice)}</span>
-                              </div>
-                              <div style="display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;">
-                                <strong style="color: var(--brand-moss-dark); font-size: 0.85rem;">${formatCurrencyWithSymbol(it.totalPrice || it.unitPrice)}</strong>
-                                <button type="button" class="btn btn-secondary btn-xs" data-quick-add-receipt-item="${it.code || it.rawName}" style="padding: 0.15rem 0.4rem; font-size: 0.7rem; white-space: nowrap;" title="Colocar na lista de compras do mês">+ Lista</button>
-                              </div>
-                            </div>
-                          `).join('')}
-                        </div>
-                      </details>
-                    ` : ''}
-
-                    <!-- Fotos do Cupom / Comprovante -->
-                    <div style="margin-top: 0.35rem;">
-                      <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--text-muted);">
-                        <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Bater foto do cupom fiscal ou recibo">
-                          📸 Câmera
-                          <input type="file" accept="image/*" capture="environment" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
-                        </label>
-                        <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Escolher foto da galeria">
-                          🖼️ Galeria
-                          <input type="file" accept="image/*" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
-                        </label>
+                <div class="market-receipt-card" data-purchase-id="${p.id}">
+                  <div class="market-receipt-header-row">
+                    <div class="market-receipt-title-box">
+                      <div class="market-name">🛒 ${p.marketName || 'Supermercado'}</div>
+                      <div class="market-meta">
+                        <span>📅 ${p.date ? p.date.split('-').reverse().join('/') : 'Data da compra'}</span>
+                        ${p.items && p.items.length ? `<span>• <strong>${p.items.length} itens</strong></span>` : ''}
+                        ${(p.nfeKey || p.accessKey) ? `<span style="font-size: 0.7rem; color: var(--text-muted);" title="${p.nfeKey || p.accessKey}">Chave: ${(p.nfeKey || p.accessKey).slice(0, 10)}...</span>` : ''}
                       </div>
-                      ${(p.photos && p.photos.length > 0) ? `
-                        <div class="carro-photos-container" style="margin-top: 0.25rem;">
-                          ${p.photos.map((src, pIdx) => `
-                            <div class="carro-thumb-wrapper" style="width: 58px; height: 58px;" data-view-photo="${src}">
-                              <img src="${src}" alt="Cupom ${p.marketName}" class="carro-thumb-img" />
-                              <button class="carro-thumb-delete" data-del-purchase-photo="${p.id}" data-photo-idx="${pIdx}" title="Excluir foto">✕</button>
-                            </div>
-                          `).join('')}
-                        </div>
-                      ` : ''}
+                    </div>
+                    <div class="market-receipt-actions-box">
+                      <div class="market-receipt-total-badge">${formatCurrencyWithSymbol(p.total || p.totalAmount || 0)}</div>
+                      <button class="btn btn-icon btn-sm" data-edit-purchase="${p.id}" title="Editar Registro de Compra">✏️</button>
+                      <button class="btn btn-icon btn-sm" data-delete-purchase="${p.id}" title="Excluir Registro de Compra">🗑️</button>
                     </div>
                   </div>
-                  <div style="display: flex; align-items: center; gap: 0.4rem;">
-                    <div class="market-receipt-total">${formatCurrencyWithSymbol(p.total || p.totalAmount || 0)}</div>
-                    <button class="btn btn-icon btn-sm" data-edit-purchase="${p.id}" title="Editar Registro de Compra">✏️</button>
-                    <button class="btn btn-icon btn-sm" data-delete-purchase="${p.id}" title="Excluir Registro de Compra">🗑️</button>
+
+                  ${p.notes ? `<div style="font-size: 0.78rem; color: var(--text-secondary); background: var(--bg-tertiary); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm);">📝 ${p.notes}</div>` : ''}
+
+                  <!-- Lista Expansível de Produtos Comprados nesta Nota (100% largura, sem truncar nomes) -->
+                  ${(p.items && p.items.length > 0) ? `
+                    <details class="market-receipt-items-details" style="margin-top: 0.25rem; background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; width: 100%;" open>
+                      <summary style="font-size: 0.8rem; font-weight: 700; color: var(--brand-moss-dark); cursor: pointer; user-select: none;">
+                        📦 ${p.items.length} produtos comprados nesta nota:
+                      </summary>
+                      <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                        ${p.items.map(it => `
+                          <div class="receipt-product-row">
+                            <div class="receipt-product-info">
+                              <strong class="receipt-product-name">${it.alias || it.rawName}</strong>
+                              <div class="receipt-product-sub">${it.qty} ${it.unit || 'un'} × ${formatCurrencyWithSymbol(it.unitPrice)}</div>
+                            </div>
+                            <div class="receipt-product-side">
+                              <strong class="receipt-product-price">${formatCurrencyWithSymbol(it.totalPrice || it.unitPrice)}</strong>
+                              <button type="button" class="btn btn-secondary btn-xs" data-quick-add-receipt-item="${it.code || it.rawName}" style="padding: 0.15rem 0.45rem; font-size: 0.72rem; white-space: nowrap;" title="Colocar na lista de compras do mês">+ Lista</button>
+                            </div>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </details>
+                  ` : ''}
+
+                  <!-- Fotos do Cupom / Comprovante -->
+                  <div style="margin-top: 0.25rem;">
+                    <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--text-muted); flex-wrap: wrap;">
+                      <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin: 0;" title="Bater foto do cupom fiscal ou recibo">
+                        📸 Câmera
+                        <input type="file" accept="image/*" capture="environment" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
+                      </label>
+                      <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin: 0;" title="Escolher foto da galeria">
+                        🖼️ Galeria
+                        <input type="file" accept="image/*" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
+                      </label>
+                    </div>
+                    ${(p.photos && p.photos.length > 0) ? `
+                      <div class="carro-photos-container" style="margin-top: 0.35rem;">
+                        ${p.photos.map((src, pIdx) => `
+                          <div class="carro-thumb-wrapper" style="width: 58px; height: 58px;" data-view-photo="${src}">
+                            <img src="${src}" alt="Cupom ${p.marketName}" class="carro-thumb-img" />
+                            <button class="carro-thumb-delete" data-del-purchase-photo="${p.id}" data-photo-idx="${pIdx}" title="Excluir foto">✕</button>
+                          </div>
+                        `).join('')}
+                      </div>
+                    ` : ''}
                   </div>
                 </div>
               `).join('')}
@@ -1370,6 +1433,31 @@ export function renderQuickEmojis() {
 // CATÁLOGO DE PRODUTOS & HISTÓRICO COMPARATIVO DE PREÇOS
 // -------------------------------------------------------------
 
+
+export function updateRecurrentMarketsDatalist(state) {
+  const datalist = document.getElementById('recurrent-markets-datalist');
+  if (!datalist) return;
+
+  const defaultMarkets = [
+    'Carrefour',
+    'Atacadão',
+    'Pão de Açúcar',
+    'Assaí Atacadista',
+    'Açougue Central',
+    'Feira Livre',
+    'Hortifruti',
+    'Padaria',
+    'Farmácia',
+    'Swift'
+  ];
+
+  const analytics = getMarketAnalytics(state);
+  const recordedMarkets = analytics.uniqueMarketsList || [];
+  const combined = Array.from(new Set([...recordedMarkets, ...defaultMarkets]));
+
+  datalist.innerHTML = combined.map(m => `<option value="${m}"></option>`).join('');
+}
+
 export function updateCatalogDatalist(state) {
   const datalist = document.getElementById('catalog-suggestions-list');
   if (!datalist) return;
@@ -1382,36 +1470,163 @@ export function updateCatalogDatalist(state) {
   }).join('');
 }
 
-export function renderCatalogModal(state, query = '', categoryFilter = 'todos') {
+export function renderCatalogModal(state, query = '', categoryFilter = 'todos', mode = 'comparator', sortOption = 'economy') {
   const container = document.getElementById('catalog-products-container');
   const chipsContainer = document.getElementById('catalog-category-chips');
+  const headingEl = document.getElementById('catalog-modal-heading');
+  const sortPillsEl = document.getElementById('catalog-sort-pills');
   if (!container) return;
 
-  const userCats = getCategories(state, 'compras');
-  if (chipsContainer) {
-    chipsContainer.innerHTML = `
-      <button type="button" class="chip ${categoryFilter === 'todos' ? 'active' : ''}" data-catalog-cat="todos">Todos (${(state.catalog || []).length})</button>
-      ${userCats.map(c => `
-        <button type="button" class="chip ${categoryFilter === c.id ? 'active' : ''}" data-catalog-cat="${c.id}">${c.icon} ${c.label}</button>
-      `).join('')}
-    `;
+  // Atualiza título do modal e visibilidade dos botões de ordenação
+  if (headingEl) {
+    headingEl.textContent = mode === 'comparator'
+      ? '📊 Comparador de Preços (Onde é mais barato?)'
+      : '✨ Catálogo Geral (+ Lista de Compras)';
+  }
+  if (sortPillsEl) {
+    sortPillsEl.style.display = mode === 'comparator' ? 'flex' : 'none';
   }
 
-  const products = searchCatalogProducts(state, query, categoryFilter);
+  // Atualiza pílulas de modo
+  document.querySelectorAll('[data-catalog-mode]').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-catalog-mode') === mode);
+  });
+
+  // Atualiza pílulas de ordenação
+  document.querySelectorAll('[data-catalog-sort]').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-catalog-sort') === sortOption);
+  });
+
+  // Chips de categoria no catálogo
+  if (chipsContainer) {
+    const cats = getCategories(state, 'compras');
+    const allChips = [
+      { id: 'todos', label: 'Todos os Produtos', icon: '🛒' },
+      ...cats
+    ];
+    chipsContainer.innerHTML = allChips.map(c => `
+      <button class="chip ${c.id === categoryFilter ? 'active' : ''}" data-catalog-cat="${c.id}">
+        <span>${c.icon}</span>
+        <span>${c.label}</span>
+      </button>
+    `).join('');
+  }
+
+  let products = searchCatalogProducts(state, query, categoryFilter);
 
   if (products.length === 0) {
     container.innerHTML = `
       <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg);">
         <p style="font-size: 2.2rem; margin-bottom: 0.5rem;">✨</p>
-        <p style="font-weight: 700; color: var(--text-primary);">Nenhum produto encontrado no catálogo.</p>
+        <p style="font-weight: 700; color: var(--text-primary);">Nenhum produto encontrado.</p>
         <p style="font-size: 0.8rem; margin-top: 0.25rem;">
-          Suba notas fiscais em PDF ou escaneie QR Codes para que o app memorize os produtos automaticamente!
+          Lance compras ou suba notas fiscais em PDF para que o app memorize os produtos e compare os preços automaticamente!
         </p>
       </div>
     `;
     return;
   }
 
+  // Ordenação inteligente
+  products = [...products].sort((a, b) => {
+    const compA = getProductPriceComparison(a) || {};
+    const compB = getProductPriceComparison(b) || {};
+
+    if (sortOption === 'economy') {
+      const diffA = (compA.maxPrice && compA.minPrice) ? (compA.maxPrice - compA.minPrice) : 0;
+      const diffB = (compB.maxPrice && compB.minPrice) ? (compB.maxPrice - compB.minPrice) : 0;
+      if (diffB !== diffA) return diffB - diffA;
+      return (b.timesBought || 0) - (a.timesBought || 0);
+    }
+    if (sortOption === 'lowest') {
+      const minA = compA.minPrice || compA.lastPrice || 999999;
+      const minB = compB.minPrice || compB.lastPrice || 999999;
+      return minA - minB;
+    }
+    if (sortOption === 'bought') {
+      return (b.timesBought || 0) - (a.timesBought || 0);
+    }
+    if (sortOption === 'alpha') {
+      return (a.alias || a.rawName || '').localeCompare(b.alias || b.rawName || '');
+    }
+    return 0;
+  });
+
+  // MODO 1: COMPARADOR DE PREÇOS DEDICADO
+  if (mode === 'comparator') {
+    container.innerHTML = products.map(prod => {
+      const catObj = findCategory(state, 'compras', prod.category);
+      const comp = getProductPriceComparison(prod);
+      const thumbSrc = (prod.photos && prod.photos.length > 0) ? prod.photos[0] : null;
+
+      const hasHistory = comp && comp.totalPurchases > 1 && comp.minPrice > 0;
+      const priceDiff = (comp && comp.maxPrice > comp.minPrice) ? Math.round((comp.maxPrice - comp.minPrice) * 100) / 100 : 0;
+      const economyPercent = (comp && comp.maxPrice > 0 && priceDiff > 0) ? Math.round((priceDiff / comp.maxPrice) * 100) : 0;
+
+      return `
+        <div class="comparator-card" data-catalog-id="${prod.id}">
+          <div class="comparator-card-top">
+            <div style="display: flex; gap: 0.65rem; align-items: flex-start; flex: 1; min-width: 0;">
+              ${thumbSrc ? `
+                <img src="${thumbSrc}" alt="${prod.alias}" class="product-photo-preview-sm" data-view-photo="${thumbSrc}" />
+              ` : `
+                <div style="width: 44px; height: 44px; border-radius: var(--radius-sm); background: rgba(46, 89, 51, 0.08); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0;">
+                  ${catObj.icon}
+                </div>
+              `}
+              <div style="flex: 1; min-width: 0;">
+                <strong style="font-size: 0.95rem; color: var(--text-primary); line-height: 1.3; display: block; word-break: break-word;">${prod.alias || prod.rawName}</strong>
+                <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; margin-top: 0.2rem;">
+                  <span class="tag-room">${catObj.icon} ${catObj.label}</span>
+                  <span style="font-size: 0.72rem; color: var(--text-muted);">Comprado ${prod.timesBought || 1}x</span>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" data-add-catalog-to-list="${prod.id}" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; white-space: nowrap;">
+              + Lista
+            </button>
+          </div>
+
+          <!-- Grade Comparativa de Preços e Mercados -->
+          <div class="comparator-price-grid">
+            <div style="border-right: 1px solid var(--border-subtle); padding-right: 0.5rem;">
+              <span style="font-size: 0.68rem; color: #16a34a; font-weight: 700; text-transform: uppercase; display: block;">★ Menor Preço Encontrado</span>
+              <strong style="font-size: 1.05rem; color: #16a34a;">${formatCurrencyWithSymbol(comp ? comp.minPrice : prod.lastPrice)}</strong>
+              <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 1px;">no <strong>${(comp && comp.minMarket) || prod.lastMarket || 'Supermercado'}</strong></div>
+            </div>
+            <div style="padding-left: 0.25rem;">
+              <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">Último Preço Pago</span>
+              <strong style="font-size: 1.05rem; color: var(--brand-moss-dark);">${formatCurrencyWithSymbol(prod.lastPrice || 0)}</strong>
+              <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 1px;">no <strong>${prod.lastMarket || 'Supermercado'}</strong></div>
+            </div>
+          </div>
+
+          <!-- Destaque de Economia ou Histórico -->
+          ${priceDiff > 0 ? `
+            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+              <span class="economy-pill">
+                💰 Economia de até ${formatCurrencyWithSymbol(priceDiff)} (-${economyPercent}%) comprando no ${comp.minMarket}!
+              </span>
+            </div>
+          ` : (hasHistory ? `
+            <div style="font-size: 0.75rem; color: var(--text-muted);">
+              Preço estável entre compras (Média: ${formatCurrencyWithSymbol(comp.avgPrice)})
+            </div>
+          ` : '')}
+
+          <!-- Botão para Ver Todos os Mercados onde foi comprado -->
+          <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 0.15rem; gap: 0.4rem;">
+            <button type="button" class="btn btn-secondary btn-xs" data-view-product-history="${prod.id}" style="padding: 0.2rem 0.55rem; font-size: 0.72rem; font-weight: 600;">
+              📊 Ver Todas as ${comp ? comp.totalPurchases : 1} Compras deste Produto
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    return;
+  }
+
+  // MODO 2: CATÁLOGO GERAL & APELIDOS
   container.innerHTML = products.map(prod => {
     const catObj = findCategory(state, 'compras', prod.category);
     const comp = getProductPriceComparison(prod);

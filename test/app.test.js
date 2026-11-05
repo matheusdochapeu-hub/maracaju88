@@ -1,3 +1,4 @@
+import { registerInvoiceInCatalog, findCatalogProduct, getProductPriceComparison } from '../js/catalog.js';
 // ============================================================
 //  MARACAJU - TESTES UNITÁRIOS DE REGRAS DE NEGÓCIO
 // ============================================================
@@ -60,6 +61,7 @@ import {
   addMarketPurchase,
   updateMarketPurchase,
   getMarketPurchasesByMonth,
+  getMarketAnalytics,
   addPhotoToShoppingItem,
   removePhotoFromShoppingItem,
   addPhotoToMarketPurchase,
@@ -809,4 +811,92 @@ test('Sheets: Prioridade da planilha Google e sincronização completa dos dados
   assert.equal(merged.settings.sheetsToken, localState.settings.sheetsToken);
   assert.equal(merged.settings.autoSync, true);
   assert.ok(merged.settings.lastSyncTimestamp);
+});
+
+test('Mercado: Análise de Gastos e Mercados Recorrentes (getMarketAnalytics)', () => {
+  const state = {
+    comprasRegistros: [
+      { id: 'nfe_1', marketName: 'Carrefour', total: 350.00, date: '2026-11-01', monthKey: '2026-11' },
+      { id: 'nfe_2', marketName: 'Atacadão', total: 200.00, date: '2026-11-03', monthKey: '2026-11' },
+      { id: 'nfe_3', marketName: 'Carrefour', total: 150.00, date: '2026-11-05', monthKey: '2026-11' },
+      { id: 'nfe_4', marketName: 'Açougue Central', total: 100.00, date: '2026-10-20', monthKey: '2026-10' }
+    ]
+  };
+
+  // Análise geral de todo o histórico
+  const overall = getMarketAnalytics(state);
+  assert.equal(overall.total, 800.00);
+  assert.equal(overall.count, 4);
+  assert.equal(overall.avgTicket, 200.00);
+
+  // Ranking de mercados recorrentes
+  assert.equal(overall.recurrentMarkets.length, 3);
+  assert.equal(overall.recurrentMarkets[0].marketName, 'Carrefour');
+  assert.equal(overall.recurrentMarkets[0].total, 500.00);
+  assert.equal(overall.recurrentMarkets[0].count, 2);
+  assert.equal(overall.recurrentMarkets[0].percentage, 62.5); // 500 / 800 = 62.5%
+
+  // Análise filtrada por mês específico (Novembro/2026)
+  const novAnalytics = getMarketAnalytics(state, '2026-11');
+  assert.equal(novAnalytics.total, 700.00);
+  assert.equal(novAnalytics.count, 3);
+  assert.equal(novAnalytics.avgTicket, 233.33);
+  assert.equal(novAnalytics.recurrentMarkets[0].marketName, 'Carrefour');
+});
+
+test('Mercado: Lançamento Manual de Compra sem Nota & Comparador de Preços entre Mercados', () => {
+  const state = {
+    comprasRegistros: [],
+    catalog: []
+  };
+
+  // 1. Lança compra manual no Atacadão
+  const purchase1 = addMarketPurchase(state, {
+    marketName: 'Atacadão',
+    date: '2026-11-01',
+    total: '85,50',
+    items: [
+      { rawName: 'Café Pilão 500g', alias: 'Café Pilão', qty: '2 un', unitPrice: 17.50, totalPrice: 35.00 },
+      { rawName: 'Arroz Camil 5kg', alias: 'Arroz Camil', qty: '1 un', unitPrice: 28.90, totalPrice: 28.90 }
+    ],
+    notes: 'Compra manual quinzenal'
+  });
+  assert.equal(purchase1.marketName, 'Atacadão');
+  assert.equal(purchase1.total, 85.50);
+
+  // Registra no catálogo
+  registerInvoiceInCatalog(state, {
+    marketName: purchase1.marketName,
+    date: purchase1.date,
+    items: purchase1.items
+  });
+
+  // 2. Lança compra manual no Carrefour com preço mais caro do mesmo café
+  const purchase2 = addMarketPurchase(state, {
+    marketName: 'Carrefour',
+    date: '2026-11-05',
+    total: '55,00',
+    items: [
+      { rawName: 'Café Pilão 500g', alias: 'Café Pilão', qty: '1 un', unitPrice: 22.90, totalPrice: 22.90 }
+    ]
+  });
+
+  registerInvoiceInCatalog(state, {
+    marketName: purchase2.marketName,
+    date: purchase2.date,
+    items: purchase2.items
+  });
+
+  // 3. Testa Comparador de Preços
+  const cafeProd = findCatalogProduct(state, { alias: 'Café Pilão' });
+  assert.ok(cafeProd, 'Café Pilão deve estar memorizado no catálogo inteligente');
+  assert.equal(cafeProd.timesBought, 2);
+
+  const comp = getProductPriceComparison(cafeProd);
+  assert.equal(comp.lastPrice, 22.90);
+  assert.equal(comp.minPrice, 17.50);
+  assert.equal(comp.maxPrice, 22.90);
+  assert.equal(comp.minMarket, 'Atacadão');
+  assert.equal(comp.maxMarket, 'Carrefour');
+  assert.equal(comp.priceDiff, 5.40); // 22.90 - 17.50 = 5.40 de economia no Atacadão
 });

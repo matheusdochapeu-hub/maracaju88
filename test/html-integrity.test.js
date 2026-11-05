@@ -31,7 +31,8 @@ test('HTML Integridade: Todas as tags de index.html estão balanceadas e sem tru
     'modal-edit-task',
     'modal-edit-carro',
     'modal-edit-shopping-item',
-    'modal-edit-purchase'
+    'modal-edit-purchase',
+    'modal-add-manual-purchase'
   ];
   expectedModals.forEach(m => {
     assert.ok(modalMatches.includes(m), `Modal #${m} deve existir no index.html.`);
@@ -49,4 +50,11 @@ test('Modais & Gatilhos: Todos os botões com data-open-modal apontam para modai
       `O gatilho data-open-modal="${targetId}" deve apontar para um elemento existente.`
     );
   });
+});
+
+test('Rodapé limpo: Não deve haver caracteres espúrios como v> soltos no HTML', () => {
+  const html = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
+  const regex = new RegExp('(?:^|\\n)\\s*v>\\s*(?:\\r?\\n|$)', 'g');
+  const strayMatches = html.match(regex) || [];
+  assert.equal(strayMatches.length, 0, 'Não deve haver linhas com v> no index.html.');
 });

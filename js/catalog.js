@@ -230,11 +230,18 @@ export function getProductPriceComparison(product) {
     }
   }
 
+    const minEntry = history.find(h => h.unitPrice === minPrice);
+  const maxEntry = history.find(h => h.unitPrice === maxPrice);
+  const minMarket = minEntry ? (minEntry.market || 'Mercado') : (product.lastMarket || 'Mercado');
+  const maxMarket = maxEntry ? (maxEntry.market || 'Mercado') : (product.lastMarket || 'Mercado');
+
   return {
     lastPrice,
     previousPrice,
     minPrice,
     maxPrice,
+    minMarket,
+    maxMarket,
     avgPrice: Math.round(avgPrice * 100) / 100,
     priceDiff,
     priceDiffPercent,

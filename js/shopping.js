@@ -320,3 +320,53 @@ export function getMarketPurchasesByMonth(state) {
 
   return result;
 }
+
+export function getMarketAnalytics(state, selectedMonthKey = null) {
+  const allPurchases = purchasesList(state);
+  const purchases = selectedMonthKey && selectedMonthKey !== 'todos'
+    ? allPurchases.filter(p => (p.monthKey || formatMonthKey(p.date)) === selectedMonthKey)
+    : allPurchases;
+
+  const total = Math.round(purchases.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
+  const count = purchases.length;
+  const avgTicket = count > 0 ? Math.round((total / count) * 100) / 100 : 0;
+
+  // Gastos e frequência por Mercado (Mercados Recorrentes)
+  const marketMap = {};
+  purchases.forEach(p => {
+    const rawName = (p.marketName || 'Supermercado').trim();
+    const name = rawName || 'Supermercado';
+    if (!marketMap[name]) {
+      marketMap[name] = { marketName: name, total: 0, count: 0, lastDate: p.date };
+    }
+    marketMap[name].total = Math.round((marketMap[name].total + (Number(p.total) || 0)) * 100) / 100;
+    marketMap[name].count += 1;
+    if (p.date && (!marketMap[name].lastDate || p.date > marketMap[name].lastDate)) {
+      marketMap[name].lastDate = p.date;
+    }
+  });
+
+  const recurrentMarkets = Object.values(marketMap)
+    .map(m => ({
+      ...m,
+      percentage: total > 0 ? Math.round((m.total / total) * 1000) / 10 : 0,
+      avgTicket: m.count > 0 ? Math.round((m.total / m.count) * 100) / 100 : 0
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  // Lista única de nomes de mercados cadastrados em todo o histórico (para autocomplete / datalist)
+  const uniqueMarketsList = Array.from(new Set(allPurchases.map(p => (p.marketName || '').trim()).filter(Boolean)));
+
+  // Total de itens registrados
+  const itemsCount = purchases.reduce((sum, p) => sum + (Array.isArray(p.items) ? p.items.length : 0), 0);
+
+  return {
+    total,
+    count,
+    avgTicket,
+    itemsCount,
+    recurrentMarkets,
+    uniqueMarketsList,
+    selectedMonthKey
+  };
+}
