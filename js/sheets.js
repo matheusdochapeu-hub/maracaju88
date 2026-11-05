@@ -2,7 +2,7 @@
 //  MARACAJU - GOOGLE SHEETS SYNC & BACKUP CLIENT
 // ============================================================
 
-export async function testSheetsConnection(url, token) {
+export async function testSheetsConnection(url, token, timeoutMs = 10000) {
   if (!url || !url.trim()) {
     throw new Error("Por favor, informe a URL do Google Apps Script.");
   }
@@ -13,24 +13,37 @@ export async function testSheetsConnection(url, token) {
     endpoint.searchParams.set("token", token.trim());
   }
 
-  const res = await fetch(endpoint.toString(), {
-    method: "GET",
-    headers: { "Accept": "application/json" }
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!res.ok) {
-    throw new Error(`Erro na conexão HTTP: ${res.status} ${res.statusText}`);
+  try {
+    const res = await fetch(endpoint.toString(), {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      throw new Error(`Erro na conexão HTTP: ${res.status} ${res.statusText}`);
+    }
+
+    const json = await res.json();
+    if (json.status !== "success") {
+      throw new Error(json.message || "Falha ao validar token do Google Sheets.");
+    }
+
+    return json;
+  } catch (err) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') {
+      throw new Error("Tempo limite excedido ao testar conexão (timeout de 10s).");
+    }
+    throw err;
   }
-
-  const json = await res.json();
-  if (json.status !== "success") {
-    throw new Error(json.message || "Falha ao validar token do Google Sheets.");
-  }
-
-  return json;
 }
 
-export async function backupToSheets(state, overrideUrl = null, overrideToken = null) {
+export async function backupToSheets(state, overrideUrl = null, overrideToken = null, timeoutMs = 15000) {
   const url = overrideUrl || (state && state.settings && state.settings.sheetsUrl);
   const token = overrideToken !== null ? overrideToken : (state && state.settings && state.settings.sheetsToken);
 
@@ -60,32 +73,48 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
     }
   };
 
-  // Usamos text/plain para evitar bloqueios de CORS pré-flight (OPTIONS) no Apps Script
-  const response = await fetch(url.trim(), {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8"
-    },
-    body: JSON.stringify(payload)
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  let result;
   try {
-    result = await response.json();
+    // Usamos text/plain para evitar bloqueios de CORS pré-flight (OPTIONS) no Apps Script
+    const response = await fetch(url.trim(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    clearTimeout(timer);
+
+    let result;
+    try {
+      result = await response.json();
+    } catch (err) {
+      // Caso o Apps Script responda redirect ou texto simples
+      result = { status: "success", message: "Backup enviado para processamento." };
+    }
+
+    if (result && result.status === "error") {
+      throw new Error(result.message || "Erro desconhecido ao gravar no Google Sheets.");
+    }
+
+    if (state && state.settings) {
+      state.settings.lastSyncTimestamp = new Date().toISOString();
+    }
+    return result;
   } catch (err) {
-    // Caso o Apps Script responda redirect ou texto simples
-    result = { status: "success", message: "Backup enviado para processamento." };
+    clearTimeout(timer);
+    if (err.name === 'AbortError') {
+      throw new Error("Tempo limite excedido ao salvar na nuvem (timeout de 15s).");
+    }
+    throw err;
   }
-
-  if (result && result.status === "error") {
-    throw new Error(result.message || "Erro desconhecido ao gravar no Google Sheets.");
-  }
-
-  state.settings.lastSyncTimestamp = new Date().toISOString();
-  return result;
 }
 
-export async function restoreFromSheets(state, overrideUrl = null, overrideToken = null) {
+export async function restoreFromSheets(state, overrideUrl = null, overrideToken = null, timeoutMs = 12000) {
   const url = overrideUrl || (state && state.settings && state.settings.sheetsUrl);
   const token = overrideToken !== null ? overrideToken : (state && state.settings && state.settings.sheetsToken);
 
@@ -99,26 +128,47 @@ export async function restoreFromSheets(state, overrideUrl = null, overrideToken
     endpoint.searchParams.set("token", token.trim());
   }
 
-  const res = await fetch(endpoint.toString(), {
-    method: "GET",
-    headers: { "Accept": "application/json" }
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!res.ok) {
-    throw new Error(`Erro ao conectar: ${res.status}`);
+  try {
+    const res = await fetch(endpoint.toString(), {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+      signal: controller.signal
+    });
+
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      throw new Error(`Erro ao conectar: ${res.status}`);
+    }
+
+    const text = await res.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (parseErr) {
+      throw new Error("Resposta da planilha inválida (esperava JSON). Verifique se o Apps Script está publicado corretamente.");
+    }
+
+    if (json.status !== "success" || !json.data) {
+      throw new Error(json.message || "Nenhum dado encontrado para restaurar.");
+    }
+
+    return json.data;
+  } catch (err) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') {
+      throw new Error("Tempo limite excedido ao ler a planilha (timeout de 12s).");
+    }
+    throw err;
   }
-
-  const json = await res.json();
-  if (json.status !== "success" || !json.data) {
-    throw new Error(json.message || "Nenhum dado encontrado para restaurar.");
-  }
-
-  return json.data;
 }
 
 /**
  * Aplica os dados do backup na nuvem com prioridade máxima sobre o estado local,
- * preservando credenciais locais e garantindo compatibilidade de estruturas.
+ * preservando credenciais locais e garantindo compatibilidade e integridade das estruturas.
  */
 export function applyCloudBackup(currentState, cloudData) {
   if (!cloudData || typeof cloudData !== 'object') {
@@ -141,11 +191,87 @@ export function applyCloudBackup(currentState, cloudData) {
     activeUserId: safeCurrent.activeUserId || cloudData.activeUserId || "matheus",
     users: { ...(safeCurrent.users || {}), ...(cloudData.users || {}) },
     gamification: { ...(safeCurrent.gamification || {}), ...(cloudData.gamification || {}) },
-    tasks: Array.isArray(cloudData.tasks) ? cloudData.tasks : (safeCurrent.tasks || []),
-    history: (cloudData.history && typeof cloudData.history === 'object') ? cloudData.history : (safeCurrent.history || {}),
-    carro: Array.isArray(cloudData.carro) ? cloudData.carro : (safeCurrent.carro || []),
-    reformas: Array.isArray(cloudData.reformas) ? cloudData.reformas : (safeCurrent.reformas || []),
-    sonhos: Array.isArray(cloudData.sonhos) ? cloudData.sonhos : (safeCurrent.sonhos || []),
+    tasks: (() => {
+      const cloudList = Array.isArray(cloudData.tasks) ? cloudData.tasks : [];
+      const localList = Array.isArray(safeCurrent.tasks) ? safeCurrent.tasks : [];
+      if (cloudList.length === 0) return localList;
+
+      const sanitizeTask = (t) => {
+        if (!t || typeof t !== 'object') return null;
+        let freq = t.frequency || 'diaria';
+        if (freq === 'dias_alternados') freq = 'diaria';
+        return {
+          id: t.id || `task_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          title: t.title || 'Tarefa sem nome',
+          room: t.room || 'cozinha',
+          effort: t.effort || 'media',
+          xp: t.xp || 20,
+          assignedTo: t.assignedTo || 'ambos',
+          frequency: freq,
+          weekDays: Array.isArray(t.weekDays) ? t.weekDays : (t.frequency === 'dias_alternados' ? [1, 3, 5] : []),
+          notes: t.notes || '',
+          createdAt: t.createdAt || new Date().toISOString()
+        };
+      };
+
+      const map = new Map();
+      localList.forEach(item => {
+        const clean = sanitizeTask(item);
+        if (clean && clean.id) map.set(clean.id, clean);
+      });
+      cloudList.forEach(item => {
+        const clean = sanitizeTask(item);
+        if (clean && clean.id) {
+          const existing = map.get(clean.id);
+          if (existing && Array.isArray(existing.weekDays) && existing.weekDays.length > 0 && (!clean.weekDays || clean.weekDays.length === 0)) {
+            clean.weekDays = existing.weekDays;
+          }
+          map.set(clean.id, clean);
+        }
+      });
+      return Array.from(map.values());
+    })(),
+    history: (() => {
+      const localHist = (safeCurrent.history && typeof safeCurrent.history === 'object') ? safeCurrent.history : {};
+      const cloudHist = (cloudData.history && typeof cloudData.history === 'object') ? cloudData.history : {};
+      const mergedHist = { ...localHist };
+      for (const [dateKey, dayData] of Object.entries(cloudHist)) {
+        if (typeof dayData === 'object' && dayData !== null) {
+          mergedHist[dateKey] = { ...(mergedHist[dateKey] || {}), ...dayData };
+        }
+      }
+      return mergedHist;
+    })(),
+    carro: (() => {
+      const cloudList = Array.isArray(cloudData.carro) ? cloudData.carro : [];
+      const localList = Array.isArray(safeCurrent.carro) ? safeCurrent.carro : [];
+      if (cloudList.length === 0) return localList;
+      if (localList.length === 0) return cloudList;
+      const map = new Map();
+      localList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      cloudList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      return Array.from(map.values());
+    })(),
+    reformas: (() => {
+      const cloudList = Array.isArray(cloudData.reformas) ? cloudData.reformas : [];
+      const localList = Array.isArray(safeCurrent.reformas) ? safeCurrent.reformas : [];
+      if (cloudList.length === 0) return localList;
+      if (localList.length === 0) return cloudList;
+      const map = new Map();
+      localList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      cloudList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      return Array.from(map.values());
+    })(),
+    sonhos: (() => {
+      const cloudList = Array.isArray(cloudData.sonhos) ? cloudData.sonhos : [];
+      const localList = Array.isArray(safeCurrent.sonhos) ? safeCurrent.sonhos : [];
+      if (cloudList.length === 0) return localList;
+      if (localList.length === 0) return cloudList;
+      const map = new Map();
+      localList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      cloudList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      return Array.from(map.values());
+    })(),
     compras: (() => {
       const cloudList = Array.isArray(cloudData.compras) ? cloudData.compras : [];
       const localList = Array.isArray(safeCurrent.compras) ? safeCurrent.compras : [];
@@ -222,7 +348,7 @@ export function applyCloudBackup(currentState, cloudData) {
       ...safeCloudSettings,
       sheetsUrl: preservedSheetsUrl,
       sheetsToken: preservedSheetsToken,
-      autoSync: true, // Prioridade da planilha: auto-sync sempre ativo quando há URL
+      autoSync: true,
       lastSyncTimestamp: new Date().toISOString()
     }
   };

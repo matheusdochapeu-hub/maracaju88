@@ -12,7 +12,9 @@ import {
   isTaskDoneOnDate,
   getTaskHistoryEntry,
   getAllFrequenciesSummary,
-  getTasksProgressByFrequency
+  getTasksProgressByFrequency,
+  isTaskScheduledForDate,
+  formatTaskWeekDays
 } from './tasks.js';
 import { getHistoryForDate, getRecentDaysSummary } from './history.js';
 import { getCarroSummary } from './carro.js';
@@ -202,53 +204,67 @@ export function renderTasksTab(state, selectedFrequency = 'diaria', selectedRoom
   const taskListEl = document.getElementById('tasks-list');
   if (!taskListEl) return;
 
-  let tasksToDisplay = (state.tasks || []).filter(t => (t.frequency || 'diaria') === selectedFrequency);
+  let tasksToDisplay = (state.tasks || []).filter(t => {
+    let freq = t.frequency || 'diaria';
+    if (freq === 'dias_alternados') freq = 'diaria';
+    return freq === selectedFrequency;
+  });
 
   if (selectedRoom !== 'tudo') {
     tasksToDisplay = tasksToDisplay.filter(t => t.room === selectedRoom);
   }
 
   const renderSingleTaskCard = (task) => {
-    const isDone = isTaskDoneOnDate(state, task.id, todayStr);
-    const historyEntry = getTaskHistoryEntry(state, task.id, todayStr);
-    const room = findCategory(state, 'tarefas', task.room);
-    const curFreqObj = FREQUENCIES.find(f => f.id === task.frequency) || FREQUENCIES[0];
-    const hasSpecificWeekDays = Array.isArray(task.weekDays) && task.weekDays.length > 0 && task.weekDays.length < 7;
-    const weekDaysBadge = hasSpecificWeekDays
-      ? `<span class="tag-weekdays" title="Executar em: ${formatTaskWeekDays(task.weekDays)}">📅 ${formatTaskWeekDays(task.weekDays)}</span>`
-      : '';
+    try {
+      const isDone = isTaskDoneOnDate(state, task.id, todayStr);
+      const historyEntry = getTaskHistoryEntry(state, task.id, todayStr);
+      const room = findCategory(state, 'tarefas', task.room);
+      const curFreqObj = FREQUENCIES.find(f => f.id === task.frequency) || FREQUENCIES[0];
+      const hasSpecificWeekDays = Array.isArray(task.weekDays) && task.weekDays.length > 0 && task.weekDays.length < 7;
+      const weekDaysBadge = hasSpecificWeekDays
+        ? `<span class="tag-weekdays" title="Executar em: ${formatTaskWeekDays(task.weekDays)}">📅 ${formatTaskWeekDays(task.weekDays)}</span>`
+        : '';
 
-    return `
-      <div class="task-card ${isDone ? 'completed' : ''}" data-task-id="${task.id}">
-        <div class="task-main">
-          <label class="task-checkbox-wrapper">
-            <input type="checkbox" class="task-checkbox" data-id="${task.id}" ${isDone ? 'checked' : ''} />
-          </label>
-          <div class="task-info">
-            <span class="task-title" title="${task.title}">${task.title}</span>
-            <div class="task-meta">
-              <span class="tag-freq">${curFreqObj.icon} ${curFreqObj.label}</span>
-              ${weekDaysBadge}
-              <span class="tag-room">${room.icon} ${room.label}</span>
-              ${isDone && historyEntry ? `
-                <span style="color: var(--success); font-weight: 600;">
-                  ✓ Feito por ${historyEntry.doneBy} ${historyEntry.completedOnDate ? `(${historyEntry.completedOnDate})` : ''}
-                </span>
-              ` : `
-                <button class="task-assignee-btn" data-change-assignee="${task.id}" title="Alterar responsável">
-                  <span>👤 ${task.assignedTo === 'ambos' ? 'Casal' : ((task.assignedTo === 'esposa' || task.assignedTo === 'scarlet') ? state.users.user2.name : state.users.user1.name)}</span>
-                </button>
-              `}
+      const u1Name = (state.users && state.users.user1 && state.users.user1.name) ? state.users.user1.name : 'Matheus';
+      const u2Name = (state.users && state.users.user2 && state.users.user2.name) ? state.users.user2.name : 'Scarlet';
+      const isUser2 = task.assignedTo === 'esposa' || task.assignedTo === 'scarlet';
+      const assigneeLabel = task.assignedTo === 'ambos' ? 'Casal' : (isUser2 ? u2Name : u1Name);
+
+      return `
+        <div class="task-card ${isDone ? 'completed' : ''}" data-task-id="${task.id}">
+          <div class="task-main">
+            <label class="task-checkbox-wrapper">
+              <input type="checkbox" class="task-checkbox" data-id="${task.id}" ${isDone ? 'checked' : ''} />
+            </label>
+            <div class="task-info">
+              <span class="task-title" title="${task.title || ''}">${task.title || 'Tarefa sem nome'}</span>
+              <div class="task-meta">
+                <span class="tag-freq">${curFreqObj.icon} ${curFreqObj.label}</span>
+                ${weekDaysBadge}
+                <span class="tag-room">${room.icon} ${room.label}</span>
+                ${isDone && historyEntry ? `
+                  <span style="color: var(--success); font-weight: 600;">
+                    ✓ Feito por ${historyEntry.doneBy} ${historyEntry.completedOnDate ? `(${historyEntry.completedOnDate})` : ''}
+                  </span>
+                ` : `
+                  <button class="task-assignee-btn" data-change-assignee="${task.id}" title="Alterar responsável">
+                    <span>👤 ${assigneeLabel}</span>
+                  </button>
+                `}
+              </div>
+              ${task.notes ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">${task.notes}</div>` : ''}
             </div>
-            ${task.notes ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">${task.notes}</div>` : ''}
+          </div>
+          <div class="task-actions">
+            <button class="btn btn-icon btn-sm" data-edit-task="${task.id}" title="Editar tarefa e periodicidade" style="color: var(--brand-forest); margin-right: 0.25rem;">✏️</button>
+            <button class="btn btn-icon btn-sm" data-delete-task="${task.id}" title="Excluir tarefa">🗑️</button>
           </div>
         </div>
-        <div class="task-actions">
-          <button class="btn btn-icon btn-sm" data-edit-task="${task.id}" title="Editar tarefa e periodicidade" style="color: var(--brand-forest); margin-right: 0.25rem;">✏️</button>
-          <button class="btn btn-icon btn-sm" data-delete-task="${task.id}" title="Excluir tarefa">🗑️</button>
-        </div>
-      </div>
-    `;
+      `;
+    } catch (err) {
+      console.warn('[Maracaju] Erro ao renderizar card de tarefa:', err);
+      return '';
+    }
   };
 
   if (tasksToDisplay.length === 0) {

@@ -2,7 +2,7 @@
 //  MARACAJU - APP CONTROLLER PRINCIPAL (v1.3.3)
 // ============================================================
 
-import { loadState, saveState, exportBackupJson, importBackupJson } from './storage.js';
+import { loadState, saveState, exportBackupJson, importBackupJson, getInitialState } from './storage.js';
 import {
   getAuthSession,
   loginWithEmail,
@@ -132,42 +132,59 @@ let deferredInstallPrompt = null;
 // INICIALIZAÇÃO DO APP
 // -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
-  state = loadState();
+  try {
+    state = loadState();
+  } catch (err) {
+    console.error('[Maracaju] Erro ao carregar estado inicial:', err);
+    state = getInitialState();
+  }
 
-  initAuthModule();
-  initServiceWorker();
-  initPwaInstallPrompt();
-  initNavigation();
-  initHeaderControls();
-  initTasksModule();
-  initHistoryModule();
-  initCarroModule();
-  initReformasModule();
-  initSonhosModule();
-  initComprasModule();
-  initQrCodeScanner();
-  initSettingsModule();
-  initCategoryManagement();
-  initModals();
+  const safeInit = (fn, name) => {
+    try {
+      fn();
+    } catch (e) {
+      console.warn(`[Maracaju] Falha ao inicializar ${name}:`, e);
+    }
+  };
 
-  populateCategorySelects(state);
-  updateCatalogDatalist(state);
-  updateRecurrentMarketsDatalist(state);
+  safeInit(initAuthModule, 'initAuthModule');
+  safeInit(initServiceWorker, 'initServiceWorker');
+  safeInit(initPwaInstallPrompt, 'initPwaInstallPrompt');
+  safeInit(initNavigation, 'initNavigation');
+  safeInit(initHeaderControls, 'initHeaderControls');
+  safeInit(initTasksModule, 'initTasksModule');
+  safeInit(initHistoryModule, 'initHistoryModule');
+  safeInit(initCarroModule, 'initCarroModule');
+  safeInit(initReformasModule, 'initReformasModule');
+  safeInit(initSonhosModule, 'initSonhosModule');
+  safeInit(initComprasModule, 'initComprasModule');
+  safeInit(initQrCodeScanner, 'initQrCodeScanner');
+  safeInit(initSettingsModule, 'initSettingsModule');
+  safeInit(initCategoryManagement, 'initCategoryManagement');
+  safeInit(initModals, 'initModals');
+
+  try {
+    populateCategorySelects(state);
+    updateCatalogDatalist(state);
+    updateRecurrentMarketsDatalist(state);
+  } catch (e) {
+    console.warn('[Maracaju] Erro ao popular selects/datalists:', e);
+  }
+
+  // Render inicial ultra-rápido (< 20ms) a partir do cache local
   refreshAllUI();
 
-  // Prioridade da Planilha: quem abrir o app puxa imediatamente os dados mais recentes
-  syncPullFromSheets(false);
+  // Sincronização em segundo plano não-bloqueante: inicia após pintura da interface
+  setTimeout(() => {
+    syncPullFromSheets(true);
+  }, 400);
 });
 
-// Ao retornar ao aplicativo (mudança de aba ou desbloqueio de tela no celular), puxa a planilha
+// Ao retornar ao aplicativo (desbloqueio de tela no celular ou volta de aba), puxa a planilha em background com cooldown
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     syncPullFromSheets(true);
   }
-});
-
-window.addEventListener('focus', () => {
-  syncPullFromSheets(true);
 });
 
 // -------------------------------------------------------------
@@ -870,6 +887,10 @@ function initTasksModule() {
           document.getElementById('task-edit-effort').value = task.effort || 'media';
           document.getElementById('task-edit-assignee').value = task.assignedTo || 'ambos';
           document.getElementById('task-edit-notes').value = task.notes || '';
+          if (editWeekdaysGroup) {
+            editWeekdaysGroup.style.display = (task.frequency === 'diaria' || !task.frequency) ? 'block' : 'none';
+          }
+          updateWeekdaysUI('task-edit-weekdays-buttons', 'task-edit-weekdays-label', task.weekDays || []);
           openModal('modal-edit-task');
         }
         return;
@@ -933,13 +954,15 @@ function initTasksModule() {
       const previousTask = state.tasks.find(t => t.id === taskId);
       const prevFreq = previousTask ? previousTask.frequency : null;
 
+      const weekDays = frequency === 'diaria' ? getSelectedWeekdays('task-edit-weekdays-buttons') : [];
       updateTask(state, taskId, {
         title,
         frequency,
         room,
         effort,
         assignedTo,
-        notes
+        notes,
+        weekDays
       });
 
       saveState(state);

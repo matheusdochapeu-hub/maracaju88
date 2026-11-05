@@ -17,7 +17,9 @@ export const WEEK_DAYS = [
 
 export function isTaskScheduledForDate(task, dateStr = getLocalDateString()) {
   if (!task) return false;
-  if (task.frequency && task.frequency !== 'diaria') {
+  let freq = task.frequency || 'diaria';
+  if (freq === 'dias_alternados') freq = 'diaria';
+  if (freq !== 'diaria') {
     return true;
   }
   if (!Array.isArray(task.weekDays) || task.weekDays.length === 0 || task.weekDays.length === 7) {
@@ -133,7 +135,9 @@ export function toggleTaskDone(state, taskId, dateStr = getLocalDateString(), us
 
 export function getTasksProgressByFrequency(state, frequency = 'diaria', dateStr = getLocalDateString()) {
   const tasks = (state.tasks || []).filter(t => {
-    if ((t.frequency || 'diaria') !== frequency) return false;
+    let tFreq = t.frequency || 'diaria';
+    if (tFreq === 'dias_alternados') tFreq = 'diaria';
+    if (tFreq !== frequency) return false;
     if (frequency === 'diaria') {
       return isTaskScheduledForDate(t, dateStr) || isTaskDoneOnDate(state, t.id, dateStr);
     }
