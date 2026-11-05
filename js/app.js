@@ -2158,15 +2158,106 @@ function initComprasModule() {
         });
 
         currentPendingPdfInvoice = invoiceData;
+
+        // AUTO-SAVE IMEDIATO: Salva a nota e todos os itens no histórico e catálogo
+        const existingIdx = (state.comprasRegistros || []).findIndex(p => p.nfeKey && p.nfeKey === invoiceData.nfeKey);
+        let savedPurchase;
+        if (existingIdx >= 0) {
+          state.comprasRegistros[existingIdx].items = [...invoiceData.items];
+          state.comprasRegistros[existingIdx].total = invoiceData.total;
+          state.comprasRegistros[existingIdx].marketName = invoiceData.marketName;
+          savedPurchase = state.comprasRegistros[existingIdx];
+        } else {
+          savedPurchase = addMarketPurchase(state, {
+            marketName: invoiceData.marketName,
+            date: invoiceData.date,
+            total: invoiceData.total,
+            nfeKey: invoiceData.nfeKey,
+            items: invoiceData.items,
+            notes: `${invoiceData.items.length} itens (importados via PDF)`
+          });
+        }
+
+        // Grava e memoriza todos os produtos no Catálogo Inteligente
+        registerInvoiceInCatalog(state, invoiceData);
+
+        // Salva estado e dispara sincronização com Google Sheets
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        updateCatalogDatalist(state);
+
+        // Muda a visualização para a aba de notas e atualiza toda a interface imediatamente
+        currentComprasView = 'notas';
+        refreshAllUI();
+
+        // Abre o modal de conferência / apelidos
         renderPdfInvoiceConfirmation(state, invoiceData);
         openModal('modal-confirm-pdf-invoice');
-        showToast(`${invoiceData.items.length} itens extraídos da nota fiscal!`, 'success');
+
+        showToast(`🎉 Nota do ${invoiceData.marketName || 'Mercado'} salva! ${invoiceData.items.length} produtos registrados no app!`, 'success', 4500);
       } catch (err) {
         console.error('Erro ao ler PDF:', err);
         showToast('Erro ao processar PDF da nota: ' + err.message, 'error', 5000);
       } finally {
         inputPdf.value = '';
       }
+    });
+  }
+
+  // Botão: Adicionar TODOS os itens da nota fiscal diretamente à Lista do Mês
+  const btnAddAllPdfToList = document.getElementById('btn-add-all-pdf-to-list');
+  if (btnAddAllPdfToList) {
+    btnAddAllPdfToList.addEventListener('click', () => {
+      if (!currentPendingPdfInvoice || !currentPendingPdfInvoice.items) return;
+
+      currentPendingPdfInvoice.items.forEach(it => {
+        addShoppingItem(state, {
+          name: it.alias || it.rawName,
+          category: it.category || 'mercearia',
+          qty: `${it.qty} ${it.unit || 'un'}`,
+          unitPrice: it.unitPrice,
+          price: it.unitPrice,
+          notes: `Importado de ${currentPendingPdfInvoice.marketName || 'Supermercado'}`
+        });
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      refreshAllUI();
+      showToast(`🛒 ${currentPendingPdfInvoice.items.length} itens colocados na sua Lista de Compras do Mês!`, 'success', 4000);
+    });
+  }
+
+  // Botão rápido "+ Lista" a partir de qualquer produto nas Notas Fiscais
+  const purchasesListContainer = document.getElementById('market-purchases-container');
+  if (purchasesListContainer) {
+    purchasesListContainer.addEventListener('click', (e) => {
+      const addBtn = e.target.closest('[data-quick-add-receipt-item]');
+      if (!addBtn) return;
+
+      const itemIdentifier = addBtn.getAttribute('data-quick-add-receipt-item');
+      if (!itemIdentifier) return;
+
+      // Busca no catálogo ou nos registros de compras
+      let foundItem = findCatalogProduct(state, { code: itemIdentifier, rawName: itemIdentifier, alias: itemIdentifier });
+      const itemName = foundItem ? (foundItem.alias || foundItem.rawName) : itemIdentifier;
+      const itemCat = foundItem ? (foundItem.category || 'mercearia') : 'mercearia';
+      const itemPrice = foundItem ? (foundItem.lastPrice || 0) : 0;
+      const itemUnit = foundItem ? (foundItem.unit || 'un') : 'un';
+
+      addShoppingItem(state, {
+        name: itemName,
+        category: itemCat,
+        qty: `1 ${itemUnit}`,
+        unitPrice: itemPrice,
+        price: itemPrice,
+        notes: foundItem ? `Última compra em ${foundItem.lastMarket || 'Supermercado'}` : ''
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      refreshAllUI();
+      showToast(`✓ "${itemName}" adicionado à Lista de Compras do Mês! 🛒`, 'success', 3000);
     });
   }
 
@@ -2249,19 +2340,17 @@ function initComprasModule() {
 
       currentPendingPdfInvoice.items = itemsToKeep;
 
-      // 1. Registra no histórico de notas fiscais do casal
-      addMarketPurchase(state, {
-        marketName: currentPendingPdfInvoice.marketName,
-        date: currentPendingPdfInvoice.date,
-        total: currentPendingPdfInvoice.total,
-        nfeKey: currentPendingPdfInvoice.nfeKey,
-        notes: `${itemsToKeep.length} itens (importados via PDF)`
-      });
+      // Atualiza o registro da compra na lista de notas fiscais
+      const regIdx = (state.comprasRegistros || []).findIndex(p => p.nfeKey && p.nfeKey === currentPendingPdfInvoice.nfeKey);
+      if (regIdx >= 0) {
+        state.comprasRegistros[regIdx].marketName = marketName;
+        state.comprasRegistros[regIdx].items = itemsToKeep;
+      }
 
-      // 2. Grava e memoriza todos os itens no Catálogo Inteligente
+      // Atualiza o Catálogo Inteligente com os apelidos definidos
       registerInvoiceInCatalog(state, currentPendingPdfInvoice);
 
-      // 3. Coloca na lista do mês os itens que o usuário solicitou
+      // Coloca na lista do mês os itens que o usuário solicitou
       itemsToAddToList.forEach(it => {
         const res = addShoppingItem(state, {
           name: it.alias || it.rawName,
@@ -2282,8 +2371,7 @@ function initComprasModule() {
       closeModal('modal-confirm-pdf-invoice');
 
       playTaskCompleteSound(state.settings.soundEnabled);
-      triggerConfetti();
-      showToast(`🎉 Nota do ${marketName} registrada e ${itemsToKeep.length} produtos salvos no catálogo!`, 'success', 4000);
+      showToast(`✨ Catálogo atualizado com ${itemsToKeep.length} produtos!`, 'success', 3500);
 
       updateCatalogDatalist(state);
       refreshAllUI();

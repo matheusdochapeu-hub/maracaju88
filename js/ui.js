@@ -1105,9 +1105,32 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
                     <div class="market-receipt-name">🛒 ${p.marketName || 'Supermercado'}</div>
                     <div class="market-receipt-meta">
                       <span>📅 ${p.date || 'Data da compra'}</span>
-                      ${p.items && p.items.length ? `<span>• ${p.items.length} itens</span>` : ''}
+                      ${p.items && p.items.length ? `<span>• <strong>${p.items.length} itens</strong></span>` : ''}
                       ${(p.nfeKey || p.accessKey) ? `<span style="font-size: 0.7rem; color: var(--text-muted);" title="${p.nfeKey || p.accessKey}">Chave: ${(p.nfeKey || p.accessKey).slice(0, 10)}...</span>` : ''}
                     </div>
+
+                    <!-- Lista Expansível de Produtos Comprados nesta Nota -->
+                    ${(p.items && p.items.length > 0) ? `
+                      <details class="market-receipt-items-details" style="margin-top: 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.4rem 0.6rem;" open>
+                        <summary style="font-size: 0.8rem; font-weight: 700; color: var(--brand-moss-dark); cursor: pointer; user-select: none;">
+                          📦 ${p.items.length} produtos comprados nesta nota:
+                        </summary>
+                        <div style="margin-top: 0.45rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                          ${p.items.map(it => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.06); padding: 0.25rem 0; font-size: 0.8rem; gap: 0.5rem;">
+                              <div style="flex: 1; min-width: 0;">
+                                <strong style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary);">${it.alias || it.rawName}</strong>
+                                <span style="font-size: 0.7rem; color: var(--text-muted);">${it.qty} ${it.unit || 'un'} × ${formatCurrencyWithSymbol(it.unitPrice)}</span>
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0;">
+                                <strong style="color: var(--brand-moss-dark); font-size: 0.85rem;">${formatCurrencyWithSymbol(it.totalPrice || it.unitPrice)}</strong>
+                                <button type="button" class="btn btn-secondary btn-xs" data-quick-add-receipt-item="${it.code || it.rawName}" style="padding: 0.15rem 0.4rem; font-size: 0.7rem; white-space: nowrap;" title="Colocar na lista de compras do mês">+ Lista</button>
+                              </div>
+                            </div>
+                          `).join('')}
+                        </div>
+                      </details>
+                    ` : ''}
 
                     <!-- Fotos do Cupom / Comprovante -->
                     <div style="margin-top: 0.35rem;">

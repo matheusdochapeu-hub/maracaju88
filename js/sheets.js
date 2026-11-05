@@ -146,9 +146,56 @@ export function applyCloudBackup(currentState, cloudData) {
     carro: Array.isArray(cloudData.carro) ? cloudData.carro : (safeCurrent.carro || []),
     reformas: Array.isArray(cloudData.reformas) ? cloudData.reformas : (safeCurrent.reformas || []),
     sonhos: Array.isArray(cloudData.sonhos) ? cloudData.sonhos : (safeCurrent.sonhos || []),
-    compras: Array.isArray(cloudData.compras) ? cloudData.compras : (safeCurrent.compras || []),
-    comprasRegistros: Array.isArray(cloudData.comprasRegistros) ? cloudData.comprasRegistros : (safeCurrent.comprasRegistros || []),
-    catalog: Array.isArray(cloudData.catalog) ? cloudData.catalog : (safeCurrent.catalog || []),
+    compras: (() => {
+      const cloudList = Array.isArray(cloudData.compras) ? cloudData.compras : [];
+      const localList = Array.isArray(safeCurrent.compras) ? safeCurrent.compras : [];
+      if (cloudList.length === 0) return localList;
+      if (localList.length === 0) return cloudList;
+      const map = new Map();
+      localList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      cloudList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      return Array.from(map.values());
+    })(),
+    comprasRegistros: (() => {
+      const cloudList = Array.isArray(cloudData.comprasRegistros) ? cloudData.comprasRegistros : [];
+      const localList = Array.isArray(safeCurrent.comprasRegistros) ? safeCurrent.comprasRegistros : [];
+      if (cloudList.length === 0) return localList;
+      if (localList.length === 0) return cloudList;
+      const map = new Map();
+      localList.forEach(p => { if (p && p.id) map.set(p.id, p); });
+      cloudList.forEach(p => { if (p && p.id) map.set(p.id, p); });
+      return Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    })(),
+    catalog: (() => {
+      const cloudList = Array.isArray(cloudData.catalog) ? cloudData.catalog : [];
+      const localList = Array.isArray(safeCurrent.catalog) ? safeCurrent.catalog : [];
+      if (cloudList.length === 0) return localList;
+      if (localList.length === 0) return cloudList;
+      const map = new Map();
+      localList.forEach(item => {
+        const key = item.id || item.code || item.rawName;
+        if (key) map.set(key, item);
+      });
+      cloudList.forEach(item => {
+        const key = item.id || item.code || item.rawName;
+        if (key) {
+          const existing = map.get(key);
+          if (!existing) {
+            map.set(key, item);
+          } else {
+            const mergedItem = { ...existing, ...item };
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+              mergedItem.photos = existing.photos;
+            }
+            if (existing.alias && !item.alias) {
+              mergedItem.alias = existing.alias;
+            }
+            map.set(key, mergedItem);
+          }
+        }
+      });
+      return Array.from(map.values());
+    })(),
     categories: {
       tarefas: (cloudData.categories && Array.isArray(cloudData.categories.tarefas) && cloudData.categories.tarefas.length > 0)
         ? cloudData.categories.tarefas

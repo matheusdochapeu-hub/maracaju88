@@ -2,7 +2,7 @@
 //  MARACAJU - SERVICE WORKER (PWA Offline Cache)
 // ============================================================
 
-const CACHE_NAME = 'maracaju-v2.1.2';
+const CACHE_NAME = 'maracaju-v2.1.3';
 
 const ASSETS_TO_CACHE = [
   './',
