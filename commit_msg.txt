@@ -1,6 +1,0 @@
-v2.2.3: Corrige exibicao de Forma de Pagamento no modal de edicao e adiciona fallback dinamico
-
-- Corrige fechamento de div nos modais de edicao e lancamento manual de compras
-- Adiciona injecao dinamica de fallback em js/app.js para garantir que Forma de Pagamento sempre apareca mesmo se houver cache antigo no navegador
-- Adiciona seletor de forma de pagamento na confirmacao de notas fiscais em PDF
-- Atualiza tags de versao e cache-busting para v2.2.3 em sw.js, package.json e index.html

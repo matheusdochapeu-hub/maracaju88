@@ -167,4 +167,12 @@ test('HTML: Modais de Compra contêm seletor de Forma de Pagamento', async () =>
   assert.ok(html.includes('id="purchase-edit-payment-method"'));
   assert.ok(html.includes('id="manual-purchase-payment-method"'));
   assert.ok(html.includes('id="pdf-invoice-payment-method"'));
+  assert.ok(html.includes('id="modal-adjust-benefits"'));
+  assert.ok(html.includes('id="form-adjust-benefits"'));
+  assert.ok(html.includes('id="benefits-input-month"'));
+  assert.ok(html.includes('id="benefits-input-va-fixed"'));
+  assert.ok(html.includes('id="benefits-input-vr-daily"'));
+  assert.ok(html.includes('id="benefits-input-vr-days"'));
+  assert.ok(html.includes('id="benefits-preview-vr-total"'));
+  assert.ok(html.includes('id="benefits-preview-combined-total"'));
 });

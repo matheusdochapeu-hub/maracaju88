@@ -3051,6 +3051,71 @@ function initComprasModule() {
     });
   }
 
+  // -------------------------------------------------------------
+  // CONTROLE DO MODAL DE AJUSTE DE BENEFÍCIOS (VA / VR)
+  // -------------------------------------------------------------
+  const formAdjustBenefits = document.getElementById('form-adjust-benefits');
+  const benefitsMonthInput = document.getElementById('benefits-input-month');
+  const benefitsVaInput = document.getElementById('benefits-input-va-fixed');
+  const benefitsVrDailyInput = document.getElementById('benefits-input-vr-daily');
+  const benefitsVrDaysInput = document.getElementById('benefits-input-vr-days');
+
+  function updateBenefitsLivePreview() {
+    const vaVal = benefitsVaInput ? parseCurrency(benefitsVaInput.value) : 2050;
+    const vrDailyVal = benefitsVrDailyInput ? parseCurrency(benefitsVrDailyInput.value) : 65;
+    const vrDaysVal = benefitsVrDaysInput ? (parseInt(benefitsVrDaysInput.value, 10) || 0) : 0;
+
+    const vrTotal = Math.round(vrDailyVal * vrDaysVal * 100) / 100;
+    const combinedTotal = Math.round((vaVal + vrTotal) * 100) / 100;
+
+    const vrPreview = document.getElementById('benefits-preview-vr-total');
+    const combinedPreview = document.getElementById('benefits-preview-combined-total');
+    if (vrPreview) vrPreview.textContent = formatCurrencyWithSymbol(vrTotal);
+    if (combinedPreview) combinedPreview.textContent = formatCurrencyWithSymbol(combinedTotal);
+  }
+
+  if (benefitsMonthInput) {
+    benefitsMonthInput.addEventListener('change', () => {
+      const selectedMonth = benefitsMonthInput.value;
+      if (selectedMonth && typeof prepareBenefitsModal === 'function') {
+        prepareBenefitsModal(selectedMonth);
+      }
+    });
+  }
+
+  [benefitsVaInput, benefitsVrDailyInput, benefitsVrDaysInput].forEach(inp => {
+    if (inp) {
+      inp.addEventListener('input', updateBenefitsLivePreview);
+      inp.addEventListener('change', updateBenefitsLivePreview);
+    }
+  });
+
+  if (formAdjustBenefits) {
+    formAdjustBenefits.addEventListener('submit', (e) => {
+      e.preventDefault();
+      try {
+        const monthKey = benefitsMonthInput?.value || new Date().toISOString().slice(0, 7);
+        const vaFixed = benefitsVaInput ? parseCurrency(benefitsVaInput.value) : 2050;
+        const vrDaily = benefitsVrDailyInput ? parseCurrency(benefitsVrDailyInput.value) : 65;
+        const vrDays = benefitsVrDaysInput ? (parseInt(benefitsVrDaysInput.value, 10) || 0) : 0;
+
+        updateMonthlyBenefitsConfig(state, monthKey, {
+          vaFixed,
+          vrDaily,
+          vrDays
+        });
+
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        closeModal('modal-adjust-benefits');
+        showToast('Benefícios VA/VR salvos com sucesso! 🥗🍽️', 'success');
+        refreshAllUI();
+      } catch (err) {
+        showToast('Erro ao salvar benefícios: ' + err.message, 'error');
+      }
+    });
+  }
+
 function initQrCodeScanner() {
   const btnScan = document.getElementById('btn-scan-nfce-qr');
   const videoEl = document.getElementById('qr-video');
@@ -3408,6 +3473,100 @@ function initCategoryManagement() {
 // -------------------------------------------------------------
 // CONTROLE DE MODAIS
 // -------------------------------------------------------------
+// -------------------------------------------------------------
+// AJUSTE & PREENCHIMENTO DO MODAL DE BENEFÍCIOS (VA / VR)
+// -------------------------------------------------------------
+function prepareBenefitsModal(monthKey) {
+  if (!state) return;
+  const targetMonth = monthKey || (typeof getLocalDateString === 'function' ? getLocalDateString().slice(0, 7) : new Date().toISOString().slice(0, 7));
+  const monthInput = document.getElementById('benefits-input-month');
+  if (monthInput) monthInput.value = targetMonth;
+
+  const details = getMonthlyBenefitDetails(state, targetMonth);
+  const vaInput = document.getElementById('benefits-input-va-fixed');
+  const vrDailyInput = document.getElementById('benefits-input-vr-daily');
+  const vrDaysInput = document.getElementById('benefits-input-vr-days');
+  const vrTotalPreview = document.getElementById('benefits-preview-vr-total');
+  const combinedTotalPreview = document.getElementById('benefits-preview-combined-total');
+
+  if (vaInput) vaInput.value = formatCurrency(details.vaTotal);
+  if (vrDailyInput) vrDailyInput.value = formatCurrency(details.vrDaily);
+  if (vrDaysInput) vrDaysInput.value = details.vrDays;
+  if (vrTotalPreview) vrTotalPreview.textContent = formatCurrencyWithSymbol(details.vrTotal);
+  if (combinedTotalPreview) combinedTotalPreview.textContent = formatCurrencyWithSymbol(details.totalBenefit);
+}
+
+// -------------------------------------------------------------
+// DELEGAÇÃO GLOBAL DE AÇÕES DE EDIÇÃO (Resiliente em Celulares)
+// -------------------------------------------------------------
+function initGlobalEditDelegation() {
+  document.addEventListener('click', (e) => {
+    // 1. Abrir Modal de Ajuste de Benefícios VA / VR
+    const benBtn = e.target.closest('[data-open-modal="modal-adjust-benefits"]');
+    if (benBtn) {
+      prepareBenefitsModal();
+      openModal('modal-adjust-benefits');
+      return;
+    }
+
+    // 2. Editar Registro de Compra / Nota Fiscal
+    const editPurBtn = e.target.closest('[data-edit-purchase]');
+    if (editPurBtn) {
+      const purchaseId = editPurBtn.getAttribute('data-edit-purchase');
+      const p = (state.comprasRegistros || []).find(item => item.id === purchaseId);
+      if (p) {
+        const idEl = document.getElementById('purchase-edit-id');
+        const marketEl = document.getElementById('purchase-edit-market');
+        const dateEl = document.getElementById('purchase-edit-date');
+        const totalEl = document.getElementById('purchase-edit-total');
+        const notesEl = document.getElementById('purchase-edit-notes');
+        const payEl = document.getElementById('purchase-edit-payment-method');
+
+        if (idEl) idEl.value = p.id;
+        if (marketEl) marketEl.value = p.marketName || '';
+        if (dateEl) dateEl.value = p.date || '';
+        const tot = (p.total !== undefined && p.total !== null) ? p.total : (p.totalAmount || 0);
+        if (totalEl) totalEl.value = tot ? formatCurrency(tot) : '';
+        if (notesEl) notesEl.value = p.notes || '';
+        if (payEl) payEl.value = p.paymentMethod || 'va';
+
+        openModal('modal-edit-purchase');
+      }
+      return;
+    }
+
+    // 3. Editar Item da Lista de Compras
+    const editShoppingBtn = e.target.closest('[data-edit-shopping]');
+    if (editShoppingBtn) {
+      const itemId = editShoppingBtn.getAttribute('data-edit-shopping');
+      const item = (state.compras || []).find(i => i.id === itemId);
+      if (item) {
+        populateCategorySelects(state);
+        const idEl = document.getElementById('shopping-edit-id');
+        const titleEl = document.getElementById('shopping-edit-title');
+        const catEl = document.getElementById('shopping-edit-category');
+        const qtyEl = document.getElementById('shopping-edit-qty');
+        const priceEl = document.getElementById('shopping-edit-price');
+        const sugEl = document.getElementById('shopping-edit-suggested-by');
+        const notesEl = document.getElementById('shopping-edit-notes');
+
+        if (idEl) idEl.value = item.id;
+        if (titleEl) titleEl.value = item.title || item.name || '';
+        if (catEl) catEl.value = item.category || 'outros';
+        const qtyParsed = parseQuantity(item.quantity || item.qty);
+        if (qtyEl) qtyEl.value = qtyParsed.text;
+        const uPrice = item.unitPrice !== undefined ? item.unitPrice : (item.price || 0);
+        if (priceEl) priceEl.value = uPrice ? formatCurrency(uPrice) : '';
+        if (sugEl) sugEl.value = item.suggestedBy || 'ambos';
+        if (notesEl) notesEl.value = item.notes || '';
+        updateShoppingSubtotalPreview('edit');
+        openModal('modal-edit-shopping-item');
+      }
+      return;
+    }
+  });
+}
+
 function initModals() {
   document.addEventListener('click', (e) => {
     const openBtn = e.target.closest('[data-open-modal]');
@@ -3440,6 +3599,7 @@ function initModals() {
 }
 
 function openModal(id) {
+  if (id === 'modal-adjust-benefits') prepareBenefitsModal();
   const modal = document.getElementById(id);
   if (modal) {
     modal.classList.add('active');
