@@ -4,6 +4,32 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-04 18:20] - Edição Completa de Lançamentos em Todos os Módulos (v2.0.5)
+
+### 🔍 Problemas Identificados & Causa Raiz
+1. **Ausência de Edição em Lançamentos (Carro, Reformas, Sonhos e Mercado):**
+   - **Causa Raiz:** Os cards de Carro, Reformas e Sonhos possuíam apenas o botão "Alterar Status" e exclusão ("🗑️"), sem um botão "✏️ Editar" nem formulário modal para alterar título, custos, datas ou anotações (por exemplo, corrigir digitação de "Suporte Bagagiyo" para "Suporte Bagageiro"). Da mesma forma, as notas fiscais de mercado não podiam ser editadas após o cadastro.
+
+---
+
+### 🛠️ Correções Implementadas
+1. **Botões de Edição Direta em Cada Card:**
+   - **Carro:** Adicionado botão `✏️ Editar` (`data-edit-carro`) em todos os cards de manutenção.
+   - **Reformas:** Adicionado botão `✏️ Editar` (`data-edit-reforma`) em todos os projetos.
+   - **Sonhos:** Adicionado botão `✏️ Editar` (`data-edit-sonho`) em todas as metas do casal.
+   - **Mercado (Notas/Registros):** Adicionado botão `✏️` (`data-edit-purchase`) em cada linha de comprovante.
+2. **Novos Modais de Edição Completos:**
+   - Criados `modal-edit-carro`, `modal-edit-reforma`, `modal-edit-sonho` e `modal-edit-purchase` em `index.html`.
+   - População automática e reativa de campos (título, categoria, status, prioridade, orçamentos, gastos reais, datas e notas).
+3. **Novas Funções de Negócio & Atualização de Estado:**
+   - Implementada `updateMarketPurchase` em `js/shopping.js`.
+   - Conectadas as chamadas de `updateCarroItem`, `updateReforma` e `updateSonho` com sincronização automática e persistência em `localStorage`.
+4. **Validação:**
+   - 15 testes unitários aprovados em `test/app.test.js`.
+   - Teste E2E no Headless Chrome (CDP) confirmando abertura de modal e edição do card.
+
+---
+
 ## [2026-11-04 18:05] - Clarificação de Quantidades ("6 unidades") e Multiplicação Precisa de Valor Total (v2.0.4)
 
 ### 🔍 Problemas Identificados & Causa Raiz

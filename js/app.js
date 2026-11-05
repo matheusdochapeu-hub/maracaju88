@@ -34,7 +34,8 @@ import {
   getShoppingSummary,
   getMarketPurchasesByMonth,
   parseQuantity,
-  getItemTotalPrice
+  getItemTotalPrice,
+  updateMarketPurchase
 } from './shopping.js';
 import { parseNfceQrCodeText, fetchNfceDetailsOnline } from './nfce.js';
 import { parseCurrency, formatCurrency, formatCurrencyWithSymbol } from './currency.js';
@@ -51,6 +52,7 @@ import {
 } from './carro.js';
 import {
   addReforma,
+  updateReforma,
   deleteReforma,
   toggleReformaChecklistItem,
   addPhotoToReforma,
@@ -58,7 +60,7 @@ import {
   addLinkToReforma,
   removeLinkFromReforma
 } from './reformas.js';
-import { addSonho, deleteSonho, toggleSonhoMilestone, addPhotoToSonho, removePhotoFromSonho } from './sonhos.js';
+import { addSonho, updateSonho, deleteSonho, toggleSonhoMilestone, addPhotoToSonho, removePhotoFromSonho } from './sonhos.js';
 import { testSheetsConnection, backupToSheets, restoreFromSheets } from './sheets.js';
 import {
   getCategories,
@@ -806,6 +808,29 @@ function initCarroModule() {
         return;
       }
 
+      
+      // Editar lançamento do Carro (Título, categoria, custos, etc.)
+      const editCarroBtn = e.target.closest('[data-edit-carro]');
+      if (editCarroBtn) {
+        const carId = editCarroBtn.getAttribute('data-edit-carro');
+        const item = state.carro.find(c => c.id === carId);
+        if (item) {
+          populateCategorySelects(state);
+          document.getElementById('carro-edit-id').value = item.id;
+          document.getElementById('carro-edit-title').value = item.title || '';
+          document.getElementById('carro-edit-category').value = item.category || 'mecanica';
+          document.getElementById('carro-edit-status').value = item.status || 'pendente';
+          document.getElementById('carro-edit-priority').value = item.priority || 'media';
+          document.getElementById('carro-edit-estimated').value = item.estimatedCost ? formatCurrency(item.estimatedCost) : '';
+          document.getElementById('carro-edit-actual').value = item.actualCost ? formatCurrency(item.actualCost) : '';
+          document.getElementById('carro-edit-km').value = item.targetKm || '';
+          document.getElementById('carro-edit-date').value = item.targetDate || '';
+          document.getElementById('carro-edit-notes').value = item.notes || '';
+          openModal('modal-edit-carro');
+        }
+        return;
+      }
+
       // Alterar status rápido
       const statusBtn = e.target.closest('[data-edit-carro-status]');
       if (statusBtn) {
@@ -897,6 +922,50 @@ function initCarroModule() {
       refreshAllUI();
     });
   }
+
+
+  // Formulário Editar Manutenção do Carro
+  const formEditCarro = document.getElementById('form-edit-carro');
+  if (formEditCarro) {
+    formEditCarro.addEventListener('submit', (e) => {
+      e.preventDefault();
+      try {
+        const id = document.getElementById('carro-edit-id').value;
+        const title = document.getElementById('carro-edit-title').value.trim();
+        const category = document.getElementById('carro-edit-category').value;
+        const status = document.getElementById('carro-edit-status').value;
+        const priority = document.getElementById('carro-edit-priority').value;
+        const estimatedCost = document.getElementById('carro-edit-estimated').value;
+        const actualCost = document.getElementById('carro-edit-actual').value;
+        const targetKm = document.getElementById('carro-edit-km').value;
+        const targetDate = document.getElementById('carro-edit-date').value;
+        const notes = document.getElementById('carro-edit-notes').value.trim();
+
+        if (!id || !title) return;
+
+        updateCarroItem(state, id, {
+          title,
+          category,
+          status,
+          priority,
+          estimatedCost,
+          actualCost,
+          targetKm,
+          targetDate,
+          notes
+        });
+
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        closeModal('modal-edit-carro');
+        showToast('Manutenção do carro atualizada com sucesso!', 'success');
+        refreshAllUI();
+      } catch (err) {
+        showToast('Erro ao editar: ' + err.message, 'error');
+      }
+    });
+  }
+
 }
 
 // -------------------------------------------------------------
@@ -1032,6 +1101,28 @@ function initReformasModule() {
         return;
       }
 
+      
+      // Editar lançamento de Reforma (Projeto, custos, status, cômodo)
+      const editReformaBtn = e.target.closest('[data-edit-reforma]');
+      if (editReformaBtn) {
+        const refId = editReformaBtn.getAttribute('data-edit-reforma');
+        const ref = state.reformas.find(r => r.id === refId);
+        if (ref) {
+          populateCategorySelects(state);
+          document.getElementById('reforma-edit-id').value = ref.id;
+          document.getElementById('reforma-edit-title').value = ref.title || '';
+          document.getElementById('reforma-edit-room').value = ref.room || 'sala';
+          document.getElementById('reforma-edit-status').value = ref.status || 'ideia';
+          document.getElementById('reforma-edit-priority').value = ref.priority || 'media';
+          document.getElementById('reforma-edit-estimated').value = ref.estimatedCost ? formatCurrency(ref.estimatedCost) : '';
+          document.getElementById('reforma-edit-actual').value = ref.actualCost ? formatCurrency(ref.actualCost) : '';
+          document.getElementById('reforma-edit-date').value = ref.targetDate || '';
+          document.getElementById('reforma-edit-desc').value = ref.description || '';
+          openModal('modal-edit-reforma');
+        }
+        return;
+      }
+
       // Alterar Status da Reforma
       const statusBtn = e.target.closest('[data-edit-reforma-status]');
       if (statusBtn) {
@@ -1108,6 +1199,48 @@ function initReformasModule() {
       refreshAllUI();
     });
   }
+
+
+  // Formulário Editar Projeto de Reforma
+  const formEditReforma = document.getElementById('form-edit-reforma');
+  if (formEditReforma) {
+    formEditReforma.addEventListener('submit', (e) => {
+      e.preventDefault();
+      try {
+        const id = document.getElementById('reforma-edit-id').value;
+        const title = document.getElementById('reforma-edit-title').value.trim();
+        const room = document.getElementById('reforma-edit-room').value;
+        const status = document.getElementById('reforma-edit-status').value;
+        const priority = document.getElementById('reforma-edit-priority').value;
+        const estimatedCost = document.getElementById('reforma-edit-estimated').value;
+        const actualCost = document.getElementById('reforma-edit-actual').value;
+        const targetDate = document.getElementById('reforma-edit-date').value;
+        const description = document.getElementById('reforma-edit-desc').value.trim();
+
+        if (!id || !title) return;
+
+        updateReforma(state, id, {
+          title,
+          room,
+          status,
+          priority,
+          estimatedCost,
+          actualCost,
+          targetDate,
+          description
+        });
+
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        closeModal('modal-edit-reforma');
+        showToast('Projeto de reforma atualizado com sucesso!', 'success');
+        refreshAllUI();
+      } catch (err) {
+        showToast('Erro ao editar: ' + err.message, 'error');
+      }
+    });
+  }
+
 }
 
 // -------------------------------------------------------------
@@ -1201,6 +1334,26 @@ function initSonhosModule() {
         return;
       }
 
+      
+      // Editar lançamento de Sonho (Título, meta, valor guardado, status)
+      const editSonhoBtn = e.target.closest('[data-edit-sonho]');
+      if (editSonhoBtn) {
+        const sId = editSonhoBtn.getAttribute('data-edit-sonho');
+        const sonho = state.sonhos.find(s => s.id === sId);
+        if (sonho) {
+          document.getElementById('sonho-edit-id').value = sonho.id;
+          document.getElementById('sonho-edit-title').value = sonho.title || '';
+          document.getElementById('sonho-edit-category').value = sonho.category || 'viagem';
+          document.getElementById('sonho-edit-status').value = sonho.status || 'sonhando';
+          document.getElementById('sonho-edit-amount').value = sonho.targetAmount ? formatCurrency(sonho.targetAmount) : '';
+          document.getElementById('sonho-edit-current').value = sonho.savedAmount ? formatCurrency(sonho.savedAmount) : '';
+          document.getElementById('sonho-edit-date').value = sonho.targetDate || '';
+          document.getElementById('sonho-edit-desc').value = sonho.description || '';
+          openModal('modal-edit-sonho');
+        }
+        return;
+      }
+
       const statusBtn = e.target.closest('[data-edit-sonho-status]');
       if (statusBtn) {
         const id = statusBtn.getAttribute('data-edit-sonho-status');
@@ -1240,6 +1393,46 @@ function initSonhosModule() {
       refreshAllUI();
     });
   }
+
+
+  // Formulário Editar Sonho do Casal
+  const formEditSonho = document.getElementById('form-edit-sonho');
+  if (formEditSonho) {
+    formEditSonho.addEventListener('submit', (e) => {
+      e.preventDefault();
+      try {
+        const id = document.getElementById('sonho-edit-id').value;
+        const title = document.getElementById('sonho-edit-title').value.trim();
+        const category = document.getElementById('sonho-edit-category').value;
+        const status = document.getElementById('sonho-edit-status').value;
+        const targetAmount = document.getElementById('sonho-edit-amount').value;
+        const savedAmount = document.getElementById('sonho-edit-current').value;
+        const targetDate = document.getElementById('sonho-edit-date').value;
+        const description = document.getElementById('sonho-edit-desc').value.trim();
+
+        if (!id || !title) return;
+
+        updateSonho(state, id, {
+          title,
+          category,
+          status,
+          targetAmount,
+          savedAmount,
+          targetDate,
+          description
+        });
+
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        closeModal('modal-edit-sonho');
+        showToast('Sonho atualizado com sucesso! ✨', 'success');
+        refreshAllUI();
+      } catch (err) {
+        showToast('Erro ao editar: ' + err.message, 'error');
+      }
+    });
+  }
+
 }
 
 // -------------------------------------------------------------
@@ -1619,6 +1812,23 @@ function initComprasModule() {
         return;
       }
 
+      
+      // Editar registro de compra / nota fiscal
+      const editPurBtn = e.target.closest('[data-edit-purchase]');
+      if (editPurBtn) {
+        const purchaseId = editPurBtn.getAttribute('data-edit-purchase');
+        const p = (state.comprasRegistros || []).find(item => item.id === purchaseId);
+        if (p) {
+          document.getElementById('purchase-edit-id').value = p.id;
+          document.getElementById('purchase-edit-market').value = p.marketName || '';
+          document.getElementById('purchase-edit-date').value = p.date || '';
+          document.getElementById('purchase-edit-total').value = p.total ? formatCurrency(p.total) : '';
+          document.getElementById('purchase-edit-notes').value = p.notes || '';
+          openModal('modal-edit-purchase');
+        }
+        return;
+      }
+
       const delBtn = e.target.closest('[data-delete-purchase]');
       if (delBtn) {
         const purchaseId = delBtn.getAttribute('data-delete-purchase');
@@ -1632,6 +1842,40 @@ function initComprasModule() {
       }
     });
   }
+
+
+  // Formulário Editar Registro de Compra / Nota Fiscal
+  const formEditPurchase = document.getElementById('form-edit-purchase');
+  if (formEditPurchase) {
+    formEditPurchase.addEventListener('submit', (e) => {
+      e.preventDefault();
+      try {
+        const id = document.getElementById('purchase-edit-id').value;
+        const marketName = document.getElementById('purchase-edit-market').value.trim();
+        const date = document.getElementById('purchase-edit-date').value;
+        const total = document.getElementById('purchase-edit-total').value;
+        const notes = document.getElementById('purchase-edit-notes').value.trim();
+
+        if (!id || !marketName) return;
+
+        updateMarketPurchase(state, id, {
+          marketName,
+          date,
+          total,
+          notes
+        });
+
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        closeModal('modal-edit-purchase');
+        showToast('Registro de compra atualizado com sucesso!', 'success');
+        renderComprasTab(state, currentComprasCategory, currentComprasView);
+      } catch (err) {
+        showToast('Erro ao editar: ' + err.message, 'error');
+      }
+    });
+  }
+
 
   // Botão Limpar Comprados
   const btnClearBought = document.getElementById('btn-clear-bought-items');

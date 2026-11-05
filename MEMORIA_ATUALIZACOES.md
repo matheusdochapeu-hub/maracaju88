@@ -3,11 +3,29 @@
 **Data da última consolidação:** `04/11/2026`  
 **Repositório GitHub:** [https://github.com/matheusdochapeu-hub/maracaju88](https://github.com/matheusdochapeu-hub/maracaju88)  
 **App no Ar (PWA / GitHub Pages):** [https://matheusdochapeu-hub.github.io/maracaju88/](https://matheusdochapeu-hub.github.io/maracaju88/)  
-**Versão Atual:** `v2.0.4`
+**Versão Atual:** `v2.0.5`
 
 ---
 
 ## Histórico de Versões
+
+### Versão 2.0.5 (`04/11/2026`) — Edição Completa de Lançamentos em Todos os Módulos do Aplicativo
+1. **Edição de Cuidados & Peças do Carro (`#tab-carro`):**
+   - Adicionado o botão `✏️ Editar` em cada card de manutenção do carro.
+   - Criado o modal `modal-edit-carro` permitindo editar título (ex: corrigir "Suporte Bagagiyo" para "Suporte Bagageiro"), categoria, status, prioridade, orçamento estimado, gasto real, KM alvo, data prevista e observações.
+2. **Edição de Reformas & Melhorias (`#tab-reformas`):**
+   - Adicionado o botão `✏️ Editar` em cada card de reforma.
+   - Criado o modal `modal-edit-reforma` para atualizar nome do projeto, cômodo, status, prioridade, orçamentos, datas e descrição detalhada.
+3. **Edição do Mural de Sonhos (`#tab-sonhos`):**
+   - Adicionado o botão `✏️ Editar` em cada sonho cadastrado.
+   - Criado o modal `modal-edit-sonho` para alterar título, categoria, status, meta financeira, valor poupado, prazos e notas.
+4. **Edição de Notas Fiscais e Compras de Mercado (`#tab-compras`):**
+   - Adicionado o botão `✏️` em cada registro de nota fiscal/compra na visão "Notas & Compras Mensais".
+   - Criado o modal `modal-edit-purchase` permitindo corrigir nome do mercado, data da compra, total gasto e observações.
+5. **Atualização PWA:**
+   - Cache atualizado para `maracaju-v2.0.5` com atualização automática de interface.
+
+---
 
 ### Versão 2.0.4 (`04/11/2026`) — Clarificação de Quantidades ("6 unidades") e Multiplicação Precisa de Valor Total
 1. **Clarificação de Quantidades em Cada Item:**

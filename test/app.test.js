@@ -19,6 +19,7 @@ import {
 import { getHistoryForDate, getRecentDaysSummary } from '../js/history.js';
 import {
   addCarroItem,
+  updateCarroItem,
   getCarroSummary,
   addPhotoToCarro,
   removePhotoFromCarro,
@@ -28,6 +29,7 @@ import {
 } from '../js/carro.js';
 import {
   addReforma,
+  updateReforma,
   getReformasSummary,
   toggleReformaChecklistItem,
   addPhotoToReforma,
@@ -37,6 +39,7 @@ import {
 } from '../js/reformas.js';
 import {
   addSonho,
+  updateSonho,
   getSonhosSummary,
   toggleSonhoMilestone,
   addPhotoToSonho,
@@ -55,6 +58,7 @@ import {
   toggleShoppingItem,
   getShoppingSummary,
   addMarketPurchase,
+  updateMarketPurchase,
   getMarketPurchasesByMonth,
   addPhotoToShoppingItem,
   removePhotoFromShoppingItem,
@@ -632,4 +636,83 @@ test('Auth: Definir senha individual, validar PIN e login seguro com credenciais
   const resFalha = loginWithCredentials('matheusdochapeu@gmail.com', 'senhaInvalida');
   assert.equal(resFalha.success, false);
   assert.equal(resFalha.error, 'Senha incorreta. Tente novamente.');
+});
+
+test('Edição de Lançamentos: Permitir editar qualquer item em Carro, Reformas, Sonhos e Mercado', () => {
+  const state = createMockState();
+
+  // 1. Carro: Cadastrar "Suporte Bagagiyo" e corrigir para "Suporte Bagageiro" com novos valores
+  const carro = addCarroItem(state, {
+    title: 'Suporte Bagagiyo',
+    category: 'estetica',
+    status: 'orcamento',
+    estimatedCost: '270,00',
+    actualCost: '0'
+  });
+  assert.equal(carro.title, 'Suporte Bagagiyo');
+  assert.equal(carro.estimatedCost, 270.00);
+
+  const updatedCarro = updateCarroItem(state, carro.id, {
+    title: 'Suporte Bagageiro',
+    category: 'eletrica_acessorios',
+    status: 'andamento',
+    estimatedCost: '280,00',
+    actualCost: '275,50',
+    notes: 'Comprado modelo reforçado'
+  });
+  assert.equal(updatedCarro.title, 'Suporte Bagageiro');
+  assert.equal(updatedCarro.category, 'eletrica_acessorios');
+  assert.equal(updatedCarro.status, 'andamento');
+  assert.equal(updatedCarro.estimatedCost, 280.00);
+  assert.equal(updatedCarro.actualCost, 275.50);
+  assert.equal(updatedCarro.notes, 'Comprado modelo reforçado');
+
+  // 2. Reformas: Atualizar título, status e custos de projeto
+  const ref = addReforma(state, {
+    title: 'Pintura Sala',
+    room: 'sala',
+    status: 'orcamento',
+    estimatedCost: '500,00'
+  });
+  const updatedRef = updateReforma(state, ref.id, {
+    title: 'Pintura da Sala e Corredor',
+    estimatedCost: '750,00',
+    actualCost: '300,00',
+    status: 'andamento'
+  });
+  assert.equal(updatedRef.title, 'Pintura da Sala e Corredor');
+  assert.equal(updatedRef.estimatedCost, 750.00);
+  assert.equal(updatedRef.actualCost, 300.00);
+
+  // 3. Sonhos: Atualizar meta financeira e valor poupado
+  const sonho = addSonho(state, {
+    title: 'Viagem Japão',
+    category: 'viagem',
+    targetAmount: '15000,00'
+  });
+  const updatedSonho = updateSonho(state, sonho.id, {
+    title: 'Viagem para o Japão em Outubro',
+    targetAmount: '18000,00',
+    savedAmount: '4500,00',
+    status: 'poupando'
+  });
+  assert.equal(updatedSonho.title, 'Viagem para o Japão em Outubro');
+  assert.equal(updatedSonho.targetAmount, 18000.00);
+  assert.equal(updatedSonho.savedAmount, 4500.00);
+  assert.equal(updatedSonho.status, 'poupando');
+
+  // 4. Mercado: Atualizar registro de compra / nota fiscal
+  const purchase = addMarketPurchase(state, {
+    marketName: 'Mercadinho Local',
+    date: '2026-11-04',
+    total: '85,00'
+  });
+  const updatedPurchase = updateMarketPurchase(state, purchase.id, {
+    marketName: 'Supermercado Pão de Açúcar',
+    total: '92,40',
+    notes: 'Itens de café da manhã'
+  });
+  assert.equal(updatedPurchase.marketName, 'Supermercado Pão de Açúcar');
+  assert.equal(updatedPurchase.total, 92.40);
+  assert.equal(updatedPurchase.notes, 'Itens de café da manhã');
 });

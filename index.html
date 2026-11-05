@@ -28,11 +28,11 @@
     }
   </script>
 
-  <!-- Stylesheets (v2.0.4) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.0.4" />
-  <link rel="stylesheet" href="./css/base.css?v=2.0.4" />
-  <link rel="stylesheet" href="./css/components.css?v=2.0.4" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.0.4" />
+  <!-- Stylesheets (v2.0.5) -->
+  <link rel="stylesheet" href="./css/variables.css?v=2.0.5" />
+  <link rel="stylesheet" href="./css/base.css?v=2.0.5" />
+  <link rel="stylesheet" href="./css/components.css?v=2.0.5" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.0.5" />
 </head>
 <body>
 
@@ -119,7 +119,7 @@
       <div class="auth-footer" style="display: flex; flex-direction: column; gap: 0.6rem; align-items: center;">
         <span>🔒 Acesso seguro: Seus dados são mantidos no seu aparelho e sincronizados com a planilha Google do casal.</span>
         <button type="button" id="btn-force-update-login" style="background: none; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem; color: var(--brand-moss); font-size: 0.75rem; cursor: pointer; text-decoration: none;">
-          🔄 App desatualizado ou travado? Toque para Limpar Cache e Atualizar (v2.0.4)
+          🔄 App desatualizado ou travado? Toque para Limpar Cache e Atualizar (v2.0.5)
         </button>
       </div>
     </div>
@@ -511,7 +511,7 @@
         <div class="dash-card">
           <h3 class="dash-title" style="margin-bottom: 0.75rem;">📲 Atualização do Aplicativo</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            Versão instalada: <strong>Maracaju v2.0.4</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
+            Versão instalada: <strong>Maracaju v2.0.5</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
           </p>
           <button type="button" id="btn-force-update-settings" class="btn btn-secondary btn-sm" onclick="window.forceUpdateApp && window.forceUpdateApp()">
             🔄 Limpar Cache e Forçar Atualização
@@ -734,7 +734,82 @@
         <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar Manutenção do Carro</button>
       </form>
     </div>
+  </di
+  <!-- Modal: Editar Manutenção do Carro -->
+  <div id="modal-edit-carro" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Manutenção do Carro</h3>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-carro">
+        <input type="hidden" id="carro-edit-id" value="" />
+        <div class="form-group">
+          <label class="form-label">Título da Manutenção ou Peça</label>
+          <input type="text" id="carro-edit-title" class="form-control" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Categoria</label>
+            <select id="carro-edit-category" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select id="carro-edit-status" class="form-control">
+              <option value="pendente">⏳ Pendente / Ideia</option>
+              <option value="orcamento">📐 Em Orçamento</option>
+              <option value="andamento">🛠️ Em Andamento</option>
+              <option value="concluido">✅ Concluído</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Prioridade</label>
+            <select id="carro-edit-priority" class="form-control">
+              <option value="baixa">Baixa (Estética)</option>
+              <option value="media">Média</option>
+              <option value="alta">Alta (Segurança)</option>
+              <option value="urgente">Urgente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Orçamento Estimado (R$)</label>
+            <input type="text" inputmode="decimal" id="carro-edit-estimated" class="form-control" placeholder="Ex: 270,00" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Gasto Real (R$)</label>
+            <input type="text" inputmode="decimal" id="carro-edit-actual" class="form-control" placeholder="Ex: 250,00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">KM Alvo</label>
+            <input type="number" id="carro-edit-km" class="form-control" placeholder="Ex: 80000" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Data Prevista / Limite</label>
+          <input type="date" id="carro-edit-date" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notas e Instruções</label>
+          <textarea id="carro-edit-notes" class="form-control" rows="2" placeholder="Oficina de preferência, marca recomendada"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
   </div>
+v>
 
   <!-- Modal: Nova Reforma -->
   <div id="modal-add-reforma" class="modal-overlay">
@@ -804,7 +879,77 @@
         <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar Projeto de Reforma</button>
       </form>
     </div>
+  </di
+  <!-- Modal: Editar Projeto de Reforma -->
+  <div id="modal-edit-reforma" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Projeto de Reforma</h3>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-reforma">
+        <input type="hidden" id="reforma-edit-id" value="" />
+        <div class="form-group">
+          <label class="form-label">Nome do Projeto</label>
+          <input type="text" id="reforma-edit-title" class="form-control" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Cômodo / Categoria</label>
+            <select id="reforma-edit-room" class="form-control" required></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select id="reforma-edit-status" class="form-control">
+              <option value="ideia">💡 Ideia / Planejamento</option>
+              <option value="orcamento">📐 Em Orçamento</option>
+              <option value="andamento">🛠️ Em Andamento</option>
+              <option value="concluido">✅ Concluído</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Prioridade</label>
+            <select id="reforma-edit-priority" class="form-control">
+              <option value="baixa">Baixa (Futuro)</option>
+              <option value="media">Média</option>
+              <option value="alta">Alta</option>
+              <option value="urgente">Urgente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Orçamento Estimado (R$)</label>
+            <input type="text" inputmode="decimal" id="reforma-edit-estimated" class="form-control" placeholder="Ex: 800,00" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Gasto Real (R$)</label>
+            <input type="text" inputmode="decimal" id="reforma-edit-actual" class="form-control" placeholder="Ex: 150,00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Previsão / Data Alvo</label>
+            <input type="date" id="reforma-edit-date" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Descrição & Inspirações</label>
+          <textarea id="reforma-edit-desc" class="form-control" rows="3" placeholder="Detalhes de materiais, medidas, referências"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
   </div>
+v>
 
   <!-- Modal: Novo Sonho -->
   <div id="modal-add-sonho" class="modal-overlay">
@@ -844,7 +989,71 @@
         <button type="submit" class="btn btn-primary" style="width: 100%;">Adicionar ao Mural dos Sonhos</button>
       </form>
     </div>
+  </di
+  <!-- Modal: Editar Sonho do Casal -->
+  <div id="modal-edit-sonho" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Sonho do Casal</h3>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-sonho">
+        <input type="hidden" id="sonho-edit-id" value="" />
+        <div class="form-group">
+          <label class="form-label">Título do Sonho</label>
+          <input type="text" id="sonho-edit-title" class="form-control" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Categoria</label>
+            <select id="sonho-edit-category" class="form-control">
+              <option value="viagem">✈️ Viagens</option>
+              <option value="casa">🏡 Casa & Conforto</option>
+              <option value="bens">🚗 Conquistas</option>
+              <option value="experiencia">💖 Vida a Dois</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select id="sonho-edit-status" class="form-control">
+              <option value="sonhando">💭 Sonhando</option>
+              <option value="planejando">📐 Planejando</option>
+              <option value="poupando">💰 Poupando</option>
+              <option value="realizado">🎉 Realizado</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Meta Financeira (R$)</label>
+            <input type="text" inputmode="decimal" id="sonho-edit-amount" class="form-control" placeholder="Ex: 12000,00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Valor Já Guardado (R$)</label>
+            <input type="text" inputmode="decimal" id="sonho-edit-current" class="form-control" placeholder="Ex: 3500,00" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Prazo Estimado / Ano Alvo</label>
+          <input type="date" id="sonho-edit-date" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Descrição & Por que queremos isso?</label>
+          <textarea id="sonho-edit-desc" class="form-control" rows="3" placeholder="O que esse sonho significa para nós"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
   </div>
+v>
 
   <!-- Modal: Visualizador de Foto Ampliada -->
   <div id="modal-photo-viewer" class="modal-overlay">
@@ -1099,7 +1308,45 @@
         </div>
       </form>
     </div>
+  </di
+  <!-- Modal: Editar Registro de Mercado / Nota Fiscal -->
+  <div id="modal-edit-purchase" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Compra de Mercado</h3>
+        <button class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-purchase">
+        <input type="hidden" id="purchase-edit-id" value="" />
+        <div class="form-group">
+          <label class="form-label">Nome do Mercado / Estabelecimento</label>
+          <input type="text" id="purchase-edit-market" class="form-control" placeholder="Ex: Pão de Açúcar, Atacadão" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Data da Compra</label>
+            <input type="date" id="purchase-edit-date" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Valor Total (R$)</label>
+            <input type="text" inputmode="decimal" id="purchase-edit-total" class="form-control" placeholder="Ex: 264,33" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Observações / Detalhes</label>
+          <textarea id="purchase-edit-notes" class="form-control" rows="2" placeholder="Forma de pagamento, itens principais"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
   </div>
+v>
 
   <!-- Modal: Leitor de QR Code de Nota Fiscal (NFC-e) -->
   <div id="modal-qr-scanner" class="modal-overlay">
@@ -1196,7 +1443,7 @@
     </div>
   </div>
 
-  <!-- Script Principal Modular (v2.0.4) -->
-  <script type="module" src="./js/app.js?v=2.0.4"></script>
+  <!-- Script Principal Modular (v2.0.5) -->
+  <script type="module" src="./js/app.js?v=2.0.5"></script>
 </body>
 </html>

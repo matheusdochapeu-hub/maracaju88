@@ -572,8 +572,9 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
             ${item.targetDate ? `📅 Previsão: ${item.targetDate}` : ''}
           </div>
           <div style="display: flex; gap: 0.35rem;">
+            <button class="btn btn-secondary btn-sm" data-edit-carro="${item.id}" title="Editar Manutenção">✏️ Editar</button>
             <button class="btn btn-secondary btn-sm" data-edit-carro-status="${item.id}">Alterar Status</button>
-            <button class="btn btn-icon btn-sm" data-delete-carro="${item.id}">🗑️</button>
+            <button class="btn btn-icon btn-sm" data-delete-carro="${item.id}" title="Excluir">🗑️</button>
           </div>
         </div>
       </div>
@@ -758,8 +759,9 @@ export function renderReformasTab(state, statusFilter = 'todas', categoryFilter 
             ${ref.targetDate ? `📅 Alvo: ${ref.targetDate}` : ''}
           </div>
           <div style="display: flex; gap: 0.35rem;">
+            <button class="btn btn-secondary btn-sm" data-edit-reforma="${ref.id}" title="Editar Reforma">✏️ Editar</button>
             <button class="btn btn-secondary btn-sm" data-edit-reforma-status="${ref.id}">Alterar Status</button>
-            <button class="btn btn-icon btn-sm" data-delete-reforma="${ref.id}">🗑️</button>
+            <button class="btn btn-icon btn-sm" data-delete-reforma="${ref.id}" title="Excluir">🗑️</button>
           </div>
         </div>
       </div>
@@ -910,8 +912,9 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
             ${sonho.targetDate ? `🎯 Prazo: ${sonho.targetDate}` : ''}
           </div>
           <div style="display: flex; gap: 0.35rem;">
+            <button class="btn btn-secondary btn-sm" data-edit-sonho="${sonho.id}" title="Editar Sonho">✏️ Editar</button>
             <button class="btn btn-secondary btn-sm" data-edit-sonho-status="${sonho.id}">Status</button>
-            <button class="btn btn-icon btn-sm" data-delete-sonho="${sonho.id}">🗑️</button>
+            <button class="btn btn-icon btn-sm" data-delete-sonho="${sonho.id}" title="Excluir">🗑️</button>
           </div>
         </div>
       </div>
@@ -1125,8 +1128,9 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
                       ` : ''}
                     </div>
                   </div>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <div style="display: flex; align-items: center; gap: 0.4rem;">
                     <div class="market-receipt-total">${formatCurrencyWithSymbol(p.total || p.totalAmount || 0)}</div>
+                    <button class="btn btn-icon btn-sm" data-edit-purchase="${p.id}" title="Editar Registro de Compra">✏️</button>
                     <button class="btn btn-icon btn-sm" data-delete-purchase="${p.id}" title="Excluir Registro de Compra">🗑️</button>
                   </div>
                 </div>
@@ -1251,6 +1255,14 @@ export function populateCategorySelects(state) {
     if (curVal && cats.some(c => c.id === curVal)) carroSelect.value = curVal;
   }
 
+  const carroEditSelect = document.getElementById('carro-edit-category');
+  if (carroEditSelect) {
+    const cats = getCategories(state, 'carro');
+    const curVal = carroEditSelect.value;
+    carroEditSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+    if (curVal && cats.some(c => c.id === curVal)) carroEditSelect.value = curVal;
+  }
+
   const reformaSelect = document.getElementById('reforma-input-room');
   if (reformaSelect) {
     const cats = getCategories(state, 'reformas');
@@ -1259,12 +1271,28 @@ export function populateCategorySelects(state) {
     if (curVal && cats.some(c => c.id === curVal)) reformaSelect.value = curVal;
   }
 
+  const reformaEditSelect = document.getElementById('reforma-edit-room');
+  if (reformaEditSelect) {
+    const cats = getCategories(state, 'reformas');
+    const curVal = reformaEditSelect.value;
+    reformaEditSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+    if (curVal && cats.some(c => c.id === curVal)) reformaEditSelect.value = curVal;
+  }
+
   const sonhoSelect = document.getElementById('sonho-input-category');
   if (sonhoSelect) {
     const cats = getCategories(state, 'sonhos');
     const curVal = sonhoSelect.value;
     sonhoSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
     if (curVal && cats.some(c => c.id === curVal)) sonhoSelect.value = curVal;
+  }
+
+  const sonhoEditSelect = document.getElementById('sonho-edit-category');
+  if (sonhoEditSelect) {
+    const cats = getCategories(state, 'sonhos');
+    const curVal = sonhoEditSelect.value;
+    sonhoEditSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+    if (curVal && cats.some(c => c.id === curVal)) sonhoEditSelect.value = curVal;
   }
 }
 

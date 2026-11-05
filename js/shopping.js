@@ -272,6 +272,20 @@ export function removePhotoFromMarketPurchase(state, id, index) {
   return true;
 }
 
+export function updateMarketPurchase(state, id, data) {
+  const p = purchasesList(state).find(item => item.id === id);
+  if (!p) return null;
+  if (data.marketName !== undefined) p.marketName = data.marketName.trim() || 'Supermercado';
+  if (data.date !== undefined) {
+    p.date = String(data.date).substring(0, 10);
+    p.monthKey = formatMonthKey(p.date);
+  }
+  if (data.total !== undefined) p.total = parseCurrency(data.total);
+  if (data.notes !== undefined) p.notes = data.notes.trim();
+  p.updatedAt = new Date().toISOString();
+  return p;
+}
+
 export function deleteMarketPurchase(state, id) {
   const arr = purchasesList(state);
   const idx = arr.findIndex(p => p.id === id);
