@@ -73,6 +73,20 @@ function doGet(e) {
       });
     }
 
+    // Ação 'matrix' ou 'beneficios': endpoint dedicado de integração com o Matrix Finance
+    if (action === "matrix" || action === "beneficios") {
+      var sheetRawM = ss.getSheetByName("Backup_JSON");
+      var jsonStrM = (sheetRawM && sheetRawM.getLastRow() >= 2) ? sheetRawM.getRange(2, 2).getValue() : null;
+      var parsedM = jsonStrM ? JSON.parse(jsonStrM) : {};
+      return createJsonResponse({
+        status: "success",
+        action: "matrix",
+        serverTime: new Date().toISOString(),
+        data: parsedM,
+        message: "Dados de compras, VA e VR fornecidos para o Matrix com sucesso."
+      });
+    }
+
     // Ação 'restore': busca o JSON mais recente armazenado
     var sheetRaw = ss.getSheetByName("Backup_JSON");
     if (!sheetRaw) {
