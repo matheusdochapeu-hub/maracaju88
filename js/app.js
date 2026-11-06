@@ -480,6 +480,16 @@ function initPwaInstallPrompt() {
 // -------------------------------------------------------------
 // NAVEGAÇÃO ENTRE ABAS
 // -------------------------------------------------------------
+
+function handleActiveCalendarDayChange(detail) {
+  console.log('[Maracaju] Transição de dia detectada pelo calendário ativo:', detail);
+  if (detail && detail.currentCycle && typeof setBenefitsCycle === 'function') {
+    setBenefitsCycle(detail.currentCycle);
+  }
+  if (typeof renderComprasTab === 'function') {
+    renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
+  }
+}
 function initNavigation() {
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(item => {

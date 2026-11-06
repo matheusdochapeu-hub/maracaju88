@@ -3,6 +3,8 @@ import {
   getBenefitsHistory,
   getCurrentBenefitCycleKey,
   getBenefitCycleRange,
+  getBenefitCycleStatus,
+  getBenefitCycleKey,
   getPaymentMethodInfo,
   PAYMENT_METHODS
 } from './benefits.js';
@@ -50,6 +52,14 @@ export function getActiveBenefitsCycle() {
     currentBenefitsCycle = getCurrentBenefitCycleKey();
   }
   return currentBenefitsCycle;
+}
+
+export let currentAnalyticsPeriod = 'cycle'; // 'cycle' | '12months' | 'year'
+export function getAnalyticsPeriod() {
+  return currentAnalyticsPeriod;
+}
+export function setAnalyticsPeriod(period) {
+  currentAnalyticsPeriod = period;
 }
 
 
@@ -1013,12 +1023,18 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
     const benefits = getMonthlyBenefitDetails(state, activeCycle);
     const isOct = benefits.cycleKey === '2026-10';
     const isNov = benefits.cycleKey === '2026-11';
+    const octStatus = getBenefitCycleStatus('2026-10', state);
+    const novStatus = getBenefitCycleStatus('2026-11', state);
 
     let cycleNotice = '';
     if (isOct) {
       cycleNotice = '📅 <strong>Ciclo Outubro/2026 (06/10 a 05/11):</strong> Encerrado! Os gastos com Carrefour, padaria e açougue trouxeram o VA a R$ 9,84 e o VR a R$ 0,16. Essas sobras foram acumuladas e somadas automaticamente a Novembro.';
     } else if (isNov) {
-      cycleNotice = '✨ <strong>Ciclo Novembro/2026 (06/11 a 03/12):</strong> Crédito disponibilizado amanhã (06/11)! Inclui + R$ 9,84 de VA e + R$ 0,16 de VR acumulados de Outubro (Total R$ 3.165,00 livre).';
+      if (novStatus.isActive) {
+        cycleNotice = '✨ <strong>Ciclo Novembro/2026 (06/11 a 03/12):</strong> Ciclo Ativo! Crédito disponibilizado hoje (06/11)! Inclui + R$ 9,84 de VA e + R$ 0,16 de VR acumulados de Outubro (Total R$ 3.165,00 livre).';
+      } else {
+        cycleNotice = '✨ <strong>Ciclo Novembro/2026 (06/11 a 03/12):</strong> Crédito a partir de 06/11! Inclui + R$ 9,84 de VA e + R$ 0,16 de VR acumulados de Outubro (Total R$ 3.165,00 livre).';
+      }
     } else {
       cycleNotice = `📍 <strong>${benefits.cycleLabel}:</strong> Período de vigência: ${benefits.cycleRange}.`;
     }
@@ -1053,10 +1069,10 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
         <!-- Seletor Rápido de Ciclos (Abas) -->
         <div style="display: flex; gap: 0.35rem; margin-bottom: 0.65rem; flex-wrap: wrap;">
           <button type="button" class="btn btn-xs ${isOct ? 'btn-primary' : 'btn-secondary'}" data-benefits-cycle="2026-10" style="font-size: 0.7rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.2rem 0.55rem;">
-            📅 Ciclo Outubro ${isOct ? '(Ativo)' : ''}
+            📅 Ciclo Outubro ${octStatus.badgeFormatted}
           </button>
           <button type="button" class="btn btn-xs ${isNov ? 'btn-primary' : 'btn-secondary'}" data-benefits-cycle="2026-11" style="font-size: 0.7rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.2rem 0.55rem;">
-            ✨ Ciclo Novembro (Amanhã) ${isNov ? '(Ativo)' : ''}
+            ✨ Ciclo Novembro ${novStatus.badgeFormatted}
           </button>
         </div>
 
@@ -1395,7 +1411,30 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
     if (purchasesSearch !== null && purchasesSearch !== undefined) currentPurchasesSearch = purchasesSearch;
 
     const allPurchases = (state.comprasRegistros || []);
-    let filteredPurchases = allPurchases;
+    const activeCycle = getActiveBenefitsCycle();
+    const period = getAnalyticsPeriod();
+    const benefits = getMonthlyBenefitDetails(state, activeCycle);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const pad = n => String(n).padStart(2, '0');
+
+    let periodPurchases = allPurchases;
+    let periodLabel = benefits.cycleLabel;
+
+    if (period === 'cycle') {
+      periodLabel = benefits.cycleLabel;
+      periodPurchases = allPurchases.filter(p => getBenefitCycleKey(p.date || p.createdAt, state) === activeCycle);
+    } else if (period === '12months') {
+      periodLabel = 'Últimos 12 Meses';
+      const cutoff = new Date(currentYear - 1, now.getMonth(), now.getDate());
+      const cutoffIso = `${cutoff.getFullYear()}-${pad(cutoff.getMonth() + 1)}-${pad(cutoff.getDate())}`;
+      periodPurchases = allPurchases.filter(p => (p.date || p.createdAt || '').slice(0, 10) >= cutoffIso);
+    } else if (period === 'year') {
+      periodLabel = `Ano Todo (${currentYear})`;
+      periodPurchases = allPurchases.filter(p => (p.date || p.createdAt || '').slice(0, 10).startsWith(String(currentYear)));
+    }
+
+    let filteredPurchases = periodPurchases;
 
     if (currentPurchasesSearch && currentPurchasesSearch.trim()) {
       const q = currentPurchasesSearch.trim().toLowerCase();
@@ -1454,15 +1493,21 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
             📁 Recolher
           </button>
         </div>
+        <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding-top: 0.35rem; border-top: 1px dashed var(--border-subtle); font-size: 0.75rem;">
+          <span style="color: var(--brand-forest); font-weight: 700;">
+            📋 Compras em: <strong>${periodLabel}</strong> (${filteredPurchases.length} ${filteredPurchases.length === 1 ? 'registro' : 'registros'})
+          </span>
+          ${period !== 'cycle' ? `<span style="color: var(--text-muted); font-size: 0.7rem;">(Filtro de período ativo)</span>` : ''}
+        </div>
       </div>
     `;
 
-    if (allPurchases.length === 0) {
+    if (periodPurchases.length === 0) {
       purchasesContainer.innerHTML = `
         ${toolbarHtml}
         <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-subtle);">
           <p style="font-size: 2.2rem; margin-bottom: 0.5rem;">🧾</p>
-          <p style="font-weight: 700; font-size: 1.05rem; color: var(--brand-moss-dark);">Nenhuma compra ou nota fiscal registrada ainda.</p>
+          <p style="font-weight: 700; font-size: 1.05rem; color: var(--brand-moss-dark);">Nenhuma compra registrada em ${periodLabel}.</p>
           <p style="font-size: 0.85rem; margin-top: 0.35rem;">Toque em "📝 Lançar Compra", escaneie um QR Code de NFC-e ou envie um PDF de cupom fiscal!</p>
         </div>
       `;

@@ -5,6 +5,7 @@
 
 import { parseCurrency } from './currency.js';
 import { makeId } from './projects.js';
+import { getBenefitCycleKey, getCurrentBenefitCycleKey } from './benefits.js';
 
 function list(state) {
   if (!Array.isArray(state.compras)) state.compras = [];
@@ -324,11 +325,41 @@ export function getMarketPurchasesByMonth(state) {
   return result;
 }
 
-export function getMarketAnalytics(state, selectedMonthKey = null) {
+export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey = null) {
   const allPurchases = purchasesList(state);
-  const purchases = selectedMonthKey && selectedMonthKey !== 'todos'
-    ? allPurchases.filter(p => (p.monthKey || formatMonthKey(p.date)) === selectedMonthKey)
-    : allPurchases;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const pad = n => String(n).padStart(2, '0');
+
+  let selectedPeriod = periodOrCycle;
+  let cycleKey = targetCycleKey;
+
+  let purchases = allPurchases;
+
+  if (selectedPeriod === 'cycle') {
+    if (!cycleKey) {
+      cycleKey = (state && state._activeBenefitsCycle) || getCurrentBenefitCycleKey(state);
+    }
+    purchases = allPurchases.filter(p => {
+      const pCycle = getBenefitCycleKey(p.date || p.createdAt, state);
+      return pCycle === cycleKey;
+    });
+  } else if (selectedPeriod === '12months') {
+    const cutoff = new Date(currentYear - 1, now.getMonth(), now.getDate());
+    const cutoffIso = `${cutoff.getFullYear()}-${pad(cutoff.getMonth() + 1)}-${pad(cutoff.getDate())}`;
+    purchases = allPurchases.filter(p => {
+      const pDate = (p.date || p.createdAt || '').slice(0, 10);
+      return pDate >= cutoffIso;
+    });
+  } else if (selectedPeriod === 'year') {
+    const targetY = String(targetCycleKey || currentYear);
+    purchases = allPurchases.filter(p => {
+      const pDate = (p.date || p.createdAt || '').slice(0, 10);
+      return pDate.startsWith(targetY);
+    });
+  } else if (selectedPeriod && selectedPeriod !== 'todos' && selectedPeriod !== 'all') {
+    purchases = allPurchases.filter(p => (p.monthKey || formatMonthKey(p.date)) === selectedPeriod);
+  }
 
   const total = Math.round(purchases.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
   const count = purchases.length;
@@ -386,6 +417,10 @@ export function getMarketAnalytics(state, selectedMonthKey = null) {
     paymentBreakdown[k] = Math.round(paymentBreakdown[k] * 100) / 100;
   });
 
+  const vaTotal = paymentBreakdown.va;
+  const vrTotal = paymentBreakdown.vr;
+  const foodBenefitsTotal = Math.round((vaTotal + vrTotal) * 100) / 100;
+
   return {
     total,
     count,
@@ -393,8 +428,14 @@ export function getMarketAnalytics(state, selectedMonthKey = null) {
     itemsCount,
     recurrentMarkets,
     uniqueMarketsList,
-    selectedMonthKey,
-    paymentBreakdown
+    selectedMonthKey: selectedPeriod === 'cycle' ? cycleKey : (selectedPeriod || 'todos'),
+    period: selectedPeriod || 'all',
+    cycleKey,
+    paymentBreakdown,
+    vaTotal,
+    vrTotal,
+    foodBenefitsTotal,
+    purchases
   };
 }
 

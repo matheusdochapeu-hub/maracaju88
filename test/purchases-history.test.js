@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { getInitialState } from '../js/storage.js';
 import { addMarketPurchase } from '../js/shopping.js';
-import { renderComprasTab } from '../js/ui.js';
+import { renderComprasTab, setBenefitsCycle } from '../js/ui.js';
 
 test('Mercado: Histórico de Compras e Notas com Ordenação e Expansão de Itens', () => {
   const state = getInitialState();
@@ -60,6 +60,7 @@ test('Mercado: Histórico de Compras e Notas com Ordenação e Expansão de Iten
     querySelectorAll: () => []
   };
 
+  setBenefitsCycle('2026-10');
   // 1. Render in 'notas' view (default: date-desc)
   assert.doesNotThrow(() => {
     renderComprasTab(state, 'todas', 'notas', 'date-desc');

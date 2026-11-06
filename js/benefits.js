@@ -350,6 +350,55 @@ export function getBenefitCycleRange(cycleKey, state = null) {
   };
 }
 
+/**
+ * Retorna o status dinâmico do ciclo com badge formatada (Ativo, Encerrado, Amanhã, etc.)
+ */
+export function getBenefitCycleStatus(cycleKey, state = null) {
+  const range = getBenefitCycleRange(cycleKey, state);
+  const now = new Date();
+
+  if (range.isCurrent) {
+    return {
+      status: 'active',
+      isActive: true,
+      isEnded: false,
+      isUpcoming: false,
+      badgeText: 'Ativo',
+      badgeFormatted: '(Ativo)'
+    };
+  }
+  if (range.isPast) {
+    return {
+      status: 'ended',
+      isActive: false,
+      isEnded: true,
+      isUpcoming: false,
+      badgeText: 'Encerrado',
+      badgeFormatted: '(Encerrado)'
+    };
+  }
+  // Futuro / Em breve
+  let badgeText = `A partir de ${range.startFormatted}`;
+  let badgeFormatted = `(A partir de ${range.startFormatted})`;
+  if (range.startIso) {
+    const [sy, sm, sd] = range.startIso.split('-').map(Number);
+    const startDate = new Date(sy, sm - 1, sd);
+    const diffDays = Math.round((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 1) {
+      badgeText = 'Amanhã';
+      badgeFormatted = '(Amanhã)';
+    }
+  }
+  return {
+    status: 'upcoming',
+    isActive: false,
+    isEnded: false,
+    isUpcoming: true,
+    badgeText,
+    badgeFormatted
+  };
+}
+
 // Calcula todos os detalhes de VA e VR para um ciclo selecionado
 export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
   const cycleKey = targetMonthKey && targetMonthKey !== 'todos'
