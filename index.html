@@ -799,20 +799,20 @@
         <div class="form-group">
           <label class="form-label">Link de Peça ou Tutorial (Opcional)</label>
           <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 0.5rem;">
-            <input type="text" id="carro-input-link-title" class="form-control" placeholder="Título (ex: Mercado Livre)" />
+            <input type="text" id="carro-input-link-title" class="form-control" placeholder="Título (ex: Loja)" />
             <input type="url" id="carro-input-link-url" class="form-control" placeholder="https://..." />
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label">Foto da Peça / Defeito / Referência (Opcional)</label>
-          <input type="file" id="carro-input-photo" class="form-control" accept="image/*" capture="environment" />
-          <span style="font-size: 0.7rem; color: var(--text-muted);">Você pode tirar foto com a câmera ou anexar da galeria (comprimida automaticamente).</span>
+          <input type="file" id="carro-input-photo" class="form-control" accept="image/*" />
+          <span style="font-size: 0.72rem; color: var(--text-muted);">Escolha uma foto da galeria, tire com a câmera ou anexe um arquivo do computador.</span>
         </div>
 
         <div class="form-group">
           <label class="form-label">Notas e Instruções</label>
-          <textarea id="carro-input-notes" class="form-control" rows="2" placeholder="Marca da peça recomendada, especificações, oficina de preferência"></textarea>
+          <textarea id="carro-input-notes" class="form-control" rows="3" placeholder="Marca da peça recomendada, especificações, oficina de preferência"></textarea>
         </div>
 
         <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar Manutenção do Carro</button>
@@ -945,15 +945,15 @@
         <div class="form-group">
           <label class="form-label">Link de Inspiração ou Loja (Opcional)</label>
           <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 0.5rem;">
-            <input type="text" id="reforma-input-link-title" class="form-control" placeholder="Título (ex: Pinterest, Leroy)" />
+            <input type="text" id="reforma-input-link-title" class="form-control" placeholder="Título (ex: Leroy)" />
             <input type="url" id="reforma-input-link-url" class="form-control" placeholder="https://..." />
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label">Foto de Referência / Antes da Reforma (Opcional)</label>
-          <input type="file" id="reforma-input-photo" class="form-control" accept="image/*" capture="environment" />
-          <span style="font-size: 0.7rem; color: var(--text-muted);">Tire foto com a câmera ou escolha da galeria. Você também pode anexar mais fotos direto no card depois.</span>
+          <input type="file" id="reforma-input-photo" class="form-control" accept="image/*" />
+          <span style="font-size: 0.72rem; color: var(--text-muted);">Escolha uma foto da galeria, tire com a câmera ou anexe um arquivo do computador.</span>
         </div>
 
         <div class="form-group">
