@@ -663,14 +663,14 @@ function initHeaderControls() {
           payGroup.id = 'manual-purchase-payment-group';
           payGroup.innerHTML = `
             <label class="form-label">Forma de Pagamento</label>
-            <select id="manual-purchase-payment-method" class="form-control" style="font-weight: 600;">
-              <option value="va" selected>🥗 Vale Alimentação (VA) - Saldo R$ 2.050</option>
-              <option value="vr">🍽️ Vale Refeição (VR) - R$ 65/dia</option>
-              <option value="pix">💠 Pix</option>
-              <option value="credito">💳 Cartão de Crédito</option>
-              <option value="debito">💳 Cartão de Débito</option>
-              <option value="dinheiro">💵 Dinheiro</option>
-            </select>
+            <select id="manual-purchase-payment-method" class="form-control" style="font-weight: 700;">
+                  <option value="va">VA</option>
+                  <option value="vr">VR</option>
+                  <option value="pix">PIX</option>
+                  <option value="credito">CREDITO</option>
+                  <option value="debito">DEBITO</option>
+                  <option value="dinheiro">DINHEIRO</option>
+                </select>
           `;
           notesGroup.parentNode.insertBefore(payGroup, notesGroup);
           paySelect = document.getElementById('manual-purchase-payment-method');
@@ -2469,13 +2469,13 @@ function initComprasModule() {
               payGroup.id = 'purchase-edit-payment-group';
               payGroup.innerHTML = `
                 <label class="form-label">Forma de Pagamento</label>
-                <select id="purchase-edit-payment-method" class="form-control" style="font-weight: 600;">
-                  <option value="va">🥗 Vale Alimentação (VA)</option>
-                  <option value="vr">🍽️ Vale Refeição (VR)</option>
-                  <option value="pix">💠 Pix</option>
-                  <option value="credito">💳 Cartão de Crédito</option>
-                  <option value="debito">💳 Cartão de Débito</option>
-                  <option value="dinheiro">💵 Dinheiro</option>
+                <select id="purchase-edit-payment-method" class="form-control" style="font-weight: 700;">
+                  <option value="va">VA</option>
+                  <option value="vr">VR</option>
+                  <option value="pix">PIX</option>
+                  <option value="credito">CREDITO</option>
+                  <option value="debito">DEBITO</option>
+                  <option value="dinheiro">DINHEIRO</option>
                 </select>
               `;
               notesGroup.parentNode.insertBefore(payGroup, notesGroup);
@@ -3731,6 +3731,12 @@ function handleCloseBenefitCycle() {
   }
 }
 
+// -------------------------------------------------------------
+// CONTROLE INTELIGENTE DE MODAIS (Anti-Fechamento / Suporte ao Voltar do Celular)
+// -------------------------------------------------------------
+const activeModalStack = [];
+let isHandlingPopstate = false;
+
 function initModals() {
   document.addEventListener('click', (e) => {
     const openBtn = e.target.closest('[data-open-modal]');
@@ -3752,12 +3758,44 @@ function initModals() {
     if (closeBtn) {
       e.preventDefault();
       const modal = closeBtn.closest('.modal-overlay');
-      if (modal) modal.classList.remove('active');
+      if (modal && modal.id) {
+        closeModal(modal.id);
+      } else {
+        const modalIdAttr = closeBtn.getAttribute('data-close-modal');
+        if (modalIdAttr) closeModal(modalIdAttr);
+      }
       return;
     }
 
     if (e.target.classList.contains('modal-overlay')) {
-      e.target.classList.remove('active');
+      closeModal(e.target.id);
+    }
+  });
+
+  // Intercepta botão Voltar do celular (Android Back / Gestos) para fechar o modal aberto sem fechar o app
+  window.addEventListener('popstate', (e) => {
+    if (activeModalStack.length > 0) {
+      isHandlingPopstate = true;
+      try {
+        const topModalId = activeModalStack.pop();
+        const modal = document.getElementById(topModalId);
+        if (modal) {
+          modal.classList.remove('active');
+          playSubtleClick(state?.settings?.soundEnabled);
+        }
+      } finally {
+        setTimeout(() => {
+          isHandlingPopstate = false;
+        }, 60);
+      }
+    }
+  });
+
+  // Tecla Escape no desktop
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && activeModalStack.length > 0) {
+      const topModalId = activeModalStack[activeModalStack.length - 1];
+      closeModal(topModalId);
     }
   });
 }
@@ -3767,12 +3805,34 @@ function openModal(id) {
   if (id === 'modal-benefits-history' && typeof renderBenefitsHistoryModal === 'function') renderBenefitsHistoryModal(state);
   const modal = document.getElementById(id);
   if (modal) {
-    modal.classList.add('active');
-    playSubtleClick(state.settings.soundEnabled);
+    if (!modal.classList.contains('active')) {
+      modal.classList.add('active');
+      activeModalStack.push(id);
+      try {
+        window.history.pushState({ maracajuModal: id }, '');
+      } catch (err) {}
+    }
+    playSubtleClick(state?.settings?.soundEnabled);
   }
 }
 
-function closeModal(id) {
+function closeModal(id, fromPopstate = false) {
   const modal = document.getElementById(id);
-  if (modal) modal.classList.remove('active');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+
+  const stackIdx = activeModalStack.lastIndexOf(id);
+  if (stackIdx !== -1) {
+    activeModalStack.splice(stackIdx, 1);
+  }
+
+  // Se o fechamento foi pelo botão/backdrop (e não pelo popstate), limpa o histórico
+  if (!fromPopstate && !isHandlingPopstate) {
+    try {
+      if (window.history.state && window.history.state.maracajuModal) {
+        window.history.back();
+      }
+    } catch (err) {}
+  }
 }

@@ -34,13 +34,13 @@ export const DEFAULT_BENEFITS_CONFIG = {
 };
 
 export const PAYMENT_METHODS = [
-  { id: 'va', label: 'Vale Alimentação (VA)', shortLabel: 'VA', icon: '🥗', color: '#16a34a', bg: 'rgba(22, 163, 74, 0.12)' },
-  { id: 'vr', label: 'Vale Refeição (VR)', shortLabel: 'VR', icon: '🍽️', color: '#ea580c', bg: 'rgba(234, 88, 12, 0.12)' },
-  { id: 'pix', label: 'Pix', shortLabel: 'Pix', icon: '💠', color: '#0284c7', bg: 'rgba(2, 132, 199, 0.12)' },
-  { id: 'credito', label: 'Cartão de Crédito', shortLabel: 'Crédito', icon: '💳', color: '#7c3aed', bg: 'rgba(124, 58, 237, 0.12)' },
-  { id: 'debito', label: 'Cartão de Débito', shortLabel: 'Débito', icon: '💳', color: '#0d9488', bg: 'rgba(13, 148, 136, 0.12)' },
-  { id: 'dinheiro', label: 'Dinheiro', shortLabel: 'Dinheiro', icon: '💵', color: '#65a30d', bg: 'rgba(101, 163, 13, 0.12)' },
-  { id: 'outro', label: 'Outro', shortLabel: 'Outro', icon: '🏷️', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' }
+  { id: 'va', label: 'VA', shortLabel: 'VA', icon: '🥗', color: '#16a34a', bg: 'rgba(22, 163, 74, 0.12)' },
+  { id: 'vr', label: 'VR', shortLabel: 'VR', icon: '🍽️', color: '#ea580c', bg: 'rgba(234, 88, 12, 0.12)' },
+  { id: 'pix', label: 'PIX', shortLabel: 'PIX', icon: '💠', color: '#0284c7', bg: 'rgba(2, 132, 199, 0.12)' },
+  { id: 'credito', label: 'CREDITO', shortLabel: 'CREDITO', icon: '💳', color: '#7c3aed', bg: 'rgba(124, 58, 237, 0.12)' },
+  { id: 'debito', label: 'DEBITO', shortLabel: 'DEBITO', icon: '💳', color: '#0d9488', bg: 'rgba(13, 148, 136, 0.12)' },
+  { id: 'dinheiro', label: 'DINHEIRO', shortLabel: 'DINHEIRO', icon: '💵', color: '#65a30d', bg: 'rgba(101, 163, 13, 0.12)' },
+  { id: 'outro', label: 'OUTRO', shortLabel: 'OUTRO', icon: '🏷️', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' }
 ];
 
 export const MONTH_NAMES_PT = [
