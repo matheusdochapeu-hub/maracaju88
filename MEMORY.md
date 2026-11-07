@@ -4,6 +4,59 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-06 22:35] - Aba Oficial "Pets" (Estilo FisioFlow), Ração, Areia, Banhos, Vacinas & Correção Definitiva do Parser de PDF (v2.4.0)
+
+### 🔍 Problemas Identificados & Causa Raiz
+1. **Erro ao Processar PDF da Nota Fiscal ("Não foi possível identificar os itens da compra neste PDF"):**
+   - **Causa Raiz:** O parser anterior dependia exclusivamente de pares de linhas contíguas `Linha 1: Produto (Código: ...)` e `Linha 2: Qtde.: ... Vl. Unit.: ...`. Dependendo de como o PDF.js no navegador agrupava os fragmentos ou em arquivos PDF onde os campos vinham em fluxo bruto de palavras ou linhas mescladas pelo posicionamento espacial, a busca linha a linha falhava em encontrar valores na linha seguinte e descartava todos os 18 itens com preço 0.
+   - **Causa Raiz 2 (Feedback de PDFs sem texto):** PDFs digitalizados como imagem pura não possuíam camada de texto, e o app disparava um erro genérico sem explicar que se tratava de uma imagem escaneada.
+2. **Criação da Aba Pets:**
+   - O aplicativo necessitava de um módulo completo para gestão de animais de estimação do casal (Mandioca e futuros pets), posicionado estrategicamente na barra de navegação entre **Tarefas** e **Mercado**.
+   - Necessidade de sub-pastas personalizadas inspiradas na arquitetura de pacientes do FisioFlow (cartões com cascata expansível de botões e modal com navegação em abas).
+
+---
+
+### 🛠️ Correções e Funcionalidades Implementadas
+1. **Parser de PDF Multi-Estratégia e Ultra-Resiliente (`js/pdf-parser.js`):**
+   - **Estratégia de Bloco Global (`blockPattern`):** Utiliza regex contínuo multilinha que captura produtos com código, quantidade, unidade, preço unitário e total mesmo quando o PDF quebra os elementos em linhas individuais (`(C`, `ó`, `digo: ...`, `Qtde.:`, `1`, `Vl. Unit.:`, `3,19`) ou os condensa em linha única.
+   - **Estratégia Linha a Linha Bidirecional:** Verifica dados na mesma linha e nas linhas seguintes com tolerância a múltiplos formatos de mercado.
+   - **Diagnóstico Preciso de PDF Imagem/Scan:** Detecção antecipada de PDFs sem camada de texto pesquisável com instrução amigável para usar a câmera com QR Code da NFC-e.
+2. **Nova Aba "Pets" (`🐾 Pets`) no Menu Principal:**
+   - Localizada estritamente entre **Tarefas** e **Mercado**.
+   - **Dados Cadastrais:** Nome, data de nascimento e **idade exibida dinamicamente ao lado do nome** (ex: `1 ano e 8 meses`), fotos (câmera ou galeria com compressão automática), apelido, sexo, raça e status de vacinação em dia.
+   - **Arquitetura Visual FisioFlow:** Cada pet possui seu card com avatar, pílula de idade, resumo de status de saúde e botão de expansão em cascata (`.pill-action-stack`) com botões dedicados de atalho:
+     - 🥣 *Ração*
+     - 🏖️ *Areia*
+     - 🛁 *Higiene / Banhos*
+     - 💉 *Vacinas & Vermífugos*
+     - 🩺 *Exames & Consultas*
+     - 📂 *Abrir Pasta Completa*
+3. **Módulo de Saúde e Cuidados Veterinários (`js/pets.js`):**
+   - **Controle de Ração:** Data da compra, marca, quantidade (kg), consumo diário (gramas/dia), duração estimada calculada e badge com a **data provável da próxima compra**, com alertas automáticos de reposição.
+   - **Controle de Areia:** Data da compra, quantidade (kg/pacotes), apresentação da **data provável da última compra** e previsão da próxima compra conforme o histórico de consumo.
+   - **Higiene e Banhos da Mandioca:** Registro de datas dos banhos indicando se foi realizado **em casa** ou em **pet shop** (com nome do estabelecimento, valores e observações de tosa/unha).
+   - **Vacinações e Vermifugação:**
+     - Vacinas com controle por espécie (cães tomam V10/V8 e Antirrábica; gatos tomam V4/V5 e Antirrábica), controle de lote, clínica e cálculo anual da próxima dose.
+     - Vermifugação com dose personalizada calculada automaticamente por peso do animal (`formatPetDoseVermifugo`).
+   - **Exames e Consultas Veterinárias:** Registro de data da última consulta, tipo de exame, clínica, veterinário, diagnóstico e acompanhamento de **pendências médicas/medicamentos**.
+4. **Sincronização Cloud Google Sheets (`js/sheets.js`):**
+   - Chave `pets` integrada ao backup completo e restauração com mesclagem defensiva por IDs.
+5. **Integração de Interface e Eventos (`js/ui.js` & `js/app.js`):**
+   - `renderPetsTab()` e `renderPetFolderModal()` completamente orquestrados com o ciclo de vida e sistema de abas.
+
+---
+
+### 🧪 Validação Automatizada
+- **Suíte de Testes:** `node --test test/*.test.js`
+- **Resultado:** 62 testes executados, 62 aprovados (0 falhas).
+- **Testes Específicos:**
+  - `test/pets.test.js`: 6 testes cobrindo idade, ração, areia, banhos, vacinas e CRUD.
+  - `test/pdf-parser.test.js`: Testes com o PDF Carrefour real, tokens soltos e linhas mescladas.
+  - `test/html-integrity.test.js`: 100% de tags HTML balanceadas e modais verificados.
+  - `test/imports.test.js`: Todos os módulos ES importados e validados.
+
+---
+
 ## [2026-11-04 23:30] - Revisão Profunda (/revisar): Remoção Completa de Gamificação, Robustez do Parser de PDF, Auto-Backfill do Catálogo e Visualização de Notas Fiscais (v2.1.4)
 
 ### 🔍 Problemas Identificados & Causa Raiz

@@ -8,6 +8,14 @@ import {
   getPaymentMethodInfo,
   PAYMENT_METHODS
 } from './benefits.js';
+import {
+  calculatePetAge,
+  getPetRacaoStatus,
+  getPetAreiaStatus,
+  getPetHigieneStatus,
+  getPetVaccinesStatus,
+  formatPetDoseVermifugo
+} from './pets.js';
 // ============================================================
 //  MARACAJU - INTERFACE, RENDERIZAÇÃO & MODAIS
 // ============================================================
@@ -2357,4 +2365,496 @@ export function renderBenefitsHistoryModal(state) {
       }).join('')}
     </div>
   `;
+}
+
+
+// -------------------------------------------------------------
+// RENDERIZAÇÃO DA ABA PETS & PASTAS INDIVIDUAIS DOS ANIMAIS
+// -------------------------------------------------------------
+export function renderPetsTab(state, speciesFilter = 'todos', searchQuery = '') {
+  const container = document.getElementById('pets-list-container');
+  const countEl = document.getElementById('pets-count-badge');
+  const chipsContainer = document.getElementById('pets-species-chips');
+  if (!container) return;
+
+  const pets = Array.isArray(state.pets) ? state.pets : [];
+
+  if (countEl) {
+    countEl.textContent = `${pets.length} ${pets.length === 1 ? 'pet' : 'pets'}`;
+  }
+
+  if (chipsContainer) {
+    chipsContainer.innerHTML = `
+      <button type="button" class="chip ${speciesFilter === 'todos' ? 'active' : ''}" data-pet-species-filter="todos">🐾 Todos (${pets.length})</button>
+      <button type="button" class="chip ${speciesFilter === 'cachorro' ? 'active' : ''}" data-pet-species-filter="cachorro">🐶 Cães (${pets.filter(p => (p.especie || 'cachorro') === 'cachorro').length})</button>
+      <button type="button" class="chip ${speciesFilter === 'gato' ? 'active' : ''}" data-pet-species-filter="gato">🐱 Gatos (${pets.filter(p => p.especie === 'gato').length})</button>
+    `;
+  }
+
+  const query = (searchQuery || '').trim().toLowerCase();
+  const filtered = pets.filter(p => {
+    if (speciesFilter !== 'todos' && (p.especie || 'cachorro') !== speciesFilter) return false;
+    if (!query) return true;
+    return (p.nome && p.nome.toLowerCase().includes(query)) ||
+           (p.apelido && p.apelido.toLowerCase().includes(query)) ||
+           (p.raca && p.raca.toLowerCase().includes(query));
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg); border: 1.5px dashed var(--border-subtle);">
+        <p style="font-size: 2.5rem; margin-bottom: 0.5rem;">🐾</p>
+        <p style="font-weight: 700; color: var(--text-primary); font-size: 1.1rem;">Nenhum pet encontrado.</p>
+        <p style="font-size: 0.85rem; margin: 0.35rem 0 1.25rem;">Cadastre a Mandioca ou seus gatinhos para acompanhar ração, vacinas e cuidados!</p>
+        <button type="button" class="btn btn-primary" data-open-modal="modal-add-pet" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 0.5rem;">
+          <span>➕</span> Cadastrar Pet
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(pet => {
+    const idade = calculatePetAge(pet.dataNascimento) || 'Idade não informada';
+    const racaoStatus = getPetRacaoStatus(pet);
+    const areiaStatus = getPetAreiaStatus(pet);
+    const vacinaStatus = getPetVaccinesStatus(pet);
+    const higieneStatus = getPetHigieneStatus(pet);
+
+    const isCachorro = (pet.especie || 'cachorro') === 'cachorro';
+    const isGato = pet.especie === 'gato';
+    const speciesEmoji = isGato ? '🐱' : (isCachorro ? '🐶' : '🐾');
+
+    const photoSrc = (pet.fotos && pet.fotos.length > 0) ? pet.fotos[0] : null;
+
+    return `
+      <div class="pet-card" id="pet-card-${pet.id}" data-pet-id="${pet.id}">
+        <div class="pet-card-main" data-toggle-pet-cascade="${pet.id}">
+          <div class="pet-avatar-wrapper">
+            ${photoSrc ? `
+              <img src="${photoSrc}" alt="${pet.nome}" class="pet-avatar-img" />
+            ` : `
+              <div class="pet-avatar-placeholder">${speciesEmoji}</div>
+            `}
+            <span class="pet-species-badge">${speciesEmoji}</span>
+          </div>
+
+          <div class="pet-meta">
+            <div class="pet-name-row">
+              <div class="pet-title-box">
+                <span class="pet-card-name">${pet.nome}</span>
+                <span class="pet-age-pill" title="Nascimento: ${pet.dataNascimento || 'Não informado'}">🎂 ${idade}</span>
+              </div>
+              <span class="cascade-chevron" id="chevron-${pet.id}">▼</span>
+            </div>
+
+            <div class="pet-tags-row">
+              ${pet.raca ? `<span class="p-tag breed">${pet.raca}</span>` : ''}
+              <span class="p-tag sex">${pet.sexo === 'macho' ? '♂ Macho' : '♀ Fêmea'}</span>
+              <span class="p-tag ${vacinaStatus.badgeClass}">${vacinaStatus.badgeText}</span>
+              ${racaoStatus.hasData ? `<span class="p-tag ${racaoStatus.badgeClass}">${racaoStatus.badgeText}</span>` : ''}
+              ${isGato && areiaStatus.hasData ? `<span class="p-tag ${areiaStatus.badgeClass}">${areiaStatus.badgeText}</span>` : ''}
+              ${isCachorro && higieneStatus.hasData ? `<span class="p-tag ${higieneStatus.badgeClass}">${higieneStatus.badgeText}</span>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Cascata de Ações / Pastas Personalizadas por Animal (Estilo FisioFlow) -->
+        <div class="pet-cascade hidden" id="cascade-${pet.id}">
+          <div class="pill-action-stack">
+            <button type="button" class="btn-pill primary-green" data-open-pet-folder="${pet.id}" data-folder-tab="racao">
+              <span>🥣</span> Controle de Ração
+            </button>
+            ${isGato ? `
+              <button type="button" class="btn-pill primary-accent" data-open-pet-folder="${pet.id}" data-folder-tab="areia">
+                <span>🏖️</span> Areia
+              </button>
+            ` : `
+              <button type="button" class="btn-pill primary-terracotta" data-open-pet-folder="${pet.id}" data-folder-tab="higiene">
+                <span>🛁</span> Higiene & Banhos
+              </button>
+            `}
+            <button type="button" class="btn-pill outline-highlight" data-open-pet-folder="${pet.id}" data-folder-tab="vacinas">
+              <span>💉</span> Vacinas & Vermífugo
+            </button>
+            <button type="button" class="btn-pill outline" data-open-pet-folder="${pet.id}" data-folder-tab="exames">
+              <span>🩺</span> Exames Veterinários
+            </button>
+            <button type="button" class="btn-pill outline" data-open-pet-folder="${pet.id}" data-folder-tab="cadastrais">
+              <span>📋</span> Dados Cadastrais
+            </button>
+            ${isGato ? `
+              <button type="button" class="btn-pill outline" data-open-pet-folder="${pet.id}" data-folder-tab="higiene">
+                <span>🛁</span> Higiene
+              </button>
+            ` : `
+              <button type="button" class="btn-pill outline" data-open-pet-folder="${pet.id}" data-folder-tab="areia">
+                <span>🏖️</span> Areia
+              </button>
+            `}
+            <button type="button" class="btn-pill outline" data-edit-pet="${pet.id}">
+              <span>✏️</span> Editar Cadastro
+            </button>
+            <button type="button" class="btn-pill danger-solid" data-delete-pet="${pet.id}">
+              <span>🗑️</span> Excluir Pet
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
+  const modalEl = document.getElementById('modal-pet-folder');
+  if (!modalEl) return;
+
+  const pet = (state.pets || []).find(p => p.id === petId);
+  if (!pet) return;
+
+  const idade = calculatePetAge(pet.dataNascimento) || 'Idade não informada';
+  const racaoStatus = getPetRacaoStatus(pet);
+  const areiaStatus = getPetAreiaStatus(pet);
+  const vacinaStatus = getPetVaccinesStatus(pet);
+  const higieneStatus = getPetHigieneStatus(pet);
+
+  const isCachorro = (pet.especie || 'cachorro') === 'cachorro';
+  const isGato = pet.especie === 'gato';
+  const speciesEmoji = isGato ? '🐱' : (isCachorro ? '🐶' : '🐾');
+  const photoSrc = (pet.fotos && pet.fotos.length > 0) ? pet.fotos[0] : null;
+
+  // Header do Modal
+  const headerEl = document.getElementById('pet-folder-header');
+  if (headerEl) {
+    headerEl.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.75rem;">
+        <div class="pet-avatar-wrapper" style="width: 52px; height: 52px;">
+          ${photoSrc ? `<img src="${photoSrc}" alt="${pet.nome}" class="pet-avatar-img" />` : `<div class="pet-avatar-placeholder" style="font-size: 1.5rem;">${speciesEmoji}</div>`}
+          <span class="pet-species-badge">${speciesEmoji}</span>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap;">
+            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--brand-moss-dark);">${pet.nome}</h3>
+            <span class="pet-age-pill">🎂 ${idade}</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+            ${pet.raca || 'SRD'} • ${pet.sexo === 'macho' ? 'Macho' : 'Fêmea'} ${pet.pesoKg ? `• ${pet.pesoKg} kg` : ''} ${pet.apelido ? `• "${pet.apelido}"` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Barra de Abas Internas da Pasta
+  const tabsNavEl = document.getElementById('pet-folder-tabs-nav');
+  if (tabsNavEl) {
+    tabsNavEl.innerHTML = `
+      <button type="button" class="pet-folder-tab-btn ${activeFolderTab === 'racao' ? 'active' : ''}" data-folder-switch-tab="racao" data-pet-id="${pet.id}">
+        🥣 Ração
+      </button>
+      <button type="button" class="pet-folder-tab-btn ${activeFolderTab === 'areia' ? 'active' : ''}" data-folder-switch-tab="areia" data-pet-id="${pet.id}">
+        🏖️ Areia
+      </button>
+      <button type="button" class="pet-folder-tab-btn ${activeFolderTab === 'higiene' ? 'active' : ''}" data-folder-switch-tab="higiene" data-pet-id="${pet.id}">
+        🛁 Higiene (Banhos)
+      </button>
+      <button type="button" class="pet-folder-tab-btn ${activeFolderTab === 'vacinas' ? 'active' : ''}" data-folder-switch-tab="vacinas" data-pet-id="${pet.id}">
+        💉 Vacinas & Vermífugo
+      </button>
+      <button type="button" class="pet-folder-tab-btn ${activeFolderTab === 'exames' ? 'active' : ''}" data-folder-switch-tab="exames" data-pet-id="${pet.id}">
+        🩺 Exames & Consultas
+      </button>
+      <button type="button" class="pet-folder-tab-btn ${activeFolderTab === 'cadastrais' ? 'active' : ''}" data-folder-switch-tab="cadastrais" data-pet-id="${pet.id}">
+        📋 Dados Cadastrais
+      </button>
+    `;
+  }
+
+  // Conteúdo da Aba Ativa
+  const bodyEl = document.getElementById('pet-folder-body');
+  if (!bodyEl) return;
+
+  if (activeFolderTab === 'racao') {
+    const list = Array.isArray(pet.racao) ? pet.racao : [];
+    bodyEl.innerHTML = `
+      <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+          <span style="font-weight: 700; color: #047857; font-size: 0.9rem;">Previsão de Ração</span>
+          <span class="p-tag ${racaoStatus.badgeClass}" style="font-size: 0.75rem;">${racaoStatus.badgeText}</span>
+        </div>
+        ${racaoStatus.hasData ? `
+          <div style="font-size: 0.82rem; color: var(--text-primary); line-height: 1.45;">
+            <strong>Data provável da próxima compra:</strong> ${racaoStatus.dataPrevisaoFim ? racaoStatus.dataPrevisaoFim.split('-').reverse().join('/') : 'A calcular'}<br>
+            <span style="color: var(--text-muted);">Última compra: ${racaoStatus.ultimaCompra.dataCompra.split('-').reverse().join('/')} (${racaoStatus.ultimaCompra.quantidadeKg} kg - ${racaoStatus.duracaoDias} dias estimados)</span>
+          </div>
+        ` : `
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Nenhuma compra de ração lançada ainda. Registre a compra para calcular a data provável!</p>
+        `}
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+        <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Histórico de Ração</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-action-add-racao="${pet.id}">+ Lançar Compra</button>
+      </div>
+
+      <div class="pet-records-list">
+        ${list.length === 0 ? `<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1rem;">Nenhum registro de ração.</p>` : list.map(r => `
+          <div class="pet-sub-entry-card">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; font-size: 0.85rem; color: var(--brand-moss-dark);">${r.marca || 'Ração'} (${r.quantidadeKg} kg)</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                📅 Comprado em: ${r.dataCompra.split('-').reverse().join('/')} • Duração estimada: ${r.duracaoDias} dias
+              </div>
+              <div style="font-size: 0.75rem; color: #047857; font-weight: 600; margin-top: 2px;">
+                📅 Próxima compra provável: ${r.dataPrevisaoFim ? r.dataPrevisaoFim.split('-').reverse().join('/') : 'N/A'}
+              </div>
+              ${r.notas ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${r.notas}</div>` : ''}
+            </div>
+            <button type="button" class="btn btn-icon btn-sm" data-del-racao="${r.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else if (activeFolderTab === 'areia') {
+    const list = Array.isArray(pet.areia) ? pet.areia : [];
+    bodyEl.innerHTML = `
+      <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+          <span style="font-weight: 700; color: #b45309; font-size: 0.9rem;">Previsão de Areia Sanitária</span>
+          <span class="p-tag ${areiaStatus.badgeClass}" style="font-size: 0.75rem;">${areiaStatus.badgeText}</span>
+        </div>
+        ${areiaStatus.hasData ? `
+          <div style="font-size: 0.82rem; color: var(--text-primary); line-height: 1.45;">
+            <strong>Data provável da última compra:</strong> ${areiaStatus.dataUltimaCompra ? areiaStatus.dataUltimaCompra.split('-').reverse().join('/') : 'N/A'}<br>
+            <strong>Data provável da próxima compra:</strong> ${areiaStatus.dataProximaCompra ? areiaStatus.dataProximaCompra.split('-').reverse().join('/') : 'A calcular'}
+          </div>
+        ` : `
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Nenhuma compra de areia registrada ainda.</p>
+        `}
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+        <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Histórico de Areia</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-action-add-areia="${pet.id}">+ Lançar Compra</button>
+      </div>
+
+      <div class="pet-records-list">
+        ${list.length === 0 ? `<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1rem;">Nenhum registro de areia.</p>` : list.map(a => `
+          <div class="pet-sub-entry-card">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; font-size: 0.85rem; color: #b45309;">${a.marca || 'Areia Higiênica'} ${a.quantidadeKg ? `(${a.quantidadeKg} kg)` : ''}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                📅 Comprado em: ${a.dataCompra.split('-').reverse().join('/')} • Duração: ${a.duracaoDias || 25} dias
+              </div>
+              <div style="font-size: 0.75rem; color: #b45309; font-weight: 600; margin-top: 2px;">
+                📅 Próxima compra provável: ${a.dataPrevisaoFim ? a.dataPrevisaoFim.split('-').reverse().join('/') : 'N/A'}
+              </div>
+              ${a.notas ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${a.notas}</div>` : ''}
+            </div>
+            <button type="button" class="btn btn-icon btn-sm" data-del-areia="${a.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else if (activeFolderTab === 'higiene') {
+    const list = Array.isArray(pet.higiene) ? pet.higiene : [];
+    bodyEl.innerHTML = `
+      <div style="background: rgba(234, 88, 12, 0.08); border: 1px solid rgba(234, 88, 12, 0.25); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+          <span style="font-weight: 700; color: #c2410c; font-size: 0.9rem;">Higiene & Banhos</span>
+          <span class="p-tag ${higieneStatus.badgeClass}" style="font-size: 0.75rem;">${higieneStatus.badgeText}</span>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Controle de banhos da Mandioca e pets (em casa ou pet shop).</p>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+        <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Histórico de Banhos</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-action-add-banho="${pet.id}">+ Registrar Banho</button>
+      </div>
+
+      <div class="pet-records-list">
+        ${list.length === 0 ? `<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1rem;">Nenhum banho registrado.</p>` : list.map(b => `
+          <div class="pet-sub-entry-card">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; font-size: 0.85rem; color: var(--brand-moss-dark);">
+                ${b.tipo === 'casa' ? '🏠 Em Casa' : '🛁 Pet Shop'} ${b.local && b.tipo !== 'casa' ? `(${b.local})` : ''}
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                📅 Data: ${b.data.split('-').reverse().join('/')} ${b.valor ? `• R$ ${Number(b.valor).toFixed(2).replace('.', ',')}` : ''}
+              </div>
+              ${b.notas ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${b.notas}</div>` : ''}
+            </div>
+            <button type="button" class="btn btn-icon btn-sm" data-del-banho="${b.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else if (activeFolderTab === 'vacinas') {
+    const vacinasList = Array.isArray(pet.vacinas) ? pet.vacinas : [];
+    const vermList = Array.isArray(pet.vermifugos) ? pet.vermifugos : [];
+    const isCachorro = (pet.especie || 'cachorro') === 'cachorro';
+    const vacinaSugerida = isCachorro ? 'V10 (Décupla Canina) e Antirrábica' : 'V4 (Quádrupla Felina) e Antirrábica';
+    const doseVermifugoRecomendada = formatPetDoseVermifugo(pet.pesoKg);
+
+    bodyEl.innerHTML = `
+      <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+          <span style="font-weight: 700; color: #047857; font-size: 0.9rem;">Status Vacinal Anual</span>
+          <span class="p-tag ${vacinaStatus.badgeClass}" style="font-size: 0.75rem;">${vacinaStatus.badgeText}</span>
+        </div>
+        <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
+          <strong>Vacinas Essenciais:</strong> ${vacinaSugerida}<br>
+          <strong>Vermifugação Periódica:</strong> Dose calculada para ${pet.pesoKg || 0} kg: <span style="font-weight: 700; color: var(--brand-moss-dark);">${doseVermifugoRecomendada}</span>
+        </div>
+      </div>
+
+      <!-- Seção Vacinas -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+        <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">💉 Vacinas Tomadas</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-action-add-vacina="${pet.id}">+ Nova Vacina</button>
+      </div>
+
+      <div class="pet-records-list" style="margin-bottom: 1.25rem;">
+        ${vacinasList.length === 0 ? `<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Nenhuma vacina registrada.</p>` : vacinasList.map(v => `
+          <div class="pet-sub-entry-card">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; font-size: 0.85rem; color: var(--brand-moss-dark);">${v.vacina}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                📅 Aplicada: ${v.dataAplicacao.split('-').reverse().join('/')} ${v.lote ? `• Lote: ${v.lote}` : ''}
+              </div>
+              <div style="font-size: 0.75rem; color: #047857; font-weight: 600; margin-top: 2px;">
+                📅 Próxima dose anual: ${v.dataProximaDose ? v.dataProximaDose.split('-').reverse().join('/') : 'A definir'}
+              </div>
+              ${v.clinica ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">Clínica: ${v.clinica}</div>` : ''}
+            </div>
+            <button type="button" class="btn btn-icon btn-sm" data-del-vacina="${v.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Seção Vermifugação -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; border-top: 1px dashed var(--border-subtle); padding-top: 0.75rem;">
+        <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">💊 Vermifugação (Dose por Peso)</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-action-add-vermifugo="${pet.id}">+ Registrar Dose</button>
+      </div>
+
+      <div class="pet-records-list">
+        ${vermList.length === 0 ? `<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 0.5rem;">Nenhum vermífugo registrado.</p>` : vermList.map(vm => `
+          <div class="pet-sub-entry-card">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; font-size: 0.85rem; color: #047857;">${vm.nome}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                📅 Data: ${vm.dataAplicacao.split('-').reverse().join('/')} • Peso: ${vm.pesoAnimalKg} kg
+              </div>
+              <div style="font-size: 0.75rem; color: var(--brand-moss-dark); font-weight: 600; margin-top: 2px;">
+                Dose administrada: ${vm.dose}
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">
+                📅 Próxima dose programada: ${vm.dataProximaDose ? vm.dataProximaDose.split('-').reverse().join('/') : 'A definir'}
+              </div>
+              ${vm.notas ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${vm.notas}</div>` : ''}
+            </div>
+            <button type="button" class="btn btn-icon btn-sm" data-del-vermifugo="${vm.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else if (activeFolderTab === 'exames') {
+    const list = Array.isArray(pet.exames) ? pet.exames : [];
+    bodyEl.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+        <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Consultas, Exames & Laudos</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-action-add-exame="${pet.id}">+ Nova Consulta/Exame</button>
+      </div>
+
+      <div class="pet-records-list">
+        ${list.length === 0 ? `<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1.5rem;">Nenhum exame ou consulta registrada.</p>` : list.map(e => `
+          <div class="pet-sub-entry-card">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; font-size: 0.85rem; color: var(--brand-moss-dark);">${e.tipo}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                📅 Data: ${e.data.split('-').reverse().join('/')} ${e.clinica ? `• ${e.clinica}` : ''} ${e.veterinario ? `• Dr(a). ${e.veterinario}` : ''}
+              </div>
+              ${e.descricao ? `<div style="font-size: 0.78rem; color: var(--text-primary); margin-top: 4px;">${e.descricao}</div>` : ''}
+              ${e.pendencias ? `
+                <div style="margin-top: 4px; font-size: 0.75rem; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; border-radius: var(--radius-sm); padding: 0.2rem 0.4rem;">
+                  <strong>Pendência:</strong> ${e.pendencias}
+                </div>
+              ` : ''}
+              ${(e.fotos && e.fotos.length > 0) ? `
+                <div style="display: flex; gap: 0.4rem; margin-top: 6px; overflow-x: auto;">
+                  ${e.fotos.map(src => `<img src="${src}" alt="Laudo" style="width: 50px; height: 50px; border-radius: 6px; object-fit: cover; cursor: pointer;" data-view-photo="${src}" />`).join('')}
+                </div>
+              ` : ''}
+            </div>
+            <button type="button" class="btn btn-icon btn-sm" data-del-exame="${e.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else if (activeFolderTab === 'cadastrais') {
+    bodyEl.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <div style="display: flex; gap: 1rem; align-items: center; background: var(--bg-secondary); padding: 0.85rem; border-radius: var(--radius-md);">
+          <div class="pet-avatar-wrapper" style="width: 64px; height: 64px;">
+            ${photoSrc ? `<img src="${photoSrc}" alt="${pet.nome}" class="pet-avatar-img" />` : `<div class="pet-avatar-placeholder" style="font-size: 1.8rem;">${speciesEmoji}</div>`}
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 800; font-size: 1.15rem; color: var(--brand-moss-dark);">${pet.nome}</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+              Idade atual: <strong>${idade}</strong>
+            </div>
+            <div style="display: flex; gap: 0.4rem; margin-top: 0.35rem;">
+              <label class="btn btn-secondary btn-xs" style="cursor: pointer;" title="Bater foto">
+                📷 Câmera
+                <input type="file" accept="image/*" capture="environment" class="input-pet-photo-upload" data-pet-id="${pet.id}" style="display: none;" />
+              </label>
+              <label class="btn btn-secondary btn-xs" style="cursor: pointer;" title="Escolher da galeria">
+                📁 Galeria
+                <input type="file" accept="image/*" class="input-pet-photo-upload" data-pet-id="${pet.id}" style="display: none;" />
+              </label>
+              ${photoSrc ? `<button type="button" class="btn btn-secondary btn-xs" style="color: var(--danger);" data-remove-pet-photo="${pet.id}">Remover</button>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
+          <div class="card-metric" style="padding: 0.65rem;">
+            <div class="card-metric-label">Espécie</div>
+            <div style="font-weight: 700; color: var(--text-primary); text-transform: capitalize;">${pet.especie || 'Cachorro'}</div>
+          </div>
+          <div class="card-metric" style="padding: 0.65rem;">
+            <div class="card-metric-label">Raça</div>
+            <div style="font-weight: 700; color: var(--text-primary);">${pet.raca || 'SRD'}</div>
+          </div>
+          <div class="card-metric" style="padding: 0.65rem;">
+            <div class="card-metric-label">Sexo</div>
+            <div style="font-weight: 700; color: var(--text-primary);">${pet.sexo === 'macho' ? '♂ Macho' : '♀ Fêmea'}</div>
+          </div>
+          <div class="card-metric" style="padding: 0.65rem;">
+            <div class="card-metric-label">Peso</div>
+            <div style="font-weight: 700; color: var(--text-primary);">${pet.pesoKg ? `${pet.pesoKg} kg` : 'Não informado'}</div>
+          </div>
+          <div class="card-metric" style="padding: 0.65rem;">
+            <div class="card-metric-label">Data de Nascimento</div>
+            <div style="font-weight: 700; color: var(--text-primary);">${pet.dataNascimento ? pet.dataNascimento.split('-').reverse().join('/') : 'Não informada'}</div>
+          </div>
+          <div class="card-metric" style="padding: 0.65rem;">
+            <div class="card-metric-label">Apelido</div>
+            <div style="font-weight: 700; color: var(--text-primary);">${pet.apelido || 'Nenhum'}</div>
+          </div>
+        </div>
+
+        ${pet.observacoes ? `
+          <div style="background: var(--bg-secondary); padding: 0.75rem; border-radius: var(--radius-md); font-size: 0.8rem; color: var(--text-secondary);">
+            <strong>Observações:</strong> ${pet.observacoes}
+          </div>
+        ` : ''}
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" data-edit-pet="${pet.id}" style="flex: 1; justify-content: center;">✏️ Editar Dados Cadastrais</button>
+        </div>
+      </div>
+    `;
+  }
 }

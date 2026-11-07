@@ -14,9 +14,9 @@
 
   <!-- Icons & Manifest -->
   <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=2.3.1" />
-  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png?v=2.3.1" />
-  <link rel="shortcut icon" href="./favicon.ico?v=2.3.1" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png?v=2.4.0" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png?v=2.4.0" />
+  <link rel="shortcut icon" href="./favicon.ico?v=2.4.0" />
 
   <!-- Auto-update PWA e escape de cache -->
   <script>
@@ -41,10 +41,10 @@
   </script>
 
   <!-- Stylesheets (v2.1.3) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.3.1" />
-  <link rel="stylesheet" href="./css/base.css?v=2.3.1" />
-  <link rel="stylesheet" href="./css/components.css?v=2.3.1" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.3.1" />
+  <link rel="stylesheet" href="./css/variables.css?v=2.4.0" />
+  <link rel="stylesheet" href="./css/base.css?v=2.4.0" />
+  <link rel="stylesheet" href="./css/components.css?v=2.4.0" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.4.0" />
 </head>
 <body>
 
@@ -58,7 +58,7 @@
     <div class="auth-card">
       <div class="auth-header">
         <div class="auth-logo-wrapper">
-          <img src="./icons/icon-192.png?v=2.3.1" alt="Maracaju" class="auth-logo" />
+          <img src="./icons/icon-192.png?v=2.4.0" alt="Maracaju" class="auth-logo" />
         </div>
         <h2 class="auth-title">Maracaju</h2>
         <span class="auth-badge">Área Restrita aos Moradores</span>
@@ -144,7 +144,7 @@
   <header class="app-header">
     <div class="header-container">
       <div class="brand-wrapper">
-        <img src="./icons/icon-192.png?v=2.3.1" alt="Maracaju" class="brand-logo" />
+        <img src="./icons/icon-192.png?v=2.4.0" alt="Maracaju" class="brand-logo" />
         <div class="brand-text">
           <h1>Maracaju</h1>
         </div>
@@ -174,6 +174,10 @@
     <button type="button" class="nav-item active" data-tab="tarefas">
       <span class="nav-icon">🧹</span>
       <span>Tarefas</span>
+    </button>
+    <button type="button" class="nav-item" data-tab="pets">
+      <span class="nav-icon">🐾</span>
+      <span>Pets</span>
     </button>
     <button type="button" class="nav-item" data-tab="compras">
       <span class="nav-icon">🛒</span>
@@ -231,6 +235,37 @@
     <!-- ========================================== -->
     <!-- ABA 2: MERCADO & LISTA DE COMPRAS          -->
     <!-- ========================================== -->
+    <!-- ========================================== -->
+    <!-- ABA: PETS (MANDIOCA & BICHINHOS DA FAMÍLIA) -->
+    <!-- ========================================== -->
+    <section id="tab-pets" class="tab-content">
+      <!-- Banner de Resumo e Ação Rápida -->
+      <div class="card" style="margin-bottom: 1rem; background: linear-gradient(135deg, rgba(46, 89, 51, 0.08), rgba(217, 119, 6, 0.08)); border: 1px solid var(--border-subtle);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <h2 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--brand-moss-dark); display: flex; align-items: center; gap: 0.4rem;">
+              <span>🐾</span> Nossos Pets <span class="badge" id="pets-count-badge" style="background: rgba(46, 89, 51, 0.15); color: var(--brand-moss-dark); font-size: 0.75rem;">1 pet</span>
+            </h2>
+            <p style="margin: 0.25rem 0 0; font-size: 0.8rem; color: var(--text-secondary);">
+              Pastas individuais, ração, areia, higiene da Mandioca, vacinas e exames
+            </p>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" data-open-modal="modal-add-pet" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.85rem; font-weight: 700;">
+            <span>➕</span> Novo Pet
+          </button>
+        </div>
+
+        <!-- Barra de Busca e Chips de Espécie -->
+        <div style="margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.6rem;">
+          <input type="search" id="pet-search-input" class="form-control" placeholder="🔍 Buscar pet por nome, raça ou apelido..." style="height: 38px; font-size: 0.85rem;" />
+          <div class="chips-container" id="pets-species-chips"></div>
+        </div>
+      </div>
+
+      <!-- Container da Lista de Pets (Cards com Cascata FisioFlow) -->
+      <div id="pets-list-container"></div>
+    </section>
+
     <section id="tab-compras" class="tab-content">
       <!-- Banner de Resumo da Lista & Mês -->
       <div id="compras-benefits-banner"></div>
@@ -545,7 +580,7 @@
         <div class="dash-card">
           <h3 class="dash-title" style="margin-bottom: 0.75rem;">📲 Atualização do Aplicativo</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            Versão instalada: <strong>Maracaju v2.3.1</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
+            Versão instalada: <strong>Maracaju v2.4.0</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
           </p>
           <button type="button" id="btn-force-update-settings" class="btn btn-secondary btn-sm" onclick="window.forceUpdateApp && window.forceUpdateApp()">
             🔄 Limpar Cache e Forçar Atualização
@@ -1899,7 +1934,534 @@
     </div>
   </div>
 
+  <!-- ======================================================= -->
+  <!-- MODAIS DO MÓDULO PETS (PASTAS, RAÇÃO, HIGIENE, VACINAS)  -->
+  <!-- ======================================================= -->
+
+  <!-- MODAL: PASTA COMPLETA DO PET (Estilo FisioFlow) -->
+  <div id="modal-pet-folder" class="modal-overlay">
+    <div class="modal-content" style="max-width: 620px;">
+      <div class="modal-header">
+        <div id="pet-folder-header" style="flex: 1; min-width: 0;"></div>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+
+      <!-- Abas internas da pasta (Ração, Areia, Higiene, Vacinas, Exames, Cadastro) -->
+      <nav id="pet-folder-tabs-nav" class="pet-folder-nav"></nav>
+
+      <!-- Corpo da Aba Selecionada -->
+      <div id="pet-folder-body"></div>
+
+      <div style="margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary" data-close-modal>Fechar Pasta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CADASTRAR NOVO PET -->
+  <div id="modal-add-pet" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🐾 Cadastrar Novo Pet</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-pet">
+        <div class="form-group">
+          <label class="form-label" for="add-pet-nome">Nome do Pet *</label>
+          <input type="text" id="add-pet-nome" class="form-control" placeholder="Ex: Mandioca, Mingau, Thor..." required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="add-pet-especie">Espécie *</label>
+            <select id="add-pet-especie" class="form-control">
+              <option value="cachorro" selected>🐶 Cachorro</option>
+              <option value="gato">🐱 Gato</option>
+              <option value="outro">🐾 Outro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="add-pet-sexo">Sexo</label>
+            <select id="add-pet-sexo" class="form-control">
+              <option value="femea" selected>♀ Fêmea</option>
+              <option value="macho">♂ Macho</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="add-pet-nascimento">Data de Nascimento</label>
+            <input type="date" id="add-pet-nascimento" class="form-control" />
+            <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 2px;">A idade será calculada automaticamente!</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="add-pet-peso">Peso Atual (kg)</label>
+            <input type="number" id="add-pet-peso" class="form-control" step="0.1" min="0" placeholder="Ex: 14.5" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="add-pet-raca">Raça</label>
+            <input type="text" id="add-pet-raca" class="form-control" placeholder="Ex: Vira-lata (SRD), Golden..." />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="add-pet-apelido">Apelido</label>
+            <input type="text" id="add-pet-apelido" class="form-control" placeholder="Ex: Dioca, Gordinha..." />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Foto do Pet</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📸 Câmera
+              <input type="file" id="add-pet-camera" accept="image/*" capture="environment" style="display: none;" />
+            </label>
+            <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📁 Galeria
+              <input type="file" id="add-pet-gallery" accept="image/*" style="display: none;" />
+            </label>
+            <span id="add-pet-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
+          </div>
+          <div id="add-pet-photo-preview-wrap" style="display: none; margin-top: 0.5rem;">
+            <img id="add-pet-photo-img" src="" alt="Foto" style="width: 60px; height: 60px; border-radius: 12px; object-fit: cover; border: 2px solid var(--border-subtle);" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
+            <input type="checkbox" id="add-pet-vacinas-status" checked />
+            Vacinação em dia
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="add-pet-observacoes">Observações / Cuidados Especiais</label>
+          <textarea id="add-pet-observacoes" class="form-control" rows="2" placeholder="Alergias, manias, horários de passeio..."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Pet</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR DADOS CADASTRAIS DO PET -->
+  <div id="modal-edit-pet" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Dados do Pet</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-pet">
+        <input type="hidden" id="edit-pet-id" />
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-nome">Nome do Pet *</label>
+          <input type="text" id="edit-pet-nome" class="form-control" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-especie">Espécie</label>
+            <select id="edit-pet-especie" class="form-control">
+              <option value="cachorro">🐶 Cachorro</option>
+              <option value="gato">🐱 Gato</option>
+              <option value="outro">🐾 Outro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-sexo">Sexo</label>
+            <select id="edit-pet-sexo" class="form-control">
+              <option value="femea">♀ Fêmea</option>
+              <option value="macho">♂ Macho</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-nascimento">Data de Nascimento</label>
+            <input type="date" id="edit-pet-nascimento" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-peso">Peso Atual (kg)</label>
+            <input type="number" id="edit-pet-peso" class="form-control" step="0.1" min="0" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-raca">Raça</label>
+            <input type="text" id="edit-pet-raca" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-apelido">Apelido</label>
+            <input type="text" id="edit-pet-apelido" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
+            <input type="checkbox" id="edit-pet-vacinas-status" />
+            Vacinação em dia
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-observacoes">Observações</label>
+          <textarea id="edit-pet-observacoes" class="form-control" rows="2"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: LANÇAR COMPRA DE RAÇÃO -->
+  <div id="modal-add-pet-racao" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🥣 Registrar Compra de Ração</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-pet-racao">
+        <input type="hidden" id="pet-racao-pet-id" />
+
+        <div class="form-group">
+          <label class="form-label" for="pet-racao-data">Data da Compra *</label>
+          <input type="date" id="pet-racao-data" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-racao-marca">Marca / Tipo de Ração</label>
+          <input type="text" id="pet-racao-marca" class="form-control" placeholder="Ex: Premier Raças, Golden Especial, Royal Canin..." />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="pet-racao-kg">Quantidade Comprada (kg) *</label>
+            <input type="number" id="pet-racao-kg" class="form-control" step="0.1" min="0.1" placeholder="Ex: 15" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pet-racao-consumo-g">Consumo Diário (gramas/dia)</label>
+            <input type="number" id="pet-racao-consumo-g" class="form-control" step="1" min="1" placeholder="Ex: 250" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="pet-racao-duracao-dias">Duração Estimada (dias)</label>
+            <input type="number" id="pet-racao-duracao-dias" class="form-control" step="1" min="1" placeholder="Ex: 60" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pet-racao-valor">Valor Pago (R$)</label>
+            <input type="text" id="pet-racao-valor" class="form-control" placeholder="R$ 0,00" />
+          </div>
+        </div>
+
+        <!-- Feedback dinâmico da data provável da próxima compra -->
+        <div id="pet-racao-previsao-preview" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); padding: 0.6rem 0.8rem; font-size: 0.82rem; color: #065f46; margin-bottom: 0.75rem; font-weight: 600;">
+          📅 Data provável da próxima compra: informe os dados
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-racao-notas">Notas / Onde comprou</label>
+          <input type="text" id="pet-racao-notas" class="form-control" placeholder="Ex: Cobasi, Petz, Promoção..." />
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Registrar Ração</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: LANÇAR COMPRA DE AREIA -->
+  <div id="modal-add-pet-areia" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🏖️ Registrar Compra de Areia</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-pet-areia">
+        <input type="hidden" id="pet-areia-pet-id" />
+
+        <div class="form-group">
+          <label class="form-label" for="pet-areia-data">Data da Compra *</label>
+          <input type="date" id="pet-areia-data" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-areia-marca">Marca / Tipo da Areia</label>
+          <input type="text" id="pet-areia-marca" class="form-control" placeholder="Ex: Viva Verde, Pipicat, Katbom..." />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="pet-areia-kg">Quantidade (kg ou pacotes)</label>
+            <input type="number" id="pet-areia-kg" class="form-control" step="0.1" min="0.1" placeholder="Ex: 4" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pet-areia-duracao-dias">Duração Estimada (dias)</label>
+            <input type="number" id="pet-areia-duracao-dias" class="form-control" step="1" min="1" value="25" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-areia-valor">Valor Pago (R$)</label>
+          <input type="text" id="pet-areia-valor" class="form-control" placeholder="R$ 0,00" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-areia-notas">Notas</label>
+          <input type="text" id="pet-areia-notas" class="form-control" placeholder="Ex: Pacote de 4 kg com granulado fino..." />
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Registrar Areia</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: REGISTRAR BANHO / HIGIENE -->
+  <div id="modal-add-pet-banho" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🛁 Registrar Banho & Higiene</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-pet-banho">
+        <input type="hidden" id="pet-banho-pet-id" />
+
+        <div class="form-group">
+          <label class="form-label" for="pet-banho-data">Data do Banho *</label>
+          <input type="date" id="pet-banho-data" class="form-control" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="pet-banho-tipo">Onde foi o banho? *</label>
+            <select id="pet-banho-tipo" class="form-control">
+              <option value="casa" selected>🏠 Em Casa</option>
+              <option value="petshop">🛁 Pet Shop</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pet-banho-valor">Valor Pago (R$)</label>
+            <input type="text" id="pet-banho-valor" class="form-control" placeholder="R$ 0,00" />
+          </div>
+        </div>
+
+        <div class="form-group" id="pet-banho-local-wrap">
+          <label class="form-label" for="pet-banho-local">Nome do Pet Shop / Local</label>
+          <input type="text" id="pet-banho-local" class="form-control" placeholder="Ex: Pet Shop Bicho Mimado, Cobasi..." />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-banho-notas">Observações (tosa, unhas, perfume, etc.)</label>
+          <input type="text" id="pet-banho-notas" class="form-control" placeholder="Ex: Tosa higiênica, corte de unhas e limpeza de orelhas..." />
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Registrar Banho</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: REGISTRAR VACINA -->
+  <div id="modal-add-pet-vacina" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">💉 Registrar Vacinação</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-pet-vacina">
+        <input type="hidden" id="pet-vacina-pet-id" />
+
+        <div class="form-group">
+          <label class="form-label" for="pet-vacina-nome">Vacina *</label>
+          <input type="text" id="pet-vacina-nome" class="form-control" placeholder="Ex: V10, V4, Antirrábica, Gripe Canina..." required list="vacinas-datalist" />
+          <datalist id="vacinas-datalist">
+            <option value="V10 (Décupla Canina)" />
+            <option value="Antirrábica" />
+            <option value="V4 (Quádrupla Felina)" />
+            <option value="V5 (Quíntupla Felina)" />
+            <option value="V8 (Óctupla Canina)" />
+            <option value="Gripe Canina (Tosse dos Canis)" />
+            <option value="Giárgia" />
+          </datalist>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="pet-vacina-data">Data de Aplicação *</label>
+            <input type="date" id="pet-vacina-data" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pet-vacina-proxima-data">Próxima Dose Anual</label>
+            <input type="date" id="pet-vacina-proxima-data" class="form-control" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="pet-vacina-lote">Número do Lote</label>
+            <input type="text" id="pet-vacina-lote" class="form-control" placeholder="Ex: BR-8492" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pet-vacina-clinica">Clínica Veterinária</label>
+            <input type="text" id="pet-vacina-clinica" class="form-control" placeholder="Ex: Clínica Vet São Carlos" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-vacina-notas">Observações</label>
+          <input type="text" id="pet-vacina-notas" class="form-control" placeholder="Reações, recomendações..." />
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Vacina</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: REGISTRAR VERMÍFUGO -->
+  <div id="modal-add-pet-vermifugo" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">💊 Registrar Vermifugação</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-pet-vermifugo">
+        <input type="hidden" id="pet-vermifugo-pet-id" />
+
+        <div class="form-group">
+          <label class="form-label" for="pet-vermifugo-nome">Nome do Vermífugo *</label>
+          <input type="text" id="pet-vermifugo-nome" class="form-control" value="Vermífugo Amplo Espectro / Ivermectina" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="pet-vermifugo-data">Data de Aplicação *</label>
+            <input type="date" id="pet-vermifugo-data" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pet-vermifugo-peso">Peso do Animal (kg) *</label>
+            <input type="number" id="pet-vermifugo-peso" class="form-control" step="0.1" min="0.1" placeholder="Ex: 14.5" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-vermifugo-dose">Dose Calculada por Peso</label>
+          <input type="text" id="pet-vermifugo-dose" class="form-control" placeholder="Ex: 1 e 1/2 comprimido (base: 1 cp / 10 kg)" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-vermifugo-proxima-data">Próxima Dose Programada</label>
+          <input type="date" id="pet-vermifugo-proxima-data" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-vermifugo-notas">Notas</label>
+          <input type="text" id="pet-vermifugo-notas" class="form-control" placeholder="Ex: Tomou junto com patê sem rejeição..." />
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Dose</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: REGISTRAR EXAME / CONSULTA -->
+  <div id="modal-add-pet-exame" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🩺 Consulta & Exame Veterinário</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-pet-exame">
+        <input type="hidden" id="pet-exame-pet-id" />
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="pet-exame-data">Data *</label>
+            <input type="date" id="pet-exame-data" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pet-exame-tipo">Tipo de Atendimento *</label>
+            <select id="pet-exame-tipo" class="form-control">
+              <option value="Consulta de Rotina" selected>Consulta de Rotina</option>
+              <option value="Exame de Sangue (Hemograma)">Exame de Sangue</option>
+              <option value="Ultrassom / Raio-X">Ultrassom / Raio-X</option>
+              <option value="Retorno Veterinário">Retorno</option>
+              <option value="Procedimento / Cirurgia">Procedimento / Cirurgia</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="pet-exame-clinica">Clínica / Hospital</label>
+            <input type="text" id="pet-exame-clinica" class="form-control" placeholder="Ex: Hospital Vet São Carlos" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="pet-exame-veterinario">Veterinário(a)</label>
+            <input type="text" id="pet-exame-veterinario" class="form-control" placeholder="Ex: Dr(a). André" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-exame-descricao">Descrição / Diagnóstico</label>
+          <textarea id="pet-exame-descricao" class="form-control" rows="2" placeholder="Sintomas, diagnóstico ou resultados observados..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-exame-pendencias">Pendências Médicas / Medicamentos / Retorno</label>
+          <input type="text" id="pet-exame-pendencias" class="form-control" placeholder="Ex: Retorno em 15 dias, dar antibiótico 12/12h por 7 dias..." />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Foto do Laudo / Receita</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📸 Câmera
+              <input type="file" id="pet-exame-camera" accept="image/*" capture="environment" style="display: none;" />
+            </label>
+            <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📁 Galeria
+              <input type="file" id="pet-exame-gallery" accept="image/*" style="display: none;" />
+            </label>
+            <span id="pet-exame-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Consulta/Exame</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Script Principal Modular (v2.1.0) -->
-  <script type="module" src="./js/app.js?v=2.3.1"></script>
+  <script type="module" src="./js/app.js?v=2.4.0"></script>
 </body>
 </html>

@@ -68,6 +68,7 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
       sonhos: state.sonhos || [],
       compras: state.compras || [],
       comprasRegistros: state.comprasRegistros || [],
+      pets: state.pets || [],
       catalog: state.catalog || [],
       categories: state.categories || {},
       userPasswords: state.userPasswords || {}
@@ -337,6 +338,21 @@ export function applyCloudBackup(currentState, cloudData) {
             }
             map.set(key, mergedItem);
           }
+        }
+      });
+      return Array.from(map.values());
+    })(),
+    pets: (() => {
+      const cloudList = Array.isArray(cloudData.pets) ? cloudData.pets : [];
+      const localList = Array.isArray(safeCurrent.pets) ? safeCurrent.pets : [];
+      if (cloudList.length === 0) return localList;
+      if (localList.length === 0) return cloudList;
+      const map = new Map();
+      cloudList.forEach(p => { if (p && p.id) map.set(p.id, p); });
+      localList.forEach(p => {
+        if (p && p.id) {
+          const cloudP = map.get(p.id);
+          map.set(p.id, { ...(cloudP || {}), ...p });
         }
       });
       return Array.from(map.values());

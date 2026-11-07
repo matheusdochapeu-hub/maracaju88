@@ -183,79 +183,118 @@ export function parseNfceDanfeText(rawText) {
   }
 
   // 6. Extração de Itens da Compra
-  // Padrão identificado na nota Carrefour / NFC-e padrão:
-  // Linha 1: NOME DO ITEM (Código: SS010604) Vl. Total
-  // Linha 2: Qtde.: 1 UN: un9 Vl. Unit.: 3,19 3,19
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  // Estratégia 1: Regex abrangente em bloco contínuo (captura itens com código mesmo com quebras multilinha ou linhas mescladas)
+  const blockPattern = /([A-Za-z0-9\u00C0-\u00FF][^\n\r(]*?)\s*\(\s*C\s*[oó]?\s*d(?:igo)?\.?:?\s*([A-Za-z0-9_-]+)\s*\)[\s\S]*?(?:Qtde|Qtd|Quant)\.?:?\s*([\d\.,]+)(?:[\s\S]*?UN\.?:?\s*([A-Za-z0-9]+))?[\s\S]*?(?:Vl\.?\s*Unit\.?:?\s*([\d\.,]+))[\s\S]*?(?:Vl\.?\s*Total\s*([\d\.,]+)|(?=[\w\s\u00C0-\u00FF]+\(\s*C\s*[oó]?\s*d|Qtd\. total|Valor total|$))/gi;
 
-    // Procura linha de item com código (com tolerância a espaçamentos e pontuações do OCR/PDF: "(C ó digo: ...)")
-    const codeMatch = line.match(/^(.*?)\s*\(\s*C\s*[oó]?\s*d(?:igo)?\.?:?\s*([A-Za-z0-9_-]+)\s*\)/i);
-    if (codeMatch) {
-      const rawName = codeMatch[1].trim();
-      const code = codeMatch[2].trim();
+  let blockMatch;
+  while ((blockMatch = blockPattern.exec(rawText)) !== null) {
+    const rawName = blockMatch[1].trim().replace(/\s+/g, ' ');
+    const code = blockMatch[2].trim();
+    const qty = blockMatch[3].trim();
+    const unit = blockMatch[4] ? blockMatch[4].trim().toLowerCase().replace(/[0-9]/g, '') : 'un';
+    const unitPrice = parseCurrency(blockMatch[5]);
+    const numQty = parseFloat(qty.replace(',', '.')) || 1;
+    const totalPrice = blockMatch[6] ? parseCurrency(blockMatch[6]) : (Math.round(unitPrice * numQty * 100) / 100);
 
-      let qty = '1';
-      let unit = 'un';
-      let unitPrice = 0;
-      let totalPrice = 0;
+    if (rawName && (unitPrice > 0 || totalPrice > 0)) {
+      const alias = suggestPopularName(rawName);
+      const category = detectCategoryFromItemName(alias || rawName);
+      items.push({
+        code,
+        rawName,
+        alias,
+        category,
+        qty,
+        unit: unit || 'un',
+        unitPrice,
+        totalPrice: totalPrice || unitPrice,
+        selected: true
+      });
+    }
+  }
 
-      // Inspeciona as próximas linhas procurando quantidade e valores até encontrar o próximo item
-      for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
-        const nextLine = lines[j];
+  // Estratégia 2 (Linha a linha com cabeçalho de código e verificação na mesma linha e linhas seguintes)
+  if (items.length === 0) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
 
-        // Se encontrar o cabeçalho de outro produto, interrompe a busca deste produto
-        if (/\(\s*C\s*[oó]?\s*d(?:igo)?\.?:?/i.test(nextLine)) {
-          break;
+      const codeMatch = line.match(/^(.*?)\s*\(\s*C\s*[oó]?\s*d(?:igo)?\.?:?\s*([A-Za-z0-9_-]+)\s*\)/i);
+      if (codeMatch) {
+        const rawName = codeMatch[1].trim();
+        const code = codeMatch[2].trim();
+
+        let qty = '1';
+        let unit = 'un';
+        let unitPrice = 0;
+        let totalPrice = 0;
+
+        // 2a. Verifica se a quantidade e valores já estão na mesma linha
+        const sameLineQty = line.match(/(?:Qtde|Qtd|Quant)\.?:?\s*([\d\.,]+)\s*(?:UN\.?:?\s*([A-Za-z0-9]+))?\s*(?:Vl\.?\s*Unit\.?:?\s*([\d\.,]+))?(?:\s+([\d\.,]+))?/i);
+        if (sameLineQty) {
+          qty = sameLineQty[1].trim();
+          if (sameLineQty[2]) unit = sameLineQty[2].trim().toLowerCase().replace(/[0-9]/g, '');
+          if (sameLineQty[3]) unitPrice = parseCurrency(sameLineQty[3]);
+          if (sameLineQty[4]) totalPrice = parseCurrency(sameLineQty[4]);
         }
 
-        const qtyMatch = nextLine.match(/(?:Qtde|Qtd|Quant)\.?:?\s*([\d\.,]+)\s*(?:UN\.?:?\s*([A-Za-z0-9]+))?\s*(?:Vl\.?\s*Unit\.?:?\s*([\d\.,]+))?(?:\s+([\d\.,]+))?/i);
-        if (qtyMatch) {
-          qty = qtyMatch[1].trim();
-          if (qtyMatch[2]) {
-            unit = qtyMatch[2].trim().toLowerCase().replace(/[0-9]/g, '');
+        // 2b. Se não achou na própria linha, inspeciona as próximas linhas
+        if (unitPrice === 0 && totalPrice === 0) {
+          for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
+            const nextLine = lines[j];
+
+            if (/\(\s*C\s*[oó]?\s*d(?:igo)?\.?:?/i.test(nextLine)) {
+              break;
+            }
+
+            const qtyMatch = nextLine.match(/(?:Qtde|Qtd|Quant)\.?:?\s*([\d\.,]+)\s*(?:UN\.?:?\s*([A-Za-z0-9]+))?\s*(?:Vl\.?\s*Unit\.?:?\s*([\d\.,]+))?(?:\s+([\d\.,]+))?/i);
+            if (qtyMatch) {
+              qty = qtyMatch[1].trim();
+              if (qtyMatch[2]) {
+                unit = qtyMatch[2].trim().toLowerCase().replace(/[0-9]/g, '');
+              }
+              if (qtyMatch[3]) {
+                unitPrice = parseCurrency(qtyMatch[3]);
+              }
+              if (qtyMatch[4]) {
+                totalPrice = parseCurrency(qtyMatch[4]);
+              }
+              break;
+            }
+
+            const totalRowMatch = nextLine.match(/^Vl\.\s*Total$/i);
+            if (totalRowMatch && lines[j + 1]) {
+              const candidateVal = parseCurrency(lines[j + 1]);
+              if (candidateVal > 0) {
+                totalPrice = candidateVal;
+              }
+            } else if (/^Vl\.\s*Total\s*([\d\.,]+)$/i.test(nextLine)) {
+              const directMatch = nextLine.match(/^Vl\.\s*Total\s*([\d\.,]+)$/i);
+              totalPrice = parseCurrency(directMatch[1]);
+            }
           }
-          if (qtyMatch[3]) {
-            unitPrice = parseCurrency(qtyMatch[3]);
-          }
-          if (qtyMatch[4]) {
-            totalPrice = parseCurrency(qtyMatch[4]);
-          }
-          break;
         }
 
-        const totalRowMatch = nextLine.match(/^Vl\.\s*Total$/i);
-        if (totalRowMatch && lines[j + 1]) {
-          const candidateVal = parseCurrency(lines[j + 1]);
-          if (candidateVal > 0) {
-            totalPrice = candidateVal;
-          }
-        } else if (/^Vl\.\s*Total\s*([\d\.,]+)$/i.test(nextLine)) {
-          const directMatch = nextLine.match(/^Vl\.\s*Total\s*([\d\.,]+)$/i);
-          totalPrice = parseCurrency(directMatch[1]);
+        if (totalPrice === 0 && unitPrice > 0) {
+          const numQty = parseFloat(qty.replace(',', '.')) || 1;
+          totalPrice = Math.round(unitPrice * numQty * 100) / 100;
         }
-      }
 
-      if (totalPrice === 0 && unitPrice > 0) {
-        const numQty = parseFloat(qty.replace(',', '.')) || 1;
-        totalPrice = Math.round(unitPrice * numQty * 100) / 100;
-      }
+        if (rawName && (unitPrice > 0 || totalPrice > 0)) {
+          const alias = suggestPopularName(rawName);
+          const category = detectCategoryFromItemName(alias || rawName);
 
-      if (rawName && (unitPrice > 0 || totalPrice > 0)) {
-        const alias = suggestPopularName(rawName);
-        const category = detectCategoryFromItemName(alias || rawName);
-
-        items.push({
-          code,
-          rawName,
-          alias,
-          category,
-          qty,
-          unit: unit || 'un',
-          unitPrice,
-          totalPrice: totalPrice || unitPrice,
-          selected: true
-        });
+          items.push({
+            code,
+            rawName,
+            alias,
+            category,
+            qty,
+            unit: unit || 'un',
+            unitPrice,
+            totalPrice: totalPrice || unitPrice,
+            selected: true
+          });
+        }
       }
     }
   }
@@ -414,13 +453,22 @@ export async function extractTextFromPdfFile(fileOrBlob) {
   const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const numPages = pdf.numPages;
   let fullText = '';
+  let rawText = '';
 
   for (let p = 1; p <= numPages; p++) {
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
     const pageText = reconstructSpatialLines(content.items);
+    const pageRaw = (content.items || []).map(it => (it && it.str) || '').join('\n');
     fullText += pageText + '\n';
+    rawText += pageRaw + '\n';
   }
 
-  return fullText;
+  const resultText = fullText.trim() ? fullText : rawText;
+
+  if (!resultText.trim()) {
+    throw new Error('Este arquivo PDF não contém camada de texto selecionável (pode ser uma foto ou digitalização escaneada). Use a câmera do QR Code da NFC-e ou suba o arquivo PDF original baixado do mercado.');
+  }
+
+  return resultText;
 }

@@ -289,3 +289,61 @@ test('Catálogo: Auto-backfill e syncPurchasesIntoCatalog garantem que Já Compr
   assert.equal(state.catalog.length, 2);
   assert.equal(state.catalog[0].priceHistory.length, 1);
 });
+
+test('PDF Parser: Extrai itens mesmo com tokens crus multilinha (stream de palavras soltas)', () => {
+  const rawTokenText = `
+CARREFOUR COMERCIO E INDUSTRIA LTDA
+CNPJ: 45.543.915/0280-00
+ACUCAR REF CARAVELAS
+(C
+ó
+digo: SS010604 )
+Qtde.:
+1
+UN:
+un9
+Vl. Unit.:
+3,19
+Vl. Total
+3,19
+CHA MATE LEAO LIMA T
+(C
+ó
+digo: SS012261 )
+Qtde.:
+2
+UN:
+un9
+Vl. Unit.:
+18,29
+Vl. Total
+36,58
+Valor a pagar R$: 39,77
+`;
+  const result = parseNfceDanfeText(rawTokenText);
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].rawName, 'ACUCAR REF CARAVELAS');
+  assert.equal(result.items[0].code, 'SS010604');
+  assert.equal(result.items[0].unitPrice, 3.19);
+  assert.equal(result.items[0].totalPrice, 3.19);
+  assert.equal(result.items[1].rawName, 'CHA MATE LEAO LIMA T');
+  assert.equal(result.items[1].code, 'SS012261');
+  assert.equal(result.items[1].unitPrice, 18.29);
+  assert.equal(result.items[1].totalPrice, 36.58);
+});
+
+test('PDF Parser: Extrai itens com dados combinados na mesma linha horizontal', () => {
+  const mergedLineText = `
+CARREFOUR COMERCIO E INDUSTRIA LTDA
+CNPJ: 45.543.915/0280-00
+ACUCAR REF CARAVELAS (C ó digo: SS010604 ) Vl. Total Qtde.: 1 UN: un9 Vl. Unit.: 3,19 3,19
+CHA MATE LEAO LIMA T (C ó digo: SS012261 ) Vl. Total Qtde.: 1 UN: un9 Vl. Unit.: 18,29 18,29
+Valor a pagar R$: 21,48
+`;
+  const result = parseNfceDanfeText(mergedLineText);
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].rawName, 'ACUCAR REF CARAVELAS');
+  assert.equal(result.items[0].unitPrice, 3.19);
+  assert.equal(result.items[1].rawName, 'CHA MATE LEAO LIMA T');
+  assert.equal(result.items[1].unitPrice, 18.29);
+});

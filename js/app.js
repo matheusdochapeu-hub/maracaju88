@@ -70,6 +70,33 @@ import {
   removeLinkFromReforma
 } from './reformas.js';
 import { addSonho, updateSonho, deleteSonho, toggleSonhoMilestone, addPhotoToSonho, removePhotoFromSonho } from './sonhos.js';
+import {
+  calculatePetAge,
+  addDaysToDateStr,
+  formatPetDoseVermifugo,
+  getPetRacaoStatus,
+  getPetAreiaStatus,
+  getPetHigieneStatus,
+  getPetVaccinesStatus,
+  getPetSummary,
+  addPet,
+  updatePet,
+  deletePet,
+  addPetPhoto,
+  removePetPhoto,
+  addPetRacaoPurchase,
+  deletePetRacaoPurchase,
+  addPetAreiaPurchase,
+  deletePetAreiaPurchase,
+  addPetBanho,
+  deletePetBanho,
+  addPetVacina,
+  deletePetVacina,
+  addPetVermifugo,
+  deletePetVermifugo,
+  addPetExame,
+  deletePetExame
+} from './pets.js';
 import { parseNfceDanfeText, extractTextFromPdfFile, suggestPopularName } from './pdf-parser.js';
 import {
   ensureCatalog,
@@ -90,6 +117,8 @@ import {
   renderProductHistoryModal,
   renderPdfInvoiceConfirmation,
   renderBenefitsHistoryModal,
+  renderPetsTab,
+  renderPetFolderModal,
   setBenefitsCycle,
   getActiveBenefitsCycle
 } from './ui.js';
@@ -141,6 +170,11 @@ let currentManualPurchasePhotos = [];
 let currentPendingPdfInvoice = null;
 let currentCategoryManageModule = 'tarefas';
 let deferredInstallPrompt = null;
+let currentPetsSpeciesFilter = 'todos';
+let currentPetsSearchQuery = '';
+let currentActivePetFolderId = null;
+let currentActivePetFolderTab = 'racao';
+let tempPetPhotoDataUrl = null;
 
 // -------------------------------------------------------------
 // INICIALIZAÇÃO DO APP
@@ -172,6 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
   safeInit(initReformasModule, 'initReformasModule');
   safeInit(initSonhosModule, 'initSonhosModule');
   safeInit(initComprasModule, 'initComprasModule');
+  safeInit(initPetsModule, 'initPetsModule');
   safeInit(initQrCodeScanner, 'initQrCodeScanner');
   safeInit(initSettingsModule, 'initSettingsModule');
   safeInit(initCategoryManagement, 'initCategoryManagement');
@@ -384,6 +419,8 @@ function refreshAllUI() {
     renderReformasTab(state, currentReformasFilter, currentReformasCategory);
   } else if (currentTab === 'sonhos') {
     renderSonhosTab(state, currentSonhosFilter);
+  } else if (currentTab === 'pets') {
+    renderPetsTab(state, currentPetsSpeciesFilter, currentPetsSearchQuery);
   } else if (currentTab === 'compras' || currentTab === 'gamificacao') {
     renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
   } else if (currentTab === 'ajustes') {
@@ -3742,6 +3779,667 @@ function handleCloseBenefitCycle() {
 }
 
 // -------------------------------------------------------------
+// -------------------------------------------------------------
+// MÓDULO PETS (Gestão de Animais, Ração, Areia, Banhos, Vacinas & Exames)
+// -------------------------------------------------------------
+function initPetsModule() {
+  // Filtro de Busca de Pets
+  const searchInput = document.getElementById('pet-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      currentPetsSearchQuery = (e.target.value || '').trim();
+      if (currentTab === 'pets') {
+        renderPetsTab(state, currentPetsSpeciesFilter, currentPetsSearchQuery);
+      }
+    });
+  }
+
+  // Filtros por Espécie (chips)
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-pet-species-filter]');
+    if (chip) {
+      document.querySelectorAll('[data-pet-species-filter]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentPetsSpeciesFilter = chip.getAttribute('data-pet-species-filter') || 'todos';
+      if (currentTab === 'pets') {
+        renderPetsTab(state, currentPetsSpeciesFilter, currentPetsSearchQuery);
+      }
+    }
+  });
+
+  // Alternar Cascata de Botões no Card do Pet (estilo FisioFlow)
+  document.addEventListener('click', (e) => {
+    const toggleBtn = e.target.closest('[data-toggle-pet-cascade]');
+    if (toggleBtn) {
+      const petId = toggleBtn.getAttribute('data-toggle-pet-cascade');
+      const cascade = document.getElementById(`pet-cascade-${petId}`);
+      if (cascade) {
+        const isExpanded = cascade.classList.toggle('is-expanded');
+        toggleBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+      }
+    }
+  });
+
+  // Abrir Pasta do Pet (em sub-aba específica)
+  document.addEventListener('click', (e) => {
+    const folderBtn = e.target.closest('[data-open-pet-folder]');
+    if (folderBtn) {
+      const petId = folderBtn.getAttribute('data-pet-id');
+      const targetFolderTab = folderBtn.getAttribute('data-folder-tab') || 'racao';
+      if (petId) {
+        currentActivePetFolderId = petId;
+        currentActivePetFolderTab = targetFolderTab;
+        renderPetFolderModal(state, petId, targetFolderTab);
+        openModal('modal-pet-folder');
+      }
+    }
+  });
+
+  // Trocar de aba dentro do Modal de Pasta do Pet
+  document.addEventListener('click', (e) => {
+    const tabBtn = e.target.closest('[data-folder-switch-tab]');
+    if (tabBtn) {
+      const targetTab = tabBtn.getAttribute('data-folder-switch-tab');
+      if (targetTab && currentActivePetFolderId) {
+        currentActivePetFolderTab = targetTab;
+        renderPetFolderModal(state, currentActivePetFolderId, targetTab);
+      }
+    }
+  });
+
+  // Abrir modal de edição de Pet
+  document.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('[data-open-edit-pet]');
+    if (editBtn) {
+      const petId = editBtn.getAttribute('data-open-edit-pet');
+      const pet = (state.pets || []).find(p => p.id === petId);
+      if (pet) {
+        const idEl = document.getElementById('edit-pet-id');
+        const nomeEl = document.getElementById('edit-pet-nome');
+        const espEl = document.getElementById('edit-pet-especie');
+        const sexoEl = document.getElementById('edit-pet-sexo');
+        const nascEl = document.getElementById('edit-pet-nascimento');
+        const pesoEl = document.getElementById('edit-pet-peso');
+        const racaEl = document.getElementById('edit-pet-raca');
+        const apelidoEl = document.getElementById('edit-pet-apelido');
+        const vacStatusEl = document.getElementById('edit-pet-vacinas-status');
+        const obsEl = document.getElementById('edit-pet-observacoes');
+
+        if (idEl) idEl.value = pet.id;
+        if (nomeEl) nomeEl.value = pet.nome || '';
+        if (espEl) espEl.value = pet.especie || 'cachorro';
+        if (sexoEl) sexoEl.value = pet.sexo || 'femea';
+        if (nascEl) nascEl.value = pet.dataNascimento || '';
+        if (pesoEl) pesoEl.value = pet.peso || '';
+        if (racaEl) racaEl.value = pet.raca || '';
+        if (apelidoEl) apelidoEl.value = pet.apelido || '';
+        if (vacStatusEl) vacStatusEl.checked = pet.vacinacaoEmDia !== false;
+        if (obsEl) obsEl.value = pet.observacoes || '';
+
+        openModal('modal-edit-pet');
+      }
+    }
+  });
+
+  // Excluir Pet
+  document.addEventListener('click', (e) => {
+    const delBtn = e.target.closest('[data-delete-pet]');
+    if (delBtn) {
+      const petId = delBtn.getAttribute('data-delete-pet');
+      const pet = (state.pets || []).find(p => p.id === petId);
+      const petName = pet ? pet.nome : 'este animal';
+      if (confirm(`Tem certeza que deseja remover o cadastro de ${petName}? Todos os registros de saúde serão apagados.`)) {
+        deletePet(state, petId);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        closeModal('modal-pet-folder');
+        refreshAllUI();
+        showToast(`Cadastro de ${petName} removido.`, 'info');
+      }
+    }
+  });
+
+  // Upload de Foto de Pet (Câmera & Galeria)
+  const setupPetPhotoUpload = (camInputId, galInputId, onPhotoReady) => {
+    [camInputId, galInputId].forEach(id => {
+      const input = document.getElementById(id);
+      if (input) {
+        input.addEventListener('change', async (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          try {
+            showToast('Processando foto... 📸', 'info', 1500);
+            const compressed = await compressImageFile(file, 800, 800, 0.82);
+            onPhotoReady(compressed);
+          } catch (err) {
+            console.error('Erro ao processar imagem:', err);
+            showToast('Não foi possível carregar a imagem selecionada.', 'error');
+          } finally {
+            input.value = '';
+          }
+        });
+      }
+    });
+  };
+
+  setupPetPhotoUpload('add-pet-camera', 'add-pet-gallery', (dataUrl) => {
+    tempPetPhotoDataUrl = dataUrl;
+    const previewWrap = document.getElementById('add-pet-photo-preview-wrap');
+    const previewImg = document.getElementById('add-pet-photo-img');
+    const feedback = document.getElementById('add-pet-photo-feedback');
+    if (previewWrap && previewImg) {
+      previewImg.src = dataUrl;
+      previewWrap.style.display = 'block';
+    }
+    if (feedback) feedback.textContent = '✓ Foto anexada com sucesso!';
+  });
+
+  // Formulário: Cadastrar Novo Pet
+  const formAddPet = document.getElementById('form-add-pet');
+  if (formAddPet) {
+    formAddPet.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nome = document.getElementById('add-pet-nome')?.value?.trim();
+      if (!nome) return;
+
+      const especie = document.getElementById('add-pet-especie')?.value || 'cachorro';
+      const sexo = document.getElementById('add-pet-sexo')?.value || 'femea';
+      const dataNascimento = document.getElementById('add-pet-nascimento')?.value || '';
+      const peso = parseFloat(document.getElementById('add-pet-peso')?.value) || 0;
+      const raca = document.getElementById('add-pet-raca')?.value?.trim() || '';
+      const apelido = document.getElementById('add-pet-apelido')?.value?.trim() || '';
+      const vacinacaoEmDia = document.getElementById('add-pet-vacinas-status')?.checked !== false;
+      const observacoes = document.getElementById('add-pet-observacoes')?.value?.trim() || '';
+
+      const photos = tempPetPhotoDataUrl ? [tempPetPhotoDataUrl] : [];
+
+      const newPet = addPet(state, {
+        nome,
+        especie,
+        sexo,
+        dataNascimento,
+        peso,
+        raca,
+        apelido,
+        vacinacaoEmDia,
+        observacoes,
+        photos
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+
+      formAddPet.reset();
+      tempPetPhotoDataUrl = null;
+      const previewWrap = document.getElementById('add-pet-photo-preview-wrap');
+      const feedback = document.getElementById('add-pet-photo-feedback');
+      if (previewWrap) previewWrap.style.display = 'none';
+      if (feedback) feedback.textContent = '';
+
+      closeModal('modal-add-pet');
+      refreshAllUI();
+      showToast(`🐾 ${newPet.nome} cadastrado(a) com sucesso!`, 'success');
+    });
+  }
+
+  // Formulário: Editar Pet
+  const formEditPet = document.getElementById('form-edit-pet');
+  if (formEditPet) {
+    formEditPet.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const petId = document.getElementById('edit-pet-id')?.value;
+      if (!petId) return;
+
+      const nome = document.getElementById('edit-pet-nome')?.value?.trim();
+      const especie = document.getElementById('edit-pet-especie')?.value || 'cachorro';
+      const sexo = document.getElementById('edit-pet-sexo')?.value || 'femea';
+      const dataNascimento = document.getElementById('edit-pet-nascimento')?.value || '';
+      const peso = parseFloat(document.getElementById('edit-pet-peso')?.value) || 0;
+      const raca = document.getElementById('edit-pet-raca')?.value?.trim() || '';
+      const apelido = document.getElementById('edit-pet-apelido')?.value?.trim() || '';
+      const vacinacaoEmDia = document.getElementById('edit-pet-vacinas-status')?.checked !== false;
+      const observacoes = document.getElementById('edit-pet-observacoes')?.value?.trim() || '';
+
+      updatePet(state, petId, {
+        nome,
+        especie,
+        sexo,
+        dataNascimento,
+        peso,
+        raca,
+        apelido,
+        vacinacaoEmDia,
+        observacoes
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      closeModal('modal-edit-pet');
+      if (currentActivePetFolderId === petId) {
+        renderPetFolderModal(state, petId, currentActivePetFolderTab);
+      }
+      refreshAllUI();
+      showToast('Dados do pet atualizados com sucesso!', 'success');
+    });
+  }
+
+  // Gatilhos de Abertura de Modais de Sub-registros
+  document.addEventListener('click', (e) => {
+    const btnRacao = e.target.closest('[data-open-add-pet-racao]');
+    if (btnRacao) {
+      const petId = btnRacao.getAttribute('data-open-add-pet-racao') || currentActivePetFolderId;
+      const hiddenId = document.getElementById('pet-racao-pet-id');
+      const dataInput = document.getElementById('pet-racao-data');
+      if (hiddenId) hiddenId.value = petId;
+      if (dataInput) dataInput.value = getLocalDateString();
+      openModal('modal-add-pet-racao');
+      return;
+    }
+
+    const btnAreia = e.target.closest('[data-open-add-pet-areia]');
+    if (btnAreia) {
+      const petId = btnAreia.getAttribute('data-open-add-pet-areia') || currentActivePetFolderId;
+      const hiddenId = document.getElementById('pet-areia-pet-id');
+      const dataInput = document.getElementById('pet-areia-data');
+      if (hiddenId) hiddenId.value = petId;
+      if (dataInput) dataInput.value = getLocalDateString();
+      openModal('modal-add-pet-areia');
+      return;
+    }
+
+    const btnBanho = e.target.closest('[data-open-add-pet-banho]');
+    if (btnBanho) {
+      const petId = btnBanho.getAttribute('data-open-add-pet-banho') || currentActivePetFolderId;
+      const hiddenId = document.getElementById('pet-banho-pet-id');
+      const dataInput = document.getElementById('pet-banho-data');
+      if (hiddenId) hiddenId.value = petId;
+      if (dataInput) dataInput.value = getLocalDateString();
+      openModal('modal-add-pet-banho');
+      return;
+    }
+
+    const btnVacina = e.target.closest('[data-open-add-pet-vacina]');
+    if (btnVacina) {
+      const petId = btnVacina.getAttribute('data-open-add-pet-vacina') || currentActivePetFolderId;
+      const hiddenId = document.getElementById('pet-vacina-pet-id');
+      const dataInput = document.getElementById('pet-vacina-data');
+      const proxInput = document.getElementById('pet-vacina-proxima-data');
+      if (hiddenId) hiddenId.value = petId;
+      const today = getLocalDateString();
+      if (dataInput) dataInput.value = today;
+      if (proxInput) proxInput.value = addDaysToDateStr(today, 365);
+      openModal('modal-add-pet-vacina');
+      return;
+    }
+
+    const btnVerm = e.target.closest('[data-open-add-pet-vermifugo]');
+    if (btnVerm) {
+      const petId = btnVerm.getAttribute('data-open-add-pet-vermifugo') || currentActivePetFolderId;
+      const pet = (state.pets || []).find(p => p.id === petId);
+      const hiddenId = document.getElementById('pet-vermifugo-pet-id');
+      const dataInput = document.getElementById('pet-vermifugo-data');
+      const pesoInput = document.getElementById('pet-vermifugo-peso');
+      const doseInput = document.getElementById('pet-vermifugo-dose');
+      const proxInput = document.getElementById('pet-vermifugo-proxima-data');
+      if (hiddenId) hiddenId.value = petId;
+      const today = getLocalDateString();
+      if (dataInput) dataInput.value = today;
+      if (pet && pet.peso) {
+        if (pesoInput) pesoInput.value = pet.peso;
+        if (doseInput) doseInput.value = formatPetDoseVermifugo(pet.peso);
+      }
+      if (proxInput) proxInput.value = addDaysToDateStr(today, 365);
+      openModal('modal-add-pet-vermifugo');
+      return;
+    }
+
+    const btnExame = e.target.closest('[data-open-add-pet-exame]');
+    if (btnExame) {
+      const petId = btnExame.getAttribute('data-open-add-pet-exame') || currentActivePetFolderId;
+      const hiddenId = document.getElementById('pet-exame-pet-id');
+      const dataInput = document.getElementById('pet-exame-data');
+      if (hiddenId) hiddenId.value = petId;
+      if (dataInput) dataInput.value = getLocalDateString();
+      openModal('modal-add-pet-exame');
+      return;
+    }
+  });
+
+  // Cálculo dinâmico da dose de vermífugo ao alterar o peso no formulário
+  const vermPesoInput = document.getElementById('pet-vermifugo-peso');
+  const vermDoseInput = document.getElementById('pet-vermifugo-dose');
+  if (vermPesoInput && vermDoseInput) {
+    vermPesoInput.addEventListener('input', () => {
+      const p = parseFloat(vermPesoInput.value);
+      if (p > 0) {
+        vermDoseInput.value = formatPetDoseVermifugo(p);
+      }
+    });
+  }
+
+  // Previsão dinâmica no modal de ração
+  const racaoDataInput = document.getElementById('pet-racao-data');
+  const racaoKgInput = document.getElementById('pet-racao-kg');
+  const racaoConsumoInput = document.getElementById('pet-racao-consumo-g');
+  const racaoDuracaoInput = document.getElementById('pet-racao-duracao-dias');
+  const racaoPreview = document.getElementById('pet-racao-previsao-preview');
+
+  const updateRacaoPreview = () => {
+    if (!racaoPreview) return;
+    const kg = parseFloat(racaoKgInput?.value) || 0;
+    const consumo = parseFloat(racaoConsumoInput?.value) || 0;
+    const dt = racaoDataInput?.value || getLocalDateString();
+
+    let duracao = parseInt(racaoDuracaoInput?.value, 10) || 0;
+    if (kg > 0 && consumo > 0 && !racaoDuracaoInput?.value) {
+      duracao = Math.floor((kg * 1000) / consumo);
+    }
+
+    if (duracao > 0) {
+      const prox = addDaysToDateStr(dt, duracao);
+      const [y, m, d] = prox.split('-');
+      racaoPreview.textContent = `📅 Data provável da próxima compra: ${d}/${m}/${y} (~${duracao} dias de duração)`;
+    } else {
+      racaoPreview.textContent = '📅 Data provável da próxima compra: informe os dados para estimar';
+    }
+  };
+
+  [racaoDataInput, racaoKgInput, racaoConsumoInput, racaoDuracaoInput].forEach(el => {
+    if (el) el.addEventListener('input', updateRacaoPreview);
+  });
+
+  // Submissão Ração
+  const formAddRacao = document.getElementById('form-add-pet-racao');
+  if (formAddRacao) {
+    formAddRacao.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const petId = document.getElementById('pet-racao-pet-id')?.value;
+      if (!petId) return;
+
+      const dataCompra = document.getElementById('pet-racao-data')?.value || getLocalDateString();
+      const marca = document.getElementById('pet-racao-marca')?.value?.trim() || '';
+      const quantidadeKg = parseFloat(document.getElementById('pet-racao-kg')?.value) || 1;
+      const consumoDiarioGramas = parseFloat(document.getElementById('pet-racao-consumo-g')?.value) || 0;
+      const duracaoDiasEstimada = parseInt(document.getElementById('pet-racao-duracao-dias')?.value, 10) || (consumoDiarioGramas > 0 ? Math.floor((quantidadeKg * 1000) / consumoDiarioGramas) : 30);
+      const valor = parseCurrency(document.getElementById('pet-racao-valor')?.value);
+      const notas = document.getElementById('pet-racao-notas')?.value?.trim() || '';
+
+      addPetRacaoPurchase(state, petId, {
+        dataCompra,
+        marca,
+        quantidadeKg,
+        consumoDiarioGramas,
+        duracaoDiasEstimada,
+        valor,
+        notas
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      formAddRacao.reset();
+      closeModal('modal-add-pet-racao');
+      renderPetFolderModal(state, petId, 'racao');
+      refreshAllUI();
+      showToast('🥣 Compra de ração registrada!', 'success');
+    });
+  }
+
+  // Submissão Areia
+  const formAddAreia = document.getElementById('form-add-pet-areia');
+  if (formAddAreia) {
+    formAddAreia.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const petId = document.getElementById('pet-areia-pet-id')?.value;
+      if (!petId) return;
+
+      const dataCompra = document.getElementById('pet-areia-data')?.value || getLocalDateString();
+      const marca = document.getElementById('pet-areia-marca')?.value?.trim() || '';
+      const quantidadeKg = parseFloat(document.getElementById('pet-areia-kg')?.value) || 4;
+      const duracaoDiasEstimada = parseInt(document.getElementById('pet-areia-duracao-dias')?.value, 10) || 25;
+      const valor = parseCurrency(document.getElementById('pet-areia-valor')?.value);
+      const notas = document.getElementById('pet-areia-notas')?.value?.trim() || '';
+
+      addPetAreiaPurchase(state, petId, {
+        dataCompra,
+        marca,
+        quantidadeKg,
+        duracaoDiasEstimada,
+        valor,
+        notas
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      formAddAreia.reset();
+      closeModal('modal-add-pet-areia');
+      renderPetFolderModal(state, petId, 'areia');
+      refreshAllUI();
+      showToast('🏖️ Compra de areia registrada!', 'success');
+    });
+  }
+
+  // Submissão Banho
+  const formAddBanho = document.getElementById('form-add-pet-banho');
+  if (formAddBanho) {
+    formAddBanho.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const petId = document.getElementById('pet-banho-pet-id')?.value;
+      if (!petId) return;
+
+      const data = document.getElementById('pet-banho-data')?.value || getLocalDateString();
+      const tipo = document.getElementById('pet-banho-tipo')?.value || 'casa';
+      const local = document.getElementById('pet-banho-local')?.value?.trim() || '';
+      const valor = parseCurrency(document.getElementById('pet-banho-valor')?.value);
+      const notas = document.getElementById('pet-banho-notas')?.value?.trim() || '';
+
+      addPetBanho(state, petId, {
+        data,
+        tipo,
+        local,
+        valor,
+        notas
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      formAddBanho.reset();
+      closeModal('modal-add-pet-banho');
+      renderPetFolderModal(state, petId, 'higiene');
+      refreshAllUI();
+      showToast('🛁 Banho registrado!', 'success');
+    });
+  }
+
+  // Submissão Vacina
+  const formAddVacina = document.getElementById('form-add-pet-vacina');
+  if (formAddVacina) {
+    formAddVacina.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const petId = document.getElementById('pet-vacina-pet-id')?.value;
+      if (!petId) return;
+
+      const nome = document.getElementById('pet-vacina-nome')?.value?.trim() || 'Vacina';
+      const dataAplicacao = document.getElementById('pet-vacina-data')?.value || getLocalDateString();
+      const proximaData = document.getElementById('pet-vacina-proxima-data')?.value || addDaysToDateStr(dataAplicacao, 365);
+      const lote = document.getElementById('pet-vacina-lote')?.value?.trim() || '';
+      const clinica = document.getElementById('pet-vacina-clinica')?.value?.trim() || '';
+      const notas = document.getElementById('pet-vacina-notas')?.value?.trim() || '';
+
+      addPetVacina(state, petId, {
+        nome,
+        dataAplicacao,
+        proximaData,
+        lote,
+        clinica,
+        notas
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      formAddVacina.reset();
+      closeModal('modal-add-pet-vacina');
+      renderPetFolderModal(state, petId, 'vacinas');
+      refreshAllUI();
+      showToast('💉 Vacina registrada com sucesso!', 'success');
+    });
+  }
+
+  // Submissão Vermífugo
+  const formAddVermifugo = document.getElementById('form-add-pet-vermifugo');
+  if (formAddVermifugo) {
+    formAddVermifugo.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const petId = document.getElementById('pet-vermifugo-pet-id')?.value;
+      if (!petId) return;
+
+      const medicamento = document.getElementById('pet-vermifugo-nome')?.value?.trim() || 'Vermífugo';
+      const dataAplicacao = document.getElementById('pet-vermifugo-data')?.value || getLocalDateString();
+      const pesoKg = parseFloat(document.getElementById('pet-vermifugo-peso')?.value) || 0;
+      const dose = document.getElementById('pet-vermifugo-dose')?.value?.trim() || formatPetDoseVermifugo(pesoKg);
+      const proximaData = document.getElementById('pet-vermifugo-proxima-data')?.value || addDaysToDateStr(dataAplicacao, 365);
+      const notas = document.getElementById('pet-vermifugo-notas')?.value?.trim() || '';
+
+      addPetVermifugo(state, petId, {
+        medicamento,
+        dataAplicacao,
+        pesoKg,
+        dose,
+        proximaData,
+        notas
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      formAddVermifugo.reset();
+      closeModal('modal-add-pet-vermifugo');
+      renderPetFolderModal(state, petId, 'vacinas');
+      refreshAllUI();
+      showToast('💊 Vermifugação registrada!', 'success');
+    });
+  }
+
+  // Submissão Exame
+  const formAddExame = document.getElementById('form-add-pet-exame');
+  if (formAddExame) {
+    formAddExame.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const petId = document.getElementById('pet-exame-pet-id')?.value;
+      if (!petId) return;
+
+      const data = document.getElementById('pet-exame-data')?.value || getLocalDateString();
+      const tipo = document.getElementById('pet-exame-tipo')?.value || 'Consulta';
+      const clinica = document.getElementById('pet-exame-clinica')?.value?.trim() || '';
+      const veterinario = document.getElementById('pet-exame-veterinario')?.value?.trim() || '';
+      const descricao = document.getElementById('pet-exame-descricao')?.value?.trim() || '';
+      const pendencias = document.getElementById('pet-exame-pendencias')?.value?.trim() || '';
+
+      addPetExame(state, petId, {
+        data,
+        tipo,
+        clinica,
+        veterinario,
+        descricao,
+        pendencias
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      formAddExame.reset();
+      closeModal('modal-add-pet-exame');
+      renderPetFolderModal(state, petId, 'exames');
+      refreshAllUI();
+      showToast('🩺 Atendimento veterinário salvo!', 'success');
+    });
+  }
+
+  // Exclusões de Sub-registros
+  document.addEventListener('click', (e) => {
+    const delRacao = e.target.closest('[data-delete-pet-racao]');
+    if (delRacao) {
+      const racaoId = delRacao.getAttribute('data-delete-pet-racao');
+      const petId = delRacao.getAttribute('data-pet-id') || currentActivePetFolderId;
+      if (confirm('Excluir este lançamento de ração?')) {
+        deletePetRacaoPurchase(state, petId, racaoId);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        renderPetFolderModal(state, petId, 'racao');
+        refreshAllUI();
+      }
+      return;
+    }
+
+    const delAreia = e.target.closest('[data-delete-pet-areia]');
+    if (delAreia) {
+      const areiaId = delAreia.getAttribute('data-delete-pet-areia');
+      const petId = delAreia.getAttribute('data-pet-id') || currentActivePetFolderId;
+      if (confirm('Excluir este lançamento de areia?')) {
+        deletePetAreiaPurchase(state, petId, areiaId);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        renderPetFolderModal(state, petId, 'areia');
+        refreshAllUI();
+      }
+      return;
+    }
+
+    const delBanho = e.target.closest('[data-delete-pet-banho]');
+    if (delBanho) {
+      const banhoId = delBanho.getAttribute('data-delete-pet-banho');
+      const petId = delBanho.getAttribute('data-pet-id') || currentActivePetFolderId;
+      if (confirm('Excluir este registro de banho?')) {
+        deletePetBanho(state, petId, banhoId);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        renderPetFolderModal(state, petId, 'higiene');
+        refreshAllUI();
+      }
+      return;
+    }
+
+    const delVacina = e.target.closest('[data-delete-pet-vacina]');
+    if (delVacina) {
+      const vacinaId = delVacina.getAttribute('data-delete-pet-vacina');
+      const petId = delVacina.getAttribute('data-pet-id') || currentActivePetFolderId;
+      if (confirm('Excluir este registro de vacina?')) {
+        deletePetVacina(state, petId, vacinaId);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        renderPetFolderModal(state, petId, 'vacinas');
+        refreshAllUI();
+      }
+      return;
+    }
+
+    const delVerm = e.target.closest('[data-delete-pet-vermifugo]');
+    if (delVerm) {
+      const vermId = delVerm.getAttribute('data-delete-pet-vermifugo');
+      const petId = delVerm.getAttribute('data-pet-id') || currentActivePetFolderId;
+      if (confirm('Excluir este registro de vermífugo?')) {
+        deletePetVermifugo(state, petId, vermId);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        renderPetFolderModal(state, petId, 'vacinas');
+        refreshAllUI();
+      }
+      return;
+    }
+
+    const delExame = e.target.closest('[data-delete-pet-exame]');
+    if (delExame) {
+      const exameId = delExame.getAttribute('data-delete-pet-exame');
+      const petId = delExame.getAttribute('data-pet-id') || currentActivePetFolderId;
+      if (confirm('Excluir este atendimento veterinário?')) {
+        deletePetExame(state, petId, exameId);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        renderPetFolderModal(state, petId, 'exames');
+        refreshAllUI();
+      }
+      return;
+    }
+  });
+}
+
 // CONTROLE INTELIGENTE DE MODAIS (Anti-Fechamento / Suporte ao Voltar do Celular)
 // -------------------------------------------------------------
 const activeModalStack = [];

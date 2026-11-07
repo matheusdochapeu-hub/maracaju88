@@ -8,7 +8,8 @@ import {
   INITIAL_TASKS,
   INITIAL_CARRO,
   INITIAL_REFORMAS,
-  INITIAL_SONHOS
+  INITIAL_SONHOS,
+  INITIAL_PETS
 } from './config.js';
 import { DEFAULT_CATEGORIES } from './categories.js';
 
@@ -32,6 +33,7 @@ export function getInitialState() {
     sonhos: [...INITIAL_SONHOS],
     compras: [],
     comprasRegistros: [],
+    pets: JSON.parse(JSON.stringify(INITIAL_PETS)),
     catalog: [],
     categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)),
     settings: {
@@ -86,6 +88,7 @@ export function loadState() {
       sonhos: Array.isArray(parsed.sonhos) ? parsed.sonhos : initial.sonhos,
       compras: Array.isArray(parsed.compras) ? parsed.compras : initial.compras,
       comprasRegistros: Array.isArray(parsed.comprasRegistros) ? parsed.comprasRegistros : initial.comprasRegistros,
+      pets: Array.isArray(parsed.pets) ? parsed.pets : JSON.parse(JSON.stringify(INITIAL_PETS)),
       catalog: Array.isArray(parsed.catalog) ? parsed.catalog : [],
       categories: {
         tarefas: (parsed.categories && Array.isArray(parsed.categories.tarefas) && parsed.categories.tarefas.length > 0)

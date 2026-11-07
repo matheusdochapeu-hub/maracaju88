@@ -4,7 +4,7 @@
 
 export const APP_CONFIG = {
   appName: "Maracaju",
-  version: "2.3.3",
+  version: "2.4.0",
   storageKey: "MARACAJU_STATE_v1",
   legacyStorageKeys: ["MARACAJU88_STATE_v1"],
   deviceStorageKey: "MARACAJU_DEVICE_v1",
@@ -205,3 +205,86 @@ export const INITIAL_SONHOS = [
 ];
 
 export const INITIAL_COMPRAS = [];
+
+export const INITIAL_PETS = [
+  {
+    id: "pet_mandioca",
+    nome: "Mandioca",
+    especie: "cachorro",
+    dataNascimento: "2022-04-10",
+    apelido: "Dioca",
+    sexo: "femea",
+    raca: "Vira-lata (SRD)",
+    pesoKg: 14.5,
+    vacinacaoEmDia: true,
+    fotos: [],
+    observacoes: "Cachorrinha amada da família. Banhos regulares e vacinas em dia.",
+    racao: [
+      {
+        id: "racao_1",
+        dataCompra: "2026-10-15",
+        marca: "Premier / Golden Especial",
+        quantidadeKg: 15,
+        consumoDiarioG: 250,
+        duracaoDias: 60,
+        dataPrevisaoFim: "2026-12-14",
+        notas: "Saco de 15 kg"
+      }
+    ],
+    areia: [],
+    higiene: [
+      {
+        id: "banho_1",
+        data: "2026-10-28",
+        tipo: "petshop",
+        local: "Pet Shop Bicho Mimado",
+        valor: 75.00,
+        notas: "Banho completo e tosa higiênica"
+      }
+    ],
+    vacinas: [
+      {
+        id: "vac_1",
+        vacina: "V10 (Décupla)",
+        dataAplicacao: "2026-05-10",
+        dataProximaDose: "2027-05-10",
+        lote: "BR-9842",
+        clinica: "Clínica Veterinária Central"
+      },
+      {
+        id: "vac_2",
+        vacina: "Antirrábica",
+        dataAplicacao: "2026-05-10",
+        dataProximaDose: "2027-05-10",
+        lote: "AR-2204",
+        clinica: "Clínica Veterinária Central"
+      }
+    ],
+    vermifugos: [
+      {
+        id: "verm_1",
+        nome: "Vermífugo Amplo Espectro / Ivermectina",
+        dataAplicacao: "2026-08-15",
+        dataProximaDose: "2027-02-15",
+        pesoAnimalKg: 14.5,
+        dose: "1,5 comprimido (base: 1 cp / 10 kg)",
+        notas: "Dose proporcional ao peso de 14,5 kg"
+      }
+    ],
+    exames: [
+      {
+        id: "ex_1",
+        data: "2026-05-10",
+        tipo: "Consulta de Rotina",
+        clinica: "Clínica Veterinária Central",
+        veterinario: "Dr. André",
+        descricao: "Check-up anual, ausculta cardíaca normal, dentes limpos.",
+        pendencias: "",
+        fotos: []
+      }
+    ],
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-11-06T00:00:00.000Z"
+  }
+];
+

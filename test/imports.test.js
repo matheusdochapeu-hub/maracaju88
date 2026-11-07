@@ -18,6 +18,7 @@ test('Módulos ES: Todos os arquivos JS do app importam sem erros sintáticos ou
     '../js/carro.js',
     '../js/reformas.js',
     '../js/sonhos.js',
+    '../js/pets.js',
     '../js/sheets.js',
     '../js/ui.js'
   ];
