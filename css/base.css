@@ -188,6 +188,8 @@ body {
   max-width: var(--max-content-width);
   margin: 0 auto;
   padding: 0.75rem 0.75rem 2rem 0.75rem;
+  overflow-x: hidden;
+  position: relative;
 }
 
 /* Tab Content Visibility */

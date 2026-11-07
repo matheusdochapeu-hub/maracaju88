@@ -43,3 +43,47 @@
   pointer-events: none;
   z-index: 3000;
 }
+
+
+/* ============================================================
+   EFEITO CARROSSEL DE ABAS (SLIDE HORIZONTAL SUAVE)
+   ============================================================ */
+@keyframes carouselSlideInRight {
+  0% {
+    opacity: 0.15;
+    transform: translate3d(36px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes carouselSlideInLeft {
+  0% {
+    opacity: 0.15;
+    transform: translate3d(-36px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.tab-content.carousel-slide-right {
+  animation: carouselSlideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.tab-content.carousel-slide-left {
+  animation: carouselSlideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab-content.carousel-slide-right,
+  .tab-content.carousel-slide-left {
+    animation: none !important;
+    transform: none !important;
+  }
+}

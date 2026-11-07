@@ -530,27 +530,124 @@ function handleActiveCalendarDayChange(detail) {
     renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
   }
 }
+// ============================================================
+// CARROSSEL & NAVEGAÇÃO DE ABAS
+// ============================================================
+const TAB_ORDER = ['tarefas', 'pets', 'compras', 'carro', 'reformas', 'sonhos', 'ajustes'];
+
+function switchTab(targetTab, forceDirection = null) {
+  if (!targetTab) return;
+
+  const oldIndex = TAB_ORDER.indexOf(currentTab);
+  const newIndex = TAB_ORDER.indexOf(targetTab);
+
+  let dir = forceDirection;
+  if (!dir && oldIndex !== -1 && newIndex !== -1) {
+    dir = newIndex >= oldIndex ? 'right' : 'left';
+  } else if (!dir) {
+    dir = 'right';
+  }
+
+  // Atualiza pílulas da barra de navegação
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(n => {
+    n.classList.toggle('active', n.getAttribute('data-tab') === targetTab);
+  });
+
+  // Atualiza visibilidade com animação direcional de carrossel
+  const allTabs = document.querySelectorAll('.tab-content');
+  const activeContent = document.getElementById(`tab-${targetTab}`);
+
+  allTabs.forEach(tc => {
+    tc.classList.remove('active', 'carousel-slide-right', 'carousel-slide-left');
+  });
+
+  if (activeContent) {
+    activeContent.classList.add('active');
+    activeContent.classList.add(dir === 'right' ? 'carousel-slide-right' : 'carousel-slide-left');
+  }
+
+  currentTab = targetTab;
+  refreshAllUI();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function initTabsSwipeCarousel() {
+  const mainEl = document.querySelector('.app-main') || document.body;
+  if (!mainEl) return;
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+
+  mainEl.addEventListener('touchstart', (e) => {
+    // Ignora se algum modal estiver aberto
+    if (document.querySelector('.modal-overlay.active')) return;
+
+    // Ignora se o toque começou dentro de um elemento com scroll horizontal ou formulário
+    if (e.target.closest('.chips-scroll, .pets-subnav-pills, .carousel, input, textarea, select, [data-prevent-swipe]')) {
+      return;
+    }
+
+    const touch = e.changedTouches && e.changedTouches[0];
+    if (!touch) return;
+
+    touchStartX = touch.screenX;
+    touchStartY = touch.screenY;
+    touchStartTime = Date.now();
+  }, { passive: true });
+
+  mainEl.addEventListener('touchend', (e) => {
+    if (document.querySelector('.modal-overlay.active')) return;
+    if (e.target.closest('.chips-scroll, .pets-subnav-pills, .carousel, input, textarea, select, [data-prevent-swipe]')) {
+      return;
+    }
+
+    const touch = e.changedTouches && e.changedTouches[0];
+    if (!touch) return;
+
+    const deltaX = touch.screenX - touchStartX;
+    const deltaY = touch.screenY - touchStartY;
+    const deltaTime = Date.now() - touchStartTime;
+
+    // Regras de swipe horizontal preciso:
+    // Distância mínima 50px, predomínio horizontal > 1.3x do vertical, tempo menor que 500ms
+    if (Math.abs(deltaX) >= 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3 && deltaTime < 500) {
+      const currentIndex = TAB_ORDER.indexOf(currentTab);
+      if (currentIndex === -1) return;
+
+      if (deltaX < 0) {
+        // Swipe para a esquerda -> avança para a próxima aba
+        if (currentIndex < TAB_ORDER.length - 1) {
+          const nextTab = TAB_ORDER[currentIndex + 1];
+          playSubtleClick(state.settings.soundEnabled);
+          switchTab(nextTab, 'right');
+        }
+      } else {
+        // Swipe para a direita -> volta para a aba anterior
+        if (currentIndex > 0) {
+          const prevTab = TAB_ORDER[currentIndex - 1];
+          playSubtleClick(state.settings.soundEnabled);
+          switchTab(prevTab, 'left');
+        }
+      }
+    }
+  }, { passive: true });
+}
+
 function initNavigation() {
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       const targetTab = item.getAttribute('data-tab');
-      if (!targetTab) return;
+      if (!targetTab || targetTab === currentTab) return;
 
       playSubtleClick(state.settings.soundEnabled);
-
-      navItems.forEach(n => n.classList.remove('active'));
-      item.classList.add('active');
-
-      document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-      const activeContent = document.getElementById(`tab-${targetTab}`);
-      if (activeContent) activeContent.classList.add('active');
-
-      currentTab = targetTab;
-      refreshAllUI();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      switchTab(targetTab);
     });
   });
+
+  initTabsSwipeCarousel();
 }
 
 // -------------------------------------------------------------
