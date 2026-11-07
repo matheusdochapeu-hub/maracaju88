@@ -4,6 +4,15 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-06 23:35] - Sub-abas/Categorias no Topo de Pets (Estilo FisioFlow / Pacientes), Foto do Pet no Avatar e Resiliencia Definitiva no Leitor de PDF (v2.4.1)
+
+### Problemas Identificados e Solucao
+1. Foto do Pet: Normalizados fotos e photos em addPet e updatePet, adicionado badge de camera rapida no card e upload no modal de edicao com unshift para virar avatar imediatamente ao lado do nome.
+2. Sub-abas de Categorias (Estilo FisioFlow): Categorias navegaveis no topo da aba Pets (Nossos Pets, Racao, Areia, Higiene, Vacinacoes, Exames) com atalho direto nos botoes dos cards funcionando como filtro do pet.
+3. Resiliencia no PDF: Fallbacks no parser para cupons simples e consolidado quando total existe, impedindo erro impeditivo.
+
+---
+
 ## [2026-11-06 22:35] - Aba Oficial "Pets" (Estilo FisioFlow), Ração, Areia, Banhos, Vacinas & Correção Definitiva do Parser de PDF (v2.4.0)
 
 ### 🔍 Problemas Identificados & Causa Raiz

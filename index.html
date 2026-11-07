@@ -239,31 +239,20 @@
     <!-- ABA: PETS (MANDIOCA & BICHINHOS DA FAMÍLIA) -->
     <!-- ========================================== -->
     <section id="tab-pets" class="tab-content">
-      <!-- Banner de Resumo e Ação Rápida -->
-      <div class="card" style="margin-bottom: 1rem; background: linear-gradient(135deg, rgba(46, 89, 51, 0.08), rgba(217, 119, 6, 0.08)); border: 1px solid var(--border-subtle);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-          <div>
-            <h2 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--brand-moss-dark); display: flex; align-items: center; gap: 0.4rem;">
-              <span>🐾</span> Nossos Pets <span class="badge" id="pets-count-badge" style="background: rgba(46, 89, 51, 0.15); color: var(--brand-moss-dark); font-size: 0.75rem;">1 pet</span>
-            </h2>
-            <p style="margin: 0.25rem 0 0; font-size: 0.8rem; color: var(--text-secondary);">
-              Pastas individuais, ração, areia, higiene da Mandioca, vacinas e exames
-            </p>
-          </div>
-          <button type="button" class="btn btn-primary btn-sm" data-open-modal="modal-add-pet" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.85rem; font-weight: 700;">
-            <span>➕</span> Novo Pet
-          </button>
-        </div>
-
-        <!-- Barra de Busca e Chips de Espécie -->
-        <div style="margin-top: 0.85rem; display: flex; flex-direction: column; gap: 0.6rem;">
-          <input type="search" id="pet-search-input" class="form-control" placeholder="🔍 Buscar pet por nome, raça ou apelido..." style="height: 38px; font-size: 0.85rem;" />
-          <div class="chips-container" id="pets-species-chips"></div>
-        </div>
+      <!-- Barra de Navegação de Categorias dos Pets (Estilo FisioFlow) -->
+      <div class="pets-subnav-pills" id="pets-subnav-pills">
+        <button type="button" class="chip active" data-pet-subtab="pets">🐾 Nossos Pets</button>
+        <button type="button" class="chip" data-pet-subtab="racao">🥣 Ração</button>
+        <button type="button" class="chip" data-pet-subtab="areia">🏖️ Areia</button>
+        <button type="button" class="chip" data-pet-subtab="higiene">🛁 Higiene</button>
+        <button type="button" class="chip" data-pet-subtab="vacinas">💉 Vacinações</button>
+        <button type="button" class="chip" data-pet-subtab="exames">🩺 Exames</button>
       </div>
 
-      <!-- Container da Lista de Pets (Cards com Cascata FisioFlow) -->
-      <div id="pets-list-container"></div>
+      <!-- Container Dinâmico do Conteúdo da Sub-aba Ativa -->
+      <div id="pets-content-view">
+        <div id="pets-list-container"></div>
+      </div>
     </section>
 
     <section id="tab-compras" class="tab-content">
@@ -2030,9 +2019,7 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
-            <input type="checkbox" id="add-pet-vacinas-status" checked />
+
             Vacinação em dia
           </label>
         </div>
@@ -2106,6 +2093,27 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label">Foto do Pet</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📸 Câmera
+              <input type="file" id="edit-pet-camera" accept="image/*" capture="environment" style="display: none;" />
+            </label>
+            <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📁 Galeria
+              <input type="file" id="edit-pet-gallery" accept="image/*" style="display: none;" />
+            </label>
+            <button type="button" id="edit-pet-remove-photo" class="btn btn-outline btn-xs" style="color: var(--accent-danger); border-color: rgba(239, 68, 68, 0.3); display: none;">
+              🗑️ Remover
+            </button>
+            <span id="edit-pet-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
+          </div>
+          <div id="edit-pet-photo-preview-wrap" style="display: none; margin-top: 0.5rem;">
+            <img id="edit-pet-photo-img" src="" alt="Foto" style="width: 60px; height: 60px; border-radius: 12px; object-fit: cover; border: 2px solid var(--border-subtle);" />
+          </div>
+        </div>
+
+        <div class="form-group">
           <label style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
             <input type="checkbox" id="edit-pet-vacinas-status" />
             Vacinação em dia
@@ -2133,7 +2141,10 @@
         <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-racao">
-        <input type="hidden" id="pet-racao-pet-id" />
+        <div class="form-group">
+          <label class="form-label" for="pet-racao-pet-id">Pet *</label>
+          <select id="pet-racao-pet-id" class="form-control select-pet-target" required></select>
+        </div>
 
         <div class="form-group">
           <label class="form-label" for="pet-racao-data">Data da Compra *</label>
@@ -2193,7 +2204,10 @@
         <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-areia">
-        <input type="hidden" id="pet-areia-pet-id" />
+        <div class="form-group">
+          <label class="form-label" for="pet-areia-pet-id">Pet *</label>
+          <select id="pet-areia-pet-id" class="form-control select-pet-target" required></select>
+        </div>
 
         <div class="form-group">
           <label class="form-label" for="pet-areia-data">Data da Compra *</label>
@@ -2242,7 +2256,10 @@
         <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-banho">
-        <input type="hidden" id="pet-banho-pet-id" />
+        <div class="form-group">
+          <label class="form-label" for="pet-banho-pet-id">Pet *</label>
+          <select id="pet-banho-pet-id" class="form-control select-pet-target" required></select>
+        </div>
 
         <div class="form-group">
           <label class="form-label" for="pet-banho-data">Data do Banho *</label>
@@ -2289,7 +2306,10 @@
         <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-vacina">
-        <input type="hidden" id="pet-vacina-pet-id" />
+        <div class="form-group">
+          <label class="form-label" for="pet-vacina-pet-id">Pet *</label>
+          <select id="pet-vacina-pet-id" class="form-control select-pet-target" required></select>
+        </div>
 
         <div class="form-group">
           <label class="form-label" for="pet-vacina-nome">Vacina *</label>
@@ -2348,7 +2368,10 @@
         <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-vermifugo">
-        <input type="hidden" id="pet-vermifugo-pet-id" />
+        <div class="form-group">
+          <label class="form-label" for="pet-vermifugo-pet-id">Pet *</label>
+          <select id="pet-vermifugo-pet-id" class="form-control select-pet-target" required></select>
+        </div>
 
         <div class="form-group">
           <label class="form-label" for="pet-vermifugo-nome">Nome do Vermífugo *</label>
@@ -2397,7 +2420,10 @@
         <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-exame">
-        <input type="hidden" id="pet-exame-pet-id" />
+        <div class="form-group">
+          <label class="form-label" for="pet-exame-pet-id">Pet *</label>
+          <select id="pet-exame-pet-id" class="form-control select-pet-target" required></select>
+        </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">

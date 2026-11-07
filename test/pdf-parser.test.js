@@ -347,3 +347,37 @@ Valor a pagar R$: 21,48
   assert.equal(result.items[1].rawName, 'CHA MATE LEAO LIMA T');
   assert.equal(result.items[1].unitPrice, 18.29);
 });
+
+test('PDF Parser: Extrai itens em formato simples (nome e preco ao final da linha)', () => {
+  const linePriceText = `
+MERCADINHO DA ESQUINA
+CNPJ: 11.222.333/0001-44
+Data: 06/11/2026
+ARROZ TIO JOAO 5KG 25,90
+FEIJAO CARIOCA 1KG 8,50
+LEITE INTEGRAL PIRACANJUBA 4,89
+Valor Total R$: 39,29
+`;
+  const result = parseNfceDanfeText(linePriceText);
+  assert.equal(result.items.length, 3);
+  assert.equal(result.total, 39.29);
+  assert.ok(result.items[0].rawName.includes('ARROZ TIO JOAO'));
+  assert.equal(result.items[0].unitPrice, 25.90);
+  assert.ok(result.items[1].rawName.includes('FEIJAO CARIOCA'));
+  assert.ok(result.items[2].rawName.includes('LEITE INTEGRAL PIRACANJUBA'));
+});
+
+test('PDF Parser: Garante item consolidado quando total existe mas itens vieram atípicos', () => {
+  const atypicalText = `
+COMPROVANTE FISCAL
+CNPJ: 99.888.777/0001-66
+SUPERMERCADO DIA
+Emissao: 05/11/2026
+Valor a pagar R$: 150,75
+`;
+  const result = parseNfceDanfeText(atypicalText);
+  assert.equal(result.total, 150.75);
+  assert.equal(result.items.length, 1);
+  assert.ok(result.items[0].rawName.toLowerCase().includes('supermercado'));
+  assert.equal(result.items[0].totalPrice, 150.75);
+});

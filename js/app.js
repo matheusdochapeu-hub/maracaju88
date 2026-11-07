@@ -172,9 +172,12 @@ let currentCategoryManageModule = 'tarefas';
 let deferredInstallPrompt = null;
 let currentPetsSpeciesFilter = 'todos';
 let currentPetsSearchQuery = '';
+let currentPetSubTab = 'pets';
+let currentPetFilterId = null;
 let currentActivePetFolderId = null;
 let currentActivePetFolderTab = 'racao';
 let tempPetPhotoDataUrl = null;
+let tempEditPetPhotoDataUrl = null;
 
 // -------------------------------------------------------------
 // INICIALIZAÇÃO DO APP
@@ -420,7 +423,7 @@ function refreshAllUI() {
   } else if (currentTab === 'sonhos') {
     renderSonhosTab(state, currentSonhosFilter);
   } else if (currentTab === 'pets') {
-    renderPetsTab(state, currentPetsSpeciesFilter, currentPetsSearchQuery);
+    renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
   } else if (currentTab === 'compras' || currentTab === 'gamificacao') {
     renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
   } else if (currentTab === 'ajustes') {
@@ -3783,16 +3786,51 @@ function handleCloseBenefitCycle() {
 // MÓDULO PETS (Gestão de Animais, Ração, Areia, Banhos, Vacinas & Exames)
 // -------------------------------------------------------------
 function initPetsModule() {
-  // Filtro de Busca de Pets
-  const searchInput = document.getElementById('pet-search-input');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
+  // Filtro de Busca de Pets (suporta tanto o input dinâmico quanto estático)
+  document.addEventListener('input', (e) => {
+    if (e.target && (e.target.id === 'input-search-pets' || e.target.id === 'pet-search-input')) {
       currentPetsSearchQuery = (e.target.value || '').trim();
       if (currentTab === 'pets') {
-        renderPetsTab(state, currentPetsSpeciesFilter, currentPetsSearchQuery);
+        renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
       }
-    });
-  }
+    }
+  });
+
+  // Navegação entre Sub-abas/Categorias dos Pets (Estilo FisioFlow)
+  document.addEventListener('click', (e) => {
+    const subTabBtn = e.target.closest('[data-pet-subtab]');
+    if (subTabBtn) {
+      currentPetSubTab = subTabBtn.getAttribute('data-pet-subtab') || 'pets';
+      refreshAllUI();
+      return;
+    }
+
+    // Atalho direto nos botões do card do pet (abre a categoria já filtrando pelo pet)
+    const navBtn = e.target.closest('[data-nav-pet-subtab]');
+    if (navBtn) {
+      currentPetSubTab = navBtn.getAttribute('data-nav-pet-subtab') || 'pets';
+      currentPetFilterId = navBtn.getAttribute('data-pet-id') || null;
+      refreshAllUI();
+      return;
+    }
+
+    // Seletor de filtro por Pet na barra horizontal da categoria
+    const filterBtn = e.target.closest('[data-select-pet-filter]');
+    if (filterBtn) {
+      const pid = filterBtn.getAttribute('data-select-pet-filter');
+      currentPetFilterId = pid ? pid : null;
+      refreshAllUI();
+      return;
+    }
+
+    // Botão Limpar Filtro de Pet ("Ver Todos")
+    const clearBtn = e.target.closest('[data-clear-pet-filter]');
+    if (clearBtn) {
+      currentPetFilterId = null;
+      refreshAllUI();
+      return;
+    }
+  });
 
   // Filtros por Espécie (chips)
   document.addEventListener('click', (e) => {
@@ -3802,7 +3840,30 @@ function initPetsModule() {
       chip.classList.add('active');
       currentPetsSpeciesFilter = chip.getAttribute('data-pet-species-filter') || 'todos';
       if (currentTab === 'pets') {
-        renderPetsTab(state, currentPetsSpeciesFilter, currentPetsSearchQuery);
+        renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
+      }
+    }
+  });
+
+  // Upload rápido de foto diretamente pelo badge de câmera no Avatar do Pet
+  document.addEventListener('change', async (e) => {
+    if (e.target && e.target.classList.contains('input-pet-photo-card')) {
+      const file = e.target.files && e.target.files[0];
+      const petId = e.target.getAttribute('data-pet-id');
+      if (!file || !petId) return;
+      try {
+        showToast('Atualizando foto do pet... 📸', 'info', 1500);
+        const compressed = await compressImageFile(file, 800, 800, 0.82);
+        addPetPhoto(state, petId, compressed);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        refreshAllUI();
+        showToast('Foto do pet atualizada com sucesso! 🐾', 'success');
+      } catch (err) {
+        console.error('Erro ao atualizar foto do pet:', err);
+        showToast('Não foi possível processar a imagem do pet.', 'error');
+      } finally {
+        e.target.value = '';
       }
     }
   });
@@ -3812,10 +3873,14 @@ function initPetsModule() {
     const toggleBtn = e.target.closest('[data-toggle-pet-cascade]');
     if (toggleBtn) {
       const petId = toggleBtn.getAttribute('data-toggle-pet-cascade');
-      const cascade = document.getElementById(`pet-cascade-${petId}`);
+      const card = document.getElementById(`pet-card-${petId}`);
+      const cascade = card ? card.querySelector('.pet-cascade') : null;
+      const chevron = card ? card.querySelector('.cascade-chevron') : null;
       if (cascade) {
-        const isExpanded = cascade.classList.toggle('is-expanded');
-        toggleBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+        cascade.classList.toggle('hidden');
+        if (chevron) {
+          chevron.textContent = cascade.classList.contains('hidden') ? '▼' : '▲';
+        }
       }
     }
   });
@@ -3847,9 +3912,9 @@ function initPetsModule() {
     }
   });
 
-  // Abrir modal de edição de Pet
+  // Abrir modal de edição de Pet (suporta data-open-edit-pet e data-edit-pet)
   document.addEventListener('click', (e) => {
-    const editBtn = e.target.closest('[data-open-edit-pet]');
+    const editBtn = e.target.closest('[data-open-edit-pet]') || e.target.closest('[data-edit-pet]');
     if (editBtn) {
       const petId = editBtn.getAttribute('data-open-edit-pet');
       const pet = (state.pets || []).find(p => p.id === petId);
@@ -3876,9 +3941,65 @@ function initPetsModule() {
         if (vacStatusEl) vacStatusEl.checked = pet.vacinacaoEmDia !== false;
         if (obsEl) obsEl.value = pet.observacoes || '';
 
+        // Foto no modal de edição
+        tempEditPetPhotoDataUrl = null;
+        const editPreviewWrap = document.getElementById('edit-pet-photo-preview-wrap');
+        const editPreviewImg = document.getElementById('edit-pet-photo-img');
+        const editFeedback = document.getElementById('edit-pet-photo-feedback');
+        const petPhoto = (pet.fotos && pet.fotos.length > 0 && pet.fotos[0]) ||
+                         (pet.photos && pet.photos.length > 0 && pet.photos[0]) ||
+                         null;
+        if (editPreviewWrap && editPreviewImg) {
+          if (petPhoto) {
+            editPreviewImg.src = petPhoto;
+            editPreviewWrap.style.display = 'block';
+          } else {
+            editPreviewWrap.style.display = 'none';
+          }
+        }
+        if (editFeedback) editFeedback.textContent = '';
+
         openModal('modal-edit-pet');
       }
     }
+  });
+
+  // Remover foto no modal de edição
+  const btnRemoveEditPhoto = document.getElementById('btn-remove-edit-pet-photo');
+  if (btnRemoveEditPhoto) {
+    btnRemoveEditPhoto.addEventListener('click', () => {
+      tempEditPetPhotoDataUrl = ''; // string vazia indica remoção da foto
+      const editPreviewWrap = document.getElementById('edit-pet-photo-preview-wrap');
+      const editFeedback = document.getElementById('edit-pet-photo-feedback');
+      if (editPreviewWrap) editPreviewWrap.style.display = 'none';
+      if (editFeedback) editFeedback.textContent = 'Foto removida (salve para confirmar).';
+    });
+  }
+
+  // Upload de Foto de Pet na Criação (Câmera & Galeria)
+  setupPetPhotoUpload('add-pet-camera', 'add-pet-gallery', (dataUrl) => {
+    tempPetPhotoDataUrl = dataUrl;
+    const previewWrap = document.getElementById('add-pet-photo-preview-wrap');
+    const previewImg = document.getElementById('add-pet-photo-img');
+    const feedback = document.getElementById('add-pet-photo-feedback');
+    if (previewWrap && previewImg) {
+      previewImg.src = dataUrl;
+      previewWrap.style.display = 'block';
+    }
+    if (feedback) feedback.textContent = '✓ Foto anexada com sucesso!';
+  });
+
+  // Upload de Foto de Pet na Edição (Câmera & Galeria)
+  setupPetPhotoUpload('edit-pet-camera', 'edit-pet-gallery', (dataUrl) => {
+    tempEditPetPhotoDataUrl = dataUrl;
+    const previewWrap = document.getElementById('edit-pet-photo-preview-wrap');
+    const previewImg = document.getElementById('edit-pet-photo-img');
+    const feedback = document.getElementById('edit-pet-photo-feedback');
+    if (previewWrap && previewImg) {
+      previewImg.src = dataUrl;
+      previewWrap.style.display = 'block';
+    }
+    if (feedback) feedback.textContent = '✓ Nova foto pronta para salvar!';
   });
 
   // Excluir Pet
@@ -3897,41 +4018,6 @@ function initPetsModule() {
         showToast(`Cadastro de ${petName} removido.`, 'info');
       }
     }
-  });
-
-  // Upload de Foto de Pet (Câmera & Galeria)
-  const setupPetPhotoUpload = (camInputId, galInputId, onPhotoReady) => {
-    [camInputId, galInputId].forEach(id => {
-      const input = document.getElementById(id);
-      if (input) {
-        input.addEventListener('change', async (e) => {
-          const file = e.target.files && e.target.files[0];
-          if (!file) return;
-          try {
-            showToast('Processando foto... 📸', 'info', 1500);
-            const compressed = await compressImageFile(file, 800, 800, 0.82);
-            onPhotoReady(compressed);
-          } catch (err) {
-            console.error('Erro ao processar imagem:', err);
-            showToast('Não foi possível carregar a imagem selecionada.', 'error');
-          } finally {
-            input.value = '';
-          }
-        });
-      }
-    });
-  };
-
-  setupPetPhotoUpload('add-pet-camera', 'add-pet-gallery', (dataUrl) => {
-    tempPetPhotoDataUrl = dataUrl;
-    const previewWrap = document.getElementById('add-pet-photo-preview-wrap');
-    const previewImg = document.getElementById('add-pet-photo-img');
-    const feedback = document.getElementById('add-pet-photo-feedback');
-    if (previewWrap && previewImg) {
-      previewImg.src = dataUrl;
-      previewWrap.style.display = 'block';
-    }
-    if (feedback) feedback.textContent = '✓ Foto anexada com sucesso!';
   });
 
   // Formulário: Cadastrar Novo Pet
@@ -3963,7 +4049,8 @@ function initPetsModule() {
         apelido,
         vacinacaoEmDia,
         observacoes,
-        photos
+        fotos: photos,
+        photos: photos
       });
 
       saveState(state);
@@ -4000,7 +4087,7 @@ function initPetsModule() {
       const vacinacaoEmDia = document.getElementById('edit-pet-vacinas-status')?.checked !== false;
       const observacoes = document.getElementById('edit-pet-observacoes')?.value?.trim() || '';
 
-      updatePet(state, petId, {
+      const updateData = {
         nome,
         especie,
         sexo,
@@ -4010,11 +4097,24 @@ function initPetsModule() {
         apelido,
         vacinacaoEmDia,
         observacoes
-      });
+      };
+
+      if (tempEditPetPhotoDataUrl !== null) {
+        if (tempEditPetPhotoDataUrl === '') {
+          updateData.fotos = [];
+          updateData.photos = [];
+        } else {
+          updateData.fotos = [tempEditPetPhotoDataUrl];
+          updateData.photos = [tempEditPetPhotoDataUrl];
+        }
+      }
+
+      updatePet(state, petId, updateData);
 
       saveState(state);
       triggerAutoSyncIfEnabled();
       closeModal('modal-edit-pet');
+      tempEditPetPhotoDataUrl = null;
       if (currentActivePetFolderId === petId) {
         renderPetFolderModal(state, petId, currentActivePetFolderTab);
       }
@@ -4023,31 +4123,80 @@ function initPetsModule() {
     });
   }
 
-  // Gatilhos de Abertura de Modais de Sub-registros
+  // Gatilhos de Abertura de Modais de Sub-registros (Suporta botões gerais, sub-abas e pastas de pet)
   document.addEventListener('click', (e) => {
-    const btnRacao = e.target.closest('[data-open-add-pet-racao]');
-    if (btnRacao) {
-      const petId = btnRacao.getAttribute('data-open-add-pet-racao') || currentActivePetFolderId;
-      const hiddenId = document.getElementById('pet-racao-pet-id');
-      const dataInput = document.getElementById('pet-racao-data');
-      if (hiddenId) hiddenId.value = petId;
-      if (dataInput) dataInput.value = getLocalDateString();
-      openModal('modal-add-pet-racao');
+    const subModalBtn = e.target.closest('[data-open-sub-modal]');
+    if (subModalBtn) {
+      const modalId = subModalBtn.getAttribute('data-open-sub-modal');
+      const targetPetId = subModalBtn.getAttribute('data-target-pet') || currentPetFilterId || currentActivePetFolderId;
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        const selects = modal.querySelectorAll('.select-pet-target');
+        selects.forEach(sel => {
+          sel.innerHTML = (state.pets || []).map(p => `
+            <option value="${p.id}" ${p.id === targetPetId ? 'selected' : ''}>
+              ${p.especie === 'gato' ? '🐱' : '🐶'} ${p.nome}
+            </option>
+          `).join('');
+          if (targetPetId) sel.value = targetPetId;
+        });
+        const dateInput = modal.querySelector('input[type="date"]');
+        if (dateInput && !dateInput.value) dateInput.value = getLocalDateString();
+        openModal(modalId);
+      }
       return;
     }
 
-    const btnAreia = e.target.closest('[data-open-add-pet-areia]');
+    const btnRacao = e.target.closest('[data-open-add-pet-racao]') || e.target.closest('[data-action-add-racao]');
+    if (btnRacao) {
+      const petId = btnRacao.getAttribute('data-open-add-pet-racao') || btnRacao.getAttribute('data-action-add-racao') || currentPetFilterId || currentActivePetFolderId;
+      const modal = document.getElementById('modal-add-pet-racao');
+      if (modal) {
+        const selects = modal.querySelectorAll('.select-pet-target');
+        selects.forEach(sel => {
+          sel.innerHTML = (state.pets || []).map(p => `<option value="${p.id}" ${p.id === petId ? 'selected' : ''}>${p.especie === 'gato' ? '🐱' : '🐶'} ${p.nome}</option>`).join('');
+          if (petId) sel.value = petId;
+        });
+        const dataInput = document.getElementById('pet-racao-data');
+        if (dataInput) dataInput.value = getLocalDateString();
+        openModal('modal-add-pet-racao');
+      }
+      return;
+    }
+
+    const btnAreia = e.target.closest('[data-open-add-pet-areia]') || e.target.closest('[data-action-add-areia]');
     if (btnAreia) {
-      const petId = btnAreia.getAttribute('data-open-add-pet-areia') || currentActivePetFolderId;
-      const hiddenId = document.getElementById('pet-areia-pet-id');
-      const dataInput = document.getElementById('pet-areia-data');
-      if (hiddenId) hiddenId.value = petId;
-      if (dataInput) dataInput.value = getLocalDateString();
-      openModal('modal-add-pet-areia');
+      const petId = btnAreia.getAttribute('data-open-add-pet-areia') || btnAreia.getAttribute('data-action-add-areia') || currentPetFilterId || currentActivePetFolderId;
+      const modal = document.getElementById('modal-add-pet-areia');
+      if (modal) {
+        const selects = modal.querySelectorAll('.select-pet-target');
+        selects.forEach(sel => {
+          sel.innerHTML = (state.pets || []).map(p => `<option value="${p.id}" ${p.id === petId ? 'selected' : ''}>${p.especie === 'gato' ? '🐱' : '🐶'} ${p.nome}</option>`).join('');
+          if (petId) sel.value = petId;
+        });
+        const dataInput = document.getElementById('pet-areia-data');
+        if (dataInput) dataInput.value = getLocalDateString();
+        openModal('modal-add-pet-areia');
+      }
       return;
     }
 
     const btnBanho = e.target.closest('[data-open-add-pet-banho]');
+    if (btnBanho) {
+      const petId = btnBanho.getAttribute('data-open-add-pet-banho') || currentPetFilterId || currentActivePetFolderId;
+      const modal = document.getElementById('modal-add-pet-banho');
+      if (modal) {
+        const selects = modal.querySelectorAll('.select-pet-target');
+        selects.forEach(sel => {
+          sel.innerHTML = (state.pets || []).map(p => `<option value="${p.id}" ${p.id === petId ? 'selected' : ''}>${p.especie === 'gato' ? '🐱' : '🐶'} ${p.nome}</option>`).join('');
+          if (petId) sel.value = petId;
+        });
+        const dataInput = document.getElementById('pet-banho-data');
+        if (dataInput) dataInput.value = getLocalDateString();
+        openModal('modal-add-pet-banho');
+      }
+      return;
+    }
     if (btnBanho) {
       const petId = btnBanho.getAttribute('data-open-add-pet-banho') || currentActivePetFolderId;
       const hiddenId = document.getElementById('pet-banho-pet-id');
@@ -4352,11 +4501,11 @@ function initPetsModule() {
     });
   }
 
-  // Exclusões de Sub-registros
+  // Exclusões de Sub-registros (suporta tanto modais quanto telas de categoria)
   document.addEventListener('click', (e) => {
-    const delRacao = e.target.closest('[data-delete-pet-racao]');
+    const delRacao = e.target.closest('[data-delete-pet-racao]') || e.target.closest('[data-del-racao]');
     if (delRacao) {
-      const racaoId = delRacao.getAttribute('data-delete-pet-racao');
+      const racaoId = delRacao.getAttribute('data-delete-pet-racao') || delRacao.getAttribute('data-del-racao');
       const petId = delRacao.getAttribute('data-pet-id') || currentActivePetFolderId;
       if (confirm('Excluir este lançamento de ração?')) {
         deletePetRacaoPurchase(state, petId, racaoId);
@@ -4368,9 +4517,9 @@ function initPetsModule() {
       return;
     }
 
-    const delAreia = e.target.closest('[data-delete-pet-areia]');
+    const delAreia = e.target.closest('[data-delete-pet-areia]') || e.target.closest('[data-del-areia]');
     if (delAreia) {
-      const areiaId = delAreia.getAttribute('data-delete-pet-areia');
+      const areiaId = delAreia.getAttribute('data-delete-pet-areia') || delAreia.getAttribute('data-del-areia');
       const petId = delAreia.getAttribute('data-pet-id') || currentActivePetFolderId;
       if (confirm('Excluir este lançamento de areia?')) {
         deletePetAreiaPurchase(state, petId, areiaId);
@@ -4382,9 +4531,9 @@ function initPetsModule() {
       return;
     }
 
-    const delBanho = e.target.closest('[data-delete-pet-banho]');
+    const delBanho = e.target.closest('[data-delete-pet-banho]') || e.target.closest('[data-del-banho]');
     if (delBanho) {
-      const banhoId = delBanho.getAttribute('data-delete-pet-banho');
+      const banhoId = delBanho.getAttribute('data-delete-pet-banho') || delBanho.getAttribute('data-del-banho');
       const petId = delBanho.getAttribute('data-pet-id') || currentActivePetFolderId;
       if (confirm('Excluir este registro de banho?')) {
         deletePetBanho(state, petId, banhoId);
@@ -4396,9 +4545,9 @@ function initPetsModule() {
       return;
     }
 
-    const delVacina = e.target.closest('[data-delete-pet-vacina]');
+    const delVacina = e.target.closest('[data-delete-pet-vacina]') || e.target.closest('[data-del-vacina]');
     if (delVacina) {
-      const vacinaId = delVacina.getAttribute('data-delete-pet-vacina');
+      const vacinaId = delVacina.getAttribute('data-delete-pet-vacina') || delVacina.getAttribute('data-del-vacina');
       const petId = delVacina.getAttribute('data-pet-id') || currentActivePetFolderId;
       if (confirm('Excluir este registro de vacina?')) {
         deletePetVacina(state, petId, vacinaId);
@@ -4410,9 +4559,9 @@ function initPetsModule() {
       return;
     }
 
-    const delVerm = e.target.closest('[data-delete-pet-vermifugo]');
+    const delVerm = e.target.closest('[data-delete-pet-vermifugo]') || e.target.closest('[data-del-vermifugo]');
     if (delVerm) {
-      const vermId = delVerm.getAttribute('data-delete-pet-vermifugo');
+      const vermId = delVerm.getAttribute('data-delete-pet-vermifugo') || delVerm.getAttribute('data-del-vermifugo');
       const petId = delVerm.getAttribute('data-pet-id') || currentActivePetFolderId;
       if (confirm('Excluir este registro de vermífugo?')) {
         deletePetVermifugo(state, petId, vermId);
@@ -4424,9 +4573,9 @@ function initPetsModule() {
       return;
     }
 
-    const delExame = e.target.closest('[data-delete-pet-exame]');
+    const delExame = e.target.closest('[data-delete-pet-exame]') || e.target.closest('[data-del-exame]');
     if (delExame) {
-      const exameId = delExame.getAttribute('data-delete-pet-exame');
+      const exameId = delExame.getAttribute('data-delete-pet-exame') || delExame.getAttribute('data-del-exame');
       const petId = delExame.getAttribute('data-pet-id') || currentActivePetFolderId;
       if (confirm('Excluir este atendimento veterinário?')) {
         deletePetExame(state, petId, exameId);

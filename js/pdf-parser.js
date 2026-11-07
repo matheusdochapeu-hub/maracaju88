@@ -107,9 +107,38 @@ export function detectCategoryFromItemName(name) {
 /**
  * Analisa e extrai dados de comprovantes de NFC-e / Danfe a partir do texto extraído do PDF.
  */
-export function parseNfceDanfeText(rawText) {
-  if (!rawText || typeof rawText !== 'string') {
+export function parseNfceDanfeText(rawTextInput, altTextInput = '') {
+  if (!rawTextInput) {
     throw new Error('Texto do PDF vazio ou não fornecido.');
+  }
+
+  const primaryText = (typeof rawTextInput === 'object' && rawTextInput.fullText)
+    ? rawTextInput.fullText
+    : String(rawTextInput);
+
+  const fallbackText = altTextInput || (typeof rawTextInput === 'object' && rawTextInput.rawText ? rawTextInput.rawText : '');
+
+  // Tenta analisar o texto primário (reconstrução espacial)
+  const result = _parseSingleNfceDanfeText(primaryText);
+
+  // Se nenhum item foi encontrado e temos o texto bruto de fallback, tenta extrair pelo fallback
+  if (result.items.length === 0 && fallbackText && fallbackText !== primaryText) {
+    const fallbackResult = _parseSingleNfceDanfeText(fallbackText);
+    if (fallbackResult.items.length > 0) {
+      if (!result.marketName || result.marketName === 'Supermercado') result.marketName = fallbackResult.marketName;
+      if (!result.cnpj) result.cnpj = fallbackResult.cnpj;
+      if (!result.total || result.total === 0) result.total = fallbackResult.total;
+      if (!result.nfeKey) result.nfeKey = fallbackResult.nfeKey;
+      result.items = fallbackResult.items;
+    }
+  }
+
+  return result;
+}
+
+function _parseSingleNfceDanfeText(rawText) {
+  if (!rawText || typeof rawText !== 'string') {
+    return { marketName: 'Supermercado', cnpj: '', date: new Date().toISOString().substring(0, 10), total: 0, nfeKey: '', items: [] };
   }
 
   const lines = rawText
@@ -158,16 +187,25 @@ export function parseNfceDanfeText(rawText) {
     marketName = guessMarketNameFromCnpj(cnpj);
   }
   if (!marketName) {
-    // Procura o cabeçalho antes do CNPJ
+    // Procura o cabeçalho antes ou depois do CNPJ
     for (let i = 0; i < lines.length; i++) {
       if (/CNPJ:/i.test(lines[i])) {
-        if (i > 0 && lines[i - 1].length > 3) {
-          const candidate = lines[i - 1];
-          if (/CARREFOUR/i.test(candidate)) marketName = 'Carrefour';
-          else if (/PAO DE ACUCAR|EXTRA/i.test(candidate)) marketName = 'Pão de Açúcar';
-          else if (/ASSAI/i.test(candidate)) marketName = 'Assaí Atacadista';
-          else if (/ATACADAO/i.test(candidate)) marketName = 'Atacadão';
-          else marketName = candidate;
+        // Procura para cima ignorando termos genéricos
+        for (let k = i - 1; k >= Math.max(0, i - 3); k--) {
+          const candidate = lines[k].trim();
+          if (candidate.length > 2 && !/^(?:COMPROVANTE|DOCUMENTO|EXTRATO|DANFE|NFC-E|CUPOM|NOTA)/i.test(candidate)) {
+            if (/CARREFOUR/i.test(candidate)) marketName = 'Carrefour';
+            else if (/PAO DE ACUCAR|EXTRA/i.test(candidate)) marketName = 'Pão de Açúcar';
+            else if (/ASSAI/i.test(candidate)) marketName = 'Assaí Atacadista';
+            else if (/ATACADAO/i.test(candidate)) marketName = 'Atacadão';
+            else if (/\bDIA\b/i.test(candidate)) marketName = 'Supermercado Dia';
+            else marketName = candidate;
+            break;
+          }
+        }
+        // Se não achou acima, verifica a linha logo após o CNPJ
+        if (!marketName && lines[i + 1] && lines[i + 1].length > 2 && !/^(?:RUA|AV|AVENIDA|EMISSAO|DATA)/i.test(lines[i + 1])) {
+          marketName = lines[i + 1].trim();
         }
         break;
       }
@@ -175,9 +213,13 @@ export function parseNfceDanfeText(rawText) {
   }
   if (!marketName) marketName = 'Supermercado';
 
-  // 5. Extração de Valor Total Pago
-  const totalMatch = fullText.match(/Valor\s+a\s+pagar\s+R\$:\s*([\d\.,]+)/i) ||
-                     fullText.match(/Valor\s+total\s+R\$:\s*([\d\.,]+)/i);
+  // 5. Extração de Valor Total Pago (Prioriza "Valor a pagar" para considerar descontos)
+  const totalMatch = fullText.match(/Valor\s+a\s+pagar\s+(?:R\$\s*)?:?\s*([\d\.,]+)/i) ||
+                     fullText.match(/Valor\s+a\s+pagar:\s*([\d\.,]+)/i) ||
+                     fullText.match(/Total\s+a\s+pagar\s+(?:R\$\s*)?:?\s*([\d\.,]+)/i) ||
+                     fullText.match(/Valor\s+total\s+(?:R\$\s*)?:?\s*([\d\.,]+)/i) ||
+                     fullText.match(/Valor\s+total:\s*([\d\.,]+)/i) ||
+                     fullText.match(/\bTOTAL\s+R\$:\s*([\d\.,]+)/i);
   if (totalMatch) {
     total = parseCurrency(totalMatch[1]);
   }
@@ -333,18 +375,19 @@ export function parseNfceDanfeText(rawText) {
     }
   }
 
-  // Fallback 2 para outros formatos de NFC-e (ex: 001 PRODUTO 1 UN X 12,00)
+  // Fallback 2 para outros formatos de NFC-e (ex: 001 PRODUTO 1 UN X 12,00 ou mesma linha)
   if (items.length === 0) {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const altQtyMatch = line.match(/(\d+[\.,]?\d*)\s*(?:UN|KG|LT|CX|PC)\s*(?:[xX]|\*)\s*([\d\.,]+)/i);
-      if (altQtyMatch && i > 0) {
-        const rawName = lines[i - 1].replace(/^\d+\s+/, '').trim();
-        const qty = altQtyMatch[1];
-        const unitPrice = parseCurrency(altQtyMatch[2]);
+      // Verifica se a quantidade e valor estão na mesma linha junto com o nome
+      const sameLineAltMatch = line.match(/^(?:(?:\d+\s+)+)?([A-Za-z\u00C0-\u00FF][A-Za-z0-9\s\.\,\-\/\%\(\)]+?)\s+(\d+[\.,]?\d*)\s*(?:UN|KG|LT|CX|PC|un|kg|lt|cx|pc)\s*(?:[xX\*]\s*)?([\d\.,]+)(?:\s+([\d\.,]+))?/i);
+      if (sameLineAltMatch) {
+        const rawName = sameLineAltMatch[1].trim();
+        const qty = sameLineAltMatch[2];
+        const unitPrice = parseCurrency(sameLineAltMatch[3]);
         const numQty = parseFloat(qty.replace(',', '.')) || 1;
-        const totalPrice = Math.round(unitPrice * numQty * 100) / 100;
-        if (rawName.length > 2 && unitPrice > 0) {
+        const totalPrice = sameLineAltMatch[4] ? parseCurrency(sameLineAltMatch[4]) : Math.round(unitPrice * numQty * 100) / 100;
+        if (rawName.length > 2 && unitPrice > 0 && !/Valor|Pagar|Total|Subtotal|Troco|Desconto/i.test(rawName)) {
           const alias = suggestPopularName(rawName);
           items.push({
             code: 'ITEM_' + (items.length + 1),
@@ -358,8 +401,102 @@ export function parseNfceDanfeText(rawText) {
             selected: true
           });
         }
+        continue;
+      }
+
+      // Ou se a quantidade e valor estão na linha seguinte
+      const altQtyMatch = line.match(/(\d+[\.,]?\d*)\s*(?:UN|KG|LT|CX|PC)\s*(?:[xX]|\*)\s*([\d\.,]+)/i);
+      if (altQtyMatch && i > 0) {
+        const rawName = lines[i - 1].replace(/^\d+\s+/, '').trim();
+        const qty = altQtyMatch[1];
+        const unitPrice = parseCurrency(altQtyMatch[2]);
+        const numQty = parseFloat(qty.replace(',', '.')) || 1;
+        const totalPrice = Math.round(unitPrice * numQty * 100) / 100;
+        if (rawName.length > 2 && unitPrice > 0 && !/Valor|Pagar|Total|Subtotal|Troco|Desconto/i.test(rawName)) {
+          const alias = suggestPopularName(rawName);
+          items.push({
+            code: 'ITEM_' + (items.length + 1),
+            rawName,
+            alias,
+            category: detectCategoryFromItemName(alias || rawName),
+            qty,
+            unit: 'un',
+            unitPrice,
+            totalPrice,
+            selected: true
+          });
+        }
+        continue;
+      }
+
+      // Ou se a linha termina com um valor monetário direto (ex: "LEITE INTEGRAL 4,89")
+      if (!/CNPJ|Total|Emissão|Chave|Consumidor|Danfe|NFC-e|Tributos|Protocolo|Ambiente|Via|IE:|IM:|IE\b/i.test(line)) {
+        const directPriceMatch = line.match(/^(?:(?:\d+\s+)+)?([A-Za-z\u00C0-\u00FF][A-Za-z0-9\s\.\,\-\/\%\(\)]+?)\s+(?:R\$\s*)?(\d+[\.,]\d{2})$/);
+        if (directPriceMatch) {
+          const rawName = directPriceMatch[1].trim();
+          const price = parseCurrency(directPriceMatch[2]);
+          if (rawName.length > 2 && price > 0 && !/Valor|Pagar|Total|Subtotal|Troco|Desconto|Tributo|Data|Emiss/i.test(rawName)) {
+            const alias = suggestPopularName(rawName);
+            items.push({
+              code: 'ITEM_' + (items.length + 1),
+              rawName,
+              alias,
+              category: detectCategoryFromItemName(alias || rawName),
+              qty: '1',
+              unit: 'un',
+              unitPrice: price,
+              totalPrice: price,
+              selected: true
+            });
+          }
+        }
       }
     }
+  }
+
+  // Fallback 3: Padrão tabular ou linha com descrição e valor monetário final
+  if (items.length === 0) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/CNPJ|Total|Emissão|Chave|Consumidor|Danfe|NFC-e|Tributos|Protocolo|Ambiente|Via|IE:|IM:|IE\b/i.test(line)) {
+        continue;
+      }
+      const priceEndMatch = line.match(/^(?:(?:\d+\s+)+)?([A-Za-z\u00C0-\u00FF][A-Za-z0-9\s\.\,\-\/\%\(\)]+?)\s+(?:R\$\s*)?(\d+[\.,]\d{2})$/);
+      if (priceEndMatch) {
+        const rawName = priceEndMatch[1].trim();
+        const price = parseCurrency(priceEndMatch[2]);
+        if (rawName.length > 2 && price > 0 && !/Valor|Pagar|Total|Subtotal|Troco|Desconto|Tributo/i.test(rawName)) {
+          const alias = suggestPopularName(rawName);
+          items.push({
+            code: 'ITEM_' + (items.length + 1),
+            rawName,
+            alias,
+            category: detectCategoryFromItemName(alias || rawName),
+            qty: '1',
+            unit: 'un',
+            unitPrice: price,
+            totalPrice: price,
+            selected: true
+          });
+        }
+      }
+    }
+  }
+
+  // Fallback 4: Se o total da nota foi detectado mas os itens vieram em layout atípico,
+  // cria um item consolidado para que o usuário NUNCA seja travado com erro impeditivo!
+  if (items.length === 0 && total > 0) {
+    items.push({
+      code: 'ITEM_TOTAL',
+      rawName: `Compra no ${marketName || 'Mercado'}`,
+      alias: `Compra no ${marketName || 'Mercado'}`,
+      category: 'mercearia',
+      qty: '1',
+      unit: 'un',
+      unitPrice: total,
+      totalPrice: total,
+      selected: true
+    });
   }
 
   // Se não extraiu o total pelo regex ou deu 0, soma os itens extraídos
@@ -470,5 +607,8 @@ export async function extractTextFromPdfFile(fileOrBlob) {
     throw new Error('Este arquivo PDF não contém camada de texto selecionável (pode ser uma foto ou digitalização escaneada). Use a câmera do QR Code da NFC-e ou suba o arquivo PDF original baixado do mercado.');
   }
 
-  return resultText;
+  const strObj = new String(resultText);
+  strObj.fullText = fullText;
+  strObj.rawText = rawText;
+  return strObj;
 }

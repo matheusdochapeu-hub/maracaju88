@@ -261,3 +261,59 @@ test('Pets: CRUD Completo de Pet e Sub-registros (Ração, Areia, Banho, Vacina,
   assert.equal(deleted.id, mandioca.id);
   assert.equal(state.pets.length, 0);
 });
+
+test('Pets: Foto Adicionada vira Avatar do Pet e Getters de Categorias funcionam com/sem filtro', async () => {
+  const state = { pets: [] };
+
+  // Adiciona pet com photoUrl inicial
+  const pet = addPet(state, {
+    nome: 'Mandioca',
+    especie: 'cachorro',
+    dataNascimento: '2023-01-10',
+    photos: ['data:image/jpeg;base64,foto1']
+  });
+
+  assert.equal(pet.fotos.length, 1);
+  assert.equal(pet.fotos[0], 'data:image/jpeg;base64,foto1');
+  assert.equal(pet.photos[0], 'data:image/jpeg;base64,foto1');
+
+  // Adiciona nova foto (unshift para virar a foto principal imediatamente)
+  addPetPhoto(state, pet.id, 'data:image/jpeg;base64,foto_recente');
+  assert.equal(pet.fotos[0], 'data:image/jpeg;base64,foto_recente');
+  assert.equal(pet.photos[0], 'data:image/jpeg;base64,foto_recente');
+  assert.equal(pet.fotos.length, 2);
+
+  // Adiciona registros para testar os getters por categoria
+  addPetRacaoPurchase(state, pet.id, {
+    dataCompra: '2026-11-01',
+    marca: 'Premier',
+    quantidadeKg: 15
+  });
+
+  addPetBanho(state, pet.id, {
+    data: '2026-11-03',
+    tipo: 'pet_shop',
+    local: 'Bicho Mimado',
+    valor: 80
+  });
+
+  addPetVacina(state, pet.id, {
+    vacina: 'V10',
+    dataAplicacao: '2026-11-04'
+  });
+
+  // Getters consolidados (importados dinamicamente)
+  const { getPetsRacaoList, getPetsHigieneList, getPetsVacinasList } = await import('../js/pets.js');
+  const racaoList = getPetsRacaoList(state, pet.id);
+  assert.equal(racaoList.length, 1);
+  assert.equal(racaoList[0].petNome, 'Mandioca');
+  assert.equal(racaoList[0].petFoto, 'data:image/jpeg;base64,foto_recente');
+
+  const banhoList = getPetsHigieneList(state);
+  assert.equal(banhoList.length, 1);
+  assert.equal(banhoList[0].local, 'Bicho Mimado');
+
+  const vacinasList = getPetsVacinasList(state, pet.id);
+  assert.equal(vacinasList.length, 1);
+  assert.equal(vacinasList[0].tipoVacina, 'V10');
+});

@@ -324,6 +324,14 @@ export function addPet(state, data) {
   const nome = (data.nome || '').trim();
   if (!nome) throw new Error('O nome do pet é obrigatório.');
 
+  const fotos = Array.isArray(data.fotos) && data.fotos.length > 0
+    ? [...data.fotos]
+    : (Array.isArray(data.photos) && data.photos.length > 0
+      ? [...data.photos]
+      : (data.foto ? [data.foto] : (data.photo ? [data.photo] : [])));
+
+  const pesoKg = parseFloat(data.pesoKg !== undefined ? data.pesoKg : data.peso) || 0;
+
   const newPet = {
     id: `pet_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
     nome,
@@ -332,9 +340,10 @@ export function addPet(state, data) {
     apelido: (data.apelido || '').trim(),
     sexo: (data.sexo || 'femea').toLowerCase(),
     raca: (data.raca || 'SRD').trim(),
-    pesoKg: parseFloat(data.pesoKg) || 0,
+    pesoKg,
     vacinacaoEmDia: data.vacinacaoEmDia !== false,
-    fotos: Array.isArray(data.fotos) ? data.fotos : [],
+    fotos,
+    photos: fotos,
     observacoes: (data.observacoes || '').trim(),
     racao: [],
     areia: [],
@@ -368,10 +377,21 @@ export function updatePet(state, petId, data) {
   if (data.apelido !== undefined) pet.apelido = data.apelido.trim();
   if (data.sexo !== undefined) pet.sexo = data.sexo.toLowerCase();
   if (data.raca !== undefined) pet.raca = data.raca.trim();
-  if (data.pesoKg !== undefined) pet.pesoKg = parseFloat(data.pesoKg) || 0;
+  if (data.pesoKg !== undefined || data.peso !== undefined) {
+    pet.pesoKg = parseFloat(data.pesoKg !== undefined ? data.pesoKg : data.peso) || 0;
+  }
   if (data.vacinacaoEmDia !== undefined) pet.vacinacaoEmDia = !!data.vacinacaoEmDia;
   if (data.observacoes !== undefined) pet.observacoes = data.observacoes.trim();
-  if (Array.isArray(data.fotos)) pet.fotos = data.fotos;
+
+  const newFotos = Array.isArray(data.fotos)
+    ? [...data.fotos]
+    : (Array.isArray(data.photos)
+      ? [...data.photos]
+      : (data.foto ? [data.foto] : (data.photo ? [data.photo] : null)));
+  if (newFotos !== null) {
+    pet.fotos = newFotos;
+    pet.photos = newFotos;
+  }
 
   pet.updatedAt = new Date().toISOString();
   return pet;
@@ -390,13 +410,14 @@ export function deletePet(state, petId) {
 }
 
 /**
- * Adiciona uma foto ao pet
+ * Adiciona uma foto ao pet (coloca no início para ser o avatar ativo)
  */
 export function addPetPhoto(state, petId, photoDataUrl) {
   const pet = (state.pets || []).find(p => p.id === petId);
   if (!pet) throw new Error('Pet não encontrado.');
   if (!pet.fotos) pet.fotos = [];
-  pet.fotos.push(photoDataUrl);
+  pet.fotos.unshift(photoDataUrl);
+  pet.photos = pet.fotos;
   pet.updatedAt = new Date().toISOString();
   return pet;
 }
@@ -409,6 +430,7 @@ export function removePetPhoto(state, petId, photoIdx) {
   if (!pet || !pet.fotos) return false;
   if (photoIdx >= 0 && photoIdx < pet.fotos.length) {
     pet.fotos.splice(photoIdx, 1);
+    pet.photos = pet.fotos;
     pet.updatedAt = new Date().toISOString();
     return true;
   }
@@ -541,7 +563,7 @@ export function addPetVacina(state, petId, vacinaData) {
   if (!pet) throw new Error('Pet não encontrado.');
   if (!pet.vacinas) pet.vacinas = [];
 
-  const vacinaNome = (vacinaData.vacina || '').trim();
+  const vacinaNome = (vacinaData.vacina || vacinaData.nome || vacinaData.tipoVacina || '').trim();
   if (!vacinaNome) throw new Error('Informe o nome da vacina.');
 
   const dataAplicacao = vacinaData.dataAplicacao || new Date().toISOString().split('T')[0];
@@ -551,6 +573,8 @@ export function addPetVacina(state, petId, vacinaData) {
   const entry = {
     id: `vac_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
     vacina: vacinaNome,
+    tipoVacina: vacinaNome,
+    nome: vacinaNome,
     dataAplicacao,
     dataProximaDose,
     lote: (vacinaData.lote || '').trim(),
@@ -659,4 +683,74 @@ function formatDisplayDate(dateStr) {
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
   return dateStr;
+}
+
+// -------------------------------------------------------------
+// GETTERS CONSOLIDADOS POR CATEGORIA (com ou sem filtro de Pet)
+// -------------------------------------------------------------
+
+export function getPetsRacaoList(state, petId = null) {
+  const pets = (state.pets || []).filter(p => !petId || p.id === petId);
+  const list = [];
+  pets.forEach(pet => {
+    (pet.racao || []).forEach(r => {
+      list.push({ ...r, petId: pet.id, petNome: pet.nome, petEspecie: pet.especie, petFoto: (pet.fotos && pet.fotos[0]) || (pet.photos && pet.photos[0]) || null });
+    });
+  });
+  return list.sort((a, b) => (b.dataCompra || '').localeCompare(a.dataCompra || ''));
+}
+
+export function getPetsAreiaList(state, petId = null) {
+  const pets = (state.pets || []).filter(p => !petId || p.id === petId);
+  const list = [];
+  pets.forEach(pet => {
+    (pet.areia || []).forEach(a => {
+      list.push({ ...a, petId: pet.id, petNome: pet.nome, petEspecie: pet.especie, petFoto: (pet.fotos && pet.fotos[0]) || (pet.photos && pet.photos[0]) || null });
+    });
+  });
+  return list.sort((a, b) => (b.dataCompra || '').localeCompare(a.dataCompra || ''));
+}
+
+export function getPetsHigieneList(state, petId = null) {
+  const pets = (state.pets || []).filter(p => !petId || p.id === petId);
+  const list = [];
+  pets.forEach(pet => {
+    (pet.higiene || []).forEach(h => {
+      list.push({ ...h, petId: pet.id, petNome: pet.nome, petEspecie: pet.especie, petFoto: (pet.fotos && pet.fotos[0]) || (pet.photos && pet.photos[0]) || null });
+    });
+  });
+  return list.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+}
+
+export function getPetsVacinasList(state, petId = null) {
+  const pets = (state.pets || []).filter(p => !petId || p.id === petId);
+  const list = [];
+  pets.forEach(pet => {
+    (pet.vacinas || []).forEach(v => {
+      list.push({ ...v, petId: pet.id, petNome: pet.nome, petEspecie: pet.especie, petFoto: (pet.fotos && pet.fotos[0]) || (pet.photos && pet.photos[0]) || null });
+    });
+  });
+  return list.sort((a, b) => (b.dataAplicacao || '').localeCompare(a.dataAplicacao || ''));
+}
+
+export function getPetsVermifugosList(state, petId = null) {
+  const pets = (state.pets || []).filter(p => !petId || p.id === petId);
+  const list = [];
+  pets.forEach(pet => {
+    (pet.vermifugos || []).forEach(v => {
+      list.push({ ...v, petId: pet.id, petNome: pet.nome, petEspecie: pet.especie, petFoto: (pet.fotos && pet.fotos[0]) || (pet.photos && pet.photos[0]) || null });
+    });
+  });
+  return list.sort((a, b) => (b.dataAplicacao || '').localeCompare(a.dataAplicacao || ''));
+}
+
+export function getPetsExamesList(state, petId = null) {
+  const pets = (state.pets || []).filter(p => !petId || p.id === petId);
+  const list = [];
+  pets.forEach(pet => {
+    (pet.exames || []).forEach(e => {
+      list.push({ ...e, petId: pet.id, petNome: pet.nome, petEspecie: pet.especie, petFoto: (pet.fotos && pet.fotos[0]) || (pet.photos && pet.photos[0]) || null });
+    });
+  });
+  return list.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
 }

@@ -2120,3 +2120,153 @@ input[type="file"].form-control::file-selector-button:hover {
   align-items: flex-start;
   gap: 0.6rem;
 }
+
+/* Badge de Câmera Rápida no Avatar do Pet */
+.pet-avatar-cam-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--brand-moss);
+  color: #fff;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform var(--transition-fast), background var(--transition-fast);
+  z-index: 2;
+}
+
+.pet-avatar-cam-badge:hover {
+  transform: scale(1.12);
+  background: var(--brand-moss-dark);
+}
+
+/* Sub-navegação por Categorias dentro da Aba Pets (Estilo FisioFlow) */
+.pets-subnav-pills {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding: 0.25rem 0.25rem 0.6rem;
+  margin-bottom: 0.85rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pets-subnav-pills .chip {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.48rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pets-subnav-pills .chip.active {
+  background: var(--brand-moss);
+  color: #fff;
+  border-color: var(--brand-moss);
+  box-shadow: 0 2px 8px rgba(46, 89, 51, 0.3);
+}
+
+/* Banner de Filtro Ativo por Pet */
+.pet-active-filter-banner {
+  background: linear-gradient(135deg, rgba(46, 89, 51, 0.12), rgba(217, 119, 6, 0.12));
+  border: 1px solid rgba(46, 89, 51, 0.25);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.95rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Grid de KPIs / Status da Categoria */
+.pet-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pet-kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pet-kpi-title {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pet-kpi-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.pet-kpi-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 0.2rem;
+}
+
+/* Seletor Rápido de Pets na Categoria */
+.pet-filter-selector {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.85rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pet-filter-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pet-filter-btn.active {
+  background: var(--brand-moss);
+  color: #fff;
+  border-color: var(--brand-moss);
+  box-shadow: 0 2px 6px rgba(46, 89, 51, 0.25);
+}
