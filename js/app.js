@@ -3785,6 +3785,35 @@ function handleCloseBenefitCycle() {
 // -------------------------------------------------------------
 // MÓDULO PETS (Gestão de Animais, Ração, Areia, Banhos, Vacinas & Exames)
 // -------------------------------------------------------------
+/**
+ * Utilitário de Upload e Compressão de Fotos para Pets (Câmera & Galeria)
+ */
+function setupPetPhotoUpload(cameraId, galleryId, onPhotoReady) {
+  const attachHandler = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        showToast('Processando foto do pet... 📸', 'info', 1500);
+        const compressed = await compressImageFile(file, 800, 0.78);
+        if (typeof onPhotoReady === 'function') {
+          onPhotoReady(compressed);
+        }
+      } catch (err) {
+        console.error('Erro ao processar foto do pet:', err);
+        showToast('Não foi possível processar a imagem do pet.', 'error');
+      } finally {
+        el.value = '';
+      }
+    });
+  };
+
+  attachHandler(cameraId);
+  attachHandler(galleryId);
+}
+
 function initPetsModule() {
   // Filtro de Busca de Pets (suporta tanto o input dinâmico quanto estático)
   document.addEventListener('input', (e) => {
@@ -3801,6 +3830,8 @@ function initPetsModule() {
     const subTabBtn = e.target.closest('[data-pet-subtab]');
     if (subTabBtn) {
       currentPetSubTab = subTabBtn.getAttribute('data-pet-subtab') || 'pets';
+      currentTab = 'pets';
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
       refreshAllUI();
       return;
     }
@@ -3810,7 +3841,10 @@ function initPetsModule() {
     if (navBtn) {
       currentPetSubTab = navBtn.getAttribute('data-nav-pet-subtab') || 'pets';
       currentPetFilterId = navBtn.getAttribute('data-pet-id') || null;
+      currentTab = 'pets';
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
       refreshAllUI();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -3819,6 +3853,8 @@ function initPetsModule() {
     if (filterBtn) {
       const pid = filterBtn.getAttribute('data-select-pet-filter');
       currentPetFilterId = pid ? pid : null;
+      currentTab = 'pets';
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
       refreshAllUI();
       return;
     }
@@ -3827,6 +3863,8 @@ function initPetsModule() {
     const clearBtn = e.target.closest('[data-clear-pet-filter]');
     if (clearBtn) {
       currentPetFilterId = null;
+      currentTab = 'pets';
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
       refreshAllUI();
       return;
     }
@@ -3916,7 +3954,7 @@ function initPetsModule() {
   document.addEventListener('click', (e) => {
     const editBtn = e.target.closest('[data-open-edit-pet]') || e.target.closest('[data-edit-pet]');
     if (editBtn) {
-      const petId = editBtn.getAttribute('data-open-edit-pet');
+      const petId = editBtn.getAttribute('data-open-edit-pet') || editBtn.getAttribute('data-edit-pet');
       const pet = (state.pets || []).find(p => p.id === petId);
       if (pet) {
         const idEl = document.getElementById('edit-pet-id');
@@ -4125,132 +4163,84 @@ function initPetsModule() {
 
   // Gatilhos de Abertura de Modais de Sub-registros (Suporta botões gerais, sub-abas e pastas de pet)
   document.addEventListener('click', (e) => {
-    const subModalBtn = e.target.closest('[data-open-sub-modal]');
-    if (subModalBtn) {
-      const modalId = subModalBtn.getAttribute('data-open-sub-modal');
-      const targetPetId = subModalBtn.getAttribute('data-target-pet') || currentPetFilterId || currentActivePetFolderId;
-      const modal = document.getElementById(modalId);
-      if (modal) {
-        const selects = modal.querySelectorAll('.select-pet-target');
-        selects.forEach(sel => {
-          sel.innerHTML = (state.pets || []).map(p => `
-            <option value="${p.id}" ${p.id === targetPetId ? 'selected' : ''}>
-              ${p.especie === 'gato' ? '🐱' : '🐶'} ${p.nome}
-            </option>
-          `).join('');
-          if (targetPetId) sel.value = targetPetId;
-        });
-        const dateInput = modal.querySelector('input[type="date"]');
-        if (dateInput && !dateInput.value) dateInput.value = getLocalDateString();
-        openModal(modalId);
+    const modalBtn = e.target.closest('[data-open-sub-modal]') ||
+                     e.target.closest('[data-open-modal]') ||
+                     e.target.closest('[data-open-add-pet-racao]') ||
+                     e.target.closest('[data-action-add-racao]') ||
+                     e.target.closest('[data-open-add-pet-areia]') ||
+                     e.target.closest('[data-action-add-areia]') ||
+                     e.target.closest('[data-open-add-pet-banho]') ||
+                     e.target.closest('[data-open-add-pet-vacina]') ||
+                     e.target.closest('[data-open-add-pet-vermifugo]') ||
+                     e.target.closest('[data-open-add-pet-exame]');
+    if (!modalBtn) return;
+
+    let modalId = modalBtn.getAttribute('data-open-modal') || modalBtn.getAttribute('data-open-sub-modal');
+    if (!modalId) {
+      if (modalBtn.hasAttribute('data-open-add-pet-racao') || modalBtn.hasAttribute('data-action-add-racao')) modalId = 'modal-add-pet-racao';
+      else if (modalBtn.hasAttribute('data-open-add-pet-areia') || modalBtn.hasAttribute('data-action-add-areia')) modalId = 'modal-add-pet-areia';
+      else if (modalBtn.hasAttribute('data-open-add-pet-banho')) modalId = 'modal-add-pet-banho';
+      else if (modalBtn.hasAttribute('data-open-add-pet-vacina')) modalId = 'modal-add-pet-vacina';
+      else if (modalBtn.hasAttribute('data-open-add-pet-vermifugo')) modalId = 'modal-add-pet-vermifugo';
+      else if (modalBtn.hasAttribute('data-open-add-pet-exame')) modalId = 'modal-add-pet-exame';
+    }
+
+    const petModalIds = [
+      'modal-add-pet-racao',
+      'modal-add-pet-areia',
+      'modal-add-pet-banho',
+      'modal-add-pet-vacina',
+      'modal-add-pet-vermifugo',
+      'modal-add-pet-exame'
+    ];
+
+    if (!modalId || !petModalIds.includes(modalId)) return;
+
+    const targetPetId = modalBtn.getAttribute('data-target-pet') ||
+                        modalBtn.getAttribute('data-pet-id') ||
+                        modalBtn.getAttribute('data-open-add-pet-racao') ||
+                        modalBtn.getAttribute('data-open-add-pet-areia') ||
+                        modalBtn.getAttribute('data-open-add-pet-banho') ||
+                        modalBtn.getAttribute('data-open-add-pet-vacina') ||
+                        modalBtn.getAttribute('data-open-add-pet-vermifugo') ||
+                        modalBtn.getAttribute('data-open-add-pet-exame') ||
+                        currentPetFilterId ||
+                        currentActivePetFolderId ||
+                        (state.pets && state.pets.length > 0 ? state.pets[0].id : null);
+
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      const selects = modal.querySelectorAll('.select-pet-target');
+      selects.forEach(sel => {
+        sel.innerHTML = (state.pets || []).map(p => `
+          <option value="${p.id}" ${p.id === targetPetId ? 'selected' : ''}>
+            ${p.especie === 'gato' ? '🐱' : '🐶'} ${p.nome}
+          </option>
+        `).join('');
+        if (targetPetId) sel.value = targetPetId;
+      });
+
+      const dateInputs = modal.querySelectorAll('input[type="date"]');
+      dateInputs.forEach(inp => {
+        if (!inp.value) inp.value = getLocalDateString();
+      });
+
+      if (modalId === 'modal-add-pet-vermifugo') {
+        const pet = (state.pets || []).find(p => p.id === targetPetId);
+        const pesoInput = document.getElementById('pet-vermifugo-peso');
+        const doseInput = document.getElementById('pet-vermifugo-dose');
+        const proxInput = document.getElementById('pet-vermifugo-proxima-data');
+        if (pet && pet.peso) {
+          if (pesoInput) pesoInput.value = pet.peso;
+          if (doseInput) doseInput.value = formatPetDoseVermifugo(pet.peso);
+        }
+        if (proxInput && !proxInput.value) proxInput.value = addDaysToDateStr(getLocalDateString(), 365);
+      } else if (modalId === 'modal-add-pet-vacina') {
+        const proxInput = document.getElementById('pet-vacina-proxima-data');
+        if (proxInput && !proxInput.value) proxInput.value = addDaysToDateStr(getLocalDateString(), 365);
       }
-      return;
-    }
 
-    const btnRacao = e.target.closest('[data-open-add-pet-racao]') || e.target.closest('[data-action-add-racao]');
-    if (btnRacao) {
-      const petId = btnRacao.getAttribute('data-open-add-pet-racao') || btnRacao.getAttribute('data-action-add-racao') || currentPetFilterId || currentActivePetFolderId;
-      const modal = document.getElementById('modal-add-pet-racao');
-      if (modal) {
-        const selects = modal.querySelectorAll('.select-pet-target');
-        selects.forEach(sel => {
-          sel.innerHTML = (state.pets || []).map(p => `<option value="${p.id}" ${p.id === petId ? 'selected' : ''}>${p.especie === 'gato' ? '🐱' : '🐶'} ${p.nome}</option>`).join('');
-          if (petId) sel.value = petId;
-        });
-        const dataInput = document.getElementById('pet-racao-data');
-        if (dataInput) dataInput.value = getLocalDateString();
-        openModal('modal-add-pet-racao');
-      }
-      return;
-    }
-
-    const btnAreia = e.target.closest('[data-open-add-pet-areia]') || e.target.closest('[data-action-add-areia]');
-    if (btnAreia) {
-      const petId = btnAreia.getAttribute('data-open-add-pet-areia') || btnAreia.getAttribute('data-action-add-areia') || currentPetFilterId || currentActivePetFolderId;
-      const modal = document.getElementById('modal-add-pet-areia');
-      if (modal) {
-        const selects = modal.querySelectorAll('.select-pet-target');
-        selects.forEach(sel => {
-          sel.innerHTML = (state.pets || []).map(p => `<option value="${p.id}" ${p.id === petId ? 'selected' : ''}>${p.especie === 'gato' ? '🐱' : '🐶'} ${p.nome}</option>`).join('');
-          if (petId) sel.value = petId;
-        });
-        const dataInput = document.getElementById('pet-areia-data');
-        if (dataInput) dataInput.value = getLocalDateString();
-        openModal('modal-add-pet-areia');
-      }
-      return;
-    }
-
-    const btnBanho = e.target.closest('[data-open-add-pet-banho]');
-    if (btnBanho) {
-      const petId = btnBanho.getAttribute('data-open-add-pet-banho') || currentPetFilterId || currentActivePetFolderId;
-      const modal = document.getElementById('modal-add-pet-banho');
-      if (modal) {
-        const selects = modal.querySelectorAll('.select-pet-target');
-        selects.forEach(sel => {
-          sel.innerHTML = (state.pets || []).map(p => `<option value="${p.id}" ${p.id === petId ? 'selected' : ''}>${p.especie === 'gato' ? '🐱' : '🐶'} ${p.nome}</option>`).join('');
-          if (petId) sel.value = petId;
-        });
-        const dataInput = document.getElementById('pet-banho-data');
-        if (dataInput) dataInput.value = getLocalDateString();
-        openModal('modal-add-pet-banho');
-      }
-      return;
-    }
-    if (btnBanho) {
-      const petId = btnBanho.getAttribute('data-open-add-pet-banho') || currentActivePetFolderId;
-      const hiddenId = document.getElementById('pet-banho-pet-id');
-      const dataInput = document.getElementById('pet-banho-data');
-      if (hiddenId) hiddenId.value = petId;
-      if (dataInput) dataInput.value = getLocalDateString();
-      openModal('modal-add-pet-banho');
-      return;
-    }
-
-    const btnVacina = e.target.closest('[data-open-add-pet-vacina]');
-    if (btnVacina) {
-      const petId = btnVacina.getAttribute('data-open-add-pet-vacina') || currentActivePetFolderId;
-      const hiddenId = document.getElementById('pet-vacina-pet-id');
-      const dataInput = document.getElementById('pet-vacina-data');
-      const proxInput = document.getElementById('pet-vacina-proxima-data');
-      if (hiddenId) hiddenId.value = petId;
-      const today = getLocalDateString();
-      if (dataInput) dataInput.value = today;
-      if (proxInput) proxInput.value = addDaysToDateStr(today, 365);
-      openModal('modal-add-pet-vacina');
-      return;
-    }
-
-    const btnVerm = e.target.closest('[data-open-add-pet-vermifugo]');
-    if (btnVerm) {
-      const petId = btnVerm.getAttribute('data-open-add-pet-vermifugo') || currentActivePetFolderId;
-      const pet = (state.pets || []).find(p => p.id === petId);
-      const hiddenId = document.getElementById('pet-vermifugo-pet-id');
-      const dataInput = document.getElementById('pet-vermifugo-data');
-      const pesoInput = document.getElementById('pet-vermifugo-peso');
-      const doseInput = document.getElementById('pet-vermifugo-dose');
-      const proxInput = document.getElementById('pet-vermifugo-proxima-data');
-      if (hiddenId) hiddenId.value = petId;
-      const today = getLocalDateString();
-      if (dataInput) dataInput.value = today;
-      if (pet && pet.peso) {
-        if (pesoInput) pesoInput.value = pet.peso;
-        if (doseInput) doseInput.value = formatPetDoseVermifugo(pet.peso);
-      }
-      if (proxInput) proxInput.value = addDaysToDateStr(today, 365);
-      openModal('modal-add-pet-vermifugo');
-      return;
-    }
-
-    const btnExame = e.target.closest('[data-open-add-pet-exame]');
-    if (btnExame) {
-      const petId = btnExame.getAttribute('data-open-add-pet-exame') || currentActivePetFolderId;
-      const hiddenId = document.getElementById('pet-exame-pet-id');
-      const dataInput = document.getElementById('pet-exame-data');
-      if (hiddenId) hiddenId.value = petId;
-      if (dataInput) dataInput.value = getLocalDateString();
-      openModal('modal-add-pet-exame');
-      return;
+      openModal(modalId);
     }
   });
 
@@ -4327,7 +4317,11 @@ function initPetsModule() {
       triggerAutoSyncIfEnabled();
       formAddRacao.reset();
       closeModal('modal-add-pet-racao');
-      renderPetFolderModal(state, petId, 'racao');
+      if (currentActivePetFolderId === petId) {
+        renderPetFolderModal(state, petId, 'racao');
+      }
+      currentTab = 'pets';
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
       refreshAllUI();
       showToast('🥣 Compra de ração registrada!', 'success');
     });
@@ -4361,7 +4355,11 @@ function initPetsModule() {
       triggerAutoSyncIfEnabled();
       formAddAreia.reset();
       closeModal('modal-add-pet-areia');
-      renderPetFolderModal(state, petId, 'areia');
+      if (currentActivePetFolderId === petId) {
+        renderPetFolderModal(state, petId, 'areia');
+      }
+      currentTab = 'pets';
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
       refreshAllUI();
       showToast('🏖️ Compra de areia registrada!', 'success');
     });
@@ -4393,7 +4391,11 @@ function initPetsModule() {
       triggerAutoSyncIfEnabled();
       formAddBanho.reset();
       closeModal('modal-add-pet-banho');
-      renderPetFolderModal(state, petId, 'higiene');
+      if (currentActivePetFolderId === petId) {
+        renderPetFolderModal(state, petId, 'higiene');
+      }
+      currentTab = 'pets';
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
       refreshAllUI();
       showToast('🛁 Banho registrado!', 'success');
     });
@@ -4427,7 +4429,11 @@ function initPetsModule() {
       triggerAutoSyncIfEnabled();
       formAddVacina.reset();
       closeModal('modal-add-pet-vacina');
-      renderPetFolderModal(state, petId, 'vacinas');
+      if (currentActivePetFolderId === petId) {
+        renderPetFolderModal(state, petId, 'vacinas');
+      }
+      currentTab = 'pets';
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
       refreshAllUI();
       showToast('💉 Vacina registrada com sucesso!', 'success');
     });
@@ -4461,7 +4467,11 @@ function initPetsModule() {
       triggerAutoSyncIfEnabled();
       formAddVermifugo.reset();
       closeModal('modal-add-pet-vermifugo');
-      renderPetFolderModal(state, petId, 'vacinas');
+      if (currentActivePetFolderId === petId) {
+        renderPetFolderModal(state, petId, 'vacinas');
+      }
+      currentTab = 'pets';
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
       refreshAllUI();
       showToast('💊 Vermifugação registrada!', 'success');
     });
@@ -4495,7 +4505,11 @@ function initPetsModule() {
       triggerAutoSyncIfEnabled();
       formAddExame.reset();
       closeModal('modal-add-pet-exame');
-      renderPetFolderModal(state, petId, 'exames');
+      if (currentActivePetFolderId === petId) {
+        renderPetFolderModal(state, petId, 'exames');
+      }
+      currentTab = 'pets';
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
       refreshAllUI();
       showToast('🩺 Atendimento veterinário salvo!', 'success');
     });
@@ -4511,8 +4525,11 @@ function initPetsModule() {
         deletePetRacaoPurchase(state, petId, racaoId);
         saveState(state);
         triggerAutoSyncIfEnabled();
-        renderPetFolderModal(state, petId, 'racao');
+        if (currentActivePetFolderId) renderPetFolderModal(state, currentActivePetFolderId, 'racao');
+        currentTab = 'pets';
+        renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
         refreshAllUI();
+        showToast('Lançamento de ração excluído.', 'info');
       }
       return;
     }
@@ -4525,8 +4542,11 @@ function initPetsModule() {
         deletePetAreiaPurchase(state, petId, areiaId);
         saveState(state);
         triggerAutoSyncIfEnabled();
-        renderPetFolderModal(state, petId, 'areia');
+        if (currentActivePetFolderId) renderPetFolderModal(state, currentActivePetFolderId, 'areia');
+        currentTab = 'pets';
+        renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
         refreshAllUI();
+        showToast('Lançamento de areia excluído.', 'info');
       }
       return;
     }
@@ -4539,8 +4559,11 @@ function initPetsModule() {
         deletePetBanho(state, petId, banhoId);
         saveState(state);
         triggerAutoSyncIfEnabled();
-        renderPetFolderModal(state, petId, 'higiene');
+        if (currentActivePetFolderId) renderPetFolderModal(state, currentActivePetFolderId, 'higiene');
+        currentTab = 'pets';
+        renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
         refreshAllUI();
+        showToast('Registro de banho excluído.', 'info');
       }
       return;
     }
@@ -4553,8 +4576,11 @@ function initPetsModule() {
         deletePetVacina(state, petId, vacinaId);
         saveState(state);
         triggerAutoSyncIfEnabled();
-        renderPetFolderModal(state, petId, 'vacinas');
+        if (currentActivePetFolderId) renderPetFolderModal(state, currentActivePetFolderId, 'vacinas');
+        currentTab = 'pets';
+        renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
         refreshAllUI();
+        showToast('Registro de vacina excluído.', 'info');
       }
       return;
     }
@@ -4567,8 +4593,11 @@ function initPetsModule() {
         deletePetVermifugo(state, petId, vermId);
         saveState(state);
         triggerAutoSyncIfEnabled();
-        renderPetFolderModal(state, petId, 'vacinas');
+        if (currentActivePetFolderId) renderPetFolderModal(state, currentActivePetFolderId, 'vacinas');
+        currentTab = 'pets';
+        renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
         refreshAllUI();
+        showToast('Registro de vermífugo excluído.', 'info');
       }
       return;
     }
@@ -4581,8 +4610,11 @@ function initPetsModule() {
         deletePetExame(state, petId, exameId);
         saveState(state);
         triggerAutoSyncIfEnabled();
-        renderPetFolderModal(state, petId, 'exames');
+        if (currentActivePetFolderId) renderPetFolderModal(state, currentActivePetFolderId, 'exames');
+        currentTab = 'pets';
+        renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
         refreshAllUI();
+        showToast('Atendimento veterinário excluído.', 'info');
       }
       return;
     }

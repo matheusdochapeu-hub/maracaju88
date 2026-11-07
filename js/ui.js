@@ -2484,7 +2484,7 @@ function renderPetsMainListView(container, state, pets, speciesFilter, searchQue
               <div class="pet-avatar-placeholder">${speciesEmoji}</div>
             `}
             <span class="pet-species-badge">${speciesEmoji}</span>
-            <label class="pet-avatar-cam-badge" title="Tirar foto ou escolher imagem para ${pet.nome}">
+            <label class="pet-avatar-cam-badge" title="Tirar foto ou escolher imagem para ${pet.nome}" onclick="event.stopPropagation();">
               📸
               <input type="file" accept="image/*" class="input-pet-photo-card" data-pet-id="${pet.id}" style="display:none;" />
             </label>
@@ -2496,7 +2496,7 @@ function renderPetsMainListView(container, state, pets, speciesFilter, searchQue
                 <span class="pet-card-name">${pet.nome}</span>
                 <span class="pet-age-pill" title="Nascimento: ${pet.dataNascimento || 'Não informado'}">🎂 ${idade}</span>
               </div>
-              <span class="cascade-chevron" id="chevron-${pet.id}">▼</span>
+              <span class="cascade-chevron" id="chevron-${pet.id}">▲</span>
             </div>
 
             <div class="pet-tags-row">
@@ -2511,7 +2511,7 @@ function renderPetsMainListView(container, state, pets, speciesFilter, searchQue
         </div>
 
         <!-- Cascata de Ações / Atalhos Rápidos por Animal (Estilo FisioFlow) -->
-        <div class="pet-cascade hidden" id="cascade-${pet.id}">
+        <div class="pet-cascade" id="cascade-${pet.id}">
           <div class="pill-action-stack">
             <button type="button" class="btn-pill primary-green" data-nav-pet-subtab="racao" data-pet-id="${pet.id}">
               <span>🥣</span> Controle de Ração
@@ -2534,7 +2534,7 @@ function renderPetsMainListView(container, state, pets, speciesFilter, searchQue
             <button type="button" class="btn-pill outline" data-open-pet-folder="${pet.id}" data-folder-tab="cadastrais">
               <span>📋</span> Ver Pasta Completa
             </button>
-            <button type="button" class="btn-pill outline" data-edit-pet="${pet.id}">
+            <button type="button" class="btn-pill outline" data-open-edit-pet="${pet.id}" data-edit-pet="${pet.id}">
               <span>✏️</span> Editar Cadastro & Foto
             </button>
             <button type="button" class="btn-pill danger-solid" data-delete-pet="${pet.id}">
@@ -2583,7 +2583,11 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
   const activeFilterBannerHtml = selectedPet ? `
     <div class="pet-active-filter-banner">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="font-size: 1.25rem;">${selectedPet.especie === 'gato' ? '🐱' : '🐶'}</span>
+        <span style="font-size: 1.25rem;">
+          ${(selectedPet.fotos && selectedPet.fotos[0]) || (selectedPet.photos && selectedPet.photos[0]) || selectedPet.foto || selectedPet.photo
+            ? `<img src="${(selectedPet.fotos && selectedPet.fotos[0]) || (selectedPet.photos && selectedPet.photos[0]) || selectedPet.foto || selectedPet.photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border-subtle);" />`
+            : (selectedPet.especie === 'gato' ? '🐱' : '🐶')}
+        </span>
         <div>
           <div style="font-weight: 800; color: var(--brand-moss-dark); font-size: 0.95rem;">
             Filtrando por: ${selectedPet.nome}
@@ -2632,7 +2636,7 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
         <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-primary);">Histórico de Compras de Ração</h4>
-        <button type="button" class="btn btn-primary btn-sm" data-open-sub-modal="modal-add-pet-racao" data-target-pet="${selectedPetId || ''}">
+        <button type="button" class="btn btn-primary btn-sm" data-open-modal="modal-add-pet-racao" data-open-sub-modal="modal-add-pet-racao" data-target-pet="${selectedPetId || ''}">
           ➕ Lançar Ração
         </button>
       </div>
@@ -2694,7 +2698,7 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
         <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-primary);">Histórico de Areia Sanitária</h4>
-        <button type="button" class="btn btn-primary btn-sm" data-open-sub-modal="modal-add-pet-areia" data-target-pet="${selectedPetId || ''}">
+        <button type="button" class="btn btn-primary btn-sm" data-open-modal="modal-add-pet-areia" data-open-sub-modal="modal-add-pet-areia" data-target-pet="${selectedPetId || ''}">
           ➕ Lançar Areia
         </button>
       </div>
@@ -2757,7 +2761,7 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
         <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-primary);">Histórico de Banhos & Higiene</h4>
-        <button type="button" class="btn btn-primary btn-sm" data-open-sub-modal="modal-add-pet-banho" data-target-pet="${selectedPetId || ''}">
+        <button type="button" class="btn btn-primary btn-sm" data-open-modal="modal-add-pet-banho" data-open-sub-modal="modal-add-pet-banho" data-target-pet="${selectedPetId || ''}">
           ➕ Lançar Banho
         </button>
       </div>
@@ -2822,7 +2826,7 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
       <!-- Seção Vacinas -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
         <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-primary);">Histórico de Vacinações</h4>
-        <button type="button" class="btn btn-primary btn-sm" data-open-sub-modal="modal-add-pet-vacina" data-target-pet="${selectedPetId || ''}">
+        <button type="button" class="btn btn-primary btn-sm" data-open-modal="modal-add-pet-vacina" data-open-sub-modal="modal-add-pet-vacina" data-target-pet="${selectedPetId || ''}">
           ➕ Lançar Vacina
         </button>
       </div>
@@ -2859,7 +2863,7 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
           <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-primary);">Vermifugação Periódica</h4>
           <span style="font-size: 0.75rem; color: var(--text-muted);">Geralmente ivermectina ou similar (dose baseada no peso do pet)</span>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" data-open-sub-modal="modal-add-pet-vermifugo" data-target-pet="${selectedPetId || ''}">
+        <button type="button" class="btn btn-secondary btn-sm" data-open-modal="modal-add-pet-vermifugo" data-open-sub-modal="modal-add-pet-vermifugo" data-target-pet="${selectedPetId || ''}">
           ➕ Lançar Vermífugo
         </button>
       </div>
@@ -2916,7 +2920,7 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
         <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-primary);">Consultas, Exames & Diagnósticos</h4>
-        <button type="button" class="btn btn-primary btn-sm" data-open-sub-modal="modal-add-pet-exame" data-target-pet="${selectedPetId || ''}">
+        <button type="button" class="btn btn-primary btn-sm" data-open-modal="modal-add-pet-exame" data-open-sub-modal="modal-add-pet-exame" data-target-pet="${selectedPetId || ''}">
           ➕ Lançar Exame / Consulta
         </button>
       </div>

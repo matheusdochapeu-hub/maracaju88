@@ -317,3 +317,46 @@ test('Pets: Foto Adicionada vira Avatar do Pet e Getters de Categorias funcionam
   assert.equal(vacinasList.length, 1);
   assert.equal(vacinasList[0].tipoVacina, 'V10');
 });
+
+test('Pets UI: Todos os botões e sub-abas contêm atributos de eventos válidos e modais existentes', async () => {
+  const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf-8');
+  const appJs = fs.readFileSync(path.join(rootDir, 'js', 'app.js'), 'utf-8');
+  const uiJs = fs.readFileSync(path.join(rootDir, 'js', 'ui.js'), 'utf-8');
+
+  // 1. Modais de pets devem existir no index.html
+  const expectedModais = [
+    'modal-add-pet',
+    'modal-edit-pet',
+    'modal-pet-folder',
+    'modal-add-pet-racao',
+    'modal-add-pet-areia',
+    'modal-add-pet-banho',
+    'modal-add-pet-vacina',
+    'modal-add-pet-vermifugo',
+    'modal-add-pet-exame'
+  ];
+
+  for (const mId of expectedModais) {
+    assert.ok(indexHtml.includes(`id="${mId}"`), `Modal ${mId} deve existir em index.html`);
+  }
+
+  // 2. Selects de destino de pet devem ter a classe select-pet-target
+  assert.ok(indexHtml.includes('select-pet-target'), 'Modais devem conter select com classe select-pet-target');
+
+  // 3. setupPetPhotoUpload deve estar definida em app.js
+  assert.ok(appJs.includes('function setupPetPhotoUpload('), 'setupPetPhotoUpload deve estar declarada em app.js');
+
+  // 4. Delegação de edição deve aceitar tanto data-open-edit-pet quanto data-edit-pet
+  assert.ok(appJs.includes("editBtn.getAttribute('data-open-edit-pet') || editBtn.getAttribute('data-edit-pet')"), 'Listener de edição de pet deve suportar data-open-edit-pet e data-edit-pet');
+
+  // 5. Botões de submissão e sub-abas em app.js devem garantir currentTab = "pets"
+  assert.ok(appJs.includes("currentTab = 'pets';"), 'Listener de sub-abas deve sincronizar currentTab = pets');
+
+  // 6. Botões em ui.js devem ter data-open-modal e data-open-sub-modal
+  assert.ok(uiJs.includes('data-open-modal="modal-add-pet-racao"'), 'Botão de ração deve ter data-open-modal');
+  assert.ok(uiJs.includes('data-open-modal="modal-add-pet-areia"'), 'Botão de areia deve ter data-open-modal');
+  assert.ok(uiJs.includes('data-open-modal="modal-add-pet-banho"'), 'Botão de banho deve ter data-open-modal');
+  assert.ok(uiJs.includes('data-open-modal="modal-add-pet-vacina"'), 'Botão de vacina deve ter data-open-modal');
+  assert.ok(uiJs.includes('data-open-modal="modal-add-pet-vermifugo"'), 'Botão de vermífugo deve ter data-open-modal');
+  assert.ok(uiJs.includes('data-open-modal="modal-add-pet-exame"'), 'Botão de exame deve ter data-open-modal');
+});
