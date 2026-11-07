@@ -4,6 +4,21 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-07 14:52] - Compactação de Backup Google Sheets (< 44k chars) & Sincronização de Saldo Atual VA/VR com Matrix Finance
+
+### 🔍 Problemas Identificados & Causa Raiz
+1. **Limite de 50.000 Caracteres na Célula `Backup_JSON!B2` do Google Sheets:**
+   - **Causa Raiz:** Com o envio de fotos em base64 (`data:image/...`) nos cadastros de Pets e Reformas, o payload enviado por `backupToSheets` em `js/sheets.js` ultrapassou o limite de 50.000 caracteres por célula do Google Sheets. O Apps Script lançava exceção ao gravar `B2` após limpar a aba, deixando `B2` vazia e fazendo `action=restore` retornar `SyntaxError: Unexpected end of JSON input`.
+2. **Sincronização de `settings.benefits` com o Matrix Finance:**
+   - **Causa Raiz:** O objeto `payload.data` em `backupToSheets` não incluía `settings: { benefits: state.settings.benefits }`, impedindo que overrides de saldo final e configurações de ciclo de VA/VR fossem lidos remotamente pelo Matrix Finance.
+
+### 🛠️ Correções Implementadas
+- **`js/sheets.js` (`backupToSheets`):** Remoção automática de strings `data:image/` do payload enviado ao Google Sheets (preservando todas as fotos integralmente no `localStorage` do dispositivo), inclusão de `settings.benefits` no backup e salvaguarda de tamanho (`< 44.000` caracteres).
+- **`apps_script.gs` (`syncBackupJsonSheet` & `readChunkedJsonRow`):** Suporte a particionamento automático em múltiplas colunas caso o JSON ultrapasse 45.000 caracteres e verificação contra célula vazia.
+- **Validação:** 73/73 testes automatizados aprovados (`node --test test/*.test.js`).
+
+---
+
 ## [2026-11-06 23:35] - Sub-abas/Categorias no Topo de Pets (Estilo FisioFlow / Pacientes), Foto do Pet no Avatar e Resiliencia Definitiva no Leitor de PDF (v2.4.1)
 
 ### Problemas Identificados e Solucao

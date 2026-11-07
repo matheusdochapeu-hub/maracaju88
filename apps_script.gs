@@ -102,7 +102,7 @@ function doGet(e) {
     // Ação 'matrix' ou 'beneficios': endpoint dedicado de integração com o Matrix Finance
     if (action === "matrix" || action === "beneficios") {
       var sheetRawM = ss.getSheetByName("Backup_JSON");
-      var jsonStrM = (sheetRawM && sheetRawM.getLastRow() >= 2) ? sheetRawM.getRange(2, 2).getValue() : null;
+      var jsonStrM = readChunkedJsonRow(sheetRawM);
       var parsedM = jsonStrM ? JSON.parse(jsonStrM) : {};
       return createJsonResponse({
         status: "success",
@@ -132,7 +132,14 @@ function doGet(e) {
       });
     }
 
-    var jsonStr = sheetRaw.getRange(2, 2).getValue();
+    var jsonStr = readChunkedJsonRow(sheetRaw);
+    if (!jsonStr) {
+      return createJsonResponse({
+        status: "success",
+        data: null,
+        message: "Célula de backup vazia."
+      });
+    }
     var parsed = JSON.parse(jsonStr);
 
     return createJsonResponse({
@@ -243,13 +250,28 @@ function getOrCreateSheet(ss, name) {
   return sheet;
 }
 
+function readChunkedJsonRow(sheet) {
+  if (!sheet || sheet.getLastRow() < 2) return "";
+  var lastCol = Math.max(2, sheet.getLastColumn());
+  var vals = sheet.getRange(2, 2, 1, lastCol - 1).getValues()[0];
+  return vals.map(function(v) { return v ? String(v) : ""; }).join("").trim();
+}
+
 function syncBackupJsonSheet(ss, data, now) {
   var sheet = getOrCreateSheet(ss, "Backup_JSON");
+  var rawStr = JSON.stringify(data || {});
+  var chunkSize = 45000;
+  var chunks = [];
+  for (var i = 0; i < rawStr.length; i += chunkSize) {
+    chunks.push(rawStr.substring(i, i + chunkSize));
+  }
+  if (chunks.length === 0) chunks.push("{}");
+
   sheet.clear();
   sheet.getRange(1, 1, 1, 2).setValues([["Data/Hora Backup", "Payload_JSON_Integral"]]);
   sheet.getRange(1, 1, 1, 2).setFontWeight("bold").setBackground("#0f766e").setFontColor("#ffffff");
-  sheet.getRange(2, 1).setValue(now.toLocaleString("pt-BR"));
-  sheet.getRange(2, 2).setValue(JSON.stringify(data));
+  var rowVals = [now.toLocaleString("pt-BR")].concat(chunks);
+  sheet.getRange(2, 1, 1, rowVals.length).setValues([rowVals]);
   sheet.setColumnWidth(1, 180);
   sheet.setColumnWidth(2, 600);
 }

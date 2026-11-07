@@ -52,28 +52,64 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
     throw new Error("URL do Google Apps Script não configurada.");
   }
 
-  const payload = {
-    action: "backup",
-    token: token ? token.trim() : "",
-    data: {
-      version: state.version,
-      lastUpdated: new Date().toISOString(),
-      activeUserId: state.activeUserId,
-      users: state.users,
-      gamification: state.gamification,
-      tasks: state.tasks || [],
-      history: state.history || {},
-      carro: state.carro || [],
-      reformas: state.reformas || [],
-      sonhos: state.sonhos || [],
-      compras: state.compras || [],
-      comprasRegistros: state.comprasRegistros || [],
-      pets: state.pets || [],
-      catalog: state.catalog || [],
-      categories: state.categories || {},
-      userPasswords: state.userPasswords || {}
+  const stripBase64 = (val) => (typeof val === 'string' && val.startsWith('data:image/')) ? '' : val;
+  const stripPhotosArr = (arr) => Array.isArray(arr) ? arr.filter(p => typeof p === 'string' && !p.startsWith('data:image/')) : undefined;
+
+  const compactData = {
+    version: state.version,
+    lastUpdated: new Date().toISOString(),
+    activeUserId: state.activeUserId,
+    users: state.users,
+    gamification: state.gamification,
+    tasks: state.tasks || [],
+    history: state.history || {},
+    carro: state.carro || [],
+    reformas: (state.reformas || []).map(r => ({
+      ...r,
+      photoUrl: stripBase64(r.photoUrl),
+      photos: stripPhotosArr(r.photos)
+    })),
+    sonhos: (state.sonhos || []).map(s => ({
+      ...s,
+      imageUrl: stripBase64(s.imageUrl),
+      photoUrl: stripBase64(s.photoUrl)
+    })),
+    compras: (state.compras || []).map(c => ({
+      ...c,
+      imageUrl: stripBase64(c.imageUrl)
+    })),
+    comprasRegistros: state.comprasRegistros || [],
+    pets: (state.pets || []).map(p => ({
+      ...p,
+      photoUrl: stripBase64(p.photoUrl),
+      photos: stripPhotosArr(p.photos)
+    })),
+    catalog: (state.catalog || []).map(it => ({
+      ...it,
+      photos: stripPhotosArr(it.photos)
+    })),
+    categories: state.categories || {},
+    userPasswords: state.userPasswords || {},
+    settings: {
+      benefits: (state.settings && state.settings.benefits) ? state.settings.benefits : undefined
     }
   };
+
+  // Se o JSON ainda ultrapassar 44.000 caracteres (limite de 50.000 por célula do Google Sheets),
+  // enxuga o catálogo de produtos mantendo 100% dos registros de compras (VA/VR) intactos.
+  let payload = {
+    action: "backup",
+    token: token ? token.trim() : "",
+    data: compactData
+  };
+  if (JSON.stringify(payload).length > 44000) {
+    compactData.catalog = [];
+    payload = {
+      action: "backup",
+      token: token ? token.trim() : "",
+      data: compactData
+    };
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
