@@ -431,25 +431,40 @@ function initAuthModule() {
 }
 
 function refreshAllUI() {
-  renderHeaderStats(state);
-  populateCategorySelects(state);
+  try {
+    renderHeaderStats(state);
+  } catch (err) {
+    console.warn("[Maracaju] Erro em renderHeaderStats:", err);
+  }
 
-  if (currentTab === 'tarefas') {
-    renderTasksTab(state, currentFrequencyFilter, currentRoomFilter);
-  } else if (currentTab === 'historico') {
-    renderHistoryTab(state, currentHistoryDate);
-  } else if (currentTab === 'carro') {
-    renderCarroTab(state, currentCarroCategory, currentCarroStatus);
-  } else if (currentTab === 'reformas') {
-    renderReformasTab(state, currentReformasFilter, currentReformasCategory);
-  } else if (currentTab === 'sonhos') {
-    renderSonhosTab(state, currentSonhosFilter);
-  } else if (currentTab === 'pets') {
-    renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
-  } else if (currentTab === 'compras' || currentTab === 'gamificacao') {
-    renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
-  } else if (currentTab === 'ajustes') {
-    renderSettingsTab(state, currentCategoryManageModule);
+  try {
+    populateCategorySelects(state);
+  } catch (err) {
+    console.warn("[Maracaju] Erro em populateCategorySelects:", err);
+  }
+
+  try {
+    if (currentTab === "tarefas") {
+      renderTasksTab(state, currentFrequencyFilter, currentRoomFilter);
+    } else if (currentTab === "historico") {
+      renderHistoryTab(state, currentHistoryDate);
+    } else if (currentTab === "carro") {
+      renderCarroTab(state, currentCarroCategory, currentCarroStatus);
+    } else if (currentTab === "reformas") {
+      renderReformasTab(state, currentReformasFilter, currentReformasCategory);
+    } else if (currentTab === "sonhos") {
+      renderSonhosTab(state, currentSonhosFilter);
+    } else if (currentTab === "pets") {
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
+    } else if (currentTab === "shopping") {
+      renderShoppingTab(state, currentShoppingCategory, currentShoppingStatus, currentShoppingForWhom, currentShoppingSearch, currentShoppingSort);
+    } else if (currentTab === "compras" || currentTab === "gamificacao" || currentTab === "mercado") {
+      renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
+    } else if (currentTab === "ajustes") {
+      renderSettingsTab(state, currentCategoryManageModule);
+    }
+  } catch (err) {
+    console.error("[Maracaju] Erro ao renderizar aba ativa:", currentTab, err);
   }
 }
 
