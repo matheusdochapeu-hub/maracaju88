@@ -4,8 +4,8 @@ import {
   updateShoppingWishlistItem,
   deleteShoppingWishlistItem,
   toggleShoppingItemBought,
-  addPhotoToShoppingItem,
-  removePhotoFromShoppingItem,
+  addPhotoToShoppingItem as addPhotoToWishlistItem,
+  removePhotoFromShoppingItem as removePhotoFromWishlistItem,
   getShoppingSummary as getShoppingWishlistSummary,
   filterShoppingItems
 } from './shopping-items.js';

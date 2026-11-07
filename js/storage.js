@@ -142,7 +142,6 @@ export function saveState(state) {
     return false;
   }
 }
-}
 
 export function exportBackupJson(state) {
   const jsonStr = JSON.stringify(state, null, 2);
