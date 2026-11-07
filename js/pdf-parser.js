@@ -4,7 +4,7 @@
 // ============================================================
 
 import { parseCurrency } from './currency.js';
-import { guessMarketNameFromCnpj, formatCnpj } from './nfce.js';
+import { guessMarketNameFromCnpj, formatCnpj, mapPaymentMethodToApp } from './nfce.js';
 
 // Dicionário de abreviações comuns de cupom fiscal para nomes populares
 const POPULAR_ABBREVIATIONS = [
@@ -146,15 +146,22 @@ function _parseSingleNfceDanfeText(rawText) {
     .map(l => l.trim())
     .filter(Boolean);
 
+  const fullText = lines.join(' ');
   let marketName = '';
   let cnpj = '';
   let dateStr = '';
   let nfeKey = '';
   let total = 0;
+  let paymentMethod = 'va';
   const items = [];
 
+  // Forma de Pagamento
+  const payMatch = fullText.match(/(?:FORMA\s+PAGAMENTO|Forma\s+de\s+Pagamento|PAGAMENTO)[\s\S]*?(Cart[aã]o\s+de\s+Cr[eé]dito?|Cr[eé]dito|Cart[aã]o\s+de\s+D[eé]bito?|D[eé]bito|Dinheiro|Pix|Alimenta[cç][aã]o|Refei[cç][aã]o)/i);
+  if (payMatch) {
+    paymentMethod = mapPaymentMethodToApp(payMatch[1]);
+  }
+
   // 1. Extração de Chave de Acesso (44 dígitos)
-  const fullText = lines.join(' ');
   const keyMatch = fullText.match(/\b([0-9\s]{44,60})\b/);
   if (keyMatch) {
     const rawDigits = keyMatch[1].replace(/\s/g, '');
@@ -430,12 +437,12 @@ function _parseSingleNfceDanfeText(rawText) {
       }
 
       // Ou se a linha termina com um valor monetário direto (ex: "LEITE INTEGRAL 4,89")
-      if (!/CNPJ|Total|Emissão|Chave|Consumidor|Danfe|NFC-e|Tributos|Protocolo|Ambiente|Via|IE:|IM:|IE\b/i.test(line)) {
+      if (!/CNPJ|Total|Emissão|Chave|Consumidor|Danfe|NFC-e|Tributos|Protocolo|Ambiente|Via|IE:|IM:|IE\b|Cartao|Cartão|Crédito|Credito|Débito|Debito|Dinheiro|Pix|Pagamento|Forma/i.test(line)) {
         const directPriceMatch = line.match(/^(?:(?:\d+\s+)+)?([A-Za-z\u00C0-\u00FF][A-Za-z0-9\s\.\,\-\/\%\(\)]+?)\s+(?:R\$\s*)?(\d+[\.,]\d{2})$/);
         if (directPriceMatch) {
           const rawName = directPriceMatch[1].trim();
           const price = parseCurrency(directPriceMatch[2]);
-          if (rawName.length > 2 && price > 0 && !/Valor|Pagar|Total|Subtotal|Troco|Desconto|Tributo|Data|Emiss/i.test(rawName)) {
+          if (rawName.length > 2 && price > 0 && !/Valor|Pagar|Total|Subtotal|Troco|Desconto|Tributo|Data|Emiss|Cartao|Credit|Debito|Pix|Forma/i.test(rawName)) {
             const alias = suggestPopularName(rawName);
             items.push({
               code: 'ITEM_' + (items.length + 1),
@@ -505,10 +512,12 @@ function _parseSingleNfceDanfeText(rawText) {
   }
 
   return {
+    success: true,
     marketName,
     cnpj: cnpj ? formatCnpj(cnpj) : '',
     date: dateStr,
     total,
+    paymentMethod,
     nfeKey,
     items
   };

@@ -16,6 +16,7 @@ import { registerInvoiceInCatalog, searchCatalogProducts, ensureCatalog } from '
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '..');
 
 test('NFC-e QR Code: Decodificação da Chave de Acesso e URL da SEFAZ SP', () => {
   const urlSefazSp = 'https://www.nfce.fazenda.sp.gov.br/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx?p=35261150489095000127650010000505041101032350|2|1|1|7324E472702739EBCBDA34407C169BEB60221465';
@@ -146,4 +147,75 @@ test('Formas de Pagamento NFC-e: Mapeamento preciso para o enum do app', () => {
   assert.equal(mapPaymentMethodToApp('Vale Alimentação / VR Card'), 'va');
   assert.equal(mapPaymentMethodToApp('Vale Refeição'), 'vr');
   assert.equal(mapPaymentMethodToApp('Outros'), 'va');
+});
+
+test('NFC-e OCR & Cupom: Extrai cupom impresso em papel com itens, valores e forma de pagamento', async () => {
+  const { parseNfceDanfeText } = await import('../js/pdf-parser.js');
+
+  const cupomRealText = [
+    'PADARIA E MERCEARIA IRMAOS ARAUJO LTDA',
+    'CNPJ: 50.489.095/0001-27 IE: 582124501110 IM: 428201',
+    'R. CONSTITUICAO, 1365 VILA TIBERIO',
+    'RIBEIRAO PRETO CEP: 14050470',
+    'DOCUMENTO AUXILIAR DA NOTA FISCAL CONSUMIDOR ELETRONICA',
+    'IT. COD DESCRICAO MERCADORIA QTD. UN UNITARIO TOTAL',
+    '001 3000 CAFE DA MANHA 0.442KG 59,90 26.48',
+    '002 3076 SUCO MIX JARRA 1UN 17.90 17.90',
+    '003 7079 CAPPUCCINO GELADO COM 1UN 13.50 13.50',
+    '004 3000 CAFE DA MANHA 0.22KG 59.90 13.18',
+    'Qtde. total de itens: 4',
+    'Valor Total R$ 71.06',
+    'Valor a Pagar R$ 71.06',
+    'FORMA PAGAMENTO VALOR PAGO R$',
+    'Cartao de Credit 71.06',
+    'Consulte pela chave de acesso em https://www.nfce.fazenda.sp.gov.br/consulta',
+    '3526 1150 4890 9500 0127 6500 1000 0505 0411 0103 2350',
+    'NFC-e No. 000050504 Serie 1 07/11/2026 10:32:35'
+  ].join('\n');
+
+  const parsed = parseNfceDanfeText(cupomRealText);
+
+  assert.equal(parsed.success, true);
+  assert.equal(parsed.marketName, 'Padaria e Mercearia Irmãos Araújo');
+  assert.equal(parsed.cnpj, '50.489.095/0001-27');
+  assert.equal(parsed.total, 71.06);
+  assert.equal(parsed.paymentMethod, 'credito');
+  assert.equal(parsed.nfeKey, '35261150489095000127650010000505041101032350');
+  assert.equal(parsed.items.length, 4);
+
+  // Café da manhã
+  assert.equal(parsed.items[0].rawName, 'CAFE DA MANHA');
+  assert.equal(parsed.items[0].totalPrice, 26.48);
+
+  // Suco mix jarra
+  assert.equal(parsed.items[1].rawName, 'SUCO MIX JARRA');
+  assert.equal(parsed.items[1].totalPrice, 17.90);
+
+  // Cappuccino gelado
+  assert.equal(parsed.items[2].rawName, 'CAPPUCCINO GELADO COM');
+  assert.equal(parsed.items[2].totalPrice, 13.50);
+
+  // Café da manhã 2
+  assert.equal(parsed.items[3].rawName, 'CAFE DA MANHA');
+  assert.equal(parsed.items[3].totalPrice, 13.18);
+});
+
+test('NFC-e UI: Leitor Universal possui jsQR embutido, abas de câmera, OCR e colar da área de transferência', () => {
+  const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf-8');
+  const appJs = fs.readFileSync(path.join(rootDir, 'js', 'app.js'), 'utf-8');
+
+  // 1. Script do jsQR presente no head
+  assert.ok(indexHtml.includes('js/vendor/jsqr.min.js'), 'index.html deve carregar jsqr.min.js');
+
+  // 2. Abas presentes no modal
+  assert.ok(indexHtml.includes('id="tab-btn-qr-cam"'), 'Aba Câmera QR deve existir');
+  assert.ok(indexHtml.includes('id="tab-btn-qr-ocr"'), 'Aba OCR Foto Cupom deve existir');
+  assert.ok(indexHtml.includes('id="tab-btn-qr-paste"'), 'Aba Colar/Arquivo deve existir');
+
+  // 3. Botão de colar automático presente
+  assert.ok(indexHtml.includes('id="btn-qr-clipboard-paste"'), 'Botão de colar automático da área de transferência deve existir');
+
+  // 4. Integração do fallback jsQR em app.js
+  assert.ok(appJs.includes('window.jsQR'), 'app.js deve utilizar fallback universal jsQR');
+  assert.ok(appJs.includes('navigator.clipboard.readText'), 'app.js deve ler a área de transferência');
 });

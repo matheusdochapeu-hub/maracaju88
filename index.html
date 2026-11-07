@@ -40,6 +40,9 @@
     }
   </script>
 
+  <!-- jsQR para Leitura Universal de QR Code de Nota Fiscal -->
+  <script src="./js/vendor/jsqr.min.js"></script>
+
   <!-- Stylesheets (v2.1.3) -->
   <link rel="stylesheet" href="./css/variables.css?v=2.4.0" />
   <link rel="stylesheet" href="./css/base.css?v=2.4.0" />
@@ -1834,34 +1837,95 @@
   </div>
 
   <!-- Modal: Leitor de QR Code de Nota Fiscal (NFC-e) -->
-  <div id="modal-qr-scanner" class="modal-overlay">
+    <div id="modal-qr-scanner" class="modal-overlay">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title">📷 Ler QR Code da Nota Fiscal</h3>
+        <h3 class="modal-title">🧾 Leitor de Nota Fiscal (NFC-e)</h3>
         <button type="button" class="btn btn-icon btn-sm" id="btn-close-qr-scanner" data-close-modal>✕</button>
       </div>
 
+      <!-- Abas de Modo de Leitura -->
+      <div style="display: flex; gap: 0.35rem; margin-bottom: 0.85rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; justify-content: center; flex-wrap: wrap;">
+        <button type="button" class="chip active" id="tab-btn-qr-cam" style="font-size: 0.78rem;">📷 QR ao Vivo</button>
+        <button type="button" class="chip" id="tab-btn-qr-ocr" style="font-size: 0.78rem;">📸 Foto do Cupom (OCR)</button>
+        <button type="button" class="chip" id="tab-btn-qr-paste" style="font-size: 0.78rem;">📋 Colar / Arquivo</button>
+      </div>
+
       <div class="qr-scanner-wrapper">
-        <!-- Viewport da Câmera do Celular -->
-        <div class="qr-camera-viewport" id="qr-camera-container">
-          <video id="qr-video" playsinline muted autoplay></video>
-          <div class="qr-scan-guide"></div>
-          <div class="qr-laser-line"></div>
+        <!-- Modo 1: Câmera QR Code ao Vivo -->
+        <div id="qr-section-camera" style="width: 100%;">
+          <div class="qr-camera-viewport" id="qr-camera-container">
+            <video id="qr-video" playsinline muted autoplay></video>
+            <div class="qr-scan-guide"></div>
+            <div class="qr-laser-line"></div>
+          </div>
+
+          <div style="display: flex; gap: 0.4rem; width: 100%; justify-content: center; margin-top: 0.6rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-camera">
+              🔄 Alternar Câmera
+            </button>
+            <label class="btn btn-secondary btn-sm" style="margin-bottom: 0; cursor: pointer;">
+              📁 Foto do QR Code
+              <input type="file" id="qr-file-input" accept="image/*" style="display: none;" />
+            </label>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-paste-cam-shortcut" title="Colar link ou HTML da área de transferência">
+              📋 Colar Rápido
+            </button>
+          </div>
         </div>
 
-        <!-- Controles da Câmera -->
-        <div style="display: flex; gap: 0.5rem; width: 100%; justify-content: center;">
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-camera">
-            🔄 Alternar Câmera
-          </button>
-          <label class="btn btn-secondary btn-sm" style="margin-bottom: 0; cursor: pointer;">
-            📁 Enviar Foto do QR Code
-            <input type="file" id="qr-file-input" accept="image/*" style="display: none;" />
-          </label>
+        <!-- Modo 2: Foto do Cupom Impresso com OCR -->
+        <div id="qr-section-ocr" style="display: none; width: 100%;">
+          <div style="background: var(--bg-surface); border: 2px dashed var(--border-subtle); border-radius: var(--radius-md); padding: 1.2rem; text-align: center; margin-bottom: 0.75rem;">
+            <div style="font-size: 2.2rem; margin-bottom: 0.4rem;">🧾</div>
+            <strong style="display: block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem;">
+              Fotografar Cupom Fiscal (OCR)
+            </strong>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 0.85rem;">
+              Tire uma foto nítida e reta do cupom fiscal em papel. Nosso leitor reconhecerá os produtos, quantidades e valores da compra automaticamente!
+            </p>
+            <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+              <label class="btn btn-primary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+                📷 Tirar Foto do Cupom
+                <input type="file" id="input-ocr-cupom-camera" accept="image/*" capture="environment" style="display: none;" />
+              </label>
+              <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+                📁 Escolher da Galeria
+                <input type="file" id="input-ocr-cupom-gallery" accept="image/*" style="display: none;" />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modo 3: Colar da Área de Transferência ou Importar Arquivo -->
+        <div id="qr-section-paste" style="display: none; width: 100%;">
+          <div style="display: flex; flex-direction: column; gap: 0.6rem; width: 100%;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-qr-clipboard-paste" style="width: 100%; justify-content: center; display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem;">
+              <span>📋</span> Colar da Área de Transferência (1 Toque)
+            </button>
+
+            <label class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; margin: 0;">
+              <span>📄</span> Importar Arquivo da Nota (.html, .pdf, .txt)
+              <input type="file" id="input-qr-file-any" accept=".html,.htm,.pdf,.txt,image/*" style="display: none;" />
+            </label>
+
+            <div>
+              <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Ou cole o link, chave, texto ou código HTML:</label>
+              <textarea id="qr-universal-input" class="form-control" rows="3" placeholder="Cole aqui o link da NFC-e, chave de 44 dígitos, texto do cupom ou código da Fazenda..." style="font-size: 0.75rem; font-family: monospace;"></textarea>
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.4rem;">
+                <button type="button" id="btn-qr-process-universal" class="btn btn-primary btn-sm" style="flex: 1;">
+                  ⚡ Processar Conteúdo
+                </button>
+                <a href="https://www.nfce.fazenda.sp.gov.br/consulta" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">
+                  🌐 Abrir Fazenda
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Feedback / Status do Scanner -->
-        <div id="qr-status-msg" style="font-size: 0.85rem; color: var(--text-secondary); text-align: center;">
+        <div id="qr-status-msg" style="font-size: 0.85rem; color: var(--text-secondary); text-align: center; margin: 0.5rem 0; min-height: 1.2rem;">
           Aponte a câmera para o QR Code impresso no cupom fiscal (NFC-e).
         </div>
 
@@ -1921,20 +1985,12 @@
           </div>
         </div>
 
-        <!-- Entrada Manual / Colar Link ou HTML -->
-        <div style="width: 100%; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem;">
-          <label class="form-label" style="font-size: 0.75rem;">Ou cole o link, chave ou HTML da NFC-e:</label>
-          <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="qr-manual-input" class="form-control" placeholder="Link da NFC-e ou chave de 44 dígitos..." style="font-size: 0.8rem;" />
-            <button type="button" id="btn-qr-manual-submit" class="btn btn-primary btn-sm">Processar</button>
-          </div>
-          <!-- Área Retrátil para Colar Conteúdo HTML completo -->
-          <div id="qr-paste-html-wrapper" style="display: none; margin-top: 0.5rem;">
-            <textarea id="qr-manual-html-textarea" class="form-control" rows="3" placeholder="Cole aqui o texto ou código HTML copiado da página da Fazenda..." style="font-size: 0.75rem; font-family: monospace;"></textarea>
-            <button type="button" id="btn-qr-process-html" class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 0.35rem;">
-              ⚡ Extrair Produtos e Valores do Conteúdo
-            </button>
-          </div>
+        <!-- Entrada Manual de Fallback Mantida para compatibilidade -->
+        <input type="hidden" id="qr-manual-input" value="" />
+        <button type="button" id="btn-qr-manual-submit" style="display: none;"></button>
+        <div id="qr-paste-html-wrapper" style="display: none;">
+          <textarea id="qr-manual-html-textarea" style="display: none;"></textarea>
+          <button type="button" id="btn-qr-process-html" style="display: none;"></button>
         </div>
       </div>
     </div>
