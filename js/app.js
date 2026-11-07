@@ -2254,12 +2254,23 @@ function initSettingsModule() {
 
       try {
         const cloudData = await restoreFromSheets(state);
-        if (cloudData) {
-          state = applyCloudBackup(state, cloudData);
-          saveState(state);
-          populateCategorySelects(state);
-          showToast('☁️ Dados restaurados com sucesso do Google Sheets!', 'success', 4000);
-          refreshAllUI();
+    if (cloudData) {
+      const cloudRegCount = Array.isArray(cloudData.comprasRegistros) ? cloudData.comprasRegistros.length : 0;
+      const cloudSummary = cloudData.settings && cloudData.settings.benefitsSummary;
+      state = applyCloudBackup(state, cloudData);
+      saveState(state);
+      populateCategorySelects(state);
+      refreshAllUI();
+
+      const mergedRegCount = Array.isArray(state.comprasRegistros) ? state.comprasRegistros.length : 0;
+      const localSummary = state.settings && state.settings.benefitsSummary;
+      const summaryDiffers = !cloudSummary || (localSummary && (
+        Math.abs((Number(localSummary.vaBalance) || 0) - (Number(cloudSummary.vaBalance) || 0)) > 0.01 ||
+        Math.abs((Number(localSummary.vrBalance) || 0) - (Number(cloudSummary.vrBalance) || 0)) > 0.01
+      ));
+      if (mergedRegCount > cloudRegCount || summaryDiffers) {
+        backupToSheets(state).catch(e => console.warn('[Maracaju] Push pós-merge para Sheets falhou:', e.message));
+      }
         } else {
           showToast('Nenhum dado encontrado na planilha.', 'info');
         }

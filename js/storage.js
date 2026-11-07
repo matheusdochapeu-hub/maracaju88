@@ -12,6 +12,7 @@ import {
   INITIAL_PETS
 } from './config.js';
 import { DEFAULT_CATEGORIES } from './categories.js';
+import { getMonthlyBenefitDetails, getCurrentBenefitCycleKey } from './benefits.js';
 
 export function getInitialState() {
   return {
@@ -119,12 +120,28 @@ export function loadState() {
 export function saveState(state) {
   try {
     state.lastUpdated = new Date().toISOString();
+    try {
+      if (!state.settings) state.settings = {};
+      const curCycleKey = getCurrentBenefitCycleKey(state);
+      const curDetails = getMonthlyBenefitDetails(state, curCycleKey);
+      state.settings.benefitsSummary = {
+        cycleKey: curDetails.cycleKey,
+        vaTotal: curDetails.vaTotal,
+        vaSpent: curDetails.vaSpent,
+        vaBalance: curDetails.vaBalance,
+        vrTotal: curDetails.vrTotal,
+        vrSpent: curDetails.vrSpent,
+        vrBalance: curDetails.vrBalance,
+        updatedAt: state.lastUpdated
+      };
+    } catch (e) {}
     localStorage.setItem(APP_CONFIG.storageKey, JSON.stringify(state));
     return true;
   } catch (err) {
     console.error("Erro ao salvar estado no localStorage:", err);
     return false;
   }
+}
 }
 
 export function exportBackupJson(state) {

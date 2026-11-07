@@ -1,4 +1,5 @@
 import { DEFAULT_ROOM_CATEGORIES } from './categories.js';
+import { getMonthlyBenefitDetails, getCurrentBenefitCycleKey } from './benefits.js';
 // ============================================================
 //  MARACAJU - GOOGLE SHEETS SYNC & BACKUP CLIENT
 // ============================================================
@@ -55,6 +56,22 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
   const stripBase64 = (val) => (typeof val === 'string' && val.startsWith('data:image/')) ? '' : val;
   const stripPhotosArr = (arr) => Array.isArray(arr) ? arr.filter(p => typeof p === 'string' && !p.startsWith('data:image/')) : undefined;
 
+  let benefitsSummary = undefined;
+  try {
+    const curCycleKey = getCurrentBenefitCycleKey(state);
+    const curDetails = getMonthlyBenefitDetails(state, curCycleKey);
+    benefitsSummary = {
+      cycleKey: curDetails.cycleKey,
+      vaTotal: curDetails.vaTotal,
+      vaSpent: curDetails.vaSpent,
+      vaBalance: curDetails.vaBalance,
+      vrTotal: curDetails.vrTotal,
+      vrSpent: curDetails.vrSpent,
+      vrBalance: curDetails.vrBalance,
+      updatedAt: new Date().toISOString()
+    };
+  } catch (e) {}
+
   const compactData = {
     version: state.version,
     lastUpdated: new Date().toISOString(),
@@ -63,7 +80,11 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
     gamification: state.gamification,
     tasks: state.tasks || [],
     history: state.history || {},
-    carro: state.carro || [],
+    carro: (state.carro || []).map(c => ({
+      ...c,
+      photoUrl: stripBase64(c.photoUrl),
+      photos: stripPhotosArr(c.photos)
+    })),
     reformas: (state.reformas || []).map(r => ({
       ...r,
       photoUrl: stripBase64(r.photoUrl),
@@ -72,7 +93,8 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
     sonhos: (state.sonhos || []).map(s => ({
       ...s,
       imageUrl: stripBase64(s.imageUrl),
-      photoUrl: stripBase64(s.photoUrl)
+      photoUrl: stripBase64(s.photoUrl),
+      photos: stripPhotosArr(s.photos)
     })),
     shoppingWishlist: (state.shoppingWishlist || []).map(s => ({
       ...s,
@@ -81,13 +103,29 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
     })),
     compras: (state.compras || []).map(c => ({
       ...c,
-      imageUrl: stripBase64(c.imageUrl)
+      imageUrl: stripBase64(c.imageUrl),
+      photos: stripPhotosArr(c.photos)
     })),
-    comprasRegistros: state.comprasRegistros || [],
+    comprasRegistros: (state.comprasRegistros || []).map(r => ({
+      ...r,
+      photos: stripPhotosArr(r.photos),
+      items: Array.isArray(r.items) ? r.items.map(it => ({
+        ...it,
+        photos: stripPhotosArr(it.photos)
+      })) : []
+    })),
     pets: (state.pets || []).map(p => ({
       ...p,
       photoUrl: stripBase64(p.photoUrl),
-      photos: stripPhotosArr(p.photos)
+      foto: stripBase64(p.foto),
+      photo: stripBase64(p.photo),
+      photos: stripPhotosArr(p.photos),
+      fotos: stripPhotosArr(p.fotos),
+      exames: Array.isArray(p.exames) ? p.exames.map(ex => ({
+        ...ex,
+        fotos: stripPhotosArr(ex.fotos),
+        photos: stripPhotosArr(ex.photos)
+      })) : undefined
     })),
     catalog: (state.catalog || []).map(it => ({
       ...it,
@@ -96,7 +134,8 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
     categories: state.categories || {},
     userPasswords: state.userPasswords || {},
     settings: {
-      benefits: (state.settings && state.settings.benefits) ? state.settings.benefits : undefined
+      benefits: (state.settings && state.settings.benefits) ? state.settings.benefits : undefined,
+      benefitsSummary
     }
   };
 
@@ -109,6 +148,25 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
   };
   if (JSON.stringify(payload).length > 44000) {
     compactData.catalog = [];
+    payload = {
+      action: "backup",
+      token: token ? token.trim() : "",
+      data: compactData
+    };
+  }
+  if (JSON.stringify(payload).length > 44000) {
+    compactData.comprasRegistros = (compactData.comprasRegistros || []).map(r => ({
+      id: r.id,
+      marketName: r.marketName || r.establishment || r.estabelecimento || '',
+      establishment: r.establishment || r.marketName || r.estabelecimento || '',
+      date: r.date,
+      monthKey: r.monthKey,
+      total: r.total,
+      paymentMethod: r.paymentMethod || 'va',
+      notes: r.notes || '',
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt
+    }));
     payload = {
       action: "backup",
       token: token ? token.trim() : "",
