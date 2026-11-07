@@ -26,18 +26,18 @@ test('Carrossel de Abas: CSS de Animações e Estilos de Transição', () => {
   assert.ok(baseCss.includes('overflow-x: hidden'));
 });
 
-test('Carrossel de Abas: Ordem das 7 abas e lógica direcional', () => {
+test('Carrossel de Abas: Ordem das 8 abas e lógica direcional', () => {
   const appJs = fs.readFileSync(path.join(__dirname, '../js/app.js'), 'utf-8');
 
-  // TAB_ORDER com as 7 abas na ordem oficial
-  assert.ok(appJs.includes("const TAB_ORDER = ['tarefas', 'pets', 'compras', 'carro', 'reformas', 'sonhos', 'ajustes']"));
+  // TAB_ORDER com as 8 abas na ordem oficial (incluindo Shopping)
+  assert.ok(appJs.includes("const TAB_ORDER = ['tarefas', 'pets', 'compras', 'shopping', 'carro', 'reformas', 'sonhos', 'ajustes']"));
 
   // Presença da função switchTab e initTabsSwipeCarousel
   assert.ok(appJs.includes('function switchTab('));
   assert.ok(appJs.includes('function initTabsSwipeCarousel('));
 
   // Validação da lógica direcional
-  const TAB_ORDER = ['tarefas', 'pets', 'compras', 'carro', 'reformas', 'sonhos', 'ajustes'];
+  const TAB_ORDER = ['tarefas', 'pets', 'compras', 'shopping', 'carro', 'reformas', 'sonhos', 'ajustes'];
 
   function getDirection(current, target) {
     const oldIdx = TAB_ORDER.indexOf(current);
@@ -48,10 +48,14 @@ test('Carrossel de Abas: Ordem das 7 abas e lógica direcional', () => {
   // Avançando na ordem das abas (entra da direita)
   assert.equal(getDirection('tarefas', 'pets'), 'right');
   assert.equal(getDirection('tarefas', 'compras'), 'right');
+  assert.equal(getDirection('compras', 'shopping'), 'right');
+  assert.equal(getDirection('shopping', 'carro'), 'right');
   assert.equal(getDirection('pets', 'ajustes'), 'right');
 
   // Voltando na ordem das abas (entra da esquerda)
   assert.equal(getDirection('ajustes', 'sonhos'), 'left');
+  assert.equal(getDirection('carro', 'shopping'), 'left');
+  assert.equal(getDirection('shopping', 'compras'), 'left');
   assert.equal(getDirection('compras', 'pets'), 'left');
   assert.equal(getDirection('pets', 'tarefas'), 'left');
 });

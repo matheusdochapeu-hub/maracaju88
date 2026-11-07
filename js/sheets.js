@@ -74,6 +74,11 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
       imageUrl: stripBase64(s.imageUrl),
       photoUrl: stripBase64(s.photoUrl)
     })),
+    shoppingWishlist: (state.shoppingWishlist || []).map(s => ({
+      ...s,
+      photoUrl: stripBase64(s.photoUrl),
+      photos: stripPhotosArr(s.photos)
+    })),
     compras: (state.compras || []).map(c => ({
       ...c,
       imageUrl: stripBase64(c.imageUrl)
@@ -308,6 +313,29 @@ export function applyCloudBackup(currentState, cloudData) {
       const map = new Map();
       localList.forEach(item => { if (item && item.id) map.set(item.id, item); });
       cloudList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      return Array.from(map.values());
+    })(),
+    shoppingWishlist: (() => {
+      const cloudList = Array.isArray(cloudData.shoppingWishlist) ? cloudData.shoppingWishlist : [];
+      const localList = Array.isArray(safeCurrent.shoppingWishlist) ? safeCurrent.shoppingWishlist : [];
+      if (cloudList.length === 0) return localList;
+      if (localList.length === 0) return cloudList;
+      const map = new Map();
+      localList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      cloudList.forEach(item => {
+        if (item && item.id) {
+          const existing = map.get(item.id);
+          if (!existing) {
+            map.set(item.id, item);
+          } else {
+            const mergedItem = { ...existing, ...item };
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+              mergedItem.photos = existing.photos;
+            }
+            map.set(item.id, mergedItem);
+          }
+        }
+      });
       return Array.from(map.values());
     })(),
     compras: (() => {

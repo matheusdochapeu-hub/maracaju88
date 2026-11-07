@@ -183,6 +183,10 @@
       <span class="nav-icon">🛒</span>
       <span>Mercado</span>
     </button>
+    <button type="button" class="nav-item" data-tab="shopping">
+      <span class="nav-icon">🛍️</span>
+      <span>Shopping</span>
+    </button>
     <button type="button" class="nav-item" data-tab="carro">
       <span class="nav-icon">🚗</span>
       <span>Carro</span>
@@ -2529,6 +2533,136 @@
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL: ADICIONAR / EDITAR ITEM DE SHOPPING & DESEJOS      -->
+  <!-- ======================================================= -->
+  <div id="modal-shopping-item" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="shopping-modal-title">🛍️ Novo Item de Shopping</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <form id="form-shopping-item">
+        <input type="hidden" id="shopping-item-id" value="" />
+
+        <div class="form-group">
+          <label class="form-label" for="shopping-input-title">Nome do Produto / Desejo *</label>
+          <input type="text" id="shopping-input-title" class="form-control" placeholder="Ex: Kit 3 Pares Meias New Balance, Air Fryer..." required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="shopping-input-category">Categoria *</label>
+            <select id="shopping-input-category" class="form-control" required>
+              <option value="roupas_calcados">👕 Roupas & Calçados</option>
+              <option value="eletrodomesticos">🔌 Eletrodomésticos</option>
+              <option value="eletronicos">📱 Eletrônicos & Tech</option>
+              <option value="casa_decoracao">🏠 Casa & Decoração</option>
+              <option value="beleza_pessoal">✨ Beleza & Cuidados</option>
+              <option value="esporte_lazer">👟 Esporte & Lazer</option>
+              <option value="outros">🛍️ Outros & Variados</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="shopping-input-price">Preço Visto / Estimado</label>
+            <input type="text" id="shopping-input-price" class="form-control" placeholder="R$ 0,00" inputmode="decimal" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="shopping-input-store">Loja / Marca</label>
+            <input type="text" id="shopping-input-store" class="form-control" placeholder="Ex: New Balance, Amazon, Loja física..." />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="shopping-input-for-whom">Para Quem?</label>
+            <select id="shopping-input-for-whom" class="form-control">
+              <option value="casal" selected>💑 Casal (Nós dois)</option>
+              <option value="matheus">🧢 Matheus</option>
+              <option value="scarlet">🎀 Scarlet</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="shopping-input-priority">Prioridade</label>
+            <select id="shopping-input-priority" class="form-control">
+              <option value="baixa">🟢 Baixa (Quando der)</option>
+              <option value="media" selected>🟡 Média (Planejado)</option>
+              <option value="alta">🟠 Alta (Próxima compra)</option>
+              <option value="urgente">🔴 Urgente</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="shopping-input-status">Status</label>
+            <select id="shopping-input-status" class="form-control">
+              <option value="desejado" selected>💡 Na Lista de Desejos</option>
+              <option value="pesquisando">🔍 Pesquisando Preço</option>
+              <option value="comprado">✅ Já Comprado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="shopping-input-link">Link do Produto / Loja (Opcional)</label>
+          <input type="url" id="shopping-input-link" class="form-control" placeholder="https://..." />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="shopping-input-notes">Observações (Tamanho, Voltagem, Cor, Modelo)</label>
+          <textarea id="shopping-input-notes" class="form-control" rows="2" placeholder="Ex: Tamanho M 34-38, voltagem 110V, cor branca..."></textarea>
+        </div>
+
+        <!-- Seção de Foto da Peça / Etiqueta -->
+        <div class="form-group">
+          <label class="form-label">Foto do Produto ou Etiqueta de Preço</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📷 Tirar Foto (Câmera)
+              <input type="file" id="shopping-input-camera" accept="image/*" capture="environment" style="display: none;" />
+            </label>
+            <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              🖼️ Escolher da Galeria
+              <input type="file" id="shopping-input-gallery" accept="image/*" style="display: none;" />
+            </label>
+            <span id="shopping-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
+          </div>
+
+          <!-- Preview da Imagem -->
+          <div id="shopping-photo-preview-container" style="display: none; margin-top: 0.5rem; position: relative; max-width: 200px;">
+            <img id="shopping-photo-preview-img" src="" alt="Prévia da foto" style="width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); max-height: 140px; object-fit: cover;" />
+            <button type="button" id="btn-remove-shopping-preview-photo" class="btn btn-icon btn-sm" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.65); color: #fff; border-radius: 50%; width: 24px; height: 24px; min-width: 24px; font-size: 0.7rem;" title="Remover foto">✕</button>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Item</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: VISUALIZADOR DE FOTO DE SHOPPING -->
+  <div id="modal-shopping-photo-viewer" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px; padding: 1rem; text-align: center;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <h4 id="shopping-photo-viewer-title" style="font-size: 1rem; font-weight: 700; margin: 0; color: var(--text-primary); text-align: left;">Foto do Produto</h4>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
+      </div>
+      <div style="background: #000; border-radius: var(--radius-md); overflow: hidden; max-height: 70vh; display: flex; align-items: center; justify-content: center;">
+        <img id="shopping-photo-viewer-img" src="" alt="Foto em tamanho grande" style="max-width: 100%; max-height: 70vh; object-fit: contain;" />
+      </div>
+      <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary btn-sm" data-close-modal>Fechar</button>
+      </div>
     </div>
   </div>
 

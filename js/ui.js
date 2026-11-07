@@ -1,4 +1,9 @@
 import {
+  listShoppingItems,
+  getShoppingSummary as getShoppingWishlistSummary,
+  filterShoppingItems
+} from './shopping-items.js';
+import {
   getMonthlyBenefitDetails,
   getBenefitsHistory,
   getCurrentBenefitCycleKey,
@@ -3324,4 +3329,243 @@ export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
       </div>
     `;
   }
+}
+
+// ============================================================
+// ABA SHOPPING: ROUPAS, ELETRODOMÉSTICOS & DESEJOS DO CASAL
+// ============================================================
+export function renderShoppingTab(
+  state,
+  categoryFilter = 'todos',
+  statusFilter = 'todos',
+  forWhomFilter = 'todos',
+  searchQuery = '',
+  sortOption = 'priority'
+) {
+  // 1. Resumo no topo
+  const summary = getShoppingWishlistSummary(state);
+  const bannerEl = document.getElementById('shopping-summary-banner');
+  if (bannerEl) {
+    bannerEl.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">🛍️ Shopping & Desejos</div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: var(--brand-moss-dark);">
+              ${formatCurrencyWithSymbol(summary.totalEstimatedActive)}
+              <span style="font-size: 0.8rem; font-weight: 500; color: var(--text-muted);">em ${summary.activeCount} ${summary.activeCount === 1 ? 'item desejado' : 'itens desejados'}</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-open-add-shopping-item" style="box-shadow: var(--shadow-sm);">
+            <span>➕</span> Novo Item
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem; background: var(--bg-card); padding: 0.6rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); font-size: 0.8rem;">
+          <div>
+            <span style="color: var(--text-muted); font-size: 0.72rem; display: block;">Planejados / Ativos:</span>
+            <strong style="color: var(--brand-amber); font-size: 0.95rem;">${summary.activeCount} itens</strong>
+          </div>
+          <div>
+            <span style="color: var(--text-muted); font-size: 0.72rem; display: block;">Já Comprados:</span>
+            <strong style="color: var(--success); font-size: 0.95rem;">${summary.boughtCount} itens (${formatCurrencyWithSymbol(summary.totalPurchased)})</strong>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 2. Chips de Categorias (Roupas, Eletrodomésticos, Eletrônicos, Casa, etc.)
+  const chipsContainer = document.getElementById('shopping-category-chips');
+  if (chipsContainer) {
+    const cats = getCategories(state, 'shopping');
+    const allChips = [
+      { id: 'todos', label: 'Todas as Categorias', icon: '🛍️' },
+      ...cats
+    ];
+    chipsContainer.innerHTML = allChips.map(c => `
+      <button class="chip ${c.id === categoryFilter ? 'active' : ''}" data-shopping-category="${c.id}">
+        <span>${c.icon}</span>
+        <span>${c.label}</span>
+      </button>
+    `).join('') + `
+      <button type="button" class="chip chip-add-category" data-open-category-modal="shopping" style="border-style: dashed; border-color: rgba(46, 89, 51, 0.45); background: rgba(46, 89, 51, 0.05);" title="Personalizar categorias de shopping">
+        <span>⚙️</span>
+        <span>Editar Categorias</span>
+      </button>
+    `;
+  }
+
+  // 3. Filtros de Status (Todos, Desejados, Pesquisando, Comprados)
+  const statusContainer = document.getElementById('shopping-status-filters');
+  if (statusContainer) {
+    const statuses = [
+      { id: 'todos', label: 'Todos', icon: '📋' },
+      { id: 'desejado', label: 'Desejados', icon: '💡' },
+      { id: 'pesquisando', label: 'Pesquisando', icon: '🔍' },
+      { id: 'comprado', label: 'Comprados', icon: '✅' }
+    ];
+    statusContainer.innerHTML = statuses.map(s => `
+      <button type="button" class="chip ${s.id === statusFilter ? 'active' : ''}" data-shopping-status="${s.id}">
+        <span>${s.icon}</span>
+        <span>${s.label}</span>
+      </button>
+    `).join('');
+  }
+
+  // 4. Filtros de Para Quem (Todos, Casal, Matheus, Scarlet)
+  const personContainer = document.getElementById('shopping-person-filters');
+  if (personContainer) {
+    const persons = [
+      { id: 'todos', label: 'Todos', icon: '👥' },
+      { id: 'casal', label: 'Casal', icon: '💑' },
+      { id: 'matheus', label: 'Matheus', icon: '🧢' },
+      { id: 'scarlet', label: 'Scarlet', icon: '🎀' }
+    ];
+    personContainer.innerHTML = persons.map(p => `
+      <button type="button" class="chip ${p.id === forWhomFilter ? 'active' : ''}" data-shopping-for-whom="${p.id}">
+        <span>${p.icon}</span>
+        <span>${p.label}</span>
+      </button>
+    `).join('');
+  }
+
+  // 5. Grid / Lista de Itens Filtrados
+  const gridEl = document.getElementById('shopping-items-grid');
+  if (!gridEl) return;
+
+  const items = filterShoppingItems(state, {
+    query: searchQuery,
+    category: categoryFilter,
+    status: statusFilter,
+    forWhom: forWhomFilter,
+    sort: sortOption
+  });
+
+  if (items.length === 0) {
+    gridEl.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-subtle);">
+        <p style="font-size: 2.5rem; margin-bottom: 0.5rem;">🛍️</p>
+        <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.35rem;">
+          ${searchQuery || categoryFilter !== 'todos' || statusFilter !== 'todos' || forWhomFilter !== 'todos'
+            ? 'Nenhum item encontrado com esses filtros.'
+            : 'Sua lista de Shopping está vazia!'}
+        </h4>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); max-width: 380px; margin: 0 auto 1.25rem auto;">
+          ${searchQuery || categoryFilter !== 'todos' || statusFilter !== 'todos' || forWhomFilter !== 'todos'
+            ? 'Tente ajustar os filtros ou termo de busca acima.'
+            : 'Adicione roupas, calçados, eletrodomésticos, eletrônicos ou itens para a casa com fotos, lojas e preços para organizar as compras do casal.'}
+        </p>
+        <button type="button" class="btn btn-primary" id="btn-empty-add-shopping-item">
+          ➕ Adicionar Primeiro Item
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  const priorityLabels = {
+    baixa: { label: 'Baixa', class: 'status-planejado', icon: '🟢' },
+    media: { label: 'Média', class: 'status-andamento', icon: '🟡' },
+    alta: { label: 'Alta', class: 'status-alerta', icon: '🟠' },
+    urgente: { label: 'Urgente', class: 'status-critico', icon: '🔴' }
+  };
+
+  const personLabels = {
+    casal: { label: 'Casal', icon: '💑' },
+    matheus: { label: 'Matheus', icon: '🧢' },
+    scarlet: { label: 'Scarlet', icon: '🎀' }
+  };
+
+  gridEl.innerHTML = items.map(it => {
+    const isBought = it.status === 'comprado';
+    const catObj = findCategory(state, 'shopping', it.category);
+    const prio = priorityLabels[it.priority] || priorityLabels.media;
+    const person = personLabels[it.forWhom] || personLabels.casal;
+    const hasPhoto = Array.isArray(it.photos) && it.photos.length > 0;
+    const firstPhoto = hasPhoto ? it.photos[0] : null;
+
+    return `
+      <div class="project-card ${isBought ? 'bought-item' : ''}" data-shopping-id="${it.id}" style="${isBought ? 'opacity: 0.88; border-color: var(--success);' : ''}">
+        <!-- Foto / Capa do Produto se houver -->
+        ${hasPhoto ? `
+          <div style="position: relative; margin: -1rem -1rem 0.75rem -1rem; height: 160px; overflow: hidden; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: #000; cursor: pointer;" data-shopping-view-photo="${it.id}">
+            <img src="${firstPhoto}" alt="${it.title}" style="width: 100%; height: 100%; object-fit: cover;" />
+            <div style="position: absolute; bottom: 8px; right: 8px; background: rgba(0, 0, 0, 0.65); color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; backdrop-filter: blur(4px);">
+              📷 ${it.photos.length} ${it.photos.length === 1 ? 'foto' : 'fotos'}
+            </div>
+            ${isBought ? `
+              <div style="position: absolute; top: 8px; left: 8px; background: var(--success); color: #fff; font-weight: 800; font-size: 0.75rem; padding: 3px 10px; border-radius: 12px; box-shadow: var(--shadow-sm);">
+                ✅ Comprado!
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+
+        <!-- Cabeçalho do Card: Badges -->
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem;">
+          <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+            <span class="tag-room" style="font-size: 0.75rem;">${catObj.icon} ${catObj.label}</span>
+            <span class="badge" style="background: var(--bg-surface); font-size: 0.72rem; border: 1px solid var(--border-subtle);">${person.icon} ${person.label}</span>
+          </div>
+          <span class="project-status-badge ${prio.class}" style="font-size: 0.72rem;">${prio.icon} ${prio.label}</span>
+        </div>
+
+        <!-- Título e Loja -->
+        <h3 style="font-size: 1.05rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.25rem; color: var(--text-primary); ${isBought ? 'text-decoration: line-through;' : ''}">
+          ${it.title}
+        </h3>
+
+        ${it.store ? `
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.3rem;">
+            <span>🏷️</span> <strong>${it.store}</strong>
+            ${it.link ? `<a href="${it.link}" target="_blank" rel="noopener noreferrer" style="color: var(--brand-moss); font-size: 0.75rem; margin-left: 0.25rem; text-decoration: underline;" title="Abrir link da loja">🔗 Ver Loja</a>` : ''}
+          </div>
+        ` : (it.link ? `
+          <div style="font-size: 0.75rem; margin-bottom: 0.4rem;">
+            <a href="${it.link}" target="_blank" rel="noopener noreferrer" style="color: var(--brand-moss); text-decoration: underline;">🔗 Abrir link da loja</a>
+          </div>
+        ` : '')}
+
+        <!-- Preço e Detalhes Financeiros -->
+        <div style="background: var(--bg-surface); padding: 0.5rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin: 0.5rem 0; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="font-size: 0.7rem; color: var(--text-muted); display: block;">${isBought ? 'Preço Pago:' : 'Preço Estimado / Visto:'}</span>
+            <strong style="font-size: 1.15rem; color: ${isBought ? 'var(--success)' : 'var(--brand-moss-dark)'}; font-weight: 800;">
+              ${formatCurrencyWithSymbol(isBought ? (it.purchasedPrice || it.price) : it.price)}
+            </strong>
+          </div>
+          ${it.status === 'pesquisando' ? `
+            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: var(--brand-amber); font-size: 0.72rem; font-weight: 700;">🔍 Pesquisando</span>
+          ` : ''}
+          ${isBought && it.purchasedAt ? `
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Comprado em ${it.purchasedAt.split('-').reverse().join('/')}</span>
+          ` : ''}
+        </div>
+
+        <!-- Observações (Tamanho, voltagem, etc.) -->
+        ${it.notes ? `
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem; line-height: 1.4; background: rgba(0,0,0,0.02); padding: 0.35rem 0.5rem; border-radius: var(--radius-sm); border-left: 2px solid var(--brand-moss);">
+            ${it.notes}
+          </p>
+        ` : ''}
+
+        <!-- Barra de Ações do Card -->
+        <div style="display: flex; gap: 0.4rem; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 0.6rem; margin-top: 0.4rem;">
+          <button type="button" class="btn btn-sm ${isBought ? 'btn-secondary' : 'btn-primary'}" data-shopping-toggle-bought="${it.id}" style="flex: 1; justify-content: center; font-size: 0.78rem;">
+            ${isBought ? '↩️ Desfazer Compra' : '✅ Marcar Comprado'}
+          </button>
+          <button type="button" class="btn btn-icon btn-sm" data-shopping-edit="${it.id}" title="Editar item" aria-label="Editar item">
+            ✏️
+          </button>
+          <button type="button" class="btn btn-icon btn-sm" data-shopping-add-photo="${it.id}" title="Adicionar Foto" aria-label="Adicionar Foto">
+            📷
+          </button>
+          <button type="button" class="btn btn-icon btn-sm" data-shopping-delete="${it.id}" title="Excluir item" aria-label="Excluir item" style="color: var(--danger);">
+            🗑️
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
 }

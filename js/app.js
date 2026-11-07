@@ -1,4 +1,16 @@
 import {
+  listShoppingItems,
+  addShoppingWishlistItem,
+  updateShoppingWishlistItem,
+  deleteShoppingWishlistItem,
+  toggleShoppingItemBought,
+  addPhotoToShoppingItem,
+  removePhotoFromShoppingItem,
+  getShoppingSummary as getShoppingWishlistSummary,
+  filterShoppingItems
+} from './shopping-items.js';
+import { renderShoppingTab } from './ui.js';
+import {
   getMonthlyBenefitDetails,
   updateMonthlyBenefitsConfig,
   closeBenefitCycleEarly,
@@ -150,6 +162,13 @@ import {
 // Estado global em memória
 let state = null;
 let currentTab = 'tarefas';
+let currentShoppingCategory = 'todos';
+let currentShoppingStatus = 'todos';
+let currentShoppingForWhom = 'todos';
+let currentShoppingSearch = '';
+let currentShoppingSort = 'priority';
+let currentShoppingPendingPhoto = null;
+let currentActiveShoppingPhotoItem = null;
 let currentFrequencyFilter = 'diaria';
 let currentRoomFilter = 'tudo';
 let currentHistoryDate = getLocalDateString();
@@ -209,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
   safeInit(initReformasModule, 'initReformasModule');
   safeInit(initSonhosModule, 'initSonhosModule');
   safeInit(initComprasModule, 'initComprasModule');
+  safeInit(initShoppingModule, 'initShoppingModule');
   safeInit(initPetsModule, 'initPetsModule');
   safeInit(initQrCodeScanner, 'initQrCodeScanner');
   safeInit(initSettingsModule, 'initSettingsModule');
@@ -533,7 +553,7 @@ function handleActiveCalendarDayChange(detail) {
 // ============================================================
 // CARROSSEL & NAVEGAÇÃO DE ABAS
 // ============================================================
-const TAB_ORDER = ['tarefas', 'pets', 'compras', 'carro', 'reformas', 'sonhos', 'ajustes'];
+const TAB_ORDER = ['tarefas', 'pets', 'compras', 'shopping', 'carro', 'reformas', 'sonhos', 'ajustes'];
 
 function switchTab(targetTab, forceDirection = null) {
   if (!targetTab) return;
@@ -4997,5 +5017,326 @@ function closeModal(id, fromPopstate = false) {
         window.history.back();
       }
     } catch (err) {}
+  }
+}
+
+// ============================================================
+// MÓDULO SHOPPING: ROUPAS, ELETRODOMÉSTICOS & DESEJOS DO CASAL
+// ============================================================
+function initShoppingModule() {
+  const searchInput = document.getElementById('shopping-search-input');
+  const categoryChips = document.getElementById('shopping-category-chips');
+  const statusFilters = document.getElementById('shopping-status-filters');
+  const personFilters = document.getElementById('shopping-person-filters');
+  const itemsGrid = document.getElementById('shopping-items-grid');
+  const formShopping = document.getElementById('form-shopping-item');
+  const modalShopping = document.getElementById('modal-shopping-item');
+
+  // Input de foto
+  const inputCamera = document.getElementById('shopping-input-camera');
+  const inputGallery = document.getElementById('shopping-input-gallery');
+  const photoFeedback = document.getElementById('shopping-photo-feedback');
+  const previewContainer = document.getElementById('shopping-photo-preview-container');
+  const previewImg = document.getElementById('shopping-photo-preview-img');
+  const btnRemovePreview = document.getElementById('btn-remove-shopping-preview-photo');
+
+  // Campo de preço monetário com máscara inteligente
+  const inputPrice = document.getElementById('shopping-input-price');
+  if (inputPrice) {
+    inputPrice.addEventListener('blur', () => {
+      const v = parseCurrency(inputPrice.value);
+      if (v > 0) {
+        inputPrice.value = formatCurrency(v);
+      }
+    });
+  }
+
+  // 1. Busca em tempo real
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      currentShoppingSearch = (e.target.value || '').trim();
+      if (currentTab === 'shopping') {
+        renderShoppingTab(state, currentShoppingCategory, currentShoppingStatus, currentShoppingForWhom, currentShoppingSearch, currentShoppingSort);
+      }
+    });
+  }
+
+  // 2. Filtro por Categoria
+  if (categoryChips) {
+    categoryChips.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-shopping-category]');
+      if (!chip) return;
+      currentShoppingCategory = chip.getAttribute('data-shopping-category') || 'todos';
+      playSubtleClick(state.settings.soundEnabled);
+      renderShoppingTab(state, currentShoppingCategory, currentShoppingStatus, currentShoppingForWhom, currentShoppingSearch, currentShoppingSort);
+    });
+  }
+
+  // 3. Filtro por Status
+  if (statusFilters) {
+    statusFilters.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-shopping-status]');
+      if (!chip) return;
+      currentShoppingStatus = chip.getAttribute('data-shopping-status') || 'todos';
+      playSubtleClick(state.settings.soundEnabled);
+      renderShoppingTab(state, currentShoppingCategory, currentShoppingStatus, currentShoppingForWhom, currentShoppingSearch, currentShoppingSort);
+    });
+  }
+
+  // 4. Filtro por Destinatário
+  if (personFilters) {
+    personFilters.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-shopping-for-whom]');
+      if (!chip) return;
+      currentShoppingForWhom = chip.getAttribute('data-shopping-for-whom') || 'todos';
+      playSubtleClick(state.settings.soundEnabled);
+      renderShoppingTab(state, currentShoppingCategory, currentShoppingStatus, currentShoppingForWhom, currentShoppingSearch, currentShoppingSort);
+    });
+  }
+
+  // Função auxiliar para resetar formulário
+  function openNewShoppingModal() {
+    if (!formShopping) return;
+    formShopping.reset();
+    document.getElementById('shopping-item-id').value = '';
+    document.getElementById('shopping-modal-title').textContent = '🛍️ Novo Item de Shopping';
+    currentShoppingPendingPhoto = null;
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (previewImg) previewImg.src = '';
+    if (photoFeedback) photoFeedback.textContent = '';
+    openModal('modal-shopping-item');
+    const inputTitle = document.getElementById('shopping-input-title');
+    if (inputTitle) setTimeout(() => inputTitle.focus(), 150);
+  }
+
+  // Botões de Adicionar Novo Item
+  document.querySelectorAll('#btn-open-add-shopping-item, #btn-quick-add-shopping, #btn-fab-add-shopping, #btn-empty-add-shopping-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openNewShoppingModal();
+    });
+  });
+
+  // Processamento de Fotos (Câmera ou Galeria)
+  async function handlePhotoFile(file) {
+    if (!file) return;
+    try {
+      if (photoFeedback) photoFeedback.textContent = 'Otimizando foto...';
+      const compressedBase64 = await compressImageFile(file, 1024, 0.78);
+      currentShoppingPendingPhoto = compressedBase64;
+      if (previewContainer && previewImg) {
+        previewImg.src = compressedBase64;
+        previewContainer.style.display = 'block';
+      }
+      if (photoFeedback) photoFeedback.textContent = '✅ Foto anexada!';
+    } catch (err) {
+      console.warn('Erro ao processar foto do item:', err);
+      showToast('Erro ao carregar foto.', 'error');
+      if (photoFeedback) photoFeedback.textContent = '';
+    }
+  }
+
+  if (inputCamera) {
+    inputCamera.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      handlePhotoFile(file);
+    });
+  }
+
+  if (inputGallery) {
+    inputGallery.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      handlePhotoFile(file);
+    });
+  }
+
+  if (btnRemovePreview) {
+    btnRemovePreview.addEventListener('click', () => {
+      currentShoppingPendingPhoto = null;
+      if (previewContainer) previewContainer.style.display = 'none';
+      if (previewImg) previewImg.src = '';
+      if (photoFeedback) photoFeedback.textContent = '';
+      if (inputCamera) inputCamera.value = '';
+      if (inputGallery) inputGallery.value = '';
+    });
+  }
+
+  // 5. Salvar Item de Shopping (Criação e Edição)
+  if (formShopping) {
+    formShopping.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const itemId = document.getElementById('shopping-item-id').value;
+      const title = (document.getElementById('shopping-input-title').value || '').trim();
+      const category = document.getElementById('shopping-input-category').value;
+      const price = parseCurrency(document.getElementById('shopping-input-price').value);
+      const store = (document.getElementById('shopping-input-store').value || '').trim();
+      const forWhom = document.getElementById('shopping-input-for-whom').value;
+      const priority = document.getElementById('shopping-input-priority').value;
+      const status = document.getElementById('shopping-input-status').value;
+      const link = (document.getElementById('shopping-input-link').value || '').trim();
+      const notes = (document.getElementById('shopping-input-notes').value || '').trim();
+
+      if (!title) {
+        showToast('Informe o nome do item de shopping.', 'warning');
+        return;
+      }
+
+      if (itemId) {
+        // Atualização de item existente
+        const existing = listShoppingItems(state).find(it => it.id === itemId);
+        const photos = existing && Array.isArray(existing.photos) ? [...existing.photos] : [];
+        if (currentShoppingPendingPhoto && !photos.includes(currentShoppingPendingPhoto)) {
+          photos.unshift(currentShoppingPendingPhoto);
+        }
+
+        updateShoppingWishlistItem(state, itemId, {
+          title,
+          category,
+          price,
+          store,
+          forWhom,
+          priority,
+          status,
+          link,
+          notes,
+          photos
+        });
+        showToast('Item de shopping atualizado! 🛍️', 'success');
+      } else {
+        // Novo item
+        const photos = currentShoppingPendingPhoto ? [currentShoppingPendingPhoto] : [];
+        addShoppingWishlistItem(state, {
+          title,
+          category,
+          price,
+          store,
+          forWhom,
+          priority,
+          status,
+          link,
+          notes,
+          photos
+        }, state.activeUserId);
+
+        triggerConfetti();
+        playTaskCompleteSound(state.settings.soundEnabled);
+        showToast('🎉 Item adicionado à sua lista de shopping!', 'success');
+      }
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      closeModal('modal-shopping-item');
+      formShopping.reset();
+      currentShoppingPendingPhoto = null;
+      refreshAllUI();
+    });
+  }
+
+  // 6. Delegação de Ações no Grid de Itens
+  const mainEl = document.getElementById('tab-shopping');
+  if (mainEl) {
+    mainEl.addEventListener('click', (e) => {
+      // Botão vazio "Adicionar Primeiro Item"
+      if (e.target.closest('#btn-empty-add-shopping-item')) {
+        openNewShoppingModal();
+        return;
+      }
+
+      // Alternar Comprado
+      const btnToggle = e.target.closest('[data-shopping-toggle-bought]');
+      if (btnToggle) {
+        const id = btnToggle.getAttribute('data-shopping-toggle-bought');
+        const updated = toggleShoppingItemBought(state, id);
+        if (updated) {
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          if (updated.status === 'comprado') {
+            triggerConfetti();
+            playTaskCompleteSound(state.settings.soundEnabled);
+            showToast(`🎉 Parabéns pela compra de "${updated.title}"! ✅`, 'success');
+          } else {
+            playSubtleClick(state.settings.soundEnabled);
+            showToast('Item retornado para a lista de desejos.', 'info');
+          }
+          refreshAllUI();
+        }
+        return;
+      }
+
+      // Editar Item
+      const btnEdit = e.target.closest('[data-shopping-edit]');
+      if (btnEdit) {
+        const id = btnEdit.getAttribute('data-shopping-edit');
+        const item = listShoppingItems(state).find(it => it.id === id);
+        if (!item) return;
+
+        document.getElementById('shopping-modal-title').textContent = '✏️ Editar Item de Shopping';
+        document.getElementById('shopping-item-id').value = item.id;
+        document.getElementById('shopping-input-title').value = item.title || '';
+        document.getElementById('shopping-input-category').value = item.category || 'roupas_calcados';
+        document.getElementById('shopping-input-price').value = item.price > 0 ? formatCurrency(item.price) : '';
+        document.getElementById('shopping-input-store').value = item.store || '';
+        document.getElementById('shopping-input-for-whom').value = item.forWhom || 'casal';
+        document.getElementById('shopping-input-priority').value = item.priority || 'media';
+        document.getElementById('shopping-input-status').value = item.status || 'desejado';
+        document.getElementById('shopping-input-link').value = item.link || '';
+        document.getElementById('shopping-input-notes').value = item.notes || '';
+
+        currentShoppingPendingPhoto = null;
+        if (Array.isArray(item.photos) && item.photos.length > 0) {
+          if (previewImg) previewImg.src = item.photos[0];
+          if (previewContainer) previewContainer.style.display = 'block';
+          if (photoFeedback) photoFeedback.textContent = `${item.photos.length} foto(s) anexada(s)`;
+        } else {
+          if (previewContainer) previewContainer.style.display = 'none';
+          if (previewImg) previewImg.src = '';
+          if (photoFeedback) photoFeedback.textContent = '';
+        }
+
+        openModal('modal-shopping-item');
+        return;
+      }
+
+      // Excluir Item
+      const btnDel = e.target.closest('[data-shopping-delete]');
+      if (btnDel) {
+        const id = btnDel.getAttribute('data-shopping-delete');
+        const item = listShoppingItems(state).find(it => it.id === id);
+        if (!item) return;
+
+        if (confirm(`Deseja realmente remover "${item.title}" da lista de shopping?`)) {
+          deleteShoppingWishlistItem(state, id);
+          saveState(state);
+          triggerAutoSyncIfEnabled();
+          playSubtleClick(state.settings.soundEnabled);
+          showToast('Item removido da lista.', 'info');
+          refreshAllUI();
+        }
+        return;
+      }
+
+      // Adicionar Foto Direta
+      const btnAddPhoto = e.target.closest('[data-shopping-add-photo]');
+      if (btnAddPhoto) {
+        const id = btnAddPhoto.getAttribute('data-shopping-add-photo');
+        currentActiveShoppingPhotoItem = id;
+        if (inputCamera) inputCamera.click();
+        return;
+      }
+
+      // Ver Foto Ampliada
+      const viewPhotoBox = e.target.closest('[data-shopping-view-photo]');
+      if (viewPhotoBox) {
+        const id = viewPhotoBox.getAttribute('data-shopping-view-photo');
+        const item = listShoppingItems(state).find(it => it.id === id);
+        if (item && Array.isArray(item.photos) && item.photos.length > 0) {
+          const viewerImg = document.getElementById('shopping-photo-viewer-img');
+          const viewerTitle = document.getElementById('shopping-photo-viewer-title');
+          if (viewerImg) viewerImg.src = item.photos[0];
+          if (viewerTitle) viewerTitle.textContent = `📷 ${item.title}`;
+          openModal('modal-shopping-photo-viewer');
+        }
+        return;
+      }
+    });
   }
 }
