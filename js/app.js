@@ -46,7 +46,7 @@ import {
   markShoppingItemsAsBought,
   removeShoppingItemsFromList
 } from './shopping.js';
-import { parseNfceQrCodeText, fetchNfceDetailsOnline } from './nfce.js';
+import { parseNfceQrCodeText, fetchNfceDetailsOnline, parseNfceHtml } from './nfce.js';
 import { parseCurrency, formatCurrency, formatCurrencyWithSymbol } from './currency.js';
 import {
   addCarroItem,
@@ -3269,10 +3269,21 @@ function initQrCodeScanner() {
   const statusMsg = document.getElementById('qr-status-msg');
   const previewBox = document.getElementById('qr-preview-result');
   const resMarket = document.getElementById('qr-res-market');
+  const resCnpj = document.getElementById('qr-res-cnpj');
   const resDate = document.getElementById('qr-res-date');
   const resTotal = document.getElementById('qr-res-total');
   const resKey = document.getElementById('qr-res-key');
+  const resPayment = document.getElementById('qr-res-payment');
+  const resBadgeItems = document.getElementById('qr-res-badge-items');
+  const itemsContainer = document.getElementById('qr-items-list-container');
+  const itemsCountEl = document.getElementById('qr-items-count');
+  const itemsListEl = document.getElementById('qr-items-list');
   const btnConfirm = document.getElementById('btn-confirm-qr-purchase');
+  const btnOpenSefaz = document.getElementById('btn-qr-open-sefaz');
+  const btnTogglePasteHtml = document.getElementById('btn-toggle-paste-html');
+  const pasteHtmlWrapper = document.getElementById('qr-paste-html-wrapper');
+  const manualHtmlTextarea = document.getElementById('qr-manual-html-textarea');
+  const btnProcessHtml = document.getElementById('btn-qr-process-html');
   const manualInput = document.getElementById('qr-manual-input');
   const btnManualSubmit = document.getElementById('btn-qr-manual-submit');
 
@@ -3283,7 +3294,7 @@ function initQrCodeScanner() {
 
   async function startCamera() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      if (statusMsg) statusMsg.textContent = 'Câmera não suportada neste navegador. Use a foto ou link.';
+      if (statusMsg) statusMsg.textContent = 'Câmera não suportada neste dispositivo. Use a foto, link ou cole o HTML da nota.';
       return;
     }
 
@@ -3301,11 +3312,11 @@ function initQrCodeScanner() {
         await videoEl.play();
       }
 
-      if (statusMsg) statusMsg.textContent = 'Câmera ativa! Aponte para o QR Code da nota fiscal.';
+      if (statusMsg) statusMsg.textContent = 'Câmera ativa! Aponte para o QR Code impresso no cupom fiscal.';
       startScanningLoop();
     } catch (err) {
       console.warn('Erro ao acessar câmera:', err);
-      if (statusMsg) statusMsg.textContent = 'Acesso à câmera não concedido. Você pode anexar foto ou colar o link.';
+      if (statusMsg) statusMsg.textContent = 'Acesso à câmera não concedido. Você pode anexar foto, colar o link ou colar o HTML.';
     }
   }
 
@@ -3341,6 +3352,64 @@ function initQrCodeScanner() {
     }
   }
 
+  function renderPreviewUI() {
+    if (!pendingPurchase || !previewBox) return;
+
+    if (resMarket) resMarket.textContent = pendingPurchase.marketName || 'Supermercado';
+    if (resCnpj) resCnpj.textContent = pendingPurchase.cnpj || '--';
+    if (resDate) resDate.textContent = pendingPurchase.date || getLocalDateString();
+    if (resTotal) resTotal.textContent = formatCurrencyWithSymbol(pendingPurchase.total || pendingPurchase.totalAmount || 0);
+    if (resKey) resKey.textContent = pendingPurchase.accessKey || pendingPurchase.nfeKey || (pendingPurchase.rawUrl ? pendingPurchase.rawUrl.slice(0, 44) : '--');
+
+    if (resPayment && pendingPurchase.paymentMethod) {
+      resPayment.value = pendingPurchase.paymentMethod;
+    }
+
+    const items = Array.isArray(pendingPurchase.items) ? pendingPurchase.items : [];
+    if (resBadgeItems) {
+      resBadgeItems.textContent = `${items.length} ${items.length === 1 ? 'item' : 'itens'}`;
+    }
+
+    if (itemsCountEl) itemsCountEl.textContent = String(items.length);
+
+    if (itemsListEl && itemsContainer) {
+      if (items.length > 0) {
+        itemsContainer.style.display = 'block';
+        itemsListEl.innerHTML = items.map((it, idx) => {
+          const unitPrice = it.unitPrice || (it.price && it.quantity ? it.price / it.quantity : it.price || 0);
+          const totalVal = it.price || it.totalPrice || (unitPrice * (it.quantity || 1));
+          return `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.2rem; border-bottom: 1px dashed var(--border-subtle); gap: 0.5rem;">
+              <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <strong style="color: var(--text-primary);">${idx + 1}. ${it.name}</strong>
+                <div style="font-size: 0.72rem; color: var(--text-muted);">
+                  ${it.quantity} ${it.unit || 'UN'} × ${formatCurrencyWithSymbol(unitPrice)}${it.code ? ' · Cód: ' + it.code : ''}
+                </div>
+              </div>
+              <div style="font-weight: 700; color: var(--success); white-space: nowrap; font-size: 0.85rem;">
+                ${formatCurrencyWithSymbol(totalVal)}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        itemsContainer.style.display = 'none';
+        itemsListEl.innerHTML = '';
+      }
+    }
+
+    if (btnOpenSefaz) {
+      if (pendingPurchase.rawUrl && pendingPurchase.rawUrl.startsWith('http')) {
+        btnOpenSefaz.href = pendingPurchase.rawUrl;
+        btnOpenSefaz.style.display = 'inline-flex';
+      } else {
+        btnOpenSefaz.style.display = 'none';
+      }
+    }
+
+    previewBox.style.display = 'block';
+  }
+
   function handleDetectedCode(rawText) {
     if (!rawText) return;
     const parsed = parseNfceQrCodeText(rawText);
@@ -3348,34 +3417,63 @@ function initQrCodeScanner() {
     pendingPurchase = {
       marketName: parsed.marketName || 'Supermercado',
       date: parsed.date || getLocalDateString(),
-      totalAmount: parsed.totalAmount || 0,
-      accessKey: parsed.accessKey || '',
-      rawUrl: parsed.rawUrl || rawText,
-      items: parsed.items || []
+      total: parsed.total || parsed.totalAmount || 0,
+      totalAmount: parsed.totalAmount || parsed.total || 0,
+      accessKey: parsed.accessKey || parsed.nfeKey || '',
+      nfeKey: parsed.nfeKey || parsed.accessKey || '',
+      rawUrl: parsed.rawUrl || (typeof rawText === 'string' && rawText.startsWith('http') ? rawText : ''),
+      cnpj: parsed.cnpj || '',
+      nfeNumber: parsed.nfeNumber || '',
+      nfeSeries: parsed.nfeSeries || '',
+      paymentMethod: parsed.paymentMethod || 'va',
+      items: Array.isArray(parsed.items) ? [...parsed.items] : []
     };
 
-    if (previewBox) {
-      if (resMarket) resMarket.textContent = pendingPurchase.marketName;
-      if (resDate) resDate.textContent = pendingPurchase.date;
-      if (resTotal) resTotal.textContent = formatCurrencyWithSymbol(pendingPurchase.totalAmount);
-      if (resKey) resKey.textContent = pendingPurchase.accessKey || pendingPurchase.rawUrl.slice(0, 44);
-      previewBox.style.display = 'block';
-    }
+    renderPreviewUI();
 
-    if (statusMsg) statusMsg.textContent = 'QR Code lido com sucesso! Confirme os dados abaixo:';
+    if (statusMsg) {
+      if (pendingPurchase.items.length > 0) {
+        statusMsg.textContent = `✅ Nota lida com sucesso! ${pendingPurchase.items.length} itens extraídos.`;
+      } else {
+        statusMsg.textContent = 'QR Code lido! Buscando detalhes e itens da nota...';
+      }
+    }
     playTaskCompleteSound(state.settings.soundEnabled);
 
-    // Se temos a URL online, tenta enriquecer com os itens em background
-    if (parsed.rawUrl && parsed.rawUrl.startsWith('http')) {
-      fetchNfceDetailsOnline(parsed.rawUrl).then(enhanced => {
+    // Se temos a URL online e os itens ainda não vieram, busca online
+    if (pendingPurchase.rawUrl && pendingPurchase.rawUrl.startsWith('http') && pendingPurchase.items.length === 0) {
+      const sheetsUrl = state.settings && state.settings.sheetsUrl;
+      const sheetsToken = state.settings && state.settings.sheetsToken;
+
+      fetchNfceDetailsOnline(pendingPurchase.rawUrl, {
+        sheetsUrl,
+        sheetsToken,
+        baseInfo: pendingPurchase
+      }).then(enhanced => {
         if (enhanced && enhanced.success) {
           if (enhanced.marketName) pendingPurchase.marketName = enhanced.marketName;
-          if (enhanced.totalAmount) pendingPurchase.totalAmount = enhanced.totalAmount;
-          if (enhanced.items && enhanced.items.length) pendingPurchase.items = enhanced.items;
-          if (resMarket) resMarket.textContent = pendingPurchase.marketName;
-          if (resTotal) resTotal.textContent = formatCurrencyWithSymbol(pendingPurchase.totalAmount);
+          if (enhanced.total || enhanced.totalAmount) {
+            pendingPurchase.total = enhanced.total || enhanced.totalAmount;
+            pendingPurchase.totalAmount = pendingPurchase.total;
+          }
+          if (enhanced.items && enhanced.items.length > 0) {
+            pendingPurchase.items = enhanced.items;
+          }
+          if (enhanced.cnpj) pendingPurchase.cnpj = enhanced.cnpj;
+          if (enhanced.paymentMethod) pendingPurchase.paymentMethod = enhanced.paymentMethod;
+
+          renderPreviewUI();
+
+          if (enhanced.items && enhanced.items.length > 0) {
+            if (statusMsg) statusMsg.textContent = `🎉 ${enhanced.items.length} produtos carregados com sucesso da SEFAZ!`;
+            showToast(`🎉 ${enhanced.items.length} itens extraídos da nota fiscal!`, 'success', 3500);
+          } else if (statusMsg) {
+            statusMsg.textContent = 'Dados básicos lidos. Você pode colar o conteúdo da página para extrair os itens detalhados.';
+          }
         }
-      }).catch(() => {});
+      }).catch(err => {
+        console.warn('Erro ao enriquecer dados da NFC-e:', err);
+      });
     }
   }
 
@@ -3383,6 +3481,7 @@ function initQrCodeScanner() {
     btnScan.addEventListener('click', () => {
       openModal('modal-qr-scanner');
       if (previewBox) previewBox.style.display = 'none';
+      if (pasteHtmlWrapper) pasteHtmlWrapper.style.display = 'none';
       pendingPurchase = null;
       startCamera();
     });
@@ -3395,13 +3494,53 @@ function initQrCodeScanner() {
     });
   }
 
+  // Alternador da área de colar HTML da página
+  if (btnTogglePasteHtml && pasteHtmlWrapper) {
+    btnTogglePasteHtml.addEventListener('click', () => {
+      const isHidden = pasteHtmlWrapper.style.display === 'none';
+      pasteHtmlWrapper.style.display = isHidden ? 'block' : 'none';
+      if (isHidden && manualHtmlTextarea) {
+        manualHtmlTextarea.focus();
+      }
+    });
+  }
+
+  // Processamento do HTML ou texto copiado da página da Fazenda
+  if (btnProcessHtml && manualHtmlTextarea) {
+    btnProcessHtml.addEventListener('click', () => {
+      const content = manualHtmlTextarea.value.trim();
+      if (!content) {
+        showToast('Cole o código HTML ou texto da página da Fazenda primeiro.', 'warning');
+        return;
+      }
+      const parsedHtml = parseNfceHtml(content);
+      if (parsedHtml && (parsedHtml.items.length > 0 || parsedHtml.totalAmount > 0)) {
+        pendingPurchase = {
+          ...(pendingPurchase || {}),
+          ...parsedHtml,
+          total: parsedHtml.totalAmount || parsedHtml.total,
+          totalAmount: parsedHtml.totalAmount || parsedHtml.total,
+          rawUrl: (pendingPurchase && pendingPurchase.rawUrl) || ''
+        };
+        renderPreviewUI();
+        manualHtmlTextarea.value = '';
+        if (pasteHtmlWrapper) pasteHtmlWrapper.style.display = 'none';
+        triggerConfetti();
+        playTaskCompleteSound(state.settings.soundEnabled);
+        showToast(`🎉 ${parsedHtml.items.length} itens e valores extraídos com perfeição!`, 'success', 4000);
+      } else {
+        showToast('Não foi possível reconhecer itens no texto colado. Verifique se copiou a tabela de produtos.', 'error');
+      }
+    });
+  }
+
   // Upload de Foto do QR Code
   if (fileInput) {
     fileInput.addEventListener('change', async (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
 
-      if (statusMsg) statusMsg.textContent = 'Processando imagem da nota...';
+      if (statusMsg) statusMsg.textContent = 'Processando imagem do cupom...';
 
       if (window.BarcodeDetector) {
         try {
@@ -3417,16 +3556,16 @@ function initQrCodeScanner() {
         }
       }
 
-      if (statusMsg) statusMsg.textContent = 'Não conseguimos ler o QR da imagem diretamente. Cole o link ou chave abaixo.';
+      if (statusMsg) statusMsg.textContent = 'Não conseguimos ler o QR da imagem diretamente. Cole o link, chave ou HTML abaixo.';
     });
   }
 
-  // Entrada manual do link ou chave
+  // Entrada manual do link, chave ou conteúdo
   if (btnManualSubmit && manualInput) {
     btnManualSubmit.addEventListener('click', () => {
       const val = manualInput.value.trim();
       if (!val) {
-        showToast('Digite ou cole a URL ou chave da nota', 'error');
+        showToast('Digite ou cole a URL, chave ou HTML da nota', 'error');
         return;
       }
       handleDetectedCode(val);
@@ -3439,18 +3578,56 @@ function initQrCodeScanner() {
     btnConfirm.addEventListener('click', () => {
       if (!pendingPurchase) return;
 
-      addMarketPurchase(state, pendingPurchase);
+      if (resPayment) {
+        pendingPurchase.paymentMethod = resPayment.value || pendingPurchase.paymentMethod || 'va';
+      }
+
+      const purchaseData = {
+        marketName: pendingPurchase.marketName || 'Supermercado',
+        date: pendingPurchase.date || getLocalDateString(),
+        total: pendingPurchase.total || pendingPurchase.totalAmount || 0,
+        paymentMethod: pendingPurchase.paymentMethod || 'va',
+        nfeKey: pendingPurchase.nfeKey || pendingPurchase.accessKey || '',
+        nfeUrl: pendingPurchase.rawUrl || '',
+        items: Array.isArray(pendingPurchase.items) ? pendingPurchase.items : [],
+        notes: pendingPurchase.items && pendingPurchase.items.length > 0
+          ? `${pendingPurchase.items.length} itens (importados via NFC-e)`
+          : 'Importado via NFC-e QR Code'
+      };
+
+      const savedPurchase = addMarketPurchase(state, purchaseData);
+
+      // Se houver produtos na nota, grava e memoriza no Catálogo Inteligente
+      if (Array.isArray(purchaseData.items) && purchaseData.items.length > 0) {
+        registerInvoiceInCatalog(state, {
+          marketName: purchaseData.marketName,
+          date: purchaseData.date,
+          nfeKey: purchaseData.nfeKey,
+          items: purchaseData.items
+        });
+        updateCatalogDatalist(state);
+      }
+
       saveState(state);
       triggerAutoSyncIfEnabled();
 
       stopCamera();
       closeModal('modal-qr-scanner');
-      pendingPurchase = null;
 
       currentComprasView = 'notas';
       triggerConfetti();
       playTaskCompleteSound(state.settings.soundEnabled);
-      showToast('Compra de mercado registrada com sucesso no mês! 🧾🎉', 'success', 4000);
+
+      if (purchaseData.items && purchaseData.items.length > 0) {
+        showToast(`🎉 Nota do ${purchaseData.marketName} salva com sucesso! ${purchaseData.items.length} produtos registrados no app!`, 'success', 4500);
+        // Abre o modal de conferência / apelidos e conciliação
+        renderPdfInvoiceConfirmation(state, purchaseData);
+        openModal('modal-confirm-pdf-invoice');
+      } else {
+        showToast(`🎉 Compra de ${formatCurrencyWithSymbol(purchaseData.total)} registrada no ${purchaseData.marketName}!`, 'success', 4000);
+      }
+
+      pendingPurchase = null;
       refreshAllUI();
     });
   }

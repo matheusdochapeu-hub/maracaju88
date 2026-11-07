@@ -431,3 +431,46 @@ export function applyCloudBackup(currentState, cloudData) {
 
   return merged;
 }
+
+
+/**
+ * Busca o HTML de uma NFC-e via backend do Google Apps Script (contorna restrições de CORS)
+ */
+export async function fetchNfceHtmlViaAppsScript(url, token, nfceUrl, timeoutMs = 15000) {
+  if (!url || !url.trim() || !nfceUrl) {
+    throw new Error("URL do Google Apps Script ou link da NFC-e não fornecido.");
+  }
+
+  const endpoint = new URL(url.trim());
+  endpoint.searchParams.set("action", "fetchNfce");
+  endpoint.searchParams.set("url", nfceUrl);
+  if (token) {
+    endpoint.searchParams.set("token", token.trim());
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(endpoint.toString(), {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      throw new Error(`Erro na conexão HTTP: ${res.status} ${res.statusText}`);
+    }
+
+    const json = await res.json();
+    if (json.status !== "success" || !json.html) {
+      throw new Error(json.message || "Falha ao obter HTML da NFC-e via Apps Script.");
+    }
+
+    return json.html;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}

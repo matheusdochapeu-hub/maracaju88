@@ -64,6 +64,32 @@ function doGet(e) {
     var action = (e && e.parameter && e.parameter.action) || "restore";
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+        // Ação "fetchNfce": busca o HTML da SEFAZ para contornar bloqueios de CORS do PWA
+    if (action === "fetchNfce") {
+      var targetUrl = (e && e.parameter && e.parameter.url) || "";
+      if (!targetUrl) {
+        return createJsonResponse({ status: "error", message: "URL da NFC-e não fornecida." });
+      }
+      try {
+        var resp = UrlFetchApp.fetch(targetUrl, {
+          muteHttpExceptions: true,
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+          }
+        });
+        return createJsonResponse({
+          status: "success",
+          html: resp.getContentText()
+        });
+      } catch (errFetch) {
+        return createJsonResponse({
+          status: "error",
+          message: "Erro ao buscar NFC-e na SEFAZ: " + errFetch.message
+        });
+      }
+    }
+
     if (action === "ping") {
       return createJsonResponse({
         status: "success",
@@ -135,6 +161,31 @@ function doPost(e) {
     }
 
     var payload = JSON.parse(e.postData.contents);
+        if (payload.action === "fetchNfce") {
+      var targetUrl = payload.url || "";
+      if (!targetUrl) {
+        return createJsonResponse({ status: "error", message: "URL da NFC-e não fornecida." });
+      }
+      try {
+        var respPost = UrlFetchApp.fetch(targetUrl, {
+          muteHttpExceptions: true,
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+          }
+        });
+        return createJsonResponse({
+          status: "success",
+          html: respPost.getContentText()
+        });
+      } catch (errFetchPost) {
+        return createJsonResponse({
+          status: "error",
+          message: "Erro ao buscar NFC-e na SEFAZ: " + errFetchPost.message
+        });
+      }
+    }
+
     var data = payload.data || payload;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var now = new Date();

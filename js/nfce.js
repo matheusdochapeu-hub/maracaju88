@@ -18,7 +18,8 @@ export const KNOWN_MARKETS = {
   '03007331': 'Supermercados BH',
   '16694610': 'Supermercado Savegnago',
   '00360305': 'Hipermercado Muffato',
-  '75315333': 'Supermercados Condor'
+  '75315333': 'Supermercados Condor',
+  '50489095': 'Padaria e Mercearia Irmãos Araújo'
 };
 
 /**
@@ -39,7 +40,320 @@ export function guessMarketNameFromCnpj(cnpjDigits) {
 }
 
 /**
+ * Mapeia o texto da forma de pagamento da SEFAZ para o enum do app Maracaju:
+ * 'credito' | 'debito' | 'dinheiro' | 'pix' | 'va' | 'vr'
+ */
+export function mapPaymentMethodToApp(rawMethod) {
+  if (!rawMethod || typeof rawMethod !== 'string') return 'va';
+  const norm = rawMethod.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  if (norm.includes('credit') || norm.includes('credito')) return 'credito';
+  if (norm.includes('debit') || norm.includes('debito')) return 'debito';
+  if (norm.includes('dinheiro') || norm.includes('especie')) return 'dinheiro';
+  if (norm.includes('pix') || norm.includes('instantaneo')) return 'pix';
+  if (norm.includes('alimentac') || norm.includes('vale alimentacao') || norm.includes('alelo alimentacao') || norm.includes('ticket alimentacao')) return 'va';
+  if (norm.includes('refeic') || norm.includes('vale refeicao') || norm.includes('alelo refeicao') || norm.includes('ticket restaurante')) return 'vr';
+
+  return 'va';
+}
+
+/**
+ * Realiza o parse completo de uma página HTML de consulta pública de NFC-e (SEFAZ SP e demais estados)
+ * Extrai Razão Social, CNPJ, Endereço, Data, Hora, Número, Série, Chave de Acesso, Valor Total,
+ * Forma de Pagamento e Todos os Itens Detalhados (Nome, Código, Qtd, Unidade, Valor Unitário e Total).
+ */
+export function parseNfceHtml(htmlString) {
+  if (!htmlString || typeof htmlString !== 'string') return null;
+
+  let marketName = '';
+  let cnpj = '';
+  let address = '';
+  let date = '';
+  let time = '';
+  let nfeNumber = '';
+  let nfeSeries = '';
+  let accessKey = '';
+  let totalAmount = 0;
+  let paymentMethod = 'va';
+  let paymentMethodName = '';
+  const items = [];
+
+  // Se estiver em ambiente com DOMParser (navegadores)
+  const hasDOMParser = typeof DOMParser !== 'undefined';
+
+  if (hasDOMParser) {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlString, 'text/html');
+
+      // 1. Razão Social / Nome da Empresa
+      const titleEl = doc.querySelector('.txtTopo') ||
+                      doc.querySelector('#u20') ||
+                      doc.querySelector('.txtTit') ||
+                      doc.querySelector('.text:first-child');
+      if (titleEl) {
+        marketName = titleEl.textContent.trim();
+      }
+
+      // 2. CNPJ
+      const allTexts = Array.from(doc.querySelectorAll('.text, div, span, p'));
+      for (const el of allTexts) {
+        const t = el.textContent || '';
+        const cnpjMatch = t.match(/CNPJ:\s*([\d\.\/\-]+)/i);
+        if (cnpjMatch) {
+          cnpj = formatCnpj(cnpjMatch[1]);
+          break;
+        }
+      }
+
+      // 3. Endereço
+      const endEl = doc.querySelector('.text:nth-of-type(2)') || doc.querySelector('.endereco');
+      if (endEl) {
+        address = endEl.textContent.replace(/\s+/g, ' ').trim();
+      }
+
+      // 4. Data / Número / Série
+      const infoContainer = doc.querySelector('#blocoEmitente') || doc.querySelector('.conteudo_especifico') || doc.body;
+      if (infoContainer) {
+        const infoText = infoContainer.textContent || '';
+        const numMatch = infoText.match(/N[úu]mero:\s*(\d+)/i);
+        if (numMatch) nfeNumber = numMatch[1];
+
+        const serieMatch = infoText.match(/S[ée]rie:\s*(\d+)/i);
+        if (serieMatch) nfeSeries = serieMatch[1];
+
+        const emiMatch = infoText.match(/Emiss[ãa]o:\s*(\d{2}\/\d{2}\/\d{4})(?:\s+(\d{2}:\d{2}:\d{2}))?/i);
+        if (emiMatch) {
+          const [d, m, y] = emiMatch[1].split('/');
+          date = `${y}-${m}-${d}`;
+          time = emiMatch[2] || '';
+        }
+      }
+
+      // 5. Chave de Acesso
+      const chaveEl = doc.querySelector('.chave') || doc.querySelector('#lblChave');
+      if (chaveEl) {
+        accessKey = chaveEl.textContent.replace(/\D/g, '');
+      } else {
+        const fullTxt = doc.body ? doc.body.textContent : htmlString;
+        const keyM = fullTxt.match(/\b(\d{44})\b/);
+        if (keyM) accessKey = keyM[1];
+      }
+
+      // 6. Itens da Compra
+      const rows = doc.querySelectorAll('#tabResult tr[id^="Item"], tr.linhaItem, tr[id^="Item"]');
+      rows.forEach(row => {
+        const nameEl = row.querySelector('.txtTit') || row.querySelector('.txtTit2') || row.querySelector('.desc');
+        const codeEl = row.querySelector('.RCod');
+        const qtdEl = row.querySelector('.Rqtd');
+        const unEl = row.querySelector('.RUN');
+        const unitPriceEl = row.querySelector('.RvlUnit');
+        const totalEl = row.querySelector('.valor') || row.querySelector('.total');
+
+        const name = nameEl ? nameEl.textContent.replace(/<[^>]+>/g, '').trim() : '';
+        if (!name) return;
+
+        let code = '';
+        if (codeEl) {
+          const cMatch = codeEl.textContent.match(/(\d+)/);
+          if (cMatch) code = cMatch[1];
+        }
+
+        let quantity = 1;
+        if (qtdEl) {
+          const qMatch = qtdEl.textContent.match(/([\d,\.]+)/);
+          if (qMatch) quantity = parseFloat(qMatch[1].replace(',', '.'));
+        }
+
+        let unit = 'UN';
+        if (unEl) {
+          const uMatch = unEl.textContent.match(/([A-Za-z]+)/);
+          if (uMatch) unit = uMatch[1].toUpperCase();
+        }
+
+        let unitPrice = 0;
+        if (unitPriceEl) {
+          unitPrice = parseCurrency(unitPriceEl.textContent);
+        }
+
+        let itemTotal = 0;
+        if (totalEl) {
+          itemTotal = parseCurrency(totalEl.textContent);
+        } else {
+          itemTotal = Math.round(quantity * unitPrice * 100) / 100;
+        }
+
+        items.push({
+          name,
+          rawName: name,
+          alias: name,
+          code,
+          quantity: quantity > 0 ? quantity : 1,
+          unit,
+          unitPrice,
+          price: itemTotal,
+          totalPrice: itemTotal
+        });
+      });
+
+      // 7. Total a Pagar
+      const totalEl = doc.querySelector('#totalNota .txtMax') ||
+                      doc.querySelector('.totalNumb.txtMax') ||
+                      doc.querySelector('.totalNFe') ||
+                      doc.querySelector('.vtotal');
+      if (totalEl) {
+        totalAmount = parseCurrency(totalEl.textContent);
+      }
+
+      // 8. Forma de Pagamento
+      const payLabel = doc.querySelector('#linhaTotal label.tx') ||
+                       doc.querySelector('.formaPagamento') ||
+                       doc.querySelector('#conteudo table:last-of-type label');
+      if (payLabel) {
+        paymentMethodName = payLabel.textContent.trim();
+        paymentMethod = mapPaymentMethodToApp(paymentMethodName);
+      }
+    } catch (err) {
+      console.warn('Falha no DOMParser para NFC-e, executando parser via Regex:', err);
+    }
+  }
+
+  // Fallback via Regex se o DOMParser não estiver disponível ou não tiver encontrado os dados
+  if (!marketName) {
+    const topoMatch = htmlString.match(/<div[^>]*class=["'][^"']*txtTopo[^"']*["'][^>]*>([\s\S]*?)<\/div>/i) ||
+                      htmlString.match(/id=["']u20["'][^>]*>([\s\S]*?)<\/div>/i);
+    if (topoMatch) {
+      marketName = topoMatch[1].replace(/<[^>]+>/g, '').trim();
+    }
+  }
+
+  if (!cnpj) {
+    const cnpjMatch = htmlString.match(/CNPJ:\s*([\d\.\/\-]+)/i);
+    if (cnpjMatch) {
+      cnpj = formatCnpj(cnpjMatch[1]);
+    }
+  }
+
+  if (!address) {
+    const endMatch = htmlString.match(/<div[^>]*class=["']text["'][^>]*>([\s\S]*?)<\/div>/gi);
+    if (endMatch && endMatch.length > 1) {
+      address = endMatch[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    }
+  }
+
+  if (!nfeNumber || !date) {
+    const emissaoMatch = htmlString.match(/N[úu]mero:\s*<\/strong>\s*(\d+)[\s\S]*?S[ée]rie:\s*<\/strong>\s*(\d+)[\s\S]*?Emiss[ãa]o:\s*<\/strong>\s*(\d{2}\/\d{2}\/\d{4})(?:\s+(\d{2}:\d{2}:\d{2}))?/i) ||
+                         htmlString.match(/N[úu]mero:\s*(\d+)[\s\S]*?S[ée]rie:\s*(\d+)[\s\S]*?Emiss[ãa]o:\s*(\d{2}\/\d{2}\/\d{4})(?:\s+(\d{2}:\d{2}:\d{2}))?/i);
+    if (emissaoMatch) {
+      nfeNumber = emissaoMatch[1];
+      nfeSeries = emissaoMatch[2];
+      const [d, m, y] = emissaoMatch[3].split('/');
+      date = `${y}-${m}-${d}`;
+      time = emissaoMatch[4] || '';
+    }
+  }
+
+  if (!accessKey) {
+    const chaveMatch = htmlString.match(/class=["']chave["'][^>]*>([\s\d]+)<\/span>/i) ||
+                       htmlString.match(/Chave de acesso:[\s\S]*?(\d{4}[\s\d]{40,60}\d)/i) ||
+                       htmlString.match(/\b(\d{44})\b/);
+    if (chaveMatch) {
+      accessKey = chaveMatch[1].replace(/\D/g, '');
+    }
+  }
+
+  if (items.length === 0) {
+    const rowRegex = /<tr[^>]*id=["']Item\s*\+\s*\d+["'][^>]*>([\s\S]*?)<\/tr>/gi;
+    let match;
+    while ((match = rowRegex.exec(htmlString)) !== null) {
+      const rowHtml = match[1];
+
+      const nameMatch = rowHtml.match(/<span[^>]*class=["']txtTit["'][^>]*>([\s\S]*?)<\/span>/i);
+      const name = nameMatch ? nameMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+
+      const codeMatch = rowHtml.match(/<span[^>]*class=["']RCod["'][^>]*>[\s\S]*?(\d+)[\s\S]*?<\/span>/i);
+      const code = codeMatch ? codeMatch[1].trim() : '';
+
+      const qtdMatch = rowHtml.match(/<span[^>]*class=["']Rqtd["'][^>]*>[\s\S]*?Qtde\.:\s*<\/strong>\s*([\d,\.]+)/i);
+      const quantity = qtdMatch ? parseFloat(qtdMatch[1].replace(',', '.')) : 1;
+
+      const unMatch = rowHtml.match(/<span[^>]*class=["']RUN["'][^>]*>[\s\S]*?UN:\s*<\/strong>\s*([A-Za-z]+)/i);
+      const unit = unMatch ? unMatch[1].trim().toUpperCase() : 'UN';
+
+      const vlUnitMatch = rowHtml.match(/<span[^>]*class=["']RvlUnit["'][^>]*>[\s\S]*?Vl\.\s*Unit\.:\s*<\/strong>\s*([\d,\.]+)/i);
+      const unitPrice = vlUnitMatch ? parseCurrency(vlUnitMatch[1]) : 0;
+
+      const valMatch = rowHtml.match(/<span[^>]*class=["']valor["'][^>]*>([\d,\.]+)<\/span>/i);
+      const itemTotal = valMatch ? parseCurrency(valMatch[1]) : Math.round(unitPrice * quantity * 100) / 100;
+
+      if (name) {
+        items.push({
+          name,
+          rawName: name,
+          alias: name,
+          code,
+          quantity: quantity > 0 ? quantity : 1,
+          unit,
+          unitPrice,
+          price: itemTotal,
+          totalPrice: itemTotal
+        });
+      }
+    }
+  }
+
+  if (totalAmount <= 0) {
+    const totalMatch = htmlString.match(/<span[^>]*class=["'][^"']*totalNumb\s+txtMax[^"']*["'][^>]*>([\d,\.]+)<\/span>/i) ||
+                       htmlString.match(/Valor a pagar R\$:[\s\S]*?<span[^>]*class=["']totalNumb[^"']*["'][^>]*>([\d,\.]+)<\/span>/i) ||
+                       htmlString.match(/Valor a pagar R\$:[\s\S]*?(\d+,\d{2})/i);
+    if (totalMatch) {
+      totalAmount = parseCurrency(totalMatch[1]);
+    } else if (items.length > 0) {
+      totalAmount = Math.round(items.reduce((acc, it) => acc + (it.price || 0), 0) * 100) / 100;
+    }
+  }
+
+  if (!paymentMethodName) {
+    const payMatch = htmlString.match(/<label[^>]*class=["']tx["'][^>]*>([\s\S]*?)<\/label>/i);
+    if (payMatch) {
+      paymentMethodName = payMatch[1].replace(/<[^>]+>/g, '').trim();
+      paymentMethod = mapPaymentMethodToApp(paymentMethodName);
+    }
+  }
+
+  // Nome padrão de fallback
+  if (!marketName && cnpj) {
+    marketName = guessMarketNameFromCnpj(cnpj) || `Mercado (CNPJ ${cnpj})`;
+  } else if (!marketName) {
+    marketName = 'Supermercado';
+  }
+
+  if (!date) {
+    date = new Date().toISOString().substring(0, 10);
+  }
+
+  return {
+    success: true,
+    marketName,
+    cnpj,
+    address,
+    date,
+    time,
+    nfeNumber,
+    nfeSeries,
+    accessKey,
+    nfeKey: accessKey,
+    total: totalAmount,
+    totalAmount,
+    paymentMethod,
+    paymentMethodName: paymentMethodName || 'Vale Alimentação',
+    items
+  };
+}
+
+/**
  * Extrai informações fundamentais do texto/URL de um QR Code de NFC-e brasileiro
+ * Suporta detecção de chave de 44 dígitos, parâmetros de URL e colagem direta de HTML.
  */
 export function parseNfceQrCodeText(rawText) {
   if (!rawText || typeof rawText !== 'string') {
@@ -47,36 +361,51 @@ export function parseNfceQrCodeText(rawText) {
   }
 
   const text = rawText.trim();
+
+  // Se o usuário colou diretamente o código HTML da página da Fazenda
+  if (text.includes('<tr') || text.includes('txtTit') || text.includes('txtTopo') || text.includes('<html') || text.includes('id="Item')) {
+    const fromHtml = parseNfceHtml(text);
+    if (fromHtml && (fromHtml.items.length > 0 || fromHtml.totalAmount > 0)) {
+      return fromHtml;
+    }
+  }
+
   let chNFe = '';
   let total = 0;
   let dateStr = '';
   let cnpj = '';
+  let nfeNumber = '';
+  let nfeSeries = '';
+  let cUF = '';
 
   // 1. Procura chave de 44 dígitos na string (padrão nacional de NFC-e)
-  const keyMatch = text.match(/\b(\d{44})\b/);
-  if (keyMatch) {
-    chNFe = keyMatch[1];
+  // Pode vir como parâmetro p=CHAVE|2|1|1|...
+  const pParam = text.match(/[?&]p=([0-9]{44})/i);
+  if (pParam) {
+    chNFe = pParam[1];
   } else {
-    // Pode vir como parâmetro p=CHAVE|2|1|1|...
-    const pParam = text.match(/[?&]p=([0-9]{44})/i);
-    if (pParam) {
-      chNFe = pParam[1];
+    const chParam = text.match(/[?&]chNFe=([0-9]{44})/i);
+    if (chParam) {
+      chNFe = chParam[1];
     } else {
-      // Chave em parâmetro chNFe
-      const chParam = text.match(/[?&]chNFe=([0-9]{44})/i);
-      if (chParam) chNFe = chParam[1];
+      const keyMatch = text.match(/\b(\d{44})\b/);
+      if (keyMatch) {
+        chNFe = keyMatch[1];
+      }
     }
   }
 
   // 2. Extração de informações codificadas na chave de 44 dígitos
-  // Estrutura: cUF(2) + AAMM(4) + CNPJ(14) + mod(2) + serie(3) + nNF(9) + tpEmis(1) + cNF(8) + cDV(1)
+  // Estrutura nacional: cUF(2) + AAMM(4) + CNPJ(14) + mod(2) + serie(3) + nNF(9) + tpEmis(1) + cNF(8) + cDV(1)
   if (chNFe && chNFe.length === 44) {
+    cUF = chNFe.substring(0, 2);
     const aa = chNFe.substring(2, 4);
     const mm = chNFe.substring(4, 6);
     cnpj = chNFe.substring(6, 20);
+    nfeSeries = String(parseInt(chNFe.substring(22, 25), 10));
+    nfeNumber = String(parseInt(chNFe.substring(25, 34), 10));
 
     const fullYear = `20${aa}`;
-    // Se o mês for válido, monta data estimada do mês
     if (Number(mm) >= 1 && Number(mm) <= 12) {
       const today = new Date();
       const currentYear = String(today.getFullYear());
@@ -98,7 +427,6 @@ export function parseNfceQrCodeText(rawText) {
     // Parâmetro no formato p=CHAVE|VERSAO|TPAMB|DIA_EMISSAO|VALOR_TOTAL|...
     const pipeParts = text.split('|');
     if (pipeParts.length >= 5) {
-      // O valor normalmente é a 5ª parte
       const candidateVal = pipeParts[4];
       if (/^[0-9]+(?:\.[0-9]+)?$/.test(candidateVal)) {
         total = parseFloat(candidateVal) || 0;
@@ -125,72 +453,89 @@ export function parseNfceQrCodeText(rawText) {
   }
 
   return {
+    success: true,
     rawUrl: text.startsWith('http') ? text : '',
     nfeKey: chNFe,
+    accessKey: chNFe,
     cnpj: cnpj ? formatCnpj(cnpj) : '',
     marketName,
     date: dateStr,
+    nfeNumber,
+    nfeSeries,
     total: Math.round(total * 100) / 100,
+    totalAmount: Math.round(total * 100) / 100,
+    paymentMethod: 'va',
     items: []
   };
 }
 
 /**
- * Tenta buscar online a página da SEFAZ para extrair itens detalhados e Razão Social
- * Possui fallback gracioso caso haja restrição de CORS
+ * Tenta buscar online a página da SEFAZ para extrair itens detalhados, Razão Social e valores.
+ * Suporta integração via backend do Google Apps Script (sem bloqueio de CORS)
+ * e fallback gracioso com os dados locais já extraídos da chave.
  */
-export async function fetchNfceDetailsOnline(url, baseInfo = {}) {
+export async function fetchNfceDetailsOnline(url, options = {}) {
+  const baseInfo = options.baseInfo || (url.startsWith('http') ? parseNfceQrCodeText(url) : {});
+
   if (!url || !url.startsWith('http')) {
-    return baseInfo;
+    return { success: false, ...baseInfo };
   }
 
+  // 1. Tenta buscar via Google Apps Script se configurado (zero problemas de CORS!)
+  if (options.sheetsUrl) {
+    try {
+      const { fetchNfceHtmlViaAppsScript } = await import('./sheets.js');
+      const htmlText = await fetchNfceHtmlViaAppsScript(options.sheetsUrl, options.sheetsToken, url);
+      if (htmlText) {
+        const parsed = parseNfceHtml(htmlText);
+        if (parsed && (parsed.items.length > 0 || parsed.totalAmount > 0)) {
+          return {
+            ...baseInfo,
+            ...parsed,
+            success: true,
+            rawUrl: url
+          };
+        }
+      }
+    } catch (errAppsScript) {
+      console.warn('Busca de NFC-e via Apps Script falhou ou não configurada:', errAppsScript);
+    }
+  }
+
+  // 2. Tentativa direta pelo navegador (caso a SEFAZ ou proxy permita)
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 6000);
 
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: { 'Accept': 'text/html,application/xhtml+xml,application/xml' }
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml'
+      }
     });
     clearTimeout(timeout);
 
-    if (!response.ok) return baseInfo;
-    const htmlText = await response.text();
-
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlText, 'text/html');
-
-    // Nome da Empresa / Supermercado
-    const titleEl = doc.querySelector('.txtTopo') || doc.querySelector('.txtTit') || doc.querySelector('#u20') || doc.querySelector('.text');
-    let storeName = titleEl ? titleEl.textContent.trim() : '';
-
-    // Valor Total
-    const totalEl = doc.querySelector('.totalNFe') || doc.querySelector('.txtMax') || doc.querySelector('.vtotal');
-    let totalVal = totalEl ? parseCurrency(totalEl.textContent) : 0;
-
-    // Itens da compra
-    const items = [];
-    const itemRows = doc.querySelectorAll('tr[id^="Item"], .txtItens, table.tCols tr');
-    itemRows.forEach(row => {
-      const nameEl = row.querySelector('.txtTit2') || row.querySelector('.desc') || row.querySelector('td:first-child');
-      const valEl = row.querySelector('.valor') || row.querySelector('.total') || row.querySelector('td:last-child');
-      if (nameEl && valEl) {
-        const name = nameEl.textContent.trim();
-        const price = parseCurrency(valEl.textContent);
-        if (name && price > 0) {
-          items.push({ name, price });
-        }
+    if (response.ok) {
+      const htmlText = await response.text();
+      const parsed = parseNfceHtml(htmlText);
+      if (parsed && (parsed.items.length > 0 || parsed.totalAmount > 0)) {
+        return {
+          ...baseInfo,
+          ...parsed,
+          success: true,
+          rawUrl: url
+        };
       }
-    });
-
-    return {
-      ...baseInfo,
-      marketName: storeName || baseInfo.marketName || 'Supermercado',
-      total: totalVal > 0 ? totalVal : baseInfo.total,
-      items: items.length > 0 ? items : baseInfo.items
-    };
-  } catch (err) {
-    // CORS ou offline: usa com sucesso os dados extraídos localmente do QR Code
-    return baseInfo;
+    }
+  } catch (errDirect) {
+    // CORS ou restrição de rede no browser
+    console.info('Tentativa de conexão direta com a SEFAZ bloqueada por CORS no navegador.');
   }
+
+  // Retorna os dados fundamentais extraídos da chave e indica que pode colar o HTML se desejar
+  return {
+    ...baseInfo,
+    success: true,
+    needsManualPaste: true
+  };
 }
