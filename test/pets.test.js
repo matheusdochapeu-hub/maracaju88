@@ -30,7 +30,10 @@ import {
   addPetVermifugo,
   deletePetVermifugo,
   addPetExame,
-  deletePetExame
+  deletePetExame,
+  addPetItem,
+  deletePetItem,
+  getPetsItensList
 } from '../js/pets.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -333,7 +336,8 @@ test('Pets UI: Todos os botões e sub-abas contêm atributos de eventos válidos
     'modal-add-pet-banho',
     'modal-add-pet-vacina',
     'modal-add-pet-vermifugo',
-    'modal-add-pet-exame'
+    'modal-add-pet-exame',
+    'modal-add-pet-item'
   ];
 
   for (const mId of expectedModais) {
@@ -359,4 +363,54 @@ test('Pets UI: Todos os botões e sub-abas contêm atributos de eventos válidos
   assert.ok(uiJs.includes('data-open-modal="modal-add-pet-vacina"'), 'Botão de vacina deve ter data-open-modal');
   assert.ok(uiJs.includes('data-open-modal="modal-add-pet-vermifugo"'), 'Botão de vermífugo deve ter data-open-modal');
   assert.ok(uiJs.includes('data-open-modal="modal-add-pet-exame"'), 'Botão de exame deve ter data-open-modal');
+  assert.ok(uiJs.includes('data-open-modal="modal-add-pet-item"'), 'Botão de item deve ter data-open-modal');
+});
+
+test('Pets: Gerenciamento de Itens e Acessórios (Comedouros, Coleiras, Brinquedos)', () => {
+  const state = {
+    pets: [
+      {
+        id: 'pet-mandioca-1',
+        nome: 'Mandioca',
+        especie: 'cachorro',
+        itens: []
+      }
+    ]
+  };
+
+  // 1. Adicionar comedouro
+  const item1 = addPetItem(state, 'pet-mandioca-1', {
+    nome: 'Comedouro Lento Anti-engasgo',
+    tipo: 'comedouro',
+    dataCompra: '2026-11-01',
+    valor: 45.90,
+    loja: 'Cobasi',
+    observacoes: 'Rosa 500ml'
+  });
+
+  assert.ok(item1.id.startsWith('item_'));
+  assert.equal(item1.nome, 'Comedouro Lento Anti-engasgo');
+  assert.equal(item1.tipo, 'comedouro');
+  assert.equal(item1.valor, 45.90);
+
+  // 2. Adicionar brinquedo
+  const item2 = addPetItem(state, 'pet-mandioca-1', {
+    nome: 'Brinquedo Mordedor de Corda',
+    tipo: 'brinquedo',
+    dataCompra: '2026-11-05',
+    valor: 25.00
+  });
+
+  const list = getPetsItensList(state, 'pet-mandioca-1');
+  assert.equal(list.length, 2);
+  // Mais recente primeiro
+  assert.equal(list[0].id, item2.id);
+  assert.equal(list[0].petNome, 'Mandioca');
+
+  // 3. Excluir item
+  const deleted = deletePetItem(state, 'pet-mandioca-1', item1.id);
+  assert.equal(deleted, true);
+  const updatedList = getPetsItensList(state, 'pet-mandioca-1');
+  assert.equal(updatedList.length, 1);
+  assert.equal(updatedList[0].id, item2.id);
 });

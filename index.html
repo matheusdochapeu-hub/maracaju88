@@ -251,6 +251,7 @@
         <button type="button" class="chip" data-pet-subtab="higiene">🛁 Higiene</button>
         <button type="button" class="chip" data-pet-subtab="vacinas">💉 Vacinações</button>
         <button type="button" class="chip" data-pet-subtab="exames">🩺 Exames</button>
+        <button type="button" class="chip" data-pet-subtab="itens">🦴 Itens & Acessórios</button>
       </div>
 
       <!-- Container Dinâmico do Conteúdo da Sub-aba Ativa -->
@@ -2530,6 +2531,82 @@
 
         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
           <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Consulta/Exame</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: LANÇAR ITEM / ACESSÓRIO DO PET (COMEDOURO, COLEIRA, BRINQUEDO) -->
+  <div id="modal-add-pet-item" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🦴 Comedouro, Coleira, Brinquedo & Itens</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-add-pet-item">
+        <div class="form-group">
+          <label class="form-label" for="pet-item-pet-id">Pet *</label>
+          <select id="pet-item-pet-id" class="form-control select-pet-target" required></select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="pet-item-tipo">Tipo de Item *</label>
+            <select id="pet-item-tipo" class="form-control" required>
+              <option value="comedouro" selected>🥣 Comedouro / Bebedouro</option>
+              <option value="coleira">🦮 Coleira / Guia / Peitoral</option>
+              <option value="brinquedo">🧸 Brinquedo / Mordedor</option>
+              <option value="cama_transporte">🧺 Caminha / Transporte</option>
+              <option value="outros">🦴 Outros Acessórios</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pet-item-data">Data da Compra *</label>
+            <input type="date" id="pet-item-data" class="form-control" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-item-nome">Nome / Descrição do Item *</label>
+          <input type="text" id="pet-item-nome" class="form-control" placeholder="Ex: Comedouro elevado inox, Coleira com placa, Bolinha..." required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="pet-item-valor">Valor Pago (R$)</label>
+            <input type="text" id="pet-item-valor" class="form-control" placeholder="R$ 0,00" inputmode="decimal" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="pet-item-loja">Loja / Pet Shop</label>
+            <input type="text" id="pet-item-loja" class="form-control" placeholder="Ex: Cobasi, Petz, Shopee..." />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pet-item-observacoes">Observações (Tamanho, Cor, Material)</label>
+          <textarea id="pet-item-observacoes" class="form-control" rows="2" placeholder="Ex: Tamanho M, cor rosa, material silicone, lavável..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Foto do Item</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📷 Câmera
+              <input type="file" id="pet-item-camera" accept="image/*" capture="environment" style="display: none;" />
+            </label>
+            <label class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📁 Galeria
+              <input type="file" id="pet-item-gallery" accept="image/*" style="display: none;" />
+            </label>
+            <span id="pet-item-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Item</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
       </form>

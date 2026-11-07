@@ -25,7 +25,8 @@ import {
   getPetsHigieneList,
   getPetsVacinasList,
   getPetsVermifugosList,
-  getPetsExamesList
+  getPetsExamesList,
+  getPetsItensList
 } from './pets.js';
 // ============================================================
 //  MARACAJU - INTERFACE, RENDERIZAÇÃO & MODAIS
@@ -2536,6 +2537,9 @@ function renderPetsMainListView(container, state, pets, speciesFilter, searchQue
             <button type="button" class="btn-pill outline" data-nav-pet-subtab="exames" data-pet-id="${pet.id}">
               <span>🩺</span> Exames Veterinários
             </button>
+            <button type="button" class="btn-pill outline" data-nav-pet-subtab="itens" data-pet-id="${pet.id}">
+              <span>🦴</span> Comedouros, Coleiras & Brinquedos
+            </button>
             <button type="button" class="btn-pill outline" data-open-pet-folder="${pet.id}" data-folder-tab="cadastrais">
               <span>📋</span> Ver Pasta Completa
             </button>
@@ -2966,6 +2970,76 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
         `).join('')}
       </div>
     `;
+  } else if (subTab === 'itens') {
+    const list = getPetsItensList(state, selectedPetId);
+    const totalGasto = list.reduce((acc, it) => acc + (Number(it.valor) || 0), 0);
+
+    const tipoLabels = {
+      comedouro: { label: 'Comedouro/Bebedouro', icon: '🥣' },
+      coleira: { label: 'Coleira/Guia/Peitoral', icon: '🦮' },
+      brinquedo: { label: 'Brinquedo', icon: '🧸' },
+      cama_transporte: { label: 'Caminha/Transporte', icon: '🧺' },
+      outros: { label: 'Outros Acessórios', icon: '🦴' }
+    };
+
+    bodyContent = `
+      <div class="pet-kpi-grid">
+        <div class="pet-kpi-card">
+          <span class="pet-kpi-title">🦴 Total de Itens & Acessórios</span>
+          <span class="pet-kpi-value">${list.length}</span>
+          <span class="pet-kpi-badge" style="background: rgba(14, 165, 233, 0.15); color: #0369a1;">Comedouros, coleiras, etc.</span>
+        </div>
+        <div class="pet-kpi-card">
+          <span class="pet-kpi-title">💰 Total Investido</span>
+          <span class="pet-kpi-value">${formatCurrencyWithSymbol(totalGasto)}</span>
+          <span class="pet-kpi-badge" style="background: rgba(16, 185, 129, 0.15); color: #047857;">${selectedPet ? selectedPet.nome : 'Todos os Pets'}</span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+        <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-primary);">Comedouros, Coleiras, Brinquedos & Acessórios</h4>
+        <button type="button" class="btn btn-primary btn-sm" data-open-modal="modal-add-pet-item" data-open-sub-modal="modal-add-pet-item" data-target-pet="${selectedPetId || ''}">
+          ➕ Lançar Item / Acessório
+        </button>
+      </div>
+
+      <div class="pet-records-list">
+        ${list.length === 0 ? `
+          <div style="text-align: center; padding: 2rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-md); border: 1px dashed var(--border-subtle);">
+            🦴 Nenhum item ou acessório cadastrado ainda. Lance comedouros, coleiras, caminhas e brinquedos dos seus bichinhos!
+          </div>
+        ` : list.map(it => {
+          const tipoInfo = tipoLabels[it.tipo] || tipoLabels.outros;
+          return `
+            <div class="pet-sub-entry-card">
+              <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 2px;">
+                  ${it.petFoto ? `<img src="${it.petFoto}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" />` : ''}
+                  <strong style="color: var(--brand-moss-dark); font-size: 0.9rem;">${it.petNome}</strong>
+                  <span class="p-tag info" style="font-size: 0.7rem;">
+                    ${tipoInfo.icon} ${tipoInfo.label}
+                  </span>
+                </div>
+                <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem; margin-top: 2px;">
+                  ${it.nome}
+                </div>
+                <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;">
+                  📅 Compra: <strong>${(it.dataCompra || '').split('-').reverse().join('/')}</strong>
+                  ${it.valor ? `• Valor: <strong>${formatCurrencyWithSymbol(it.valor)}</strong>` : ''}
+                  ${it.loja ? `• Loja: <em>${it.loja}</em>` : ''}
+                </div>
+                ${it.observacoes ? `
+                  <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                    ${it.observacoes}
+                  </div>
+                ` : ''}
+              </div>
+              <button type="button" class="btn btn-icon btn-sm" data-del-pet-item="${it.id}" data-pet-id="${it.petId}" title="Excluir">🗑️</button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
   }
 
   container.innerHTML = `
@@ -3035,6 +3109,9 @@ export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
       </button>
       <button type="button" class="pet-folder-tab-btn ${activeFolderTab === 'exames' ? 'active' : ''}" data-folder-switch-tab="exames" data-pet-id="${pet.id}">
         🩺 Exames & Consultas
+      </button>
+      <button type="button" class="pet-folder-tab-btn ${activeFolderTab === 'itens' ? 'active' : ''}" data-folder-switch-tab="itens" data-pet-id="${pet.id}">
+        🦴 Itens & Acessórios
       </button>
       <button type="button" class="pet-folder-tab-btn ${activeFolderTab === 'cadastrais' ? 'active' : ''}" data-folder-switch-tab="cadastrais" data-pet-id="${pet.id}">
         📋 Dados Cadastrais

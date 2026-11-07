@@ -107,7 +107,9 @@ import {
   addPetVermifugo,
   deletePetVermifugo,
   addPetExame,
-  deletePetExame
+  deletePetExame,
+  addPetItem,
+  deletePetItem
 } from './pets.js';
 import { parseNfceDanfeText, extractTextFromPdfFile, suggestPopularName } from './pdf-parser.js';
 import {
@@ -4466,7 +4468,9 @@ function initPetsModule() {
                      e.target.closest('[data-open-add-pet-banho]') ||
                      e.target.closest('[data-open-add-pet-vacina]') ||
                      e.target.closest('[data-open-add-pet-vermifugo]') ||
-                     e.target.closest('[data-open-add-pet-exame]');
+                     e.target.closest('[data-open-add-pet-exame]') ||
+                     e.target.closest('[data-open-add-pet-item]') ||
+                     e.target.closest('[data-action-add-item]');
     if (!modalBtn) return;
 
     let modalId = modalBtn.getAttribute('data-open-modal') || modalBtn.getAttribute('data-open-sub-modal');
@@ -4477,6 +4481,7 @@ function initPetsModule() {
       else if (modalBtn.hasAttribute('data-open-add-pet-vacina')) modalId = 'modal-add-pet-vacina';
       else if (modalBtn.hasAttribute('data-open-add-pet-vermifugo')) modalId = 'modal-add-pet-vermifugo';
       else if (modalBtn.hasAttribute('data-open-add-pet-exame')) modalId = 'modal-add-pet-exame';
+      else if (modalBtn.hasAttribute('data-open-add-pet-item') || modalBtn.hasAttribute('data-action-add-item')) modalId = 'modal-add-pet-item';
     }
 
     const petModalIds = [
@@ -4485,13 +4490,16 @@ function initPetsModule() {
       'modal-add-pet-banho',
       'modal-add-pet-vacina',
       'modal-add-pet-vermifugo',
-      'modal-add-pet-exame'
+      'modal-add-pet-exame',
+      'modal-add-pet-item'
     ];
 
     if (!modalId || !petModalIds.includes(modalId)) return;
 
     const targetPetId = modalBtn.getAttribute('data-target-pet') ||
                         modalBtn.getAttribute('data-pet-id') ||
+                        modalBtn.getAttribute('data-action-add-item') ||
+                        modalBtn.getAttribute('data-open-add-pet-item') ||
                         modalBtn.getAttribute('data-open-add-pet-racao') ||
                         modalBtn.getAttribute('data-open-add-pet-areia') ||
                         modalBtn.getAttribute('data-open-add-pet-banho') ||
@@ -4809,6 +4817,45 @@ function initPetsModule() {
     });
   }
 
+  // Submissão Item / Acessório
+  const formAddItem = document.getElementById('form-add-pet-item');
+  if (formAddItem) {
+    formAddItem.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const petId = document.getElementById('pet-item-pet-id')?.value;
+      if (!petId) return;
+
+      const nome = document.getElementById('pet-item-nome')?.value?.trim();
+      if (!nome) return;
+      const tipo = document.getElementById('pet-item-tipo')?.value || 'comedouro';
+      const dataCompra = document.getElementById('pet-item-data')?.value || getLocalDateString();
+      const valor = parseCurrency(document.getElementById('pet-item-valor')?.value);
+      const loja = document.getElementById('pet-item-loja')?.value?.trim() || '';
+      const observacoes = document.getElementById('pet-item-observacoes')?.value?.trim() || '';
+
+      addPetItem(state, petId, {
+        nome,
+        tipo,
+        dataCompra,
+        valor,
+        loja,
+        observacoes
+      });
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      formAddItem.reset();
+      closeModal('modal-add-pet-item');
+      if (currentActivePetFolderId === petId) {
+        renderPetFolderModal(state, petId, 'itens');
+      }
+      currentTab = 'pets';
+      renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
+      refreshAllUI();
+      showToast('🦴 Item/acessório salvo com sucesso!', 'success');
+    });
+  }
+
   // Exclusões de Sub-registros (suporta tanto modais quanto telas de categoria)
   document.addEventListener('click', (e) => {
     const delRacao = e.target.closest('[data-delete-pet-racao]') || e.target.closest('[data-del-racao]');
@@ -4909,6 +4956,23 @@ function initPetsModule() {
         renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
         refreshAllUI();
         showToast('Atendimento veterinário excluído.', 'info');
+      }
+      return;
+    }
+
+    const delItem = e.target.closest('[data-delete-pet-item]') || e.target.closest('[data-del-pet-item]');
+    if (delItem) {
+      const itemId = delItem.getAttribute('data-delete-pet-item') || delItem.getAttribute('data-del-pet-item');
+      const petId = delItem.getAttribute('data-pet-id') || currentActivePetFolderId;
+      if (confirm('Excluir este item/acessório?')) {
+        deletePetItem(state, petId, itemId);
+        saveState(state);
+        triggerAutoSyncIfEnabled();
+        if (currentActivePetFolderId) renderPetFolderModal(state, currentActivePetFolderId, 'itens');
+        currentTab = 'pets';
+        renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
+        refreshAllUI();
+        showToast('Item/acessório excluído.', 'info');
       }
       return;
     }

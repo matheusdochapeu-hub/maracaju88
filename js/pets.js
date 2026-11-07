@@ -351,6 +351,7 @@ export function addPet(state, data) {
     vacinas: [],
     vermifugos: [],
     exames: [],
+    itens: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -753,4 +754,66 @@ export function getPetsExamesList(state, petId = null) {
     });
   });
   return list.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+}
+
+/**
+ * Lança a compra de um item ou acessório para o pet (comedouro, coleira, brinquedo, etc.)
+ */
+export function addPetItem(state, petId, itemData) {
+  const pet = (state.pets || []).find(p => p.id === petId);
+  if (!pet) throw new Error('Pet não encontrado.');
+  if (!Array.isArray(pet.itens)) pet.itens = [];
+
+  const nome = (itemData.nome || itemData.titulo || '').trim();
+  if (!nome) throw new Error('O nome do item é obrigatório.');
+
+  const item = {
+    id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    petId: pet.id,
+    nome,
+    tipo: itemData.tipo || 'comedouro',
+    dataCompra: itemData.dataCompra || new Date().toISOString().substring(0, 10),
+    valor: Number(itemData.valor || 0),
+    loja: (itemData.loja || '').trim(),
+    observacoes: (itemData.observacoes || '').trim(),
+    fotos: Array.isArray(itemData.fotos) ? [...itemData.fotos] : (itemData.foto ? [itemData.foto] : []),
+    createdAt: new Date().toISOString()
+  };
+
+  pet.itens.unshift(item);
+  pet.updatedAt = new Date().toISOString();
+  return item;
+}
+
+/**
+ * Exclui um item ou acessório do pet
+ */
+export function deletePetItem(state, petId, itemId) {
+  const pet = (state.pets || []).find(p => p.id === petId);
+  if (!pet || !Array.isArray(pet.itens)) return false;
+  const idx = pet.itens.findIndex(it => it.id === itemId);
+  if (idx < 0) return false;
+  pet.itens.splice(idx, 1);
+  pet.updatedAt = new Date().toISOString();
+  return true;
+}
+
+/**
+ * Retorna a lista de todos os itens/acessórios cadastrados (filtrados ou não por pet)
+ */
+export function getPetsItensList(state, petId = null) {
+  const pets = (state.pets || []).filter(p => !petId || p.id === petId);
+  const list = [];
+  pets.forEach(p => {
+    (p.itens || []).forEach(it => {
+      list.push({
+        ...it,
+        petId: p.id,
+        petNome: p.nome,
+        petEspecie: p.especie,
+        petFoto: (p.fotos && p.fotos[0]) || (p.photos && p.photos[0]) || null
+      });
+    });
+  });
+  return list.sort((a, b) => (b.dataCompra || '').localeCompare(a.dataCompra || ''));
 }

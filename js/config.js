@@ -283,6 +283,7 @@ export const INITIAL_PETS = [
         fotos: []
       }
     ],
+    itens: [],
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-11-06T00:00:00.000Z"
   }
