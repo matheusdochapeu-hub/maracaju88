@@ -20,5 +20,8 @@
     "google-sheets-backup"
   ],
   "author": "Matheus",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "jpeg-js": "^0.4.4"
+  }
 }

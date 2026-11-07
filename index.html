@@ -327,6 +327,47 @@
     </section>
 
     <!-- ========================================== -->
+    <!-- ABA: SHOPPING, ROUPAS & DESEJOS            -->
+    <!-- ========================================== -->
+    <section id="tab-shopping" class="tab-content">
+      <!-- Banner de Resumo de Shopping -->
+      <div id="shopping-summary-banner" class="dash-card"></div>
+
+      <!-- Barra de Busca e Ordenação -->
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 180px;">
+          <input type="text" id="input-search-shopping" class="form-control" placeholder="🔍 Buscar desejos, marcas ou lojas..." style="font-size: 0.85rem;" />
+        </div>
+        <select id="shopping-sort-select" class="form-control" style="width: auto; min-width: 140px; font-size: 0.82rem;">
+          <option value="priority" selected>⚡ Prioridade</option>
+          <option value="price-asc">💵 Menor Preço</option>
+          <option value="price-desc">💎 Maior Preço</option>
+          <option value="recent">🕒 Mais Recentes</option>
+        </select>
+      </div>
+
+      <!-- Chips de Categorias (Roupas, Eletro, Tech, Casa, etc.) -->
+      <div id="shopping-category-chips" class="chips-scroll" style="margin-bottom: 0.5rem;"></div>
+
+      <!-- Filtros por Status (Todos, Desejados, Pesquisando, Comprados) -->
+      <div id="shopping-status-filters" class="chips-scroll" style="margin-bottom: 0.5rem;"></div>
+
+      <!-- Filtros por Destinatário (Todos, Casal, Matheus, Scarlet) -->
+      <div id="shopping-person-filters" class="chips-scroll" style="margin-bottom: 0.75rem;"></div>
+
+      <!-- Grid / Lista de Cards de Shopping -->
+      <div id="shopping-items-grid" class="cards-grid"></div>
+
+      <!-- FAB Flutuante para Adicionar Item -->
+      <div class="fab-wrapper">
+        <button type="button" class="fab-btn fab-btn-primary" id="btn-open-add-shopping-fab" data-open-modal="modal-shopping-item" aria-label="Adicionar Item de Shopping">
+          <span class="fab-icon">＋</span>
+          <span class="fab-label">Novo Item de Shopping</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
     <!-- ABA 3: CARRO & MANUTENÇÃO                  -->
     <!-- ========================================== -->
     <section id="tab-carro" class="tab-content">
