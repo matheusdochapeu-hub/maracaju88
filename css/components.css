@@ -2020,14 +2020,16 @@ input[type="file"].form-control::file-selector-button:hover {
 }
 
 .pill-action-stack {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.55rem;
   width: 100%;
 }
 
 .btn-pill {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: fit-content;
+  max-width: 100%;
   box-sizing: border-box;
   height: 38px;
   min-height: 38px;
@@ -2045,6 +2047,24 @@ input[type="file"].form-control::file-selector-button:hover {
   padding: 0 0.85rem;
   white-space: nowrap;
   border: none;
+}
+
+@media (max-width: 600px) {
+  .pill-action-stack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .btn-pill {
+    width: 100%;
+    min-width: 0;
+    font-size: 0.76rem;
+    padding: 0 0.45rem;
+    height: 36px;
+    min-height: 36px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .btn-pill:active {
@@ -2216,7 +2236,7 @@ input[type="file"].form-control::file-selector-button:hover {
 /* Grid de KPIs / Status da Categoria */
 .pet-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.75rem;
   margin-bottom: 1rem;
 }

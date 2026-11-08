@@ -4,6 +4,26 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-07 22:36] - Ajuste Visual e Eliminação de Sobreposição de Botões na Aba Pets (v2.5.7)
+
+### 🔍 Problema Identificado & Causa Raiz
+- **Sobreposição dos Botões de Ações dos Pets:**
+  - No card de expansão (`.pet-cascade` / `.pill-action-stack`), o botão `Exames Veterinários` colidia e sobrepunha diretamente o botão vizinho `Comedouros, Coleiras & Brinquedos`.
+  - **Causa Raiz:** O contêiner `.pill-action-stack` utilizava CSS Grid com `grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))` e `.btn-pill` possuía `white-space: nowrap`. Como os rótulos de texto eram extensos (~260px no caso de "Comedouros, Coleiras & Brinquedos"), o conteúdo estourou a largura da célula da grade e vazou sobre as células adjacentes, gerando sobreposição indevida.
+
+### 🛠️ Correções Implementadas
+1. **Layout Flexível & Responsivo (`css/components.css`):**
+   - Substituição da grade rígida por `display: flex; flex-wrap: wrap; gap: 0.55rem; width: 100%;`.
+   - Botões configurados com `flex: 1 1 auto; min-width: fit-content; max-width: 100%; box-sizing: border-box;`, permitindo que cada pílula se ajuste ao conteúdo e quebre para a linha seguinte sempre que o espaço terminar.
+   - Adicionada regra mobile `@media (max-width: 600px)` com `grid-template-columns: repeat(2, minmax(0, 1fr))` e `text-overflow: ellipsis`, garantindo simetria perfeita em telas de celular (360px a 430px) sem qualquer sobreposição.
+2. **Harmonização do Rótulo (`js/ui.js`):**
+   - Rótulo do botão alterado para `🦴 Itens & Acessórios` (com `title="Comedouros, Coleiras, Brinquedos & Acessórios"`), mantendo coerência com o nome da sub-aba no topo da tela e eliminando excesso de caracteres em linha única.
+3. **Versão PWA e Testes:**
+   - Atualizado para **`v2.5.7`** em `sw.js`, `js/config.js` e `index.html`.
+   - 96 testes aprovados com 100% de sucesso.
+
+---
+
 ## [2026-11-07 22:28] - Leitura Híbrida de NFC-e (QR Code + OCR Complementar Automático) e v2.5.6
 
 ### 🔍 Solicitação & Necessidade

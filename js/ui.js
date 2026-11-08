@@ -2648,8 +2648,8 @@ function renderPetsMainListView(container, state, pets, speciesFilter, searchQue
             <button type="button" class="btn-pill outline" data-nav-pet-subtab="exames" data-pet-id="${pet.id}">
               <span>🩺</span> Exames Veterinários
             </button>
-            <button type="button" class="btn-pill outline" data-nav-pet-subtab="itens" data-pet-id="${pet.id}">
-              <span>🦴</span> Comedouros, Coleiras & Brinquedos
+            <button type="button" class="btn-pill outline" data-nav-pet-subtab="itens" data-pet-id="${pet.id}" title="Comedouros, Coleiras, Brinquedos & Acessórios">
+              <span>🦴</span> Itens & Acessórios
             </button>
             <button type="button" class="btn-pill outline" data-open-pet-folder="${pet.id}" data-folder-tab="cadastrais">
               <span>📋</span> Ver Pasta Completa
