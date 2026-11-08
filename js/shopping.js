@@ -417,9 +417,51 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
     paymentBreakdown[k] = Math.round(paymentBreakdown[k] * 100) / 100;
   });
 
-  const vaTotal = paymentBreakdown.va;
-  const vrTotal = paymentBreakdown.vr;
+  // Separação específica VA e VR com cálculo de ticket médio
+  const vaPurchases = purchases.filter(p => (p.paymentMethod || 'va').toLowerCase() === 'va');
+  const vaTotal = Math.round(vaPurchases.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
+  const vaCount = vaPurchases.length;
+  const vaAvgTicket = vaCount > 0 ? Math.round((vaTotal / vaCount) * 100) / 100 : 0;
+
+  const vrPurchases = purchases.filter(p => (p.paymentMethod || '').toLowerCase() === 'vr');
+  const vrTotal = Math.round(vrPurchases.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
+  const vrCount = vrPurchases.length;
+  const vrAvgTicket = vrCount > 0 ? Math.round((vrTotal / vrCount) * 100) / 100 : 0;
+
+  const otherPurchases = purchases.filter(p => !['va', 'vr'].includes((p.paymentMethod || '').toLowerCase()));
+  const otherTotal = Math.round(otherPurchases.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
+  const otherCount = otherPurchases.length;
+  const otherAvgTicket = otherCount > 0 ? Math.round((otherTotal / otherCount) * 100) / 100 : 0;
+
   const foodBenefitsTotal = Math.round((vaTotal + vrTotal) * 100) / 100;
+
+  // Detalhamento estatístico por método de pagamento (ticket médio e contagem)
+  const paymentMethodStats = {};
+  Object.keys(paymentBreakdown).forEach(mId => {
+    const pList = purchases.filter(p => (p.paymentMethod || 'va').toLowerCase() === mId);
+    const mTotal = Math.round(pList.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
+    const mCount = pList.length;
+    const mAvg = mCount > 0 ? Math.round((mTotal / mCount) * 100) / 100 : 0;
+    paymentMethodStats[mId] = {
+      total: mTotal,
+      count: mCount,
+      avgTicket: mAvg
+    };
+  });
+
+  // Lista de meses disponíveis ordenada (mês vigente primeiro, depois anteriores)
+  const currentMonthKey = formatMonthKey(new Date());
+  const monthsSet = new Set();
+  monthsSet.add(currentMonthKey);
+  allPurchases.forEach(p => {
+    const mKey = p.monthKey || formatMonthKey(p.date || p.createdAt);
+    if (mKey) monthsSet.add(mKey);
+  });
+  const availableMonths = Array.from(monthsSet).sort().reverse().map(mKey => ({
+    key: mKey,
+    label: getMonthLabel(mKey),
+    isCurrent: mKey === currentMonthKey
+  }));
 
   return {
     total,
@@ -432,8 +474,18 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
     period: selectedPeriod || 'all',
     cycleKey,
     paymentBreakdown,
+    paymentMethodStats,
     vaTotal,
+    vaCount,
+    vaAvgTicket,
     vrTotal,
+    vrCount,
+    vrAvgTicket,
+    otherTotal,
+    otherCount,
+    otherAvgTicket,
+    availableMonths,
+    currentMonthKey,
     foodBenefitsTotal,
     purchases
   };

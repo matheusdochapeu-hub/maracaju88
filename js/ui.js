@@ -40,6 +40,7 @@ import {
   getMarketPurchasesByMonth,
   getMarketAnalytics,
   getMonthLabel,
+  formatMonthKey,
   parseQuantity,
   getItemTotalPrice
 } from './shopping.js';
@@ -72,6 +73,14 @@ export function getActiveBenefitsCycle() {
     currentBenefitsCycle = getCurrentBenefitCycleKey();
   }
   return currentBenefitsCycle;
+}
+
+export let currentAnalyticsMonth = null;
+export function setAnalyticsMonth(mKey) {
+  currentAnalyticsMonth = mKey;
+}
+export function getAnalyticsMonth() {
+  return currentAnalyticsMonth;
 }
 
 export let currentAnalyticsPeriod = 'cycle'; // 'cycle' | '12months' | 'year'
@@ -1353,10 +1362,25 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
   // Painel de Análise de Gastos e Mercados Recorrentes
   const analyticsContainer = document.getElementById('market-analytics-container');
   if (analyticsContainer) {
-    const analytics = getMarketAnalytics(state);
-    if (analytics.count === 0) {
+    const allPurchases = (state.comprasRegistros || []);
+    if (allPurchases.length === 0) {
       analyticsContainer.innerHTML = '';
     } else {
+      const currentMonthKey = formatMonthKey(new Date());
+
+      // Mês vigente apresentado primeiro por padrão
+      let selectedMonth = currentAnalyticsMonth;
+      if (!selectedMonth) {
+        selectedMonth = currentMonthKey;
+        currentAnalyticsMonth = currentMonthKey;
+      }
+
+      // Calcula métricas para o mês selecionado (ou todos)
+      const analytics = getMarketAnalytics(state, selectedMonth === 'todos' ? 'todos' : selectedMonth);
+      const isAll = (selectedMonth === 'todos');
+      const selectedMonthObj = analytics.availableMonths && analytics.availableMonths.find(m => m.key === selectedMonth);
+      const monthTitle = isAll ? 'Todo o Histórico' : (selectedMonthObj ? selectedMonthObj.label : getMonthLabel(selectedMonth));
+
       analyticsContainer.innerHTML = `
         <div class="market-analytics-card">
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
@@ -1369,13 +1393,34 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
             </button>
           </div>
 
+          <!-- Seletor Rápido de Meses: Mês Vigente Sempre Primeiro + Meses Anteriores -->
+          <div style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.3rem; text-transform: uppercase;">
+              📅 Selecionar Mês de Referência:
+            </div>
+            <div class="analytics-month-selector" style="display: flex; gap: 0.35rem; overflow-x: auto; padding-bottom: 0.35rem; scrollbar-width: thin;">
+              ${(analytics.availableMonths || []).map(m => {
+                const isActive = (selectedMonth === m.key);
+                return `
+                  <button type="button" class="btn btn-xs ${isActive ? 'btn-primary' : 'btn-secondary'}" data-analytics-month="${m.key}" style="font-size: 0.72rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.22rem 0.65rem; white-space: nowrap;">
+                    ${m.isCurrent ? '✨ ' + m.label + ' (Atual)' : '📅 ' + m.label}
+                  </button>
+                `;
+              }).join('')}
+              <button type="button" class="btn btn-xs ${isAll ? 'btn-primary' : 'btn-secondary'}" data-analytics-month="todos" style="font-size: 0.72rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.22rem 0.65rem; white-space: nowrap;">
+                🌐 Todo o Histórico
+              </button>
+            </div>
+          </div>
+
+          <!-- Estatísticas Gerais do Mês/Período -->
           <div class="analytics-stats-grid">
             <div class="analytics-stat-box">
-              <div class="analytics-stat-label">Total Gasto</div>
+              <div class="analytics-stat-label">Total Gasto (${monthTitle})</div>
               <div class="analytics-stat-value">${formatCurrencyWithSymbol(analytics.total)}</div>
             </div>
             <div class="analytics-stat-box">
-              <div class="analytics-stat-label">Ticket Médio</div>
+              <div class="analytics-stat-label">Ticket Médio Geral</div>
               <div class="analytics-stat-value">${formatCurrencyWithSymbol(analytics.avgTicket)}</div>
             </div>
             <div class="analytics-stat-box">
@@ -1384,10 +1429,67 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
             </div>
           </div>
 
+          <!-- Bloco Dedicado: Separação VA & VR com Cálculo do Ticket Médio de Cada Um -->
+          <div style="margin-top: 0.65rem; background: linear-gradient(135deg, rgba(22, 163, 74, 0.05), rgba(13, 148, 136, 0.05)); border: 1px solid rgba(22, 163, 74, 0.2); border-radius: var(--radius-md); padding: 0.65rem 0.75rem;">
+            <div style="font-size: 0.76rem; font-weight: 800; color: var(--brand-forest); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.3px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.3rem;">
+              <span>🥗 Separação VA vs VR • ${monthTitle}</span>
+              <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted);">Total Vales: <strong>${formatCurrencyWithSymbol(analytics.foodBenefitsTotal)}</strong></span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem;">
+              <!-- Card VA -->
+              <div style="background: #ffffff; border: 1px solid rgba(22, 163, 74, 0.3); border-radius: var(--radius-sm); padding: 0.55rem 0.65rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.2rem;">
+                  <span style="font-size: 0.72rem; font-weight: 700; color: #15803d;">🥗 Vale Alimentação (VA)</span>
+                  <span style="font-size: 0.68rem; font-weight: 700; color: var(--text-muted);">${analytics.vaCount}x</span>
+                </div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: #15803d; line-height: 1.2;">
+                  ${formatCurrencyWithSymbol(analytics.vaTotal)}
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-secondary); margin-top: 0.35rem; border-top: 1px dashed rgba(22, 163, 74, 0.2); padding-top: 0.25rem;">
+                  <span>Ticket Médio:</span>
+                  <strong style="color: #15803d;">${formatCurrencyWithSymbol(analytics.vaAvgTicket)}</strong>
+                </div>
+              </div>
+
+              <!-- Card VR -->
+              <div style="background: #ffffff; border: 1px solid rgba(234, 88, 12, 0.3); border-radius: var(--radius-sm); padding: 0.55rem 0.65rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.2rem;">
+                  <span style="font-size: 0.72rem; font-weight: 700; color: #c2410c;">🍽️ Vale Refeição (VR)</span>
+                  <span style="font-size: 0.68rem; font-weight: 700; color: var(--text-muted);">${analytics.vrCount}x</span>
+                </div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: #c2410c; line-height: 1.2;">
+                  ${formatCurrencyWithSymbol(analytics.vrTotal)}
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-secondary); margin-top: 0.35rem; border-top: 1px dashed rgba(234, 88, 12, 0.2); padding-top: 0.25rem;">
+                  <span>Ticket Médio:</span>
+                  <strong style="color: #c2410c;">${formatCurrencyWithSymbol(analytics.vrAvgTicket)}</strong>
+                </div>
+              </div>
+
+              ${analytics.otherCount > 0 ? `
+                <!-- Card Outros (Crédito, Débito, Pix, Dinheiro) -->
+                <div style="background: #ffffff; border: 1px solid rgba(100, 116, 139, 0.3); border-radius: var(--radius-sm); padding: 0.55rem 0.65rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.2rem;">
+                    <span style="font-size: 0.72rem; font-weight: 700; color: #475569;">💳 Outros (Crédito/Pix)</span>
+                    <span style="font-size: 0.68rem; font-weight: 700; color: var(--text-muted);">${analytics.otherCount}x</span>
+                  </div>
+                  <div style="font-size: 1.15rem; font-weight: 800; color: #475569; line-height: 1.2;">
+                    ${formatCurrencyWithSymbol(analytics.otherTotal)}
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-secondary); margin-top: 0.35rem; border-top: 1px dashed rgba(100, 116, 139, 0.2); padding-top: 0.25rem;">
+                    <span>Ticket Médio:</span>
+                    <strong style="color: #475569;">${formatCurrencyWithSymbol(analytics.otherAvgTicket)}</strong>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
           ${analytics.recurrentMarkets.length > 0 ? `
-            <div style="margin-top: 0.25rem;">
+            <div style="margin-top: 0.5rem;">
               <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.4rem; text-transform: uppercase;">
-                🏪 Mercados Mais Frequentados (Gastos Recorrentes):
+                🏪 Mercados Mais Frequentados (${monthTitle}):
               </div>
               <div class="recurrent-markets-container">
                 ${analytics.recurrentMarkets.slice(0, 5).map(m => `
@@ -1403,7 +1505,11 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
                 `).join('')}
               </div>
             </div>
-          ` : ''}
+          ` : (analytics.count === 0 ? `
+            <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.8rem; background: rgba(0,0,0,0.02); border-radius: var(--radius-sm); margin-top: 0.5rem;">
+              Nenhuma compra registrada em <strong>${monthTitle}</strong>. Selecione outro mês acima ou lance uma compra.
+            </div>
+          ` : '')}
 
           ${analytics.paymentBreakdown ? `
             <div style="margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px solid var(--border-subtle);">
@@ -1411,11 +1517,16 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
                 💳 Gastos por Forma de Pagamento no Mês:
               </div>
               <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
-                ${PAYMENT_METHODS.filter(m => (analytics.paymentBreakdown[m.id] || 0) > 0).map(m => `
-                  <span style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: var(--radius-full); background: ${m.bg}; color: ${m.color}; border: 1px solid ${m.color}30;">
-                    <span>${m.icon}</span> ${m.shortLabel}: ${formatCurrencyWithSymbol(analytics.paymentBreakdown[m.id])}
-                  </span>
-                `).join('') || '<span style="font-size: 0.75rem; color: var(--text-muted);">Nenhum pagamento registrado ainda.</span>'}
+                ${PAYMENT_METHODS.filter(m => (analytics.paymentBreakdown[m.id] || 0) > 0).map(m => {
+                  const stat = analytics.paymentMethodStats && analytics.paymentMethodStats[m.id];
+                  const avgTxt = stat && stat.avgTicket ? ` • méd. ${formatCurrencyWithSymbol(stat.avgTicket)}` : '';
+                  const countTxt = stat && stat.count ? ` • ${stat.count}x` : '';
+                  return `
+                    <span style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: var(--radius-full); background: ${m.bg}; color: ${m.color}; border: 1px solid ${m.color}30;">
+                      <span>${m.icon}</span> ${m.shortLabel}: ${formatCurrencyWithSymbol(analytics.paymentBreakdown[m.id])} <span style="font-size: 0.68rem; opacity: 0.85; font-weight: normal;">(${countTxt.replace(' • ', '')}${avgTxt})</span>
+                    </span>
+                  `;
+                }).join('') || '<span style="font-size: 0.75rem; color: var(--text-muted);">Nenhum pagamento registrado ainda.</span>'}
               </div>
             </div>
           ` : ''}

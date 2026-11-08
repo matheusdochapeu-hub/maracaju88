@@ -4,6 +4,38 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-07 22:12] - Separação VA vs VR com Ticket Médio Individual, Navegação Mensal Inteligente e Sincronização em Tempo Real (v2.5.5)
+
+### 🔍 Solicitação & Necessidade
+1. **Separação Explícita entre VA e VR com Ticket Médio de Cada Um:**
+   - O card de "Análise de Gastos & Mercados" agrupava apenas os totais, sem destacar de forma clara e analítica o Ticket Médio individual de cada benefício (Vale Alimentação vs Vale Refeição) e a quantidade de compras realizadas com cada um.
+2. **Separação por Mês com Mês Vigente Primeiro e Acesso aos Anteriores:**
+   - O usuário precisava visualizar por padrão o mês vigente e poder alternar livremente para meses passados ou para todo o histórico sem que a página perdesse o contexto.
+3. **Backup Automático para Cada Atualização & Sincronização Contínua Entre Dispositivos:**
+   - Garantir que qualquer alteração (tasks, mercado, wishlist, pets, etc.) fosse enviada imediatamente ao Google Sheets via auto-sync debounced, além de polling inteligente periódico em segundo plano para que múltiplos dispositivos (celular, tablet, PC) permaneçam sempre com as mesmas informações.
+
+### 🛠️ Implementações Realizadas
+1. **Separação Analítica VA vs VR (`js/shopping.js` & `js/ui.js`):**
+   - Em `getMarketAnalytics`, cálculo individualizado de `vaTotal`, `vaCount`, `vaAvgTicket`, `vrTotal`, `vrCount`, `vrAvgTicket` e detalhamento para `otherTotal`, `otherCount`, `otherAvgTicket`.
+   - Novo bloco visual dedicado em `renderComprasTab`:
+     - Card **🥗 Vale Alimentação (VA)** com total gasto, ticket médio e contagem de compras.
+     - Card **🍽️ Vale Refeição (VR)** com total gasto, ticket médio e contagem de compras.
+     - Card de Outros (Crédito, Débito, Pix) quando houver compras fora dos vales.
+     - Badges de forma de pagamento com ticket médio e quantidade de idas ao mercado.
+2. **Seletor de Meses Rápido (`js/ui.js` & `js/app.js`):**
+   - Pills de seleção de mês no topo do card de Análise de Gastos (`data-analytics-month`).
+   - Mês atual sempre apresentado em primeiro lugar com tag `(Atual)`, seguido dos meses anteriores e botão de `Todo o Histórico`.
+   - Event listener em `initComprasModule` atualiza `currentAnalyticsMonth` e recalcula instantaneamente os gastos, mercados mais frequentes e tickets médios.
+3. **Auto-Backup e Sincronização Contínua (`js/storage.js` & `js/app.js`):**
+   - Criado hook `setOnStateSavedListener` em `js/storage.js`, acionado a cada chamada de `saveState()`.
+   - Conectado em `js/app.js` para disparar `triggerAutoSyncIfEnabled()` (debounced 400ms) automaticamente a cada modificação.
+   - Adicionada sincronização em background a cada 30 segundos (com o app visível) e em eventos de `visibilitychange` e `window.focus`.
+4. **Validação & Testes Automatizados:**
+   - Criado `test/market-analytics-va-vr.test.js` com 3 testes unitários cobrindo o cálculo de VA/VR com os dados reais do usuário (R$ 761,22 total, VA R$ 461,47 com méd. R$ 115,37 e VR R$ 299,75 com méd. R$ 149,88), navegação de meses e disparo automático de backup.
+   - Suíte completa: 93 testes executados, 93 aprovados (0 falhas).
+
+---
+
 ## [2026-11-07 21:55] - Recuperação e Salvaguarda Definitiva de Notas Fiscais Históricas (Padaria Araújo & Carrefour), Auto-Sync Bidirecional e PWA v2.5.4
 
 ### 🔍 Problemas Identificados & Causa Raiz

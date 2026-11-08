@@ -257,6 +257,12 @@ export function loadState() {
   }
 }
 
+let stateSavedListener = null;
+
+export function setOnStateSavedListener(fn) {
+  stateSavedListener = fn;
+}
+
 export function saveState(state) {
   try {
     state.lastUpdated = new Date().toISOString();
@@ -275,7 +281,18 @@ export function saveState(state) {
         updatedAt: state.lastUpdated
       };
     } catch (e) {}
-    localStorage.setItem(APP_CONFIG.storageKey, JSON.stringify(state));
+    if (typeof localStorage !== 'undefined' && localStorage && typeof localStorage.setItem === 'function') {
+      localStorage.setItem(APP_CONFIG.storageKey, JSON.stringify(state));
+    }
+
+    if (typeof stateSavedListener === 'function') {
+      try {
+        stateSavedListener(state);
+      } catch (e) {
+        console.warn("[Maracaju] Erro no listener de auto-sync pós-salvamento:", e);
+      }
+    }
+
     return true;
   } catch (err) {
     console.error("Erro ao salvar estado no localStorage:", err);

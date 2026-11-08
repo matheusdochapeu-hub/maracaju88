@@ -20,7 +20,7 @@ import {
 //  MARACAJU - APP CONTROLLER PRINCIPAL (v1.3.3)
 // ============================================================
 
-import { loadState, saveState, exportBackupJson, importBackupJson, getInitialState, ensureRecoveredPurchases } from './storage.js';
+import { loadState, saveState, exportBackupJson, importBackupJson, getInitialState, ensureRecoveredPurchases, setOnStateSavedListener } from './storage.js';
 import {
   getAuthSession,
   loginWithEmail,
@@ -134,7 +134,9 @@ import {
   renderPetsTab,
   renderPetFolderModal,
   setBenefitsCycle,
-  getActiveBenefitsCycle
+  getActiveBenefitsCycle,
+  setAnalyticsMonth,
+  getAnalyticsMonth
 } from './ui.js';
 import { testSheetsConnection, backupToSheets, restoreFromSheets, applyCloudBackup } from './sheets.js';
 import {
@@ -252,6 +254,11 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn('[Maracaju] Erro ao popular selects/datalists:', e);
   }
 
+  // Sincronização automática em nuvem: qualquer alteração salva localmente dispara auto-sync
+  setOnStateSavedListener(() => {
+    triggerAutoSyncIfEnabled();
+  });
+
   // Render inicial ultra-rápido (< 20ms) a partir do cache local
   refreshAllUI();
 
@@ -261,12 +268,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 400);
 });
 
-// Ao retornar ao aplicativo (desbloqueio de tela no celular ou volta de aba), puxa a planilha em background com cooldown
+// Ao retornar ao aplicativo (desbloqueio de tela no celular ou volta de aba) ou foco na janela, puxa a planilha
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     syncPullFromSheets(true);
   }
 });
+window.addEventListener('focus', () => {
+  syncPullFromSheets(true);
+});
+
+// Sincronização periódica contínua em segundo plano (a cada 30 segundos se visível)
+setInterval(() => {
+  if (document.visibilityState === 'visible' && !isSyncPulling && !autoSyncTimeout) {
+    syncPullFromSheets(true);
+  }
+}, 30000);
 
 // -------------------------------------------------------------
 // CONTROLE DE ACESSO EXCLUSIVO (Matheus & Scarlet)
@@ -2463,6 +2480,15 @@ function initComprasModule() {
       const catChip = e.target.closest('[data-compras-cat]');
       if (catChip) {
         currentComprasCategory = catChip.getAttribute('data-compras-cat') || 'todas';
+        playSubtleClick(state.settings.soundEnabled);
+        renderComprasTab(state, currentComprasCategory, currentComprasView);
+        return;
+      }
+
+      const monthBtn = e.target.closest('[data-analytics-month]');
+      if (monthBtn) {
+        const mKey = monthBtn.getAttribute('data-analytics-month');
+        setAnalyticsMonth(mKey);
         playSubtleClick(state.settings.soundEnabled);
         renderComprasTab(state, currentComprasCategory, currentComprasView);
         return;
