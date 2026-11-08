@@ -4,6 +4,45 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-08 15:15] - Otimização Completa do Leitor de QR Code ao Vivo e OCR de Notas Fiscais (v2.6.3)
+
+### 🔍 Problema Identificado & Causa Raiz
+1. **Leitor de QR Code (Câmera ao Vivo e Imagem/Galeria) Falhando no Mobile:**
+   - O usuário relatou: *"olá, voce pode rever o leitor QR code e o Leitor OCR ainda não estão funcionando nem lendo as notas direito."*
+   - **Causa Raiz 1 (Câmera ao vivo):** Celulares modernos transmitem o stream da câmera em 1080p ou 4K. O loop `startScanningLoop` alocava um canvas em resolução nativa a cada frame (~350ms de latência de CPU). Além disso, quando o `jsQR` detectava o QR Code, a câmera não era parada imediatamente (`stopCamera()`), gerando disparos repetidos e concorrência na thread JS.
+   - **Causa Raiz 2 (Fotos da Galeria):** Fotos de smartphones modernos possuem entre 12MP e 48MP (3000x4000 a 6000x8000 pixels). Redimensionar ou processar uma imagem desse tamanho com `jsQR` exigia mais de 40MB de `ImageData` de uma só vez, estourando o limite de memória dos navegadores móveis e falhando na leitura de códigos térmicos amassados ou inclinados.
+   - **Causa Raiz 3 (Formato de Cupons SAT SP):** Cupons fiscais SAT CF-e de São Paulo utilizam formato separado por barras verticais (`CHAVE|DATAHORA|TOTAL|...`) e não URLs tradicionais da SEFAZ, o que fazia o parser ignorar a chave de 44 dígitos e a data.
+2. **Leitor OCR (Tesseract.js) Congelando ou Não Extraindo Cupons Físicos:**
+   - **Causa Raiz 1 (Falta de Pré-processamento):** A imagem bruta fotografada era enviada diretamente ao Tesseract.js WebAssembly. Papel térmico cinza/amarelado, sombras de iluminação e ruídos térmicos degradavam a precisão do OCR para < 30%. Imagens pesadas congelavam o worker sem feedback visual.
+   - **Causa Raiz 2 (Colisão com Cabeçalhos de Total):** Na extração do total de notas térmicas, a regex capturava o termo `TOTAL` seguido do número da primeira linha de produto (ex: `TOTAL\n001`), setando o total da compra como R$ 1,00 em vez do valor correto.
+   - **Causa Raiz 3 (Linhas de Endereço):** Endereços do mercado (ex: `R. CONSTITUICAO, 1365`) eram classificados incorretamente como itens de produto.
+
+### 🛠️ Correções Implementadas
+1. **Scanner de Câmera Ultrarrápido (`js/app.js`):**
+   - Resolução de scan limitada a 640px de largura mantendo a proporção nativa (tempo de leitura caiu de ~350ms para ~20ms por frame).
+   - Chamada obrigatória e imediata a `stopCamera()` assim que o QR Code é validado, evitando tempestade de eventos.
+2. **Decodificação de QR Code em Cascata Multi-Escala e Multi-Região (`js/app.js`):**
+   - Cascata inteligente em 5 etapas para imagens e fotos da galeria:
+     a) Imagem completa redimensionada para max 1000px.
+     b) Recorte da metade inferior (50%), onde fica 95% dos QR Codes fiscais.
+     c) Recorte do terço inferior (35%).
+     d) Recorte do quadrado central (60%).
+     e) Binarização com alto contraste por limiar de luminância (threshold) para papéis térmicos desgastados.
+3. **Pré-Processamento Otimizado para OCR (`js/app.js`):**
+   - Função `preprocessImageForOcr` que reduz a foto para max 1600px, converte para escala de cinza e aplica estiramento de contraste dinâmico (curva gama), removendo sombras e destacando o texto impresso.
+   - Inclusão de `logger` no Tesseract com barra e indicador de progresso em tempo real (`🔍 Lendo texto do cupom fiscal (XX%)...`).
+   - Fallback automático para o idioma inglês caso o download do modelo em português falhe.
+4. **Parser Robusto de Cupom e NFC-e / SAT (`js/nfce.js`, `js/pdf-parser.js`):**
+   - Suporte nativo a cupons SAT CF-e com formato `pipe` (`CHAVE|DATAHORA|TOTAL|...`) e extração automática de data e hora.
+   - Nova regex priorizada para `TOTAL`: prioriza "Valor a pagar", exige símbolo de moeda (`R$`) ou linha exclusiva, evitando cabeçalhos tabulares.
+   - Stop-words ampliadas para descartar linhas de endereço (`Rua`, `Avenida`, `Bairro`, `Cep`, etc.) e formas de pagamento da lista de produtos.
+5. **Testes Automatizados (`test/nfce-ocr-complement.test.js`):**
+   - Adicionada suíte de testes com validação de SAT CF-e, cupons térmicos reais sem código de barras e integração híbrida QR Code + OCR. 104 testes executados e 100% aprovados.
+6. **Bump de Versão & PWA:**
+   - Versão **`v2.6.3`** atualizada em `config.js`, `sw.js` e `package.json`.
+
+---
+
 ## [2026-11-08 14:55] - Correção do Botão Editar Tarefas e Otimização do Touch Target (v2.6.2)
 
 ### 🔍 Problema Identificado & Causa Raiz

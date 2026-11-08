@@ -119,3 +119,45 @@ Protocolo de Autorizacao: 13526007664984907
   assert.equal(parsed.nfeKey, '35261150489095000127650010000505041101032350');
   assert.ok(parsed.items.length >= 3, `Deveria ter extraído os itens do cupom, achou ${parsed.items.length}`);
 });
+
+test('NFC-e / SAT QR Code: Decodifica formatos SAT CF-e e pipe com dia exato e valor', () => {
+  // SAT CF-e de São Paulo (padrão muito comum em padarias e mercados)
+  const satQrText = '35261150489095000127650010000505041101032350|20261107103235|71.06|50489095000127|ASSINATURA';
+  const parsedSat = parseNfceQrCodeText(satQrText);
+  assert.equal(parsedSat.accessKey, '35261150489095000127650010000505041101032350');
+  assert.equal(parsedSat.date, '2026-11-07');
+  assert.equal(parsedSat.time, '10:32:35');
+  assert.equal(parsedSat.total, 71.06);
+  assert.equal(parsedSat.marketName, 'Padaria e Mercearia Irmãos Araújo');
+
+  // NFC-e padrão com dia do mês no pipeParts[3]
+  const nfcePipe = 'https://www.nfce.fazenda.sp.gov.br/qrcode?p=35261150489095000127650010000505041101032350|2|1|7|71,06|DIGVAL';
+  const parsedNfce = parseNfceQrCodeText(nfcePipe);
+  assert.equal(parsedNfce.accessKey, '35261150489095000127650010000505041101032350');
+  assert.equal(parsedNfce.date, '2026-11-07');
+  assert.equal(parsedNfce.total, 71.06);
+});
+
+test('PDF / Cupom Parser: Suporta variações de TOTAL R$, TOTAL: e itens sem código de barras', () => {
+  const cupomVariado = `
+SUPERMERCADO CENTRAL
+CNPJ: 12.345.678/0001-99
+RUA SAO PAULO 100
+001 LEITE INTEGRAL 2 UN X 4.50 9.00
+002 ARROZ TIO JOAO 5KG 1 UN 28.90 28.90
+003 BANANA PRATA 1.5KG 6.00 9.00
+TOTAL R$ 46,90
+DINHEIRO 50.00
+TROCO 3.10
+08/11/2026 14:20:00
+  `;
+
+  const parsed = parseNfceDanfeText(cupomVariado);
+  assert.equal(parsed.total, 46.90);
+  assert.equal(parsed.date, '2026-11-08');
+  assert.equal(parsed.time, '14:20:00');
+  assert.equal(parsed.items.length, 3);
+  assert.equal(parsed.items[0].rawName, 'LEITE INTEGRAL');
+  assert.equal(parsed.items[1].rawName, 'ARROZ TIO JOAO');
+  assert.equal(parsed.items[2].rawName, 'BANANA PRATA');
+});

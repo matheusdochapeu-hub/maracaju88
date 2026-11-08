@@ -2017,15 +2017,20 @@
               ✅ Confirmar e Registrar Compra no App
             </button>
             <div id="qr-complement-ocr-wrapper">
-              <div id="qr-complement-ocr-btns" style="display: none; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-complement-ocr-cam" data-pick-file="input-qr-complement-ocr" style="flex: 1; min-width: 130px; text-align: center; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: var(--bg-card); border: 1px dashed var(--brand-sage); padding: 0.65rem 0.5rem;">
-                  📸 Câmera
-                </button>
-                <input type="file" id="input-qr-complement-ocr" accept="image/*" capture="environment" style="display: none;" />
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-complement-ocr-gal" data-pick-file="input-qr-complement-gallery" style="flex: 1; min-width: 130px; text-align: center; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: var(--bg-card); border: 1px dashed var(--brand-sage); padding: 0.65rem 0.5rem;">
-                  🖼️ Galeria
-                </button>
-                <input type="file" id="input-qr-complement-gallery" accept="image/*" style="display: none;" />
+              <div id="qr-complement-ocr-btns" style="display: none; flex-direction: column; gap: 0.35rem; width: 100%; margin: 0.35rem 0;">
+                <div style="font-size: 0.78rem; color: var(--text-secondary); text-align: center; font-weight: 600;">
+                  📸 Quer os produtos na lista? Fotografe os itens do cupom:
+                </div>
+                <div style="display: flex; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-complement-ocr-cam" data-pick-file="input-qr-complement-ocr" style="flex: 1; min-width: 130px; text-align: center; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: var(--bg-card); border: 1px dashed var(--brand-sage); padding: 0.65rem 0.5rem;">
+                    📸 Câmera
+                  </button>
+                  <input type="file" id="input-qr-complement-ocr" accept="image/*" capture="environment" style="display: none;" />
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-complement-ocr-gal" data-pick-file="input-qr-complement-gallery" style="flex: 1; min-width: 130px; text-align: center; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: var(--bg-card); border: 1px dashed var(--brand-sage); padding: 0.65rem 0.5rem;">
+                    🖼️ Galeria
+                  </button>
+                  <input type="file" id="input-qr-complement-gallery" accept="image/*" style="display: none;" />
+                </div>
               </div>
             </div>
             <div style="display: flex; gap: 0.5rem;">

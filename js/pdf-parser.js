@@ -181,19 +181,20 @@ function _parseSingleNfceDanfeText(rawText) {
   // 3. Extração da Data e Hora da Compra
   // Formato: 03/11/2026 09:41:43 ou Emiss ã o: 03/11/2026
   let timeStr = '';
-  const explicitTimeMatch = fullText.match(/\d{2}\/\d{2}\/\d{4}\s+([012]\d:[0-5]\d(?::[0-5]\d)?)/) ||
-                            fullText.match(/(?:Emiss\s*[aã]\s*o|Data\/Hora|Data)[\s\S]*?([012]\d:[0-5]\d(?::[0-5]\d)?)/i) ||
+  const explicitTimeMatch = fullText.match(/\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4}\s+([012]\d:[0-5]\d(?::[0-5]\d)?)/) ||
+                            fullText.match(/(?:Emiss\s*[aã]\s*o|Data\/Hora|Data|Hora)[\s\S]*?([012]\d:[0-5]\d(?::[0-5]\d)?)/i) ||
                             fullText.match(/\b([012]\d:[0-5]\d(?::[0-5]\d)?)\b/);
   if (explicitTimeMatch) {
     timeStr = explicitTimeMatch[1].trim();
   }
 
-  const dateMatch = fullText.match(/(?:Emiss\s*[aã]\s*o|Data\/Hora):\s*(\d{2})\/(\d{2})\/(\d{4})/i) ||
-                    fullText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  const dateMatch = fullText.match(/(?:Emiss\s*[aã]\s*o|Data\/Hora|Data):\s*(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2,4})/i) ||
+                    fullText.match(/(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2,4})/);
   if (dateMatch) {
     const day = dateMatch[1];
     const month = dateMatch[2];
-    const year = dateMatch[3];
+    let year = dateMatch[3];
+    if (year.length === 2) year = `20${year}`;
     dateStr = `${year}-${month}-${day}`;
   } else {
     dateStr = new Date().toISOString().substring(0, 10);
@@ -231,12 +232,10 @@ function _parseSingleNfceDanfeText(rawText) {
   if (!marketName) marketName = 'Supermercado';
 
   // 5. Extração de Valor Total Pago (Prioriza "Valor a pagar" para considerar descontos)
-  const totalMatch = fullText.match(/Valor\s+a\s+pagar\s+(?:R\$\s*)?:?\s*([\d\.,]+)/i) ||
-                     fullText.match(/Valor\s+a\s+pagar:\s*([\d\.,]+)/i) ||
-                     fullText.match(/Total\s+a\s+pagar\s+(?:R\$\s*)?:?\s*([\d\.,]+)/i) ||
-                     fullText.match(/Valor\s+total\s+(?:R\$\s*)?:?\s*([\d\.,]+)/i) ||
-                     fullText.match(/Valor\s+total:\s*([\d\.,]+)/i) ||
-                     fullText.match(/\bTOTAL\s+R\$:\s*([\d\.,]+)/i);
+  const totalMatch = fullText.match(/(?:Valor\s+a\s+pagar|Total\s+a\s+pagar)\s*(?:R\$\s*|RS\s*|\$)?\s*:?\s*(?:R\$\s*|RS\s*|\$)?\s*([\d\.,]+)/i) ||
+                     fullText.match(/(?:Valor\s+total(?:\s+bruto|\s+l[ií]quido)?|Total\s+Geral|Total\s+L[ií]quido|Vlr\.?\s*Total)\s*(?:R\$\s*|RS\s*|\$)?\s*:?\s*(?:R\$\s*|RS\s*|\$)?\s*([\d\.,]+)/i) ||
+                     fullText.match(/\bTOTAL\s*(?:R\$\s*|RS\s*|\$)\s*:?\s*([\d\.,]+)/i) ||
+                     rawText.match(/^\s*TOTAL\s*(?::\s*)?(?:R\$\s*|RS\s*|\$)?\s*([\d\.,]+)\s*$/im);
   if (totalMatch) {
     total = parseCurrency(totalMatch[1]);
   }
@@ -397,14 +396,16 @@ function _parseSingleNfceDanfeText(rawText) {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       // Verifica se a quantidade e valor estão na mesma linha junto com o nome
-      const sameLineAltMatch = line.match(/^(?:(?:\d+\s+)+)?([A-Za-z\u00C0-\u00FF][A-Za-z0-9\s\.\,\-\/\%\(\)]+?)\s+(\d+[\.,]?\d*)\s*(?:UN|KG|LT|CX|PC|un|kg|lt|cx|pc)\s*(?:[xX\*]\s*)?([\d\.,]+)(?:\s+([\d\.,]+))?/i);
+      const sameLineAltMatch = line.match(/^(?:(?:\d+[\s\.\-]+)+)?([A-Za-z\u00C0-\u00FF][A-Za-z0-9\s\.\,\-\/\%\(\)]+?)\s+([0-9]+(?:[\.,][0-9]+)?)\s*(?:UN|KG|LT|CX|PC|G|ML|un|kg|lt|cx|pc|g|ml)?\s*(?:[xX\*]\s*)?([0-9]+(?:[\.,][0-9]+)?)(?:\s+([0-9]+(?:[\.,][0-9]+)?))?/i);
       if (sameLineAltMatch) {
-        const rawName = sameLineAltMatch[1].trim();
+        let rawName = sameLineAltMatch[1].trim();
+        // Remove eventuais códigos de barras residuais no início do nome
+        rawName = rawName.replace(/^\d{4,14}\s+/, '').trim();
         const qty = sameLineAltMatch[2];
         const unitPrice = parseCurrency(sameLineAltMatch[3]);
         const numQty = parseFloat(qty.replace(',', '.')) || 1;
         const totalPrice = sameLineAltMatch[4] ? parseCurrency(sameLineAltMatch[4]) : Math.round(unitPrice * numQty * 100) / 100;
-        if (rawName.length > 2 && unitPrice > 0 && !/Valor|Pagar|Total|Subtotal|Troco|Desconto/i.test(rawName)) {
+        if (rawName.length > 2 && (unitPrice > 0 || totalPrice > 0) && !/Valor|Pagar|Total|Subtotal|Troco|Desconto|Tributo|Chave|Cnpj|Nfc-e|Cartao|Cartão|Credit|Debito|Débito|Dinheiro|Pix|Forma|Serie|Série|Numero|Número|Consumidor|Protocolo|Emiss|Rua|\bR\b|\bR\.\b|Avenida|\bAv\b|Rodovia|Bairro|Vila|Cep/i.test(rawName)) {
           const alias = suggestPopularName(rawName);
           items.push({
             code: 'ITEM_' + (items.length + 1),
@@ -413,8 +414,8 @@ function _parseSingleNfceDanfeText(rawText) {
             category: detectCategoryFromItemName(alias || rawName),
             qty,
             unit: 'un',
-            unitPrice,
-            totalPrice,
+            unitPrice: unitPrice || totalPrice,
+            totalPrice: totalPrice || unitPrice,
             selected: true
           });
         }

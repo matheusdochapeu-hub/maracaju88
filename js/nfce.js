@@ -373,14 +373,15 @@ export function parseNfceQrCodeText(rawText) {
   let chNFe = '';
   let total = 0;
   let dateStr = '';
+  let timeStr = '';
   let cnpj = '';
   let nfeNumber = '';
   let nfeSeries = '';
   let cUF = '';
 
-  // 1. Procura chave de 44 dígitos na string (padrão nacional de NFC-e)
-  // Pode vir como parâmetro p=CHAVE|2|1|1|...
-  const pParam = text.match(/[?&]p=([0-9]{44})/i);
+  // 1. Procura chave de 44 dígitos na string (padrão nacional de NFC-e ou SAT CF-e)
+  // Pode vir como parâmetro p=CHAVE|2|1|1|... ou chaveConsulta=CHAVE ou texto puro com espaços
+  const pParam = text.match(/[?&]p=([0-9]{44})/i) || text.match(/[?&]chaveConsulta=([0-9]{44})/i);
   if (pParam) {
     chNFe = pParam[1];
   } else {
@@ -388,7 +389,8 @@ export function parseNfceQrCodeText(rawText) {
     if (chParam) {
       chNFe = chParam[1];
     } else {
-      const keyMatch = text.match(/\b(\d{44})\b/);
+      const cleanDigits = text.replace(/[\s\.-]/g, '');
+      const keyMatch = cleanDigits.match(/\b(\d{44})\b/) || cleanDigits.match(/(\d{44})/);
       if (keyMatch) {
         chNFe = keyMatch[1];
       }
@@ -424,20 +426,38 @@ export function parseNfceQrCodeText(rawText) {
   if (vNfMatch) {
     total = parseFloat(vNfMatch[1]) || 0;
   } else {
-    // Parâmetro no formato p=CHAVE|VERSAO|TPAMB|DIA_EMISSAO|VALOR_TOTAL|...
+    // Parâmetro no formato p=CHAVE|VERSAO|TPAMB|DIA_EMISSAO|VALOR_TOTAL|... ou SAT CF-e CHAVE|DATAHORA|TOTAL|...
     const pipeParts = text.split('|');
-    if (pipeParts.length >= 5) {
-      const candidateVal = pipeParts[4];
+    // SAT CF-e SP: CHAVE(44)|DATAHORA(14)|TOTAL|...
+    if (pipeParts.length >= 3 && /^\d{14}$/.test(pipeParts[1])) {
+      const dh = pipeParts[1];
+      dateStr = `${dh.substring(0, 4)}-${dh.substring(4, 6)}-${dh.substring(6, 8)}`;
+      timeStr = `${dh.substring(8, 10)}:${dh.substring(10, 12)}:${dh.substring(12, 14)}`;
+      const candidateVal = pipeParts[2].replace(',', '.');
       if (/^[0-9]+(?:\.[0-9]+)?$/.test(candidateVal)) {
         total = parseFloat(candidateVal) || 0;
+      }
+    } else if (pipeParts.length >= 5) {
+      const candidateVal = pipeParts[4].replace(',', '.');
+      if (/^[0-9]+(?:\.[0-9]+)?$/.test(candidateVal)) {
+        total = parseFloat(candidateVal) || 0;
+      }
+      // Se pipeParts[3] for o dia do mês (1 a 31)
+      const diaCandidate = parseInt(pipeParts[3], 10);
+      if (!isNaN(diaCandidate) && diaCandidate >= 1 && diaCandidate <= 31 && dateStr) {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          dateStr = `${parts[0]}-${parts[1]}-${String(diaCandidate).padStart(2, '0')}`;
+        }
       }
     }
   }
 
-  // 4. Extração de data de emissão se presente no formato dhEmi (ex: 2026-11-04T12:30:00)
-  const dhMatch = text.match(/[?&]dhEmi=([0-9]{4}-[0-9]{2}-[0-9]{2})/i);
+  // 4. Extração de data e hora de emissão se presente no formato dhEmi (ex: 2026-11-04T12:30:00)
+  const dhMatch = text.match(/[?&]dhEmi=([0-9]{4}-[0-9]{2}-[0-9]{2})(?:T([0-9]{2}:[0-9]{2}(?::[0-9]{2})?))?/i);
   if (dhMatch) {
     dateStr = dhMatch[1];
+    if (dhMatch[2]) timeStr = dhMatch[2];
   }
 
   // Nome sugerido do mercado
@@ -460,6 +480,7 @@ export function parseNfceQrCodeText(rawText) {
     cnpj: cnpj ? formatCnpj(cnpj) : '',
     marketName,
     date: dateStr,
+    time: timeStr || '',
     nfeNumber,
     nfeSeries,
     total: Math.round(total * 100) / 100,
