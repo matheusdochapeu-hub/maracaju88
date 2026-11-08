@@ -821,9 +821,9 @@ test('Sheets: Prioridade da planilha Google e sincronização completa dos dados
 test('Mercado: Análise de Gastos e Mercados Recorrentes (getMarketAnalytics)', () => {
   const state = {
     comprasRegistros: [
-      { id: 'nfe_1', marketName: 'Carrefour', total: 350.00, date: '2026-11-01', monthKey: '2026-11' },
-      { id: 'nfe_2', marketName: 'Atacadão', total: 200.00, date: '2026-11-03', monthKey: '2026-11' },
-      { id: 'nfe_3', marketName: 'Carrefour', total: 150.00, date: '2026-11-05', monthKey: '2026-11' },
+      { id: 'nfe_1', marketName: 'Carrefour', total: 350.00, date: '2026-11-07', monthKey: '2026-11' },
+      { id: 'nfe_2', marketName: 'Atacadão', total: 200.00, date: '2026-11-08', monthKey: '2026-11' },
+      { id: 'nfe_3', marketName: 'Carrefour', total: 150.00, date: '2026-11-09', monthKey: '2026-11' },
       { id: 'nfe_4', marketName: 'Açougue Central', total: 100.00, date: '2026-10-20', monthKey: '2026-10' }
     ]
   };
@@ -858,7 +858,7 @@ test('Mercado: Lançamento Manual de Compra sem Nota & Comparador de Preços ent
   // 1. Lança compra manual no Atacadão
   const purchase1 = addMarketPurchase(state, {
     marketName: 'Atacadão',
-    date: '2026-11-01',
+    date: '2026-11-07',
     total: '85,50',
     items: [
       { rawName: 'Café Pilão 500g', alias: 'Café Pilão', qty: '2 un', unitPrice: 17.50, totalPrice: 35.00 },
@@ -879,7 +879,7 @@ test('Mercado: Lançamento Manual de Compra sem Nota & Comparador de Preços ent
   // 2. Lança compra manual no Carrefour com preço mais caro do mesmo café
   const purchase2 = addMarketPurchase(state, {
     marketName: 'Carrefour',
-    date: '2026-11-05',
+    date: '2026-11-09',
     total: '55,00',
     items: [
       { rawName: 'Café Pilão 500g', alias: 'Café Pilão', qty: '1 un', unitPrice: 22.90, totalPrice: 22.90 }

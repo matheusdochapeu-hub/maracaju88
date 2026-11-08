@@ -5,7 +5,7 @@
 
 import { parseCurrency } from './currency.js';
 import { makeId } from './projects.js';
-import { getBenefitCycleKey, getCurrentBenefitCycleKey } from './benefits.js';
+import { getBenefitCycleKey, getCurrentBenefitCycleKey, getBenefitCycleRange } from './benefits.js';
 
 function list(state) {
   if (!Array.isArray(state.compras)) state.compras = [];
@@ -334,15 +334,22 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
   let selectedPeriod = periodOrCycle;
   let cycleKey = targetCycleKey;
 
+  const activeCycleKey = (state && state._activeBenefitsCycle) || getCurrentBenefitCycleKey(state);
+
   let purchases = allPurchases;
 
   if (selectedPeriod === 'cycle') {
-    if (!cycleKey) {
-      cycleKey = (state && state._activeBenefitsCycle) || getCurrentBenefitCycleKey(state);
-    }
+    cycleKey = targetCycleKey || activeCycleKey;
     purchases = allPurchases.filter(p => {
       const pCycle = getBenefitCycleKey(p.date || p.createdAt, state);
       return pCycle === cycleKey;
+    });
+  } else if (/^\d{4}-\d{2}$/.test(selectedPeriod)) {
+    // Formato YYYY-MM: filtra pelo ciclo de benefícios correspondente (compras antes do 4º dia útil caem no ciclo anterior)
+    cycleKey = selectedPeriod;
+    purchases = allPurchases.filter(p => {
+      const pCycle = getBenefitCycleKey(p.date || p.createdAt, state);
+      return pCycle === selectedPeriod;
     });
   } else if (selectedPeriod === '12months') {
     const cutoff = new Date(currentYear - 1, now.getMonth(), now.getDate());
@@ -357,8 +364,9 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
       const pDate = (p.date || p.createdAt || '').slice(0, 10);
       return pDate.startsWith(targetY);
     });
-  } else if (selectedPeriod && selectedPeriod !== 'todos' && selectedPeriod !== 'all') {
-    purchases = allPurchases.filter(p => (p.monthKey || formatMonthKey(p.date)) === selectedPeriod);
+  } else {
+    // Se for null, undefined, 'todos' ou 'all', abrange todo o histórico
+    purchases = allPurchases;
   }
 
   const total = Math.round(purchases.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
@@ -449,19 +457,52 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
     };
   });
 
-  // Lista de meses disponíveis ordenada (mês vigente primeiro, depois anteriores)
-  const currentMonthKey = formatMonthKey(new Date());
-  const monthsSet = new Set();
-  monthsSet.add(currentMonthKey);
+  // Lista de ciclos de benefícios disponíveis ordenada (ciclo vigente primeiro, depois anteriores)
+  const currentCycleKey = getCurrentBenefitCycleKey(state);
+  const [curY, curM] = currentCycleKey.split('-').map(Number);
+  const prevMonthDate = new Date(curY, curM - 2, 1);
+  const prevCycleKey = `${prevMonthDate.getFullYear()}-${pad(prevMonthDate.getMonth() + 1)}`;
+
+  const cyclesSet = new Set();
+  cyclesSet.add(currentCycleKey);
+  cyclesSet.add(prevCycleKey);
+
   allPurchases.forEach(p => {
-    const mKey = p.monthKey || formatMonthKey(p.date || p.createdAt);
-    if (mKey) monthsSet.add(mKey);
+    const cKey = getBenefitCycleKey(p.date || p.createdAt, state);
+    if (cKey) cyclesSet.add(cKey);
   });
-  const availableMonths = Array.from(monthsSet).sort().reverse().map(mKey => ({
-    key: mKey,
-    label: getMonthLabel(mKey),
-    isCurrent: mKey === currentMonthKey
-  }));
+
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const availableCycles = Array.from(cyclesSet).sort().reverse().map(cKey => {
+    const [yStr, mStr] = cKey.split('-');
+    const mNum = parseInt(mStr, 10);
+    const mName = monthNames[mNum - 1] || cKey;
+    const isCurrent = (cKey === currentCycleKey);
+    const isPrevious = (cKey === prevCycleKey);
+    const range = getBenefitCycleRange(cKey, state);
+
+    let tag = '';
+    if (isCurrent) tag = ' (Atual)';
+    else if (isPrevious) tag = ' (Anterior)';
+
+    const datesNotice = range.startCredit ? `${range.startCredit.formatted?.substring(0, 5)} a ${range.endFormatted?.substring(0, 5)}` : '';
+
+    return {
+      key: cKey,
+      label: `Ciclo ${mName}/${yStr}${tag}`,
+      shortLabel: `${mName.substring(0, 3)}/${yStr}${tag}`,
+      monthName: mName,
+      year: yStr,
+      datesNotice,
+      rangeFormatted: range.startCredit ? `${range.startCredit.formatted} a ${range.endFormatted}` : '',
+      isCurrent,
+      isPrevious
+    };
+  });
 
   return {
     total,
@@ -470,9 +511,12 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
     itemsCount,
     recurrentMarkets,
     uniqueMarketsList,
-    selectedMonthKey: selectedPeriod === 'cycle' ? cycleKey : (selectedPeriod || 'todos'),
+    selectedCycleKey: cycleKey || (selectedPeriod === 'todos' ? 'todos' : selectedPeriod),
+    selectedMonthKey: cycleKey || (selectedPeriod === 'todos' ? 'todos' : selectedPeriod),
     period: selectedPeriod || 'all',
     cycleKey,
+    availableCycles,
+    availableMonths: availableCycles, // Compatibilidade retroativa
     paymentBreakdown,
     paymentMethodStats,
     vaTotal,
@@ -484,8 +528,6 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
     otherTotal,
     otherCount,
     otherAvgTicket,
-    availableMonths,
-    currentMonthKey,
     foodBenefitsTotal,
     purchases
   };

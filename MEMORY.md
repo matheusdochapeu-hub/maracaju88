@@ -4,6 +4,34 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-08 02:30] - Separação por Ciclos de Benefícios (VA / VR) e Ajuste Visual de UX (v2.5.8)
+
+### 🔍 Problema Identificado & Regra de Negócio
+- **Agrupamento Indevido por Mês Calendário vs Ciclos de Benefícios:**
+  - O painel "Análise de Gastos & Mercados" agrupava as compras por mês calendário (`monthKey` / `YYYY-MM`). Como as compras do **Carrefour (R$ 280,66 em 03/11/2026)** e do **Açougue Fumaça (R$ 62,79 em 04/11/2026)** ocorreram no início de novembro, elas apareciam equivocadamente somadas em "Novembro de 2026 (Atual)".
+  - **Regra de Negócio Violada:** Os créditos de benefícios de alimentação (VA e VR) são disponibilizados apenas no **4º dia útil bancário** (no caso de Novembro/2026, em **06/11/2026**). Todas as compras efetuadas antes do crédito (`01/11` a `05/11`) foram pagas com o saldo do **Ciclo Anterior (Outubro/2026: 06/10 a 05/11)** e pertencem estritamente a ele (`getBenefitCycleKey(dateStr, state)`).
+
+### 🛠️ Correções Implementadas
+1. **Separação Estrita por Ciclos de Benefícios (`js/shopping.js`):**
+   - `getMarketAnalytics(state, periodOrCycle)` agora filtra e agrupa compras utilizando a função canônica `getBenefitCycleKey(p.date || p.createdAt, state)`.
+   - Gera lista ordenada de `availableCycles`:
+     - **Ciclo Vigente:** `Ciclo Novembro/2026 (Atual)` (06/11 a 03/12).
+     - **Ciclo Anterior:** `Ciclo Outubro/2026 (Anterior)` (06/10 a 05/11).
+     - **Todo o Histórico:** Consolida todas as compras registradas.
+   - Carrefour (03/11) e Açougue Fumaça (04/11) foram movidos com exatidão para o Ciclo de Outubro/2026, deixando o Ciclo de Novembro/2026 apenas com as despesas realizadas após a liberação do benefício (Padaria Irmãos Araújo, Padock Bar, etc.).
+2. **Interface & UX dos Ciclos (`js/ui.js`):**
+   - Seletor de botões atualizado para exibir pílulas claras com as datas do ciclo: `✨ Ciclo Novembro/2026 (Atual) (06/11 a 03/12)`, `📅 Ciclo Outubro/2026 (Anterior) (06/10 a 05/11)` e `🌐 Todo o Histórico`.
+   - Títulos dinâmicos nos blocos de Total Gasto, Separação VA vs VR e Mercados Mais Frequentados, exibindo o ciclo ativo e o intervalo exato de datas.
+3. **Refinamento Visual (/visual) (`css/components.css`):**
+   - Grade de estatísticas (`.analytics-stats-grid`) com `repeat(auto-fit, minmax(95px, 1fr))` no mobile, evitando colunas quebradas e sobreposição de números.
+   - Textos de nomes longos de estabelecimentos (`.market-spend-header`) com `min-width: 0` e `overflow: hidden; text-overflow: ellipsis;` para não empurrar valores para fora da tela em viewports estreitos (360px a 430px).
+   - Seletor com `-webkit-overflow-scrolling: touch` e botões flexíveis sem encolhimento (`flex-shrink: 0`) com altura mínima confortável para toque (>= 36px).
+4. **Cache PWA e Testes:**
+   - Cache atualizado para **`maracaju-v2.5.8`** em `sw.js`.
+   - Suíte de 96 testes aprovada com 100% de sucesso.
+
+---
+
 ## [2026-11-07 22:36] - Ajuste Visual e Eliminação de Sobreposição de Botões na Aba Pets (v2.5.7)
 
 ### 🔍 Problema Identificado & Causa Raiz

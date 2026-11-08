@@ -1587,7 +1587,17 @@ input[type="file"].form-control::file-selector-button:hover {
 
 @media (max-width: 480px) {
   .analytics-stats-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
+    gap: 0.4rem;
+  }
+  .analytics-stat-box {
+    padding: 0.5rem 0.35rem;
+  }
+  .analytics-stat-value {
+    font-size: clamp(0.95rem, 3.8vw, 1.15rem);
+  }
+  .analytics-stat-label {
+    font-size: 0.62rem;
   }
 }
 
@@ -1632,6 +1642,13 @@ input[type="file"].form-control::file-selector-button:hover {
   align-items: center;
   font-size: 0.82rem;
   gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.market-spend-header > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .market-spend-bar-bg {

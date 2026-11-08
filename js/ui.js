@@ -1366,20 +1366,22 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
     if (allPurchases.length === 0) {
       analyticsContainer.innerHTML = '';
     } else {
-      const currentMonthKey = formatMonthKey(new Date());
+      const activeCycleKey = (state && state._activeBenefitsCycle) || getCurrentBenefitCycleKey(state);
 
-      // Mês vigente apresentado primeiro por padrão
-      let selectedMonth = currentAnalyticsMonth;
-      if (!selectedMonth) {
-        selectedMonth = currentMonthKey;
-        currentAnalyticsMonth = currentMonthKey;
+      // Ciclo de benefícios vigente apresentado primeiro por padrão
+      let selectedCycle = currentAnalyticsMonth;
+      if (!selectedCycle) {
+        selectedCycle = activeCycleKey;
+        currentAnalyticsMonth = activeCycleKey;
       }
 
-      // Calcula métricas para o mês selecionado (ou todos)
-      const analytics = getMarketAnalytics(state, selectedMonth === 'todos' ? 'todos' : selectedMonth);
-      const isAll = (selectedMonth === 'todos');
-      const selectedMonthObj = analytics.availableMonths && analytics.availableMonths.find(m => m.key === selectedMonth);
-      const monthTitle = isAll ? 'Todo o Histórico' : (selectedMonthObj ? selectedMonthObj.label : getMonthLabel(selectedMonth));
+      // Calcula métricas para o ciclo selecionado (ou todos)
+      const analytics = getMarketAnalytics(state, selectedCycle === 'todos' ? 'todos' : selectedCycle);
+      const isAll = (selectedCycle === 'todos');
+      const selectedCycleObj = analytics.availableCycles && analytics.availableCycles.find(c => c.key === selectedCycle);
+      const cycleTitle = isAll ? 'Todo o Histórico' : (selectedCycleObj ? selectedCycleObj.label : `Ciclo ${selectedCycle}`);
+      const cycleDates = isAll ? '' : (selectedCycleObj && selectedCycleObj.rangeFormatted ? `• ${selectedCycleObj.rangeFormatted}` : '');
+      const monthTitle = cycleTitle;
 
       analyticsContainer.innerHTML = `
         <div class="market-analytics-card">
@@ -1393,21 +1395,23 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
             </button>
           </div>
 
-          <!-- Seletor Rápido de Meses: Mês Vigente Sempre Primeiro + Meses Anteriores -->
+          <!-- Seletor Rápido de Ciclos: Ciclo Vigente Sempre Primeiro + Ciclos Anteriores -->
           <div style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.3rem; text-transform: uppercase;">
-              📅 Selecionar Mês de Referência:
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.35rem; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.3rem;">
+              <span>🔄 Ciclo de Benefícios (VA / VR):</span>
+              ${cycleDates ? `<span style="font-size: 0.68rem; font-weight: 600; color: var(--brand-moss); font-family: var(--font-mono);">${cycleDates}</span>` : ''}
             </div>
-            <div class="analytics-month-selector" style="display: flex; gap: 0.35rem; overflow-x: auto; padding-bottom: 0.35rem; scrollbar-width: thin;">
-              ${(analytics.availableMonths || []).map(m => {
-                const isActive = (selectedMonth === m.key);
+            <div class="analytics-month-selector" style="display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.35rem; scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
+              ${(analytics.availableCycles || []).map(c => {
+                const isActive = (selectedCycle === c.key);
                 return `
-                  <button type="button" class="btn btn-xs ${isActive ? 'btn-primary' : 'btn-secondary'}" data-analytics-month="${m.key}" style="font-size: 0.72rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.22rem 0.65rem; white-space: nowrap;">
-                    ${m.isCurrent ? '✨ ' + m.label + ' (Atual)' : '📅 ' + m.label}
+                  <button type="button" class="btn btn-xs ${isActive ? 'btn-primary' : 'btn-secondary'}" data-analytics-month="${c.key}" style="font-size: 0.72rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.28rem 0.75rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem; min-height: 36px;">
+                    <span>${c.isCurrent ? '✨' : '📅'} ${c.label}</span>
+                    ${c.datesNotice ? `<span style="font-size: 0.65rem; opacity: 0.85; font-weight: 500;">(${c.datesNotice})</span>` : ''}
                   </button>
                 `;
               }).join('')}
-              <button type="button" class="btn btn-xs ${isAll ? 'btn-primary' : 'btn-secondary'}" data-analytics-month="todos" style="font-size: 0.72rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.22rem 0.65rem; white-space: nowrap;">
+              <button type="button" class="btn btn-xs ${isAll ? 'btn-primary' : 'btn-secondary'}" data-analytics-month="todos" style="font-size: 0.72rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.28rem 0.75rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem; min-height: 36px;">
                 🌐 Todo o Histórico
               </button>
             </div>
