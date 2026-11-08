@@ -1,5 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { getInitialState } from '../js/storage.js';
 import { renderTasksTab } from '../js/ui.js';
 import { applyCloudBackup } from '../js/sheets.js';
@@ -9,6 +12,9 @@ import {
   getTasksProgressByFrequency,
   getAllFrequenciesSummary
 } from '../js/tasks.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 test('Tasks UI: renderTasksTab executes cleanly without missing references', () => {
   const state = getInitialState();
@@ -110,4 +116,23 @@ test('Sheets: applyCloudBackup sanitizes legacy tasks and preserves local items'
   const mergedEmpty = applyCloudBackup(localState, { tasks: [] });
   assert.equal(mergedEmpty.tasks.length, 1);
   assert.equal(mergedEmpty.tasks[0].id, 'local_offline_1');
+});
+
+test('Tasks UI: formatTaskWeekDays is imported and works in task editing flow', () => {
+  assert.equal(formatTaskWeekDays([0, 1, 2, 3, 4, 5, 6]), 'Todos os dias');
+  assert.equal(formatTaskWeekDays([2, 4, 6]), 'Ter, Qui, Sáb');
+  assert.equal(formatTaskWeekDays([1, 2, 3, 4, 5]), 'Segunda a Sexta');
+  assert.equal(formatTaskWeekDays([0, 6]), 'Fim de semana');
+  assert.equal(formatTaskWeekDays([]), 'Todos os dias');
+
+  const appJs = fs.readFileSync(path.resolve(__dirname, '../js/app.js'), 'utf-8');
+  assert.ok(
+    appJs.includes('formatTaskWeekDays'),
+    'js/app.js must import formatTaskWeekDays from ./tasks.js'
+  );
+  assert.match(
+    appJs,
+    /import\s*\{[^}]*formatTaskWeekDays[^}]*\}\s*from\s*['"]\.\/tasks\.js['"]/,
+    'js/app.js must have formatTaskWeekDays in the tasks.js import statement'
+  );
 });

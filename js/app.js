@@ -35,7 +35,7 @@ import {
   hasUserCustomPassword
 } from './auth.js';
 import { playTaskCompleteSound, playSubtleClick } from './audio.js';
-import { toggleTaskDone, addTask, deleteTask, updateTask, getLocalDateString } from './tasks.js';
+import { toggleTaskDone, addTask, deleteTask, updateTask, getLocalDateString, formatTaskWeekDays } from './tasks.js';
 import {
   addShoppingItem,
   toggleShoppingItem,

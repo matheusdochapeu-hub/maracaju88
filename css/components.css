@@ -445,7 +445,20 @@
 .task-actions {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
+}
+
+.task-actions .btn-icon {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.05rem !important;
+  cursor: pointer !important;
+  touch-action: manipulation !important;
 }
 
 /* History / Inspection Date Navigator */

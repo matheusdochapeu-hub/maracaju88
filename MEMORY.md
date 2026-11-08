@@ -4,6 +4,27 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-08 14:55] - Correção do Botão Editar Tarefas e Otimização do Touch Target (v2.6.2)
+
+### 🔍 Problema Identificado & Causa Raiz
+1. **Botão de Editar nas Tarefas da Casa Não Abria o Modal:**
+   - O usuário relatou com screenshot: *"o botão editar nas tarefas da casa não esta funcionando"*.
+   - **Causa Raiz:** No arquivo `js/app.js`, o listener de clique em `[data-edit-task]` chama a função `updateWeekdaysUI('task-edit-weekdays-buttons', 'task-edit-weekdays-label', task.weekDays || [])`. Dentro de `updateWeekdaysUI`, a função `formatTaskWeekDays` era chamada. No entanto, `formatTaskWeekDays` não estava incluída na declaração `import { ... } from './tasks.js'` de `js/app.js`. Isso causava uma exceção não tratada (`ReferenceError: formatTaskWeekDays is not defined`), abortando a execução do script antes de alcançar `openModal('modal-edit-task')`.
+2. **Touch Target dos Botões de Ação de Tarefas:**
+   - No celular, os botões `.task-actions .btn-icon` possuíam dimensões reduzidas de 36px, dificultando o toque preciso.
+
+### 🛠️ Correções Implementadas
+1. **Importação e Integração (`js/app.js`):**
+   - Adicionada a exportação `formatTaskWeekDays` ao `import` de `./tasks.js` em `js/app.js`.
+2. **Ampliação do Touch Target Mobile (`css/components.css`):**
+   - Classes `.task-actions .btn-icon` com largura e altura mínimas de 40px, centralização flex e padding otimizado para toque no celular.
+3. **Validação Automatizada (`test/tasks-ui-startup.test.js`):**
+   - Adicionado teste automatizado garantindo que `formatTaskWeekDays` seja importada em `app.js` e que a formatação dos dias funcione sem falhas. 102 testes aprovados com 100% de sucesso.
+4. **Bump de Versão:**
+   - Atualizado para **`v2.6.2`** em `config.js`, `sw.js` e `package.json`.
+
+---
+
 ## [2026-11-08 14:05] - Correção Visual de Modais (Pets) e Resolução de Conflito de IDs no Shopping (v2.6.1)
 
 ### 🔍 Problema Identificado & Causa Raiz
