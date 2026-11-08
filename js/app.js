@@ -20,7 +20,7 @@ import {
 //  MARACAJU - APP CONTROLLER PRINCIPAL (v1.3.3)
 // ============================================================
 
-import { loadState, saveState, exportBackupJson, importBackupJson, getInitialState } from './storage.js';
+import { loadState, saveState, exportBackupJson, importBackupJson, getInitialState, ensureRecoveredPurchases } from './storage.js';
 import {
   getAuthSession,
   loginWithEmail,
@@ -206,9 +206,15 @@ let tempEditPetPhotoDataUrl = null;
 document.addEventListener('DOMContentLoaded', () => {
   try {
     state = loadState();
+    ensureRecoveredPurchases(state);
+    syncPurchasesIntoCatalog(state);
+    saveState(state);
   } catch (err) {
     console.error('[Maracaju] Erro ao carregar estado inicial:', err);
     state = getInitialState();
+    ensureRecoveredPurchases(state);
+    syncPurchasesIntoCatalog(state);
+    saveState(state);
   }
 
   const safeInit = (fn, name) => {
@@ -2277,6 +2283,8 @@ function initSettingsModule() {
       const cloudRegCount = Array.isArray(cloudData.comprasRegistros) ? cloudData.comprasRegistros.length : 0;
       const cloudSummary = cloudData.settings && cloudData.settings.benefitsSummary;
       state = applyCloudBackup(state, cloudData);
+      ensureRecoveredPurchases(state);
+      syncPurchasesIntoCatalog(state);
       saveState(state);
       populateCategorySelects(state);
       refreshAllUI();
@@ -2299,6 +2307,18 @@ function initSettingsModule() {
         btnRestoreSheets.disabled = false;
         btnRestoreSheets.textContent = 'Restaurar do Google Sheets';
       }
+    });
+  }
+
+  const btnRestoreInvoices = document.getElementById('btn-restore-invoices');
+  if (btnRestoreInvoices) {
+    btnRestoreInvoices.addEventListener('click', () => {
+      ensureRecoveredPurchases(state);
+      syncPurchasesIntoCatalog(state);
+      saveState(state);
+      refreshAllUI();
+      showToast('🧾 Notas Fiscais recuperadas com sucesso!', 'success', 4000);
+      backupToSheets(state).catch(e => console.warn('[Maracaju] Push pós-recuperação falhou:', e.message));
     });
   }
 
@@ -2390,10 +2410,19 @@ async function syncPullFromSheets(silent = false) {
   try {
     const cloudData = await restoreFromSheets(state);
     if (cloudData) {
+      const cloudRegCount = Array.isArray(cloudData.comprasRegistros) ? cloudData.comprasRegistros.length : 0;
       state = applyCloudBackup(state, cloudData);
+      ensureRecoveredPurchases(state);
+      syncPurchasesIntoCatalog(state);
       saveState(state);
       populateCategorySelects(state);
       refreshAllUI();
+
+      const mergedRegCount = Array.isArray(state.comprasRegistros) ? state.comprasRegistros.length : 0;
+      if (mergedRegCount > cloudRegCount) {
+        console.log(`[Maracaju] Sincronizando notas fiscais recuperadas para a planilha (${mergedRegCount} vs ${cloudRegCount})...`);
+        backupToSheets(state).catch(e => console.warn('[Maracaju] Push pós-pull falhou:', e.message));
+      }
 
       if (syncDot) {
         syncDot.className = 'sync-status-indicator synced';

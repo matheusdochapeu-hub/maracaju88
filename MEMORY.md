@@ -4,6 +4,35 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-07 21:55] - Recuperação e Salvaguarda Definitiva de Notas Fiscais Históricas (Padaria Araújo & Carrefour), Auto-Sync Bidirecional e PWA v2.5.4
+
+### 🔍 Problemas Identificados & Causa Raiz
+1. **Desaparecimento da Nota Fiscal da Padaria Irmãos Araújo (R$ 71,06):**
+   - **Causa Raiz:** O cupom fiscal da Padaria e Mercearia Irmãos Araújo foi lido via QR Code e adicionado localmente ao estado. Quando ocorreu uma inconsistência transitória e a sincronização com o Google Sheets foi acionada (`syncPullFromSheets`), a planilha na nuvem ainda não continha essa compra. Como a nuvem tinha prioridade e o cache local foi recomposto antes do push, a nota foi descartada, restando apenas a compra do Carrefour (R$ 280,66).
+2. **Ausência de Mecanismo de Salvaguarda de Comprovantes Históricos Oficiais:**
+   - O aplicativo não possuía uma lista imutável de notas históricas verificadas (`RECOVERABLE_PURCHASES`), deixando o histórico vulnerável a limpezas de cache no navegador ou pulls incompletos de planilhas antigas.
+3. **Versão do Cache PWA e Botão de Recuperação Manual:**
+   - O Service Worker e os metadados precisavam ser atualizados para a versão `v2.5.4` para limpar caches desatualizados no celular, e faltava um botão direto na aba Ajustes para acionar a restauração manual caso o usuário quisesse re-verificar.
+
+### 🛠️ Correções Implementadas
+1. **Definição de `RECOVERABLE_PURCHASES` e `ensureRecoveredPurchases` (`js/storage.js`):**
+   - Cadastrada a estrutura oficial com 100% de fidelidade dos dois comprovantes fiscais do casal:
+     - **Padaria e Mercearia Irmãos Araújo** (NFC-e nº 50504, 07/11/2026 10:32:35, Chave `35261150489095000127650010000505041101032350`, Total R$ 71,06 via Cartão de Crédito, com os 4 itens detalhados: Café da Manhã, Suco Mix Jarra, Cappuccino Gelado e Café da Manhã por kg).
+     - **Carrefour** (NFC-e nº 161500, 03/11/2026 09:41:43, Total R$ 280,66 via Vale Alimentação, com todos os 18 itens cadastrados).
+   - Função `ensureRecoveredPurchases(state)` verifica por chave de acesso NFC-e, ID ou estabelecimento/data/total e insere sem duplicidades.
+2. **Integração no Ciclo de Vida do App (`js/storage.js`, `js/app.js`):**
+   - `loadState()` chama automaticamente `ensureRecoveredPurchases(merged)`.
+   - `DOMContentLoaded` executa `ensureRecoveredPurchases(state)`, sincroniza produtos com `syncPurchasesIntoCatalog(state)` e persiste no `localStorage` antes da primeira renderização.
+   - `syncPullFromSheets()` mescla a nuvem e, se detectar compras recuperadas que ainda não constam na planilha (`mergedRegCount > cloudRegCount`), dispara em segundo plano o backup para atualizar o Google Sheets imediatamente.
+3. **Botão de Recuperação Manual em Ajustes (`index.html`, `js/app.js`):**
+   - Adicionado botão `🧾 Recuperar Notas Fiscais` na seção de Cópia de Segurança Local, permitindo restaurar notas com um clique e feedback em toast.
+4. **Bumping de Versão para v2.5.4:**
+   - Atualizados `sw.js` (`maracaju-v2.5.4`), `js/config.js` (`version: "2.5.4"`) e `index.html`.
+5. **Suíte de Testes Automatizados:**
+   - Criado `test/purchases-recovery.test.js` com 4 novos testes cobrindo injeção, idempotência, preservação pós-pull e totalizador da Análise de Gastos (R$ 351,72 em 2 compras). Total de 90/90 testes passando sem falhas.
+
+---
+
 ## [2026-11-07 14:52] - Compactação de Backup Google Sheets (< 44k chars) & Sincronização de Saldo Atual VA/VR com Matrix Finance
 
 ### 🔍 Problemas Identificados & Causa Raiz
