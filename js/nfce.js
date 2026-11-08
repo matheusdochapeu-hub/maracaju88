@@ -539,3 +539,89 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
     needsManualPaste: true
   };
 }
+
+/**
+ * Mescla de forma complementar os dados do QR Code com os dados extraídos pelo OCR.
+ * Regra: se o QR Code já preencheu a informação (como chave oficial, CNPJ ou total), mantém;
+ * o que faltar (produtos comprados, local/mercado, data, hora, total, forma de pagamento)
+ * o OCR preenche automaticamente.
+ */
+export function mergeNfceComplementary(qrData = {}, ocrData = {}) {
+  const merged = { ...qrData };
+
+  // 1. Chave de acesso: se o QR code tiver chave oficial de 44 dígitos, mantém; senão usa OCR
+  const qrKey = (qrData.nfeKey || qrData.accessKey || '').replace(/\D/g, '');
+  const ocrKey = (ocrData.nfeKey || ocrData.accessKey || '').replace(/\D/g, '');
+  if (qrKey.length === 44) {
+    merged.accessKey = qrKey;
+    merged.nfeKey = qrKey;
+  } else if (ocrKey.length === 44) {
+    merged.accessKey = ocrKey;
+    merged.nfeKey = ocrKey;
+  }
+
+  // 2. CNPJ
+  if (!merged.cnpj || merged.cnpj === '--') {
+    merged.cnpj = ocrData.cnpj || '';
+  }
+
+  // 3. Estabelecimento / Mercado
+  const isGeneric = (name) => !name || /^(?:Supermercado|Mercado|Comprovante|Estabelecimento)$/i.test(name.trim());
+  if (isGeneric(merged.marketName) && !isGeneric(ocrData.marketName)) {
+    merged.marketName = ocrData.marketName;
+  } else if (!merged.marketName) {
+    merged.marketName = ocrData.marketName || 'Supermercado';
+  }
+
+  // 4. Data
+  const todayStr = new Date().toISOString().substring(0, 10);
+  if (!merged.date || merged.date === todayStr) {
+    if (ocrData.date) {
+      merged.date = ocrData.date;
+    }
+  }
+
+  // 5. Hora
+  merged.time = qrData.time || ocrData.time || '';
+
+  // 6. Valor Total
+  const qrTotal = Number(qrData.total || qrData.totalAmount || 0);
+  const ocrTotal = Number(ocrData.total || ocrData.totalAmount || 0);
+  if (qrTotal > 0) {
+    merged.total = qrTotal;
+    merged.totalAmount = qrTotal;
+  } else if (ocrTotal > 0) {
+    merged.total = ocrTotal;
+    merged.totalAmount = ocrTotal;
+  }
+
+  // 7. Forma de Pagamento
+  // Se o QR Code veio com valor padrão 'va' mas o OCR detectou forma explícita (ex: 'credito', 'debito', 'pix', 'dinheiro', 'vr')
+  if (ocrData.paymentMethod && (merged.paymentMethod === 'va' || !merged.paymentMethod)) {
+    merged.paymentMethod = ocrData.paymentMethod;
+  }
+
+  // 8. Itens / Produtos Comprados
+  const qrItems = Array.isArray(qrData.items) ? qrData.items : [];
+  const ocrItems = Array.isArray(ocrData.items) ? ocrData.items : [];
+  if (qrItems.length > 0) {
+    merged.items = [...qrItems];
+  } else if (ocrItems.length > 0) {
+    merged.items = [...ocrItems];
+  } else {
+    merged.items = [];
+  }
+
+  // Se o total ainda estiver zerado mas temos itens, totaliza pelos itens
+  if ((!merged.total || merged.total === 0) && merged.items.length > 0) {
+    merged.total = Math.round(merged.items.reduce((sum, it) => sum + (it.totalPrice || it.price || 0), 0) * 100) / 100;
+    merged.totalAmount = merged.total;
+  }
+
+  // URL original da SEFAZ
+  if (!merged.rawUrl && ocrData.rawUrl) {
+    merged.rawUrl = ocrData.rawUrl;
+  }
+
+  return merged;
+}

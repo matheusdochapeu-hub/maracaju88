@@ -4,6 +4,40 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-07 22:28] - Leitura Híbrida de NFC-e (QR Code + OCR Complementar Automático) e v2.5.6
+
+### 🔍 Solicitação & Necessidade
+- **Extração Híbrida Completa:** Ao enviar uma foto de cupom fiscal (NFC-e), o aplicativo deve combinar o QR Code e o OCR de forma inteligente e complementar:
+  - Se o QR Code já tiver preenchido os metadados oficiais (chave de acesso de 44 dígitos, CNPJ, número/série ou URL), esses dados de alta confiabilidade são preservados.
+  - O que faltar ou vier genérico no QR Code (produtos comprados detalhados, razão social/local, data, hora, total e forma de pagamento), o OCR lê diretamente do texto impresso na foto e preenche automaticamente.
+  - Se o usuário digitalizar via câmera ao vivo e a nota não contiver produtos na consulta online, disponibilizar botão complementar direto ("📸 Ler Itens por Foto do Cupom (OCR)").
+
+### 🛠️ Implementações Realizadas
+1. **Parser de Cupons e Extração de Horário (`js/pdf-parser.js`):**
+   - Adicionada extração de horário/tempo da compra (`timeStr`) em `_parseSingleNfceDanfeText` e `parseNfceDanfeText`, capturando padrões `DD/MM/AAAA HH:MM:SS`, `Data/Hora` e `HH:MM`.
+   - Preserva `time` no objeto retornado para exibição e salvamento da compra.
+2. **Motor de Mesclagem Complementar (`js/nfce.js`):**
+   - Função `mergeNfceComplementary(qrData, ocrData)` criada e exportada:
+     - Preserva chave de acesso de 44 dígitos e URL da SEFAZ oficial obtidas pelo QR Code.
+     - Substitui nomes genéricos (ex: `'Supermercado'`) pela razão social lida no cupom pelo OCR (ex: `'Padaria e Mercearia Irmãos Araújo'`).
+     - Preenche a lista completa de produtos (`items`), quantidades, unidades, preços unitários e valores totais a partir do OCR.
+     - Mapeia a forma de pagamento real do cupom (`credito`, `debito`, `pix`, `dinheiro`, `vr`, `va`).
+     - Preenche hora e data se ausentes no QR Code.
+3. **Pipeline Unificado de Imagem (`js/app.js`):**
+   - Função `processReceiptImageHybrid(file)` substitui o fluxo antigo: decodifica o QR Code da imagem com `decodeQrCodeFromImageBlob`, executa OCR simultâneo com `Tesseract.js` no texto impresso e mescla via `mergeNfceComplementary`.
+   - Conectado em todos os pontos de entrada de imagem: upload de QR Code (`fileInput`), botões de câmera e galeria da aba OCR (`[inputOcrCamera, inputOcrGallery]`) e importador de arquivos (`inputAnyFile`).
+   - Botão complementar `#btn-qr-complement-ocr` renderizado dinamicamente no card de resultado caso os itens ainda estejam pendentes.
+4. **Interface e Versionamento (`index.html`, `js/config.js`, `sw.js`):**
+   - Atualizado para versão **v2.5.6**.
+   - Novo botão estilizado `📸 Ler Itens por Foto do Cupom (OCR)` em `#qr-preview-result`.
+5. **Validação & Testes Automatizados (`test/nfce-ocr-complement.test.js`):**
+   - Teste de mesclagem não-destrutiva de QR Code com itens do OCR.
+   - Teste de preenchimento completo por OCR quando QR Code traz apenas chave.
+   - Teste de extração de data, hora e produtos no cupom impresso da Padaria Irmãos Araújo.
+   - Suíte geral: 96 testes executados, 96 aprovados (0 falhas).
+
+---
+
 ## [2026-11-07 22:12] - Separação VA vs VR com Ticket Médio Individual, Navegação Mensal Inteligente e Sincronização em Tempo Real (v2.5.5)
 
 ### 🔍 Solicitação & Necessidade

@@ -127,6 +127,8 @@ export function parseNfceDanfeText(rawTextInput, altTextInput = '') {
     if (fallbackResult.items.length > 0) {
       if (!result.marketName || result.marketName === 'Supermercado') result.marketName = fallbackResult.marketName;
       if (!result.cnpj) result.cnpj = fallbackResult.cnpj;
+      if (!result.date) result.date = fallbackResult.date;
+      if (!result.time) result.time = fallbackResult.time;
       if (!result.total || result.total === 0) result.total = fallbackResult.total;
       if (!result.nfeKey) result.nfeKey = fallbackResult.nfeKey;
       result.items = fallbackResult.items;
@@ -176,10 +178,18 @@ function _parseSingleNfceDanfeText(rawText) {
     cnpj = cnpjMatch[1].trim();
   }
 
-  // 3. Extração da Data da Compra
+  // 3. Extração da Data e Hora da Compra
   // Formato: 03/11/2026 09:41:43 ou Emiss ã o: 03/11/2026
+  let timeStr = '';
+  const explicitTimeMatch = fullText.match(/\d{2}\/\d{2}\/\d{4}\s+([012]\d:[0-5]\d(?::[0-5]\d)?)/) ||
+                            fullText.match(/(?:Emiss\s*[aã]\s*o|Data\/Hora|Data)[\s\S]*?([012]\d:[0-5]\d(?::[0-5]\d)?)/i) ||
+                            fullText.match(/\b([012]\d:[0-5]\d(?::[0-5]\d)?)\b/);
+  if (explicitTimeMatch) {
+    timeStr = explicitTimeMatch[1].trim();
+  }
+
   const dateMatch = fullText.match(/(?:Emiss\s*[aã]\s*o|Data\/Hora):\s*(\d{2})\/(\d{2})\/(\d{4})/i) ||
-                    fullText.match(/(\d{2})\/(\d{2})\/(\d{4})\s+\d{2}:\d{2}/);
+                    fullText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
   if (dateMatch) {
     const day = dateMatch[1];
     const month = dateMatch[2];
@@ -516,6 +526,7 @@ function _parseSingleNfceDanfeText(rawText) {
     marketName,
     cnpj: cnpj ? formatCnpj(cnpj) : '',
     date: dateStr,
+    time: timeStr,
     total,
     paymentMethod,
     nfeKey,
