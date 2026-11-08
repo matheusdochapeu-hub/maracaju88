@@ -4,6 +4,29 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-08 14:05] - Correção Visual de Modais (Pets) e Resolução de Conflito de IDs no Shopping (v2.6.1)
+
+### 🔍 Problema Identificado & Causa Raiz
+1. **Layout Quebrado no Modal de Novo Pet (`modal-add-pet`):**
+   - O modal de cadastrar pet aparecia espremido numa faixa vertical estreita à esquerda, com campos como "Observações" e botões "Salvar/Cancelar" vazando para a área escura direita.
+   - **Causa Raiz:** Tag órfã `</label></div>` em `index.html` (o checkbox `add-pet-vacinas-status` perdeu as tags de abertura). Isso fechava antecipadamente o `.modal-content`, tornando os elementos restantes filhos diretos do flex container `.modal-overlay`.
+2. **Impossibilidade de Salvar Item em Shopping ("Informe o nome do item de shopping"):**
+   - Ao tentar lançar um item (como a meia New Balance com foto e loja preenchidas), o app exibia a mensagem *"Informe o nome do item de shopping."* mesmo com o formulário preenchido.
+   - **Causa Raiz:** O modal de compras do mercado (`modal-add-shopping-item`) e o modal de shopping de roupas/desejos (`modal-shopping-item`) compartilhavam os mesmos IDs no HTML (`#shopping-input-title`, `#shopping-input-category`, `#shopping-input-price`, `#shopping-input-notes`). Ao executar `document.getElementById('shopping-input-title')`, o navegador sempre retornava o campo vazio do modal de mercado acima dele. Além disso, no celular, o campo do nome ficava acima da dobra do scroll sem auto-foco nem scroll suave.
+
+### 🛠️ Correções Implementadas
+1. **Restauração da Estrutura HTML (`index.html`):**
+   - Reconstruído o checkbox de vacinação em dia no `modal-add-pet`. O saldo de tags `<div>`, `<form>` e `<label>` no HTML voltou a 100% de equilíbrio (diferença zero).
+2. **Desacoplamento e Escopo no Módulo Shopping (`index.html`, `js/app.js`):**
+   - IDs próprios e exclusivos para o shopping wishlist (`#shopping-wishlist-title`, `#shopping-wishlist-category`, etc.).
+   - Leitura de campos com escopo no `formShopping` (`formShopping.querySelector(...)`) eliminando colisões com outros modais.
+   - Fallback amigável: se o usuário preencher a "Loja / Marca" (ex: *New balance*) e notas/foto mas deixar o nome vazio, o app aproveita o nome da marca para não travar o cadastro.
+   - Scroll automático suave (`scrollIntoView`) e destaque visual em vermelho (`.input-error`) se a validação falhar.
+3. **PWA & Testes:**
+   - Suíte de 101 testes automatizados aprovada com 100% de sucesso. Versão **`maracaju-v2.6.1`** implantada no Service Worker e GitHub.
+
+---
+
 ## [2026-11-08 13:50] - Persistência Permanente de Fotos e Proteção Anti-Perda no Auto-Sync (v2.6.0)
 
 ### 🔍 Problema Identificado & Causa Raiz

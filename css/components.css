@@ -2332,3 +2332,10 @@ input[type="file"].form-control::file-selector-button:hover {
   border-color: var(--brand-moss);
   box-shadow: 0 2px 6px rgba(46, 89, 51, 0.25);
 }
+
+/* Destaque de validação e foco de campos */
+.input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+  outline: none !important;
+}

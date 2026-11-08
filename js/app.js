@@ -5720,8 +5720,14 @@ function initShoppingModule() {
     if (previewImg) previewImg.src = '';
     if (photoFeedback) photoFeedback.textContent = '';
     openModal('modal-shopping-item');
-    const inputTitle = document.getElementById('shopping-input-title');
-    if (inputTitle) setTimeout(() => inputTitle.focus(), 150);
+    const inputTitle = formShopping.querySelector('#shopping-wishlist-title, #shopping-input-title');
+    if (inputTitle) {
+      inputTitle.classList.remove('input-error');
+      setTimeout(() => {
+        inputTitle.focus();
+        inputTitle.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
+    }
   }
 
   // Botões de Adicionar Novo Item
@@ -5779,20 +5785,42 @@ function initShoppingModule() {
   if (formShopping) {
     formShopping.addEventListener('submit', (e) => {
       e.preventDefault();
-      const itemId = document.getElementById('shopping-item-id').value;
-      const title = (document.getElementById('shopping-input-title').value || '').trim();
-      const category = document.getElementById('shopping-input-category').value;
-      const price = parseCurrency(document.getElementById('shopping-input-price').value);
-      const store = (document.getElementById('shopping-input-store').value || '').trim();
-      const forWhom = document.getElementById('shopping-input-for-whom').value;
-      const priority = document.getElementById('shopping-input-priority').value;
-      const status = document.getElementById('shopping-input-status').value;
-      const link = (document.getElementById('shopping-input-link').value || '').trim();
-      const notes = (document.getElementById('shopping-input-notes').value || '').trim();
+      const getField = (id1, id2) => formShopping.querySelector(`#${id1}`) || formShopping.querySelector(`#${id2}`);
+      const itemId = (document.getElementById('shopping-item-id')?.value || '').trim();
+      const inputTitleEl = getField('shopping-wishlist-title', 'shopping-input-title');
+      const inputCatEl = getField('shopping-wishlist-category', 'shopping-input-category');
+      const inputPriceEl = getField('shopping-wishlist-price', 'shopping-input-price');
+      const inputStoreEl = getField('shopping-wishlist-store', 'shopping-input-store');
+      const inputForWhomEl = getField('shopping-wishlist-for-whom', 'shopping-input-for-whom');
+      const inputPriorityEl = getField('shopping-wishlist-priority', 'shopping-input-priority');
+      const inputStatusEl = getField('shopping-wishlist-status', 'shopping-input-status');
+      const inputLinkEl = getField('shopping-wishlist-link', 'shopping-input-link');
+      const inputNotesEl = getField('shopping-wishlist-notes', 'shopping-input-notes');
+
+      let title = (inputTitleEl?.value || '').trim();
+      const category = inputCatEl?.value || 'roupas_calcados';
+      const price = parseCurrency(inputPriceEl?.value);
+      const store = (inputStoreEl?.value || '').trim();
+      const forWhom = inputForWhomEl?.value || 'casal';
+      const priority = inputPriorityEl?.value || 'media';
+      const status = inputStatusEl?.value || 'desejado';
+      const link = (inputLinkEl?.value || '').trim();
+      const notes = (inputNotesEl?.value || '').trim();
 
       if (!title) {
-        showToast('Informe o nome do item de shopping.', 'warning');
-        return;
+        if (store) {
+          title = store;
+          if (inputTitleEl) inputTitleEl.value = title;
+        } else {
+          showToast('Informe o nome do item de shopping.', 'warning');
+          if (inputTitleEl) {
+            inputTitleEl.classList.add('input-error');
+            inputTitleEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            inputTitleEl.focus();
+            setTimeout(() => inputTitleEl.classList.remove('input-error'), 2500);
+          }
+          return;
+        }
       }
 
       if (itemId) {
@@ -5886,15 +5914,19 @@ function initShoppingModule() {
 
         document.getElementById('shopping-modal-title').textContent = '✏️ Editar Item de Shopping';
         document.getElementById('shopping-item-id').value = item.id;
-        document.getElementById('shopping-input-title').value = item.title || '';
-        document.getElementById('shopping-input-category').value = item.category || 'roupas_calcados';
-        document.getElementById('shopping-input-price').value = item.price > 0 ? formatCurrency(item.price) : '';
-        document.getElementById('shopping-input-store').value = item.store || '';
-        document.getElementById('shopping-input-for-whom').value = item.forWhom || 'casal';
-        document.getElementById('shopping-input-priority').value = item.priority || 'media';
-        document.getElementById('shopping-input-status').value = item.status || 'desejado';
-        document.getElementById('shopping-input-link').value = item.link || '';
-        document.getElementById('shopping-input-notes').value = item.notes || '';
+        const setVal = (id1, id2, val) => {
+          const el = formShopping.querySelector(`#${id1}`) || formShopping.querySelector(`#${id2}`);
+          if (el) el.value = val;
+        };
+        setVal('shopping-wishlist-title', 'shopping-input-title', item.title || '');
+        setVal('shopping-wishlist-category', 'shopping-input-category', item.category || 'roupas_calcados');
+        setVal('shopping-wishlist-price', 'shopping-input-price', item.price > 0 ? formatCurrency(item.price) : '');
+        setVal('shopping-wishlist-store', 'shopping-input-store', item.store || '');
+        setVal('shopping-wishlist-for-whom', 'shopping-input-for-whom', item.forWhom || 'casal');
+        setVal('shopping-wishlist-priority', 'shopping-input-priority', item.priority || 'media');
+        setVal('shopping-wishlist-status', 'shopping-input-status', item.status || 'desejado');
+        setVal('shopping-wishlist-link', 'shopping-input-link', item.link || '');
+        setVal('shopping-wishlist-notes', 'shopping-input-notes', item.notes || '');
 
         currentShoppingPendingPhoto = null;
         if (Array.isArray(item.photos) && item.photos.length > 0) {

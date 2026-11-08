@@ -2179,7 +2179,9 @@
           </div>
         </div>
 
-
+        <div class="form-group">
+          <label style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
+            <input type="checkbox" id="add-pet-vacinas-status" />
             Vacinação em dia
           </label>
         </div>
@@ -2736,14 +2738,14 @@
         <input type="hidden" id="shopping-item-id" value="" />
 
         <div class="form-group">
-          <label class="form-label" for="shopping-input-title">Nome do Produto / Desejo *</label>
-          <input type="text" id="shopping-input-title" class="form-control" placeholder="Ex: Kit 3 Pares Meias New Balance, Air Fryer..." required />
+          <label class="form-label" for="shopping-wishlist-title">Nome do Produto / Desejo *</label>
+          <input type="text" id="shopping-wishlist-title" class="form-control" placeholder="Ex: Kit 3 Pares Meias New Balance, Air Fryer..." required />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label" for="shopping-input-category">Categoria *</label>
-            <select id="shopping-input-category" class="form-control" required>
+            <label class="form-label" for="shopping-wishlist-category">Categoria *</label>
+            <select id="shopping-wishlist-category" class="form-control" required>
               <option value="roupas_calcados">👕 Roupas & Calçados</option>
               <option value="eletrodomesticos">🔌 Eletrodomésticos</option>
               <option value="eletronicos">📱 Eletrônicos & Tech</option>
@@ -2755,8 +2757,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="shopping-input-price">Preço Visto / Estimado</label>
-            <input type="text" id="shopping-input-price" class="form-control" placeholder="R$ 0,00" inputmode="decimal" />
+            <label class="form-label" for="shopping-wishlist-price">Preço Visto / Estimado</label>
+            <input type="text" id="shopping-wishlist-price" class="form-control" placeholder="R$ 0,00" inputmode="decimal" />
           </div>
         </div>
 
@@ -2803,8 +2805,8 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="shopping-input-notes">Observações (Tamanho, Voltagem, Cor, Modelo)</label>
-          <textarea id="shopping-input-notes" class="form-control" rows="2" placeholder="Ex: Tamanho M 34-38, voltagem 110V, cor branca..."></textarea>
+          <label class="form-label" for="shopping-wishlist-notes">Observações (Tamanho, Voltagem, Cor, Modelo)</label>
+          <textarea id="shopping-wishlist-notes" class="form-control" rows="2" placeholder="Ex: Tamanho M 34-38, voltagem 110V, cor branca..."></textarea>
         </div>
 
         <!-- Seção de Foto da Peça / Etiqueta -->

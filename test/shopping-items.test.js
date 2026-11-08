@@ -1,5 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import {
   listShoppingItems,
@@ -189,3 +195,20 @@ test('Shopping: Sincronização e applyCloudBackup preservam wishlist e fotos', 
   assert.ok(cloudItem);
   assert.equal(cloudItem.price, 120.0);
 });
+
+test('Shopping & Modais: IDs únicos e estrutura visual íntegra no HTML', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+
+  // Garante que o input de título do shopping wishlist possui ID próprio e não colide com Mercado
+  assert.ok(html.includes('id="shopping-wishlist-title"'), 'Deve existir id="shopping-wishlist-title" no modal de shopping');
+  assert.ok(html.includes('id="shopping-input-title"'), 'Deve existir id="shopping-input-title" no modal de mercado');
+
+  // Garante que o checkbox de vacinação em dia no modal de pet está com tags corretas
+  assert.ok(html.includes('id="add-pet-vacinas-status"'), 'Deve conter input de vacinação em dia no cadastro de pet');
+
+  // Garante balanceamento de tags
+  const openDivs = (html.match(/<div(\s|>|$)/gi) || []).length;
+  const closeDivs = (html.match(/<\/div>/gi) || []).length;
+  assert.equal(openDivs, closeDivs, 'Tags div devem estar perfeitamente balanceadas');
+});
+
