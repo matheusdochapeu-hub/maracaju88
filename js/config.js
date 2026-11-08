@@ -1,10 +1,10 @@
-// ============================================================
-//  MARACAJU - CONFIGURAÇÃO E DADOS INICIAIS
+﻿// ============================================================
+//  MARACAJU - CONFIGURAÃ‡ÃƒO E DADOS INICIAIS
 // ============================================================
 
 export const APP_CONFIG = {
   appName: "Maracaju",
-  version: "2.5.7",
+  version: "2.5.9",
   storageKey: "MARACAJU_STATE_v1",
   legacyStorageKeys: ["MARACAJU88_STATE_v1"],
   deviceStorageKey: "MARACAJU_DEVICE_v1",
@@ -17,48 +17,48 @@ export const AUTHORIZED_USERS_LIST = [
     name: "Matheus",
     email: "matheusdochapeu@gmail.com",
     aliases: ["matheusdochpaeu@gmail.com"],
-    avatarEmoji: "👨‍💻"
+    avatarEmoji: "ðŸ‘¨â€ðŸ’»"
   },
   {
     id: "scarlet",
     name: "Scarlet",
     email: "scarletsantos7@gmail.com",
     aliases: [],
-    avatarEmoji: "👩‍💼"
+    avatarEmoji: "ðŸ‘©â€ðŸ’¼"
   }
 ];
 
 export const DEFAULT_USERS = {
-  user1: { id: "matheus", name: "Matheus", email: "matheusdochapeu@gmail.com", avatarEmoji: "👨‍💻" },
-  user2: { id: "scarlet", name: "Scarlet", email: "scarletsantos7@gmail.com", avatarEmoji: "👩‍💼" }
+  user1: { id: "matheus", name: "Matheus", email: "matheusdochapeu@gmail.com", avatarEmoji: "ðŸ‘¨â€ðŸ’»" },
+  user2: { id: "scarlet", name: "Scarlet", email: "scarletsantos7@gmail.com", avatarEmoji: "ðŸ‘©â€ðŸ’¼" }
 };
 
 export const FREQUENCIES = [
-  { id: "diaria", label: "Diárias", single: "Diária", icon: "☀️", period: "hoje" },
-  { id: "semanal", label: "Semanais", single: "Semanal", icon: "📅", period: "esta semana" },
-  { id: "mensal", label: "Mensais", single: "Mensal", icon: "🗓️", period: "este mês" },
-  { id: "anual", label: "Anuais", single: "Anual", icon: "🎯", period: "este ano" }
+  { id: "diaria", label: "DiÃ¡rias", single: "DiÃ¡ria", icon: "â˜€ï¸", period: "hoje" },
+  { id: "semanal", label: "Semanais", single: "Semanal", icon: "ðŸ“…", period: "esta semana" },
+  { id: "mensal", label: "Mensais", single: "Mensal", icon: "ðŸ—“ï¸", period: "este mÃªs" },
+  { id: "anual", label: "Anuais", single: "Anual", icon: "ðŸŽ¯", period: "este ano" }
 ];
 
-// Cômodos padrão oficiais da casa
+// CÃ´modos padrÃ£o oficiais da casa
 export const ROOMS = [
-  { id: "suite", label: "Suite", icon: "🛏️" },
-  { id: "corredor", label: "Corredor", icon: "🚪" },
-  { id: "banheiro_azul", label: "Banheiro Azul", icon: "🚿" },
-  { id: "banheiro_rosa", label: "Banheiro Rosa", icon: "🧼" },
-  { id: "cozinha", label: "Cozinha", icon: "🍳" },
-  { id: "lavanderia", label: "Lavanderia", icon: "🧺" },
-  { id: "quintal", label: "Quintal", icon: "🌿" },
-  { id: "sala", label: "Sala", icon: "🛋️" },
-  { id: "escritorio", label: "Escritório", icon: "💻" },
-  { id: "alpendre", label: "Alpendre", icon: "🏡" },
-  { id: "area_externa_garagem", label: "Área Externa - Garagem", icon: "🚗" }
+  { id: "suite", label: "Suite", icon: "ðŸ›ï¸" },
+  { id: "corredor", label: "Corredor", icon: "ðŸšª" },
+  { id: "banheiro_azul", label: "Banheiro Azul", icon: "ðŸš¿" },
+  { id: "banheiro_rosa", label: "Banheiro Rosa", icon: "ðŸ§¼" },
+  { id: "cozinha", label: "Cozinha", icon: "ðŸ³" },
+  { id: "lavanderia", label: "Lavanderia", icon: "ðŸ§º" },
+  { id: "quintal", label: "Quintal", icon: "ðŸŒ¿" },
+  { id: "sala", label: "Sala", icon: "ðŸ›‹ï¸" },
+  { id: "escritorio", label: "EscritÃ³rio", icon: "ðŸ’»" },
+  { id: "alpendre", label: "Alpendre", icon: "ðŸ¡" },
+  { id: "area_externa_garagem", label: "Ãrea Externa - Garagem", icon: "ðŸš—" }
 ];
 
 export const EFFORT_LEVELS = {
-  leve: { label: "Leve", icon: "⚡" },
-  media: { label: "Média", icon: "⚡⚡" },
-  pesada: { label: "Pesada", icon: "⚡⚡⚡" }
+  leve: { label: "Leve", icon: "âš¡" },
+  media: { label: "MÃ©dia", icon: "âš¡âš¡" },
+  pesada: { label: "Pesada", icon: "âš¡âš¡âš¡" }
 };
 
 export const LEVELS = [];
@@ -66,12 +66,12 @@ export const LEVELS = [];
 export const BADGES = [];
 
 export const CARRO_CATEGORIES = [
-  { id: "oleo_revisao", label: "Revisão & Óleo", icon: "🛢️" },
-  { id: "mecanica", label: "Mecânica Geral", icon: "🔧" },
-  { id: "pneus_freios", label: "Pneus & Freios", icon: "🛞" },
-  { id: "estetica", label: "Estética & Lavagem", icon: "✨" },
-  { id: "eletrica", label: "Elétrica & Acessórios", icon: "🔌" },
-  { id: "outros", label: "Outros", icon: "📦" }
+  { id: "oleo_revisao", label: "RevisÃ£o & Ã“leo", icon: "ðŸ›¢ï¸" },
+  { id: "mecanica", label: "MecÃ¢nica Geral", icon: "ðŸ”§" },
+  { id: "pneus_freios", label: "Pneus & Freios", icon: "ðŸ›ž" },
+  { id: "estetica", label: "EstÃ©tica & Lavagem", icon: "âœ¨" },
+  { id: "eletrica", label: "ElÃ©trica & AcessÃ³rios", icon: "ðŸ”Œ" },
+  { id: "outros", label: "Outros", icon: "ðŸ“¦" }
 ];
 
 export const ASSIGNEES = [
@@ -81,74 +81,74 @@ export const ASSIGNEES = [
 ];
 
 export const CARRO_STATUSES = [
-  { id: "pendente", label: "Pendente", icon: "⏳" },
-  { id: "orcamento", label: "Em orçamento", icon: "📐" },
-  { id: "andamento", label: "Em andamento", icon: "🛠️" },
-  { id: "concluido", label: "Concluído", icon: "✅" }
+  { id: "pendente", label: "Pendente", icon: "â³" },
+  { id: "orcamento", label: "Em orÃ§amento", icon: "ðŸ“" },
+  { id: "andamento", label: "Em andamento", icon: "ðŸ› ï¸" },
+  { id: "concluido", label: "ConcluÃ­do", icon: "âœ…" }
 ];
 
 export const REFORMA_STATUSES = [
-  { id: "ideia", label: "Ideia", icon: "💡" },
-  { id: "orcamento", label: "Em orçamento", icon: "📐" },
-  { id: "andamento", label: "Em andamento", icon: "🛠️" },
-  { id: "concluido", label: "Concluído", icon: "✅" }
+  { id: "ideia", label: "Ideia", icon: "ðŸ’¡" },
+  { id: "orcamento", label: "Em orÃ§amento", icon: "ðŸ“" },
+  { id: "andamento", label: "Em andamento", icon: "ðŸ› ï¸" },
+  { id: "concluido", label: "ConcluÃ­do", icon: "âœ…" }
 ];
 
 export const SONHO_STATUSES = [
-  { id: "sonhando", label: "Sonhando", icon: "💭" },
-  { id: "planejando", label: "Planejando", icon: "🗺️" },
-  { id: "poupando", label: "Poupando", icon: "🐷" },
-  { id: "realizado", label: "Realizado", icon: "🎉" }
+  { id: "sonhando", label: "Sonhando", icon: "ðŸ’­" },
+  { id: "planejando", label: "Planejando", icon: "ðŸ—ºï¸" },
+  { id: "poupando", label: "Poupando", icon: "ðŸ·" },
+  { id: "realizado", label: "Realizado", icon: "ðŸŽ‰" }
 ];
 
 export const PRIORITIES = [
   { id: "baixa", label: "Baixa" },
-  { id: "media", label: "Média" },
+  { id: "media", label: "MÃ©dia" },
   { id: "alta", label: "Alta" },
   { id: "urgente", label: "Urgente" }
 ];
 
 export const INITIAL_TASKS = [
-  // --- TAREFAS DIÁRIAS ---
-  { id: "task_1", title: "Lavar e guardar a louça", room: "cozinha", assignedTo: "ambos", frequency: "diaria", notes: "Deixar a pia seca e higienizada" },
-  { id: "task_2", title: "Limpar o fogão e bancada", room: "cozinha", assignedTo: "ambos", frequency: "diaria", notes: "" },
-  { id: "task_3", title: "Tirar o lixo orgânico da pia", room: "cozinha", assignedTo: "ambos", frequency: "diaria", notes: "" },
+  // --- TAREFAS DIÃRIAS ---
+  { id: "task_1", title: "Lavar e guardar a louÃ§a", room: "cozinha", assignedTo: "ambos", frequency: "diaria", notes: "Deixar a pia seca e higienizada" },
+  { id: "task_2", title: "Limpar o fogÃ£o e bancada", room: "cozinha", assignedTo: "ambos", frequency: "diaria", notes: "" },
+  { id: "task_3", title: "Tirar o lixo orgÃ¢nico da pia", room: "cozinha", assignedTo: "ambos", frequency: "diaria", notes: "" },
   { id: "task_4", title: "Organizar almofadas e mantas da sala", room: "sala", assignedTo: "ambos", frequency: "diaria", notes: "" },
-  { id: "task_5", title: "Varrer ou aspirar o chão da sala/cozinha", room: "sala", assignedTo: "ambos", frequency: "diaria", notes: "" },
+  { id: "task_5", title: "Varrer ou aspirar o chÃ£o da sala/cozinha", room: "sala", assignedTo: "ambos", frequency: "diaria", notes: "" },
   { id: "task_6", title: "Arrumar a cama ao levantar", room: "quartos", assignedTo: "ambos", frequency: "diaria", notes: "" },
   { id: "task_7", title: "Guardar roupas soltas e sapatos", room: "quartos", assignedTo: "ambos", frequency: "diaria", notes: "" },
   { id: "task_8", title: "Higienizar a pia e espelho do banheiro", room: "banheiros", assignedTo: "ambos", frequency: "diaria", notes: "" },
   { id: "task_9", title: "Tirar o lixo do banheiro", room: "banheiros", assignedTo: "ambos", frequency: "diaria", notes: "" },
 
   // --- TAREFAS SEMANAIS ---
-  { id: "task_10", title: "Lavar o box, chão e vaso sanitário", room: "banheiros", assignedTo: "ambos", frequency: "semanal", notes: "Limpeza profunda semanal" },
-  { id: "task_11", title: "Trocar roupas de cama e toalhas de banho", room: "quartos", assignedTo: "ambos", frequency: "semanal", notes: "Lençóis, fronhas e toalhas limpas" },
-  { id: "task_12", title: "Passar pano úmido na casa inteira", room: "cuidados", assignedTo: "ambos", frequency: "semanal", notes: "" },
+  { id: "task_10", title: "Lavar o box, chÃ£o e vaso sanitÃ¡rio", room: "banheiros", assignedTo: "ambos", frequency: "semanal", notes: "Limpeza profunda semanal" },
+  { id: "task_11", title: "Trocar roupas de cama e toalhas de banho", room: "quartos", assignedTo: "ambos", frequency: "semanal", notes: "LenÃ§Ã³is, fronhas e toalhas limpas" },
+  { id: "task_12", title: "Passar pano Ãºmido na casa inteira", room: "cuidados", assignedTo: "ambos", frequency: "semanal", notes: "" },
   { id: "task_13", title: "Lavar, estender e dobrar roupas da semana", room: "lavanderia", assignedTo: "ambos", frequency: "semanal", notes: "Separar roupas claras e escuras" },
-  { id: "task_14", title: "Tirar pó de móveis, prateleiras e rodapés", room: "sala", assignedTo: "ambos", frequency: "semanal", notes: "" },
+  { id: "task_14", title: "Tirar pÃ³ de mÃ³veis, prateleiras e rodapÃ©s", room: "sala", assignedTo: "ambos", frequency: "semanal", notes: "" },
   { id: "task_15", title: "Regar e adubar as plantas", room: "cuidados", assignedTo: "ambos", frequency: "semanal", notes: "Conferir umidade do solo" },
-  { id: "task_16", title: "Colocar lixo reciclável para coleta", room: "cuidados", assignedTo: "ambos", frequency: "semanal", notes: "" },
+  { id: "task_16", title: "Colocar lixo reciclÃ¡vel para coleta", room: "cuidados", assignedTo: "ambos", frequency: "semanal", notes: "" },
 
   // --- TAREFAS MENSAIS ---
   { id: "task_17", title: "Limpeza completa da geladeira", room: "cozinha", assignedTo: "ambos", frequency: "mensal", notes: "Descartar vencidos e higienizar gavetas" },
   { id: "task_18", title: "Limpar forno, micro-ondas e airfryer", room: "cozinha", assignedTo: "ambos", frequency: "mensal", notes: "" },
   { id: "task_19", title: "Limpar vidros das janelas e portas", room: "sala", assignedTo: "ambos", frequency: "mensal", notes: "" },
-  { id: "task_20", title: "Lavar tapetes e panos de chão", room: "lavanderia", assignedTo: "ambos", frequency: "mensal", notes: "" },
-  { id: "task_21", title: "Autolimpeza da máquina de lavar", room: "lavanderia", assignedTo: "ambos", frequency: "mensal", notes: "Ciclo quente com vinagre" },
-  { id: "task_22", title: "Organizar armários de mantimentos", room: "cozinha", assignedTo: "ambos", frequency: "mensal", notes: "" },
+  { id: "task_20", title: "Lavar tapetes e panos de chÃ£o", room: "lavanderia", assignedTo: "ambos", frequency: "mensal", notes: "" },
+  { id: "task_21", title: "Autolimpeza da mÃ¡quina de lavar", room: "lavanderia", assignedTo: "ambos", frequency: "mensal", notes: "Ciclo quente com vinagre" },
+  { id: "task_22", title: "Organizar armÃ¡rios de mantimentos", room: "cozinha", assignedTo: "ambos", frequency: "mensal", notes: "" },
 
   // --- TAREFAS ANUAIS ---
   { id: "task_23", title: "Lavar cortinas e persianas", room: "sala", assignedTo: "ambos", frequency: "anual", notes: "" },
-  { id: "task_24", title: "Higienização do sofá e colchões", room: "sala", assignedTo: "ambos", frequency: "anual", notes: "" },
-  { id: "task_25", title: "Limpar calhas, ralos e telhado", room: "cuidados", assignedTo: "ambos", frequency: "anual", notes: "Antes do período de chuvas" },
-  { id: "task_26", title: "Limpar caixa d'água e trocar filtros", room: "cuidados", assignedTo: "ambos", frequency: "anual", notes: "" },
-  { id: "task_27", title: "Dedetização preventiva", room: "cuidados", assignedTo: "ambos", frequency: "anual", notes: "" }
+  { id: "task_24", title: "HigienizaÃ§Ã£o do sofÃ¡ e colchÃµes", room: "sala", assignedTo: "ambos", frequency: "anual", notes: "" },
+  { id: "task_25", title: "Limpar calhas, ralos e telhado", room: "cuidados", assignedTo: "ambos", frequency: "anual", notes: "Antes do perÃ­odo de chuvas" },
+  { id: "task_26", title: "Limpar caixa d'Ã¡gua e trocar filtros", room: "cuidados", assignedTo: "ambos", frequency: "anual", notes: "" },
+  { id: "task_27", title: "DedetizaÃ§Ã£o preventiva", room: "cuidados", assignedTo: "ambos", frequency: "anual", notes: "" }
 ];
 
 export const INITIAL_CARRO = [
   {
     id: "car_1",
-    title: "Troca de óleo 5W30 e filtros",
+    title: "Troca de Ã³leo 5W30 e filtros",
     category: "oleo_revisao",
     status: "andamento",
     priority: "alta",
@@ -156,11 +156,11 @@ export const INITIAL_CARRO = [
     actualCost: 320.5,
     targetKm: 80000,
     targetDate: "2026-11-20",
-    notes: "Óleo sintético 5W30, filtro de óleo, combustível, ar e cabine.",
+    notes: "Ã“leo sintÃ©tico 5W30, filtro de Ã³leo, combustÃ­vel, ar e cabine.",
     photos: [],
-    links: [{ id: "lnk_1", title: "Kit óleo no Mercado Livre", url: "https://www.mercadolivre.com.br" }],
+    links: [{ id: "lnk_1", title: "Kit Ã³leo no Mercado Livre", url: "https://www.mercadolivre.com.br" }],
     checklist: [
-      { id: "chk_c1", title: "Comprar kit de óleo e filtros", done: true },
+      { id: "chk_c1", title: "Comprar kit de Ã³leo e filtros", done: true },
       { id: "chk_c2", title: "Agendar troca na oficina", done: false }
     ],
     createdAt: "2026-11-01T20:00:00.000Z"
@@ -170,7 +170,7 @@ export const INITIAL_CARRO = [
 export const INITIAL_REFORMAS = [
   {
     id: "ref_1",
-    title: "Iluminação aconchegante da sala",
+    title: "IluminaÃ§Ã£o aconchegante da sala",
     room: "sala",
     priority: "alta",
     status: "ideia",
@@ -190,13 +190,13 @@ export const INITIAL_REFORMAS = [
 export const INITIAL_SONHOS = [
   {
     id: "sonho_1",
-    title: "Viagem para a Serra Gaúcha",
+    title: "Viagem para a Serra GaÃºcha",
     category: "viagem",
     status: "planejando",
     targetAmount: 5000,
     savedAmount: 0,
     targetDate: "2027-07-01",
-    description: "Fondue, vinícolas e clima de inverno juntos.",
+    description: "Fondue, vinÃ­colas e clima de inverno juntos.",
     milestones: [
       { id: "m_1", title: "Definir a semana em julho", done: true },
       { id: "m_2", title: "Monitorar passagens", done: false }
@@ -218,7 +218,7 @@ export const INITIAL_PETS = [
     pesoKg: 14.5,
     vacinacaoEmDia: true,
     fotos: [],
-    observacoes: "Cachorrinha amada da família. Banhos regulares e vacinas em dia.",
+    observacoes: "Cachorrinha amada da famÃ­lia. Banhos regulares e vacinas em dia.",
     racao: [
       {
         id: "racao_1",
@@ -239,31 +239,31 @@ export const INITIAL_PETS = [
         tipo: "petshop",
         local: "Pet Shop Bicho Mimado",
         valor: 75.00,
-        notas: "Banho completo e tosa higiênica"
+        notas: "Banho completo e tosa higiÃªnica"
       }
     ],
     vacinas: [
       {
         id: "vac_1",
-        vacina: "V10 (Décupla)",
+        vacina: "V10 (DÃ©cupla)",
         dataAplicacao: "2026-05-10",
         dataProximaDose: "2027-05-10",
         lote: "BR-9842",
-        clinica: "Clínica Veterinária Central"
+        clinica: "ClÃ­nica VeterinÃ¡ria Central"
       },
       {
         id: "vac_2",
-        vacina: "Antirrábica",
+        vacina: "AntirrÃ¡bica",
         dataAplicacao: "2026-05-10",
         dataProximaDose: "2027-05-10",
         lote: "AR-2204",
-        clinica: "Clínica Veterinária Central"
+        clinica: "ClÃ­nica VeterinÃ¡ria Central"
       }
     ],
     vermifugos: [
       {
         id: "verm_1",
-        nome: "Vermífugo Amplo Espectro / Ivermectina",
+        nome: "VermÃ­fugo Amplo Espectro / Ivermectina",
         dataAplicacao: "2026-08-15",
         dataProximaDose: "2027-02-15",
         pesoAnimalKg: 14.5,
@@ -276,9 +276,9 @@ export const INITIAL_PETS = [
         id: "ex_1",
         data: "2026-05-10",
         tipo: "Consulta de Rotina",
-        clinica: "Clínica Veterinária Central",
-        veterinario: "Dr. André",
-        descricao: "Check-up anual, ausculta cardíaca normal, dentes limpos.",
+        clinica: "ClÃ­nica VeterinÃ¡ria Central",
+        veterinario: "Dr. AndrÃ©",
+        descricao: "Check-up anual, ausculta cardÃ­aca normal, dentes limpos.",
         pendencias: "",
         fotos: []
       }

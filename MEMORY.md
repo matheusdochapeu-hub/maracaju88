@@ -4,6 +4,35 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-08 13:20] - Separação Câmera vs Galeria e Eliminação de Sobreposições Visuais (v2.5.9)
+
+### 🔍 Problema Identificado & Causa Raiz
+1. **Comportamento Câmera vs Galeria:**
+   - O usuário solicitou que ao clicar em "Câmera" abra diretamente a câmera e ao clicar em "Galeria" abra estritamente a galeria/seletor de fotos.
+   - **Causa Raiz:** Em alguns modais (como QR Complementar), só existia botão de câmera com `capture="environment"`, sem opção de galeria. Em outros, `<input type="file">` estava aninhado dentro de `<label>`, causando disparos duplos ou acionamento do seletor genérico do Android/iOS.
+2. **Sobreposição da Barra de Navegação Superior (Ajustes):**
+   - O botão `Ajustes` quebrava para a segunda linha sobrepondo o cabeçalho/conteúdo da tela em viewports médios ou ao redimensionar.
+   - **Causa Raiz:** A barra `.bottom-nav` no desktop não possuía `flex-wrap: nowrap !important;` e `overflow-x: auto !important;`, permitindo quebra acidental.
+3. **Colisão dos Botões Flutuantes (FABs) no Mercado:**
+   - Os botões `+ Novo Item na Lista de Mercado` e `+ Lançar Compra` colidiam e ficavam sobrepostos.
+   - **Causa Raiz:** `.fab-btn` possuía coordenadas fixas herdadas (`bottom`) que não eram neutralizadas com `position: relative !important;` e `bottom: auto !important;` dentro da pilha `.fab-stack`.
+
+### 🛠️ Correções Implementadas
+1. **Padrão Nativo Câmera vs Galeria (`index.html`, `js/app.js`):**
+   - Câmera: Botões dedicados com `data-pick-file="<inputId>"` disparando `<input type="file" accept="image/*" capture="environment">`. O SO móvel (Android e iOS) abre imediatamente a câmera de hardware.
+   - Galeria: Botões dedicados com `data-pick-file="<inputId>"` disparando `<input type="file" accept="image/*">` (estritamente SEM o atributo `capture`). O SO móvel abre diretamente a galeria/álbum de fotos.
+   - Aplicado de forma homogênea em: Compra Manual, Leitor OCR de Cupom, QR Code Complementar (adicionado botão de galeria), Cadastro de Pet, Edição de Pet, Exames Veterinários do Pet, Itens/Acessórios do Pet e Shopping.
+   - Limpeza automática de `inputEl.value = ''` antes de cada acionamento para garantir que a mesma foto possa ser re-selecionada.
+2. **Correção Visual da Barra de Navegação (`css/base.css`):**
+   - `.bottom-nav` com `display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: hidden !important; white-space: nowrap !important;`. Os 8 botões navegam em linha única e com rolagem horizontal suave quando necessário.
+3. **Correção dos Botões Flutuantes (`css/components.css`):**
+   - `.fab-stack` com `gap: 0.75rem !important;` e `.fab-stack .fab-btn` com `position: relative !important; top: auto; bottom: auto; right: auto; left: auto; margin: 0 !important;`. Espaçamento vertical limpo e sem sobreposição.
+4. **Cache PWA e Testes:**
+   - Atualizado para **`maracaju-v2.5.9`** em `sw.js`, `js/config.js` e `index.html`.
+   - Novo teste `test/camera-gallery-controls.test.js` adicionado. Suíte total de **98 testes aprovada com 100% de sucesso**.
+
+---
+
 ## [2026-11-08 02:30] - Separação por Ciclos de Benefícios (VA / VR) e Ajuste Visual de UX (v2.5.8)
 
 ### 🔍 Problema Identificado & Regra de Negócio

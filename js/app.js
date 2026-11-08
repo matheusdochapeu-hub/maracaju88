@@ -3505,7 +3505,9 @@ function initQrCodeScanner() {
   const universalTextarea = document.getElementById('qr-universal-input');
   const btnProcessUniversal = document.getElementById('btn-qr-process-universal');
   const btnComplementOcr = document.getElementById('btn-qr-complement-ocr');
+  const qrComplementBtns = document.getElementById('qr-complement-ocr-btns');
   const inputQrComplementOcr = document.getElementById('input-qr-complement-ocr');
+  const inputQrComplementGallery = document.getElementById('input-qr-complement-gallery');
 
   let activeStream = null;
   let scanInterval = null;
@@ -3858,8 +3860,10 @@ function initQrCodeScanner() {
       }
     }
 
-    if (btnComplementOcr) {
-      const hasItems = pendingPurchase && Array.isArray(pendingPurchase.items) && pendingPurchase.items.length > 0;
+    const hasItems = pendingPurchase && Array.isArray(pendingPurchase.items) && pendingPurchase.items.length > 0;
+    if (qrComplementBtns) {
+      qrComplementBtns.style.display = hasItems ? 'none' : 'flex';
+    } else if (btnComplementOcr) {
       btnComplementOcr.style.display = hasItems ? 'none' : 'inline-flex';
     }
 
@@ -4066,44 +4070,50 @@ function initQrCodeScanner() {
     }
   });
 
-  // 4b. Input de Foto Complementar de Itens (OCR sobre QR Code já lido)
-  if (inputQrComplementOcr) {
-    inputQrComplementOcr.addEventListener('change', async (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
+  // 4b. Input de Foto Complementar de Itens (OCR sobre QR Code já lido - Câmera e Galeria)
+  async function handleComplementOcrFile(file) {
+    if (!file) return;
+    if (statusMsg) statusMsg.textContent = '⏳ Lendo produtos e detalhes do cupom por OCR para complementar a nota...';
 
-      if (statusMsg) statusMsg.textContent = '⏳ Lendo produtos e detalhes do cupom por OCR para complementar a nota...';
+    try {
+      const Tesseract = await loadTesseractOcr();
+      const worker = await Tesseract.createWorker('por');
+      const ret = await worker.recognize(file);
+      await worker.terminate();
 
-      try {
-        const Tesseract = await loadTesseractOcr();
-        const worker = await Tesseract.createWorker('por');
-        const ret = await worker.recognize(file);
-        await worker.terminate();
+      const ocrText = (ret && ret.data && ret.data.text) ? ret.data.text : '';
+      if (ocrText && ocrText.trim().length >= 10) {
+        const parsedDanfe = parseNfceDanfeText(ocrText);
+        if (parsedDanfe && (parsedDanfe.items.length > 0 || parsedDanfe.total > 0 || parsedDanfe.marketName)) {
+          pendingPurchase = mergeNfceComplementary(pendingPurchase || {}, parsedDanfe);
+          renderPreviewUI();
+          triggerConfetti();
+          playTaskCompleteSound(state.settings.soundEnabled);
 
-        const ocrText = (ret && ret.data && ret.data.text) ? ret.data.text : '';
-        if (ocrText && ocrText.trim().length >= 10) {
-          const parsedDanfe = parseNfceDanfeText(ocrText);
-          if (parsedDanfe && (parsedDanfe.items.length > 0 || parsedDanfe.total > 0 || parsedDanfe.marketName)) {
-            pendingPurchase = mergeNfceComplementary(pendingPurchase || {}, parsedDanfe);
-            renderPreviewUI();
-            triggerConfetti();
-            playTaskCompleteSound(state.settings.soundEnabled);
-
-            const count = pendingPurchase.items.length;
-            showToast(`🎉 ${count} itens complementados com sucesso via OCR!`, 'success', 4000);
-            if (statusMsg) statusMsg.textContent = `🎉 Nota complementada! ${count} produtos prontos para registrar.`;
-            e.target.value = '';
-            return;
-          }
+          const count = pendingPurchase.items.length;
+          showToast(`🎉 ${count} itens complementados com sucesso via OCR!`, 'success', 4000);
+          if (statusMsg) statusMsg.textContent = `🎉 Nota complementada! ${count} produtos prontos para registrar.`;
+          return;
         }
-        showToast('Nenhum produto identificado no texto desta foto.', 'warning');
-      } catch (err) {
-        console.warn('Erro ao complementar itens via OCR:', err);
-        showToast('Erro ao ler itens do cupom fiscal.', 'error');
       }
-      e.target.value = '';
-    });
+      showToast('Nenhum produto identificado no texto desta foto.', 'warning');
+    } catch (err) {
+      console.warn('Erro ao complementar itens via OCR:', err);
+      showToast('Erro ao ler itens do cupom fiscal.', 'error');
+    }
   }
+
+  [inputQrComplementOcr, inputQrComplementGallery].forEach(input => {
+    if (input) {
+      input.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          await handleComplementOcrFile(file);
+        }
+        e.target.value = '';
+      });
+    }
+  });
 
   // 5. Botões de Colar da Área de Transferência
   [btnClipboard, btnPasteShortcutCam].forEach(btn => {
@@ -4828,6 +4838,22 @@ function initPetsModule() {
     if (feedback) feedback.textContent = '✓ Nova foto pronta para salvar!';
   });
 
+  // Upload de Foto de Exame / Consulta do Pet (Câmera & Galeria)
+  let tempPetExamePhotoDataUrl = null;
+  setupPetPhotoUpload('pet-exame-camera', 'pet-exame-gallery', (dataUrl) => {
+    tempPetExamePhotoDataUrl = dataUrl;
+    const feedback = document.getElementById('pet-exame-photo-feedback');
+    if (feedback) feedback.textContent = '✓ Foto do laudo/receita anexada!';
+  });
+
+  // Upload de Foto de Item / Acessório do Pet (Câmera & Galeria)
+  let tempPetItemPhotoDataUrl = null;
+  setupPetPhotoUpload('pet-item-camera', 'pet-item-gallery', (dataUrl) => {
+    tempPetItemPhotoDataUrl = dataUrl;
+    const feedback = document.getElementById('pet-item-photo-feedback');
+    if (feedback) feedback.textContent = '✓ Foto do item anexada!';
+  });
+
   // Excluir Pet
   document.addEventListener('click', (e) => {
     const delBtn = e.target.closest('[data-delete-pet]');
@@ -5292,8 +5318,12 @@ function initPetsModule() {
         clinica,
         veterinario,
         descricao,
-        pendencias
+        pendencias,
+        foto: tempPetExamePhotoDataUrl || ''
       });
+      tempPetExamePhotoDataUrl = null;
+      const exameFeedback = document.getElementById('pet-exame-photo-feedback');
+      if (exameFeedback) exameFeedback.textContent = '';
 
       saveState(state);
       triggerAutoSyncIfEnabled();
@@ -5331,8 +5361,12 @@ function initPetsModule() {
         dataCompra,
         valor,
         loja,
-        observacoes
+        observacoes,
+        foto: tempPetItemPhotoDataUrl || ''
       });
+      tempPetItemPhotoDataUrl = null;
+      const itemFeedback = document.getElementById('pet-item-photo-feedback');
+      if (itemFeedback) itemFeedback.textContent = '';
 
       saveState(state);
       triggerAutoSyncIfEnabled();
@@ -5478,6 +5512,19 @@ let isHandlingPopstate = false;
 
 function initModals() {
   document.addEventListener('click', (e) => {
+    // Gatilho universal Câmera / Galeria
+    const pickBtn = e.target.closest('[data-pick-file]');
+    if (pickBtn) {
+      e.preventDefault();
+      const inputId = pickBtn.getAttribute('data-pick-file');
+      const inputEl = document.getElementById(inputId);
+      if (inputEl) {
+        inputEl.value = '';
+        inputEl.click();
+      }
+      return;
+    }
+
     const openBtn = e.target.closest('[data-open-modal]');
     if (openBtn) {
       e.preventDefault();

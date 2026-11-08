@@ -1809,21 +1809,21 @@ input[type="file"].form-control::file-selector-button:hover {
 
 /* Grupo de botões flutuantes empilhados verticalmente */
 .fab-stack {
-  position: fixed;
-  right: max(1.25rem, calc((100vw - var(--max-content-width)) / 2 + 1.25rem));
-  bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 16px) + 0.85rem);
-  z-index: 850;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.55rem;
-  pointer-events: none;
+  position: fixed !important;
+  right: max(1.25rem, calc((100vw - var(--max-content-width)) / 2 + 1.25rem)) !important;
+  bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 16px) + 0.85rem) !important;
+  z-index: 850 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  gap: 0.75rem !important;
+  pointer-events: none !important;
 }
 
 @media (min-width: 768px) {
   .fab-stack {
-    bottom: 2rem;
-    right: max(2rem, calc((100vw - var(--max-content-width)) / 2 + 1.5rem));
+    bottom: 2rem !important;
+    right: max(2rem, calc((100vw - var(--max-content-width)) / 2 + 1.5rem)) !important;
   }
 
   .fab-btn {
@@ -1833,8 +1833,14 @@ input[type="file"].form-control::file-selector-button:hover {
 }
 
 .fab-stack .fab-btn {
-  position: static;
-  pointer-events: auto;
+  position: relative !important;
+  top: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  margin: 0 !important;
+  pointer-events: auto !important;
+  display: inline-flex !important;
   padding: 0.72rem 1.2rem;
   font-size: 0.875rem;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
