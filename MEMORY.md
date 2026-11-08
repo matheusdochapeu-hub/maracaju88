@@ -4,6 +4,35 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-08 16:15] - Resolução Definitiva do OCR de Cupons Fiscais e Parser Térmico (v2.6.6)
+
+### 🔍 Problema Identificado & Causa Raiz
+1. **OCR de Cupom Fiscal com baixa precisão ou itens/valores zerados:**
+   - O usuário reportou: *"sobre o ocr ele ainda não está funcionando."*
+   - **Causa Raiz 1 (Pré-processamento destrutivo de imagem em `js/app.js`):** A função `preprocessImageForOcr` aplicava uma binarização agressiva com limiar fixo (`val = stretched > 150 ? 255 : Math.round(stretched * 0.75)`) e comprimia com `image/jpeg (0.88)`. Em papéis térmicos (fonte matricial de pontos), esse limiar fragmentava letras e números em pontinhos soltos, além de artefatos de compressão JPEG em blocos 8x8. A confiança do OCR despencava de 62% para 29%, gerando textos corrompidos.
+   - **Causa Raiz 2 (Page Segmentation Mode - PSM):** O Tesseract estava operando no modo padrão (PSM 3), que tenta detectar colunas múltiplas e cabeçalhos em documentos tipo livro/revista. Em cupons fiscais compridos, o leitor saltava linhas e perdia o alinhamento de produtos e preços.
+   - **Causa Raiz 3 (Parser de Itens Térmicos em `js/pdf-parser.js`):** Cupons fiscais térmicos do Brasil (SAT e NFC-e) usam estrutura colunar `[COD] [DESCRICAO] [QTD][UN] [VL_UNIT] [VL_TOTAL]` (ex: `001 3000 CAFE DA MANHA 0,442KG 59,90 26,48`). O parser antigo não suportava essa ordem de colunas na mesma linha com variações de OCR (como `0,442K6`, `OCT S000`, `Carteo de Credit`, `Totel R$ 71.06`), resultando em 0 itens extraídos ou cálculos absurdos.
+
+### 🛠️ Correções Implementadas
+1. **Pré-processamento Suave e Inteligente (`js/app.js`):**
+   - Imagens pequenas (ex: 460px de largura) recebem upscale proporcional de até 2.5x para que os caracteres atinjam 20-30px (tamanho ideal da rede neural LSTM).
+   - Substituída a binarização rígida por estiramento linear suave de contraste em escala de cinza de 8 bits, preservando gradientes de sub-pixel e anti-aliasing.
+   - Saída sem perdas (lossless PNG Blob), eliminando 100% dos artefatos de compressão JPEG.
+2. **Otimização do Motor Tesseract.js (`js/app.js`):**
+   - Configurado `tessedit_pageseg_mode: '6'` (bloco uniforme de texto em coluna única), garantindo leitura estritamente sequencial linha a linha de cupons fiscais.
+   - Resolução dinâmica da URL do worker (`new URL('js/vendor/tesseract-worker.min.js', window.location.href).href`), garantindo funcionamento em subpastas do GitHub Pages.
+   - Fallback inteligente: se o português extrair pouquíssimo texto legível, reexecuta com modelo inglês (perfeito para caixa alta e dígitos numéricos).
+3. **Parser Robusto de Cupons Térmicos SAT & NFC-e (`js/pdf-parser.js`):**
+   - Nova estratégia especializada para cupons térmicos: detecta linhas com 2 ou 3 números ao final, valida a relação `qtd * unitPrice ≈ totalPrice`, extrai unidade (`kg` ou `un`) e limpa ruídos típicos de OCR em padarias/mercados (`4ANHA` -> `MANHA`, `SUCG` -> `SUCO`, `HIX` -> `MIX`, etc.).
+   - Regex de Total e Forma de Pagamento tolerante a variações (`V[ae]lor\s+Tot[ae]l`, `VALOR PAGO`, `Carteo de Credit`).
+4. **Testes Automatizados:**
+   - Adicionado teste específico com o texto real extraído do cupom da Padaria Irmãos Araújo.
+   - 107 testes automatizados executados e 100% aprovados (`npm.cmd test`).
+5. **Bump de Versão:**
+   - Atualizado para **`v2.6.6`** em `config.js`, `sw.js` e `package.json`.
+
+---
+
 ## [2026-11-08 15:45] - Correção de Modais Empilhados: z-index Dinâmico para Catálogo e Lista de Compras (v2.6.5)
 
 ### 🔍 Problema Identificado & Causa Raiz

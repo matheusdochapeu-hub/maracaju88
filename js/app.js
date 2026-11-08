@@ -3840,8 +3840,7 @@ function initQrCodeScanner() {
   }
 
   // Pré-processamento inteligente de imagem para OCR:
-  // Redimensiona para max dimension 1400px e aplica estiramento de contraste / escala de cinza
-  // Reduz uso de memória de 50MB para ~2MB e acelera o Tesseract em até 10x!
+  // Ajusta a escala para manter caracteres legíveis (20-30px) e aplica estiramento de contraste suave
   async function preprocessImageForOcr(blobOrFile) {
     if (!blobOrFile) return blobOrFile;
     try {
@@ -3855,44 +3854,52 @@ function initQrCodeScanner() {
       img.src = dataUrl;
       await new Promise((res) => { img.onload = res; });
 
-      const maxDim = 1400;
-      let w = img.naturalWidth || img.width;
-      let h = img.naturalHeight || img.height;
-      if (w > maxDim || h > maxDim) {
-        const s = Math.min(maxDim / w, maxDim / h);
-        w = Math.round(w * s);
-        h = Math.round(h * s);
+      const origW = img.naturalWidth || img.width;
+      const origH = img.naturalHeight || img.height;
+
+      // Garante que o texto tenha resolução ideal para OCR:
+      // Se a foto tiver largura menor que 900px, amplia (upscale) para caracteres ficarem com 20-30px
+      // Se for excessivamente grande (> 1600px), redimensiona proporcionalmente
+      let scale = 1.0;
+      if (origW < 900) {
+        scale = Math.min(2.5, 1200 / origW);
+      } else if (origW > 1600) {
+        scale = 1600 / origW;
       }
+
+      const w = Math.round(origW * scale);
+      const h = Math.round(origH * scale);
 
       const canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, w, h);
 
-      // Normalização de contraste para clarear papel térmico e escurecer caracteres
+      // Normalização de contraste em escala de cinza suave (sem limiar binário destrutivo)
       const imgData = ctx.getImageData(0, 0, w, h);
       const d = imgData.data;
       let minLum = 255;
       let maxLum = 0;
-      for (let i = 0; i < d.length; i += 24) {
+      for (let i = 0; i < d.length; i += 16) {
         const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
         if (lum < minLum) minLum = lum;
         if (lum > maxLum) maxLum = lum;
       }
-      const range = Math.max(20, maxLum - minLum);
+      const range = Math.max(25, maxLum - minLum);
       for (let i = 0; i < d.length; i += 4) {
         const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-        const stretched = ((lum - minLum) / range) * 255;
-        // Binarização suave / curva gama para nitidez de caracteres de cupom
-        const val = stretched > 150 ? 255 : Math.round(stretched * 0.75);
+        const val = Math.max(0, Math.min(255, Math.round(((lum - minLum) / range) * 255)));
         d[i] = val;
         d[i + 1] = val;
         d[i + 2] = val;
       }
       ctx.putImageData(imgData, 0, 0);
 
-      const processedBlob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.88));
+      // Retorna Blob PNG sem perdas (lossless) para evitar artefatos de compressão JPEG
+      const processedBlob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
       return processedBlob || blobOrFile;
     } catch (e) {
       console.warn('Falha no pré-processamento de OCR, usando imagem original:', e);
@@ -3935,14 +3942,19 @@ function initQrCodeScanner() {
     });
   }
 
-  // Motor OCR com Tesseract.js ultra-otimizado (1MB fast model, worker local e fallback resiliente)
+  // Motor OCR com Tesseract.js ultra-otimizado (1MB fast model, worker local, PSM 6 e fallback resiliente)
   async function recognizeWithTesseract(imageSource, statusCallback) {
     const Tesseract = await loadTesseractOcr();
     let worker = null;
 
+    let workerUrl = './js/vendor/tesseract-worker.min.js';
+    try {
+      workerUrl = new URL('js/vendor/tesseract-worker.min.js', window.location.href).href;
+    } catch (e) {}
+
     const workerOptions = {
-      workerPath: './js/vendor/tesseract-worker.min.js',
-      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5',
+      workerPath: workerUrl,
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@v5.1.1',
       langPath: 'https://tessdata.projectnaptha.com/4.0.0_fast',
       logger: (m) => {
         if (statusCallback && m && m.status) {
@@ -3958,17 +3970,15 @@ function initQrCodeScanner() {
 
     try {
       worker = await Tesseract.createWorker('por', 1, workerOptions);
+      await worker.setParameters({
+        tessedit_pageseg_mode: '6' // PSM 6: Uniform single column text block
+      });
     } catch (errPor) {
       console.warn('Falha no modelo por do OCR, tentando fallback eng:', errPor);
       try {
-        worker = await Tesseract.createWorker('eng', 1, {
-          ...workerOptions,
-          logger: (m) => {
-            if (statusCallback && m && m.status === 'recognizing text') {
-              const p = m.progress != null ? Math.round(m.progress * 100) : 0;
-              statusCallback(`🔍 Lendo cupom fiscal (${p}%)...`);
-            }
-          }
+        worker = await Tesseract.createWorker('eng', 1, workerOptions);
+        await worker.setParameters({
+          tessedit_pageseg_mode: '6'
         });
       } catch (errEng) {
         try {
@@ -3980,8 +3990,22 @@ function initQrCodeScanner() {
     }
 
     try {
-      const ret = await worker.recognize(imageSource);
-      return (ret && ret.data && ret.data.text) ? ret.data.text : '';
+      let ret = await worker.recognize(imageSource);
+      let text = (ret && ret.data && ret.data.text) ? ret.data.text : '';
+
+      // Se o modelo 'por' gerou pouquíssimo texto legível (< 25 caracteres), tenta passagem rápida com 'eng'
+      if (!text || text.trim().length < 25) {
+        try {
+          await worker.reinitialize('eng');
+          await worker.setParameters({ tessedit_pageseg_mode: '6' });
+          const engRet = await worker.recognize(imageSource);
+          if (engRet && engRet.data && engRet.data.text && engRet.data.text.trim().length > text.trim().length) {
+            text = engRet.data.text;
+          }
+        } catch (e) {}
+      }
+
+      return text;
     } finally {
       if (worker) {
         await worker.terminate().catch(() => {});

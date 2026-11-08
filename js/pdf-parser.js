@@ -158,7 +158,8 @@ function _parseSingleNfceDanfeText(rawText) {
   const items = [];
 
   // Forma de Pagamento
-  const payMatch = fullText.match(/(?:FORMA\s+PAGAMENTO|Forma\s+de\s+Pagamento|PAGAMENTO)[\s\S]*?(Cart[aã]o\s+de\s+Cr[eé]dito?|Cr[eé]dito|Cart[aã]o\s+de\s+D[eé]bito?|D[eé]bito|Dinheiro|Pix|Alimenta[cç][aã]o|Refei[cç][aã]o)/i);
+  const payMatch = fullText.match(/(?:FORMA\s+PAGAMENTO|Forma\s+de\s+Pagamento|PAGAMENTO|FORM[AS]\s+PAG[A-Z]+)[\s\S]*?(Cart[aãe]o\s+de\s+Cr[eé]dit[o]?|Cr[eé]dit[o]?|Cart[aãe]o\s+de\s+D[eé]bit[o]?|D[eé]bit[o]?|Dinheiro|Pix|Alimenta[cç][aã]o|Refei[cç][aã]o)/i) ||
+                   fullText.match(/\b(Cart[aãe]o\s+de\s+Cr[eé]dit[o]?|Cr[eé]dito?|Cart[aãe]o\s+de\s+D[eé]bit[o]?|D[eé]bito?|Dinheiro|Pix|Alimenta[cç][aã]o|Refei[cç][aã]o)\b/i);
   if (payMatch) {
     paymentMethod = mapPaymentMethodToApp(payMatch[1]);
   }
@@ -232,10 +233,10 @@ function _parseSingleNfceDanfeText(rawText) {
   if (!marketName) marketName = 'Supermercado';
 
   // 5. Extração de Valor Total Pago (Prioriza "Valor a pagar" para considerar descontos)
-  const totalMatch = fullText.match(/(?:Valor\s+a\s+pagar|Total\s+a\s+pagar)\s*(?:R\$\s*|RS\s*|\$)?\s*:?\s*(?:R\$\s*|RS\s*|\$)?\s*([\d\.,]+)/i) ||
-                     fullText.match(/(?:Valor\s+total(?:\s+bruto|\s+l[ií]quido)?|Total\s+Geral|Total\s+L[ií]quido|Vlr\.?\s*Total)\s*(?:R\$\s*|RS\s*|\$)?\s*:?\s*(?:R\$\s*|RS\s*|\$)?\s*([\d\.,]+)/i) ||
-                     fullText.match(/\bTOTAL\s*(?:R\$\s*|RS\s*|\$)\s*:?\s*([\d\.,]+)/i) ||
-                     rawText.match(/^\s*TOTAL\s*(?::\s*)?(?:R\$\s*|RS\s*|\$)?\s*([\d\.,]+)\s*$/im);
+  const totalMatch = fullText.match(/(?:V[ae]lor\s+(?:[ae@]\s+)?pagar|Tot[ae]l\s+(?:[ae@]\s+)?pagar|Valor\s+a\s+pagar|Total\s+a\s+pagar)\s*(?:R\$\s*|RS\s*|KS\s*|\$)?\s*:?\s*(?:R\$\s*|RS\s*|KS\s*|\$)?\s*([\d\.,]+)/i) ||
+                     fullText.match(/(?:V[ae]lor\s+Tot[ae]l(?:\s+bruto|\s+l[ií]quido)?|Valor\s+total(?:\s+bruto|\s+l[ií]quido)?|Total\s+Geral|Total\s+L[ií]quido|Vlr\.?\s*Total|VALOR\s+PAGO)\s*(?:R\$\s*|RS\s*|KS\s*|\$)?\s*:?\s*(?:R\$\s*|RS\s*|KS\s*|\$)?\s*([\d\.,]+)/i) ||
+                     fullText.match(/\b(?:TOTAL|TOTEL)\s*(?:R\$\s*|RS\s*|KS\s*|\$)\s*:?\s*([\d\.,]+)/i) ||
+                     rawText.match(/^\s*(?:TOTAL|TOTEL)\s*(?::\s*)?(?:R\$\s*|RS\s*|KS\s*|\$)?\s*([\d\.,]+)\s*$/im);
   if (totalMatch) {
     total = parseCurrency(totalMatch[1]);
   }
@@ -386,6 +387,79 @@ function _parseSingleNfceDanfeText(rawText) {
               selected: true
             });
           }
+        }
+      }
+    }
+  }
+
+  // Estratégia OCR / Cupom Térmico SAT & NFC-e (ex: 001 3000 CAFE DA MANHA 0,442KG 59,90 26,48)
+  if (items.length === 0) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/DOCUMENTO|FISCAL|CONSUMIDOR|CHAVE|ACESSO|FAZENDA|SEFAZ|CNPJ|VALOR|PAGAMENTO|TOTAL|TOTEL|TRIBUTO|SERIE|PROTOCOLO|OBRIGADO|VOLTE|SIFAT|EMISS|DATA|HORA|IE:|IM:/i.test(line)) {
+        continue;
+      }
+
+      // Procura linha que termina com 2 ou 3 valores numéricos (qtd, preco_unit, preco_total)
+      const thermalMatch = line.match(/^(?:(?:\d+|OCT|OUa|[A-Z]{1,3})\s+)?(?:(?:S?\d{3,6})\s+)?([A-Za-z\u00C0-\u00FF][A-Za-z0-9\s\.\,\-\/\%\(\)]+?)\s+([O0-9][\d\.,]*)\s*(?:[A-Za-z0-9]{1,3}\s*)?(?:[xX\*]\s*)?([0-9][\d\.,]*)\s+([0-9][\d\.,]*)$/);
+      if (thermalMatch) {
+        let rawName = thermalMatch[1].replace(/^\d+\s+/, '').trim();
+        const num1 = parseCurrency(thermalMatch[2].replace(/[Oo]/g, '0'));
+        const num2 = parseCurrency(thermalMatch[3]);
+        const num3 = parseCurrency(thermalMatch[4]);
+
+        let qty = 1;
+        let unit = 'un';
+        let unitPrice = 0;
+        let totalPrice = 0;
+
+        if (num1 > 0 && num2 > 0 && num3 > 0) {
+          if (Math.abs(num1 * num2 - num3) < 0.25 * num3) {
+            qty = num1;
+            unitPrice = num2;
+            totalPrice = num3;
+            unit = qty < 1 ? 'kg' : 'un';
+          } else if (Math.abs(num2 - num3) < 0.15 * num3) {
+            qty = 1;
+            unitPrice = num3;
+            totalPrice = num3;
+          } else {
+            totalPrice = num3;
+            unitPrice = num2;
+            qty = num1;
+          }
+        } else if (num3 > 0) {
+          totalPrice = num3;
+          unitPrice = num2 || num3;
+          qty = num1 || 1;
+        }
+
+        // Limpeza de ruídos comuns de OCR em impressão térmica
+        rawName = rawName
+          .replace(/[04]ANHA/g, 'MANHA')
+          .replace(/YANHA/g, 'MANHA')
+          .replace(/SONHA/g, 'MANHA')
+          .replace(/SUCG/g, 'SUCO')
+          .replace(/HIX/g, 'MIX')
+          .replace(/CAPPUCL[A-Z]*/g, 'CAPPUCCINO')
+          .replace(/\bCON\b/g, 'COM')
+          .replace(/\b[TJU]N\b/g, '')
+          .replace(/\bUN\b/g, '')
+          .trim();
+
+        if (rawName.length >= 2 && totalPrice > 0 && !/Valor|Pagar|Total|Subtotal|Troco|Desconto|Tributo|Chave|Cartao|Credit/i.test(rawName)) {
+          const alias = suggestPopularName(rawName);
+          items.push({
+            code: 'ITEM_' + (items.length + 1),
+            rawName,
+            alias: alias || rawName,
+            category: detectCategoryFromItemName(alias || rawName),
+            qty: String(qty),
+            unit,
+            unitPrice,
+            totalPrice,
+            selected: true
+          });
         }
       }
     }

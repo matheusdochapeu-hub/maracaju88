@@ -194,3 +194,37 @@ Numero 045123 Serie 001 08/11/2026 14:30:15
   assert.equal(parsed.items[2].rawName, 'LEITE INTEGRAL PIRACANJUBA 1L');
   assert.equal(parsed.items[2].totalPrice, 29.34);
 });
+
+test('PDF / Cupom Parser: Extrai com perfeição texto cru de OCR térmico com ruídos de impressão e caracteres especiais', () => {
+  const ocrTermicoReal = `
+DOCUNENTO RUXTLIAR DA WHA TISCAL CONSUNIDOR FLETROWIES
+IT. (CODIGHIDESCRICRO MERLADUATAS OT DE 1UN UNI TAR TOI TOTAL
+OCT S000 CAFE DA 4ANHA O,442K6 59,90 26.48
+002 S076 SUCG HIX JARRA TUN 17,99 17.90
+003 7079 CAPPUCLING GELADO CON UN 13,50 13.50
+064 S000 CAFE DA YANHA 0,22K5 59,90 13.18
+Qtde. tote] ae itens: 4
+Valor Totel R$ 71.06
+Velor @ Pagar KS 71.06
+FORMS PAGANENTO VALOR PAGO Rs
+Carteo de Credit 71.06
+Consulte pela chave de acesso eg
+nttes://wow.nfce. fazends so. gav.br/cansulta :
+3526 1150 4890 9500 0127 6500 1000 0505 0411 0103 2350
+CONSUMIDOR HAD IDENTIFICARG
+  `;
+
+  const parsed = parseNfceDanfeText(ocrTermicoReal);
+  assert.equal(parsed.total, 71.06, 'Total deve ser R$ 71.06');
+  assert.equal(parsed.paymentMethod, 'credito', 'Forma de pagamento deve ser crédito');
+  assert.equal(parsed.nfeKey, '35261150489095000127650010000505041101032350');
+  assert.equal(parsed.items.length, 4, 'Deve extrair os 4 produtos do cupom');
+  assert.ok(parsed.items[0].rawName.includes('CAFE DA MANHA'));
+  assert.equal(parsed.items[0].totalPrice, 26.48);
+  assert.ok(parsed.items[1].rawName.includes('SUCO MIX JARRA'));
+  assert.equal(parsed.items[1].totalPrice, 17.90);
+  assert.ok(parsed.items[2].rawName.includes('CAPPUCCINO GELADO'));
+  assert.equal(parsed.items[2].totalPrice, 13.50);
+  assert.ok(parsed.items[3].rawName.includes('CAFE DA MANHA'));
+  assert.equal(parsed.items[3].totalPrice, 13.18);
+});
