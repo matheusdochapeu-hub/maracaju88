@@ -204,8 +204,9 @@ test('NFC-e UI: Leitor Universal possui jsQR embutido, abas de câmera, OCR e co
   const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf-8');
   const appJs = fs.readFileSync(path.join(rootDir, 'js', 'app.js'), 'utf-8');
 
-  // 1. Script do jsQR presente no head
+  // 1. Script do jsQR e Tesseract presentes no head
   assert.ok(indexHtml.includes('js/vendor/jsqr.min.js'), 'index.html deve carregar jsqr.min.js');
+  assert.ok(indexHtml.includes('js/vendor/tesseract.min.js'), 'index.html deve carregar tesseract.min.js');
 
   // 2. Abas presentes no modal
   assert.ok(indexHtml.includes('id="tab-btn-qr-cam"'), 'Aba Câmera QR deve existir');

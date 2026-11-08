@@ -396,16 +396,17 @@ function _parseSingleNfceDanfeText(rawText) {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       // Verifica se a quantidade e valor estão na mesma linha junto com o nome
-      const sameLineAltMatch = line.match(/^(?:(?:\d+[\s\.\-]+)+)?([A-Za-z\u00C0-\u00FF][A-Za-z0-9\s\.\,\-\/\%\(\)]+?)\s+([0-9]+(?:[\.,][0-9]+)?)\s*(?:UN|KG|LT|CX|PC|G|ML|un|kg|lt|cx|pc|g|ml)?\s*(?:[xX\*]\s*)?([0-9]+(?:[\.,][0-9]+)?)(?:\s+([0-9]+(?:[\.,][0-9]+)?))?/i);
+      const sameLineAltMatch = line.match(/^(?:(?:\d+[\s\.\-]+)+)?(.+?)\s+([\d\.,]+)\s*(UN|KG|LT|CX|PC|G|ML|FD|BD|un|kg|lt|cx|pc|g|ml)?\s*(?:[xX\*]\s*)?([\d\.,]+)(?:\s+(?:\([^\)]+\)\s+)?([\d\.,]+))?$/i);
       if (sameLineAltMatch) {
         let rawName = sameLineAltMatch[1].trim();
         // Remove eventuais códigos de barras residuais no início do nome
-        rawName = rawName.replace(/^\d{4,14}\s+/, '').trim();
+        rawName = rawName.replace(/^\d{3,14}\s+/, '').trim();
         const qty = sameLineAltMatch[2];
-        const unitPrice = parseCurrency(sameLineAltMatch[3]);
+        const unit = (sameLineAltMatch[3] || 'un').toLowerCase();
+        const unitPrice = parseCurrency(sameLineAltMatch[4]);
         const numQty = parseFloat(qty.replace(',', '.')) || 1;
-        const totalPrice = sameLineAltMatch[4] ? parseCurrency(sameLineAltMatch[4]) : Math.round(unitPrice * numQty * 100) / 100;
-        if (rawName.length > 2 && (unitPrice > 0 || totalPrice > 0) && !/Valor|Pagar|Total|Subtotal|Troco|Desconto|Tributo|Chave|Cnpj|Nfc-e|Cartao|Cartão|Credit|Debito|Débito|Dinheiro|Pix|Forma|Serie|Série|Numero|Número|Consumidor|Protocolo|Emiss|Rua|\bR\b|\bR\.\b|Avenida|\bAv\b|Rodovia|Bairro|Vila|Cep/i.test(rawName)) {
+        const totalPrice = sameLineAltMatch[5] ? parseCurrency(sameLineAltMatch[5]) : Math.round(unitPrice * numQty * 100) / 100;
+        if (/[A-Za-z\u00C0-\u00FF]{2,}/.test(rawName) && rawName.length > 2 && (unitPrice > 0 || totalPrice > 0) && !/Extrato|Cupom|Fiscal|SAT|CF-e|NFC-e|DANFE|Consumidor|CPF|CNPJ|Inscri[çc]|Valor|Pagar|Total|Subtotal|Troco|Desconto|Tributo|Chave|Cartao|Cartão|Credit|Debito|Débito|Dinheiro|Pix|Forma|Serie|Série|Numero|Número|Protocolo|Emiss|Rua|\bR\b|\bR\.\b|Avenida|\bAv\b|Rodovia|Bairro|Vila|Cep|Telefone|Tel|Data|Hora|Atendente|Caixa|Operador|Obrigado|Volte\s+Sempre|Item|C[oó]d|Descri/i.test(rawName)) {
           const alias = suggestPopularName(rawName);
           items.push({
             code: 'ITEM_' + (items.length + 1),
@@ -413,7 +414,7 @@ function _parseSingleNfceDanfeText(rawText) {
             alias,
             category: detectCategoryFromItemName(alias || rawName),
             qty,
-            unit: 'un',
+            unit,
             unitPrice: unitPrice || totalPrice,
             totalPrice: totalPrice || unitPrice,
             selected: true

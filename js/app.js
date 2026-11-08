@@ -3564,13 +3564,31 @@ function initQrCodeScanner() {
         stopCamera();
       }
 
-      activeStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
+      const constraints = {
+        video: {
+          facingMode: { ideal: currentFacingMode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+
+      try {
+        activeStream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (errConstraint) {
+        // Fallback básico caso o navegador não aceite ideal facingMode
+        activeStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
 
       if (videoEl) {
         videoEl.srcObject = activeStream;
-        await videoEl.play();
+        videoEl.setAttribute('playsinline', 'true');
+        videoEl.setAttribute('muted', 'true');
+        videoEl.muted = true;
+        try {
+          await videoEl.play();
+        } catch (ePlay) {
+          console.warn('Aviso ao iniciar reprodução do vídeo:', ePlay);
+        }
       }
 
       if (statusMsg) statusMsg.textContent = 'Câmera ativa! Aponte para o QR Code impresso no cupom fiscal.';
@@ -3605,14 +3623,39 @@ function initQrCodeScanner() {
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    let frameCount = 0;
 
     scanInterval = setInterval(async () => {
       if (!videoEl || videoEl.readyState < 2) return;
+      frameCount++;
 
-      // 1. Tenta detector nativo
+      const vw = videoEl.videoWidth;
+      const vh = videoEl.videoHeight;
+      if (!vw || !vh) return;
+
+      // PASSO 1: Foco no Viewfinder Central em Alta Resolução (sem blur de redução!)
+      // O usuário posiciona o QR code exatamente no quadrado guia central da tela.
+      const boxSize = Math.round(Math.min(vw, vh) * 0.65);
+      const sx = Math.round((vw - boxSize) / 2);
+      const sy = Math.round((vh - boxSize) / 2);
+
+      let cw = boxSize;
+      let ch = boxSize;
+      const maxCenterDim = 600;
+      if (cw > maxCenterDim) {
+        const sc = maxCenterDim / cw;
+        cw = Math.round(cw * sc);
+        ch = Math.round(ch * sc);
+      }
+
+      canvas.width = cw;
+      canvas.height = ch;
+      ctx.drawImage(videoEl, sx, sy, boxSize, boxSize, 0, 0, cw, ch);
+
+      // 1. Tenta detector nativo no crop central
       if (detector) {
         try {
-          const barcodes = await detector.detect(videoEl);
+          const barcodes = await detector.detect(canvas);
           if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
             stopCamera();
             handleDetectedCode(barcodes[0].rawValue);
@@ -3621,32 +3664,79 @@ function initQrCodeScanner() {
         } catch (e) {}
       }
 
-      // 2. Fallback universal jsQR via canvas otimizado para max 640px
-      if (typeof window.jsQR === 'function' && videoEl.videoWidth > 0) {
+      // 2. jsQR no crop central nítido
+      if (typeof window.jsQR === 'function') {
         try {
-          const vw = videoEl.videoWidth;
-          const vh = videoEl.videoHeight;
-          const maxDim = 640;
-          let w = vw;
-          let h = vh;
-          if (w > maxDim || h > maxDim) {
-            const s = Math.min(maxDim / w, maxDim / h);
-            w = Math.round(w * s);
-            h = Math.round(h * s);
-          }
-          canvas.width = w;
-          canvas.height = h;
-          ctx.drawImage(videoEl, 0, 0, w, h);
-          const imgData = ctx.getImageData(0, 0, w, h);
-          const qr = window.jsQR(imgData.data, w, h, { inversionAttempts: 'attemptBoth' });
+          const imgData = ctx.getImageData(0, 0, cw, ch);
+          let qr = window.jsQR(imgData.data, cw, ch, { inversionAttempts: 'attemptBoth' });
           if (qr && qr.data) {
             stopCamera();
             handleDetectedCode(qr.data);
             return;
           }
+
+          // A cada 2 quadros, tenta binarização no crop central (papel térmico cinza/iluminação fraca)
+          if (frameCount % 2 === 0) {
+            const d = imgData.data;
+            let minB = 255, maxB = 0;
+            for (let i = 0; i < d.length; i += 16) {
+              const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+              if (lum < minB) minB = lum;
+              if (lum > maxB) maxB = lum;
+            }
+            const mid = (minB + maxB) / 2;
+            for (let i = 0; i < d.length; i += 4) {
+              const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+              const v = lum > mid ? 255 : 0;
+              d[i] = v; d[i + 1] = v; d[i + 2] = v;
+            }
+            ctx.putImageData(imgData, 0, 0);
+            qr = window.jsQR(imgData.data, cw, ch, { inversionAttempts: 'attemptBoth' });
+            if (qr && qr.data) {
+              stopCamera();
+              handleDetectedCode(qr.data);
+              return;
+            }
+          }
         } catch (e) {}
       }
-    }, 280);
+
+      // PASSO 2: Varredura da Imagem Completa (se o QR estiver fora do centro)
+      try {
+        const maxFullDim = 700;
+        let fw = vw;
+        let fh = vh;
+        if (fw > maxFullDim || fh > maxFullDim) {
+          const s = Math.min(maxFullDim / fw, maxFullDim / fh);
+          fw = Math.round(fw * s);
+          fh = Math.round(fh * s);
+        }
+        canvas.width = fw;
+        canvas.height = fh;
+        ctx.drawImage(videoEl, 0, 0, fw, fh);
+
+        if (detector) {
+          try {
+            const barcodes = await detector.detect(canvas);
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              stopCamera();
+              handleDetectedCode(barcodes[0].rawValue);
+              return;
+            }
+          } catch (e) {}
+        }
+
+        if (typeof window.jsQR === 'function') {
+          const fullData = ctx.getImageData(0, 0, fw, fh);
+          const fullQr = window.jsQR(fullData.data, fw, fh, { inversionAttempts: 'attemptBoth' });
+          if (fullQr && fullQr.data) {
+            stopCamera();
+            handleDetectedCode(fullQr.data);
+            return;
+          }
+        }
+      } catch (e) {}
+    }, 240);
   }
 
   // Decodifica QR Code de fotos com busca multi-escala, recorte inferior e aumento de contraste
@@ -3684,16 +3774,18 @@ function initQrCodeScanner() {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-        // Regiões candidatas para NFC-e:
-        // A: Imagem completa reduzida a max 1000px
-        // B: Metade inferior (onde 99% dos QR codes de cupom estão)
-        // C: Terço inferior (rodapé clássico de NFC-e)
-        // D: Centro 60%
+        // Regiões candidatas para NFC-e e fotos de cupom:
+        // A: Centro 75% (foto focada no QR code)
+        // B: Metade inferior (onde fica o QR code da NFC-e em foto do cupom inteiro)
+        // C: Terço inferior (rodapé clássico)
+        // D: Imagem inteira redimensionada a max 1100px
+        // E: Imagem inteira em resolução intermediária 750px
         const candidates = [
-          { sx: 0, sy: 0, sw: origW, sh: origH, maxDim: 1000 },
-          { sx: 0, sy: Math.round(origH * 0.45), sw: origW, sh: Math.round(origH * 0.55), maxDim: 900 },
-          { sx: 0, sy: Math.round(origH * 0.65), sw: origW, sh: Math.round(origH * 0.35), maxDim: 750 },
-          { sx: Math.round(origW * 0.2), sy: Math.round(origH * 0.2), sw: Math.round(origW * 0.6), sh: Math.round(origH * 0.6), maxDim: 750 }
+          { sx: Math.round(origW * 0.12), sy: Math.round(origH * 0.12), sw: Math.round(origW * 0.76), sh: Math.round(origH * 0.76), maxDim: 850 },
+          { sx: 0, sy: Math.round(origH * 0.45), sw: origW, sh: Math.round(origH * 0.55), maxDim: 950 },
+          { sx: 0, sy: Math.round(origH * 0.65), sw: origW, sh: Math.round(origH * 0.35), maxDim: 800 },
+          { sx: 0, sy: 0, sw: origW, sh: origH, maxDim: 1100 },
+          { sx: 0, sy: 0, sw: origW, sh: origH, maxDim: 750 }
         ];
 
         for (const c of candidates) {
@@ -3721,7 +3813,7 @@ function initQrCodeScanner() {
           for (let i = 0; i < d.length; i += 16) {
             const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
             if (lum < minB) minB = lum;
-            if (lum > maxB) maxLum = lum;
+            if (lum > maxB) maxB = lum;
           }
           const mid = (minB + maxB) / 2;
           for (let i = 0; i < d.length; i += 4) {
@@ -3743,7 +3835,7 @@ function initQrCodeScanner() {
   }
 
   // Pré-processamento inteligente de imagem para OCR:
-  // Redimensiona para max dimension 1600px e aplica estiramento de contraste / escala de cinza
+  // Redimensiona para max dimension 1400px e aplica estiramento de contraste / escala de cinza
   // Reduz uso de memória de 50MB para ~2MB e acelera o Tesseract em até 10x!
   async function preprocessImageForOcr(blobOrFile) {
     if (!blobOrFile) return blobOrFile;
@@ -3758,7 +3850,7 @@ function initQrCodeScanner() {
       img.src = dataUrl;
       await new Promise((res) => { img.onload = res; });
 
-      const maxDim = 1600;
+      const maxDim = 1400;
       let w = img.naturalWidth || img.width;
       let h = img.naturalHeight || img.height;
       if (w > maxDim || h > maxDim) {
@@ -3803,63 +3895,69 @@ function initQrCodeScanner() {
     }
   }
 
-  // Carregador dinâmico do Tesseract.js para OCR
+  // Carregador do Tesseract.js para OCR (Verifica escopo global ou carrega sob demanda)
   async function loadTesseractOcr() {
     if (window.Tesseract) return window.Tesseract;
-    if (document.getElementById('script-tesseract-ocr')) {
-      return new Promise((resolve, reject) => {
-        let attempts = 0;
-        const check = setInterval(() => {
-          attempts++;
-          if (window.Tesseract) {
-            clearInterval(check);
-            resolve(window.Tesseract);
-          } else if (attempts > 120) {
-            clearInterval(check);
-            reject(new Error('Tempo limite ao carregar Tesseract.js'));
-          }
-        }, 100);
-      });
-    }
-
     return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.id = 'script-tesseract-ocr';
-      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-      script.onload = () => {
-        if (window.Tesseract) resolve(window.Tesseract);
-        else reject(new Error('Tesseract.js não foi encontrado após carregar script.'));
-      };
-      script.onerror = () => reject(new Error('Falha ao baixar módulo OCR. Verifique sua conexão com a internet.'));
-      document.head.appendChild(script);
+      let attempts = 0;
+      const check = setInterval(() => {
+        attempts++;
+        if (window.Tesseract) {
+          clearInterval(check);
+          resolve(window.Tesseract);
+        } else if (attempts > 60) {
+          clearInterval(check);
+          const script = document.createElement('script');
+          script.src = './js/vendor/tesseract.min.js';
+          script.onload = () => {
+            if (window.Tesseract) resolve(window.Tesseract);
+            else reject(new Error('Tesseract não encontrado.'));
+          };
+          script.onerror = () => {
+            // Fallback para CDN jsDelivr caso o arquivo local não carregue
+            const cdnScript = document.createElement('script');
+            cdnScript.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+            cdnScript.onload = () => {
+              if (window.Tesseract) resolve(window.Tesseract);
+              else reject(new Error('Falha ao inicializar OCR.'));
+            };
+            cdnScript.onerror = () => reject(new Error('Falha ao baixar módulo OCR. Verifique sua conexão.'));
+            document.head.appendChild(cdnScript);
+          };
+          document.head.appendChild(script);
+        }
+      }, 50);
     });
   }
 
-  // Motor OCR com Tesseract.js com feedback de progresso e fallback de idioma
+  // Motor OCR com Tesseract.js ultra-otimizado (1MB fast model, worker local e fallback resiliente)
   async function recognizeWithTesseract(imageSource, statusCallback) {
     const Tesseract = await loadTesseractOcr();
     let worker = null;
 
-    try {
-      worker = await Tesseract.createWorker('por', 1, {
-        workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-        corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core-simd-lstm.wasm.js',
-        langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-        logger: (m) => {
-          if (statusCallback && m && m.status) {
-            if (m.status === 'recognizing text') {
-              const p = m.progress != null ? Math.round(m.progress * 100) : 0;
-              statusCallback(`🔍 Lendo texto do cupom fiscal (${p}%)...`);
-            } else if (m.status.includes('loading') || m.status.includes('downloading')) {
-              statusCallback('⏳ Carregando motor OCR...');
-            }
+    const workerOptions = {
+      workerPath: './js/vendor/tesseract-worker.min.js',
+      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5',
+      langPath: 'https://tessdata.projectnaptha.com/4.0.0_fast',
+      logger: (m) => {
+        if (statusCallback && m && m.status) {
+          if (m.status === 'recognizing text') {
+            const p = m.progress != null ? Math.round(m.progress * 100) : 0;
+            statusCallback(`🔍 Lendo texto do cupom fiscal (${p}%)...`);
+          } else if (m.status.includes('loading') || m.status.includes('downloading')) {
+            statusCallback('⏳ Preparando motor OCR (1MB)...');
           }
         }
-      });
+      }
+    };
+
+    try {
+      worker = await Tesseract.createWorker('por', 1, workerOptions);
     } catch (errPor) {
-      console.warn('Falha no idioma português do OCR, usando inglês como fallback:', errPor);
+      console.warn('Falha no modelo por do OCR, tentando fallback eng:', errPor);
       try {
         worker = await Tesseract.createWorker('eng', 1, {
+          ...workerOptions,
           logger: (m) => {
             if (statusCallback && m && m.status === 'recognizing text') {
               const p = m.progress != null ? Math.round(m.progress * 100) : 0;
@@ -3868,7 +3966,11 @@ function initQrCodeScanner() {
           }
         });
       } catch (errEng) {
-        throw new Error('Não foi possível inicializar o motor OCR no navegador.');
+        try {
+          worker = await Tesseract.createWorker('eng', 1);
+        } catch (errFinal) {
+          throw new Error('Não foi possível inicializar o motor OCR no navegador.');
+        }
       }
     }
 

@@ -4,6 +4,40 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-08 15:35] - Resolução Definitiva do Leitor de QR Code e OCR Offline de Cupons (v2.6.4)
+
+### 🔍 Problema Identificado & Causa Raiz
+1. **QR Code ao vivo e por foto não detectavam:**
+   - O usuário reportou: *"Vamos tentar mais uma vez, ainda não ta legal o QR code e o leitor OCR. Eles não estão funcionais. a unida coisa que funcionou foi colar os dados da sefaz ou baixar e subir a nota manualmente."*
+   - **Causa Raiz 1 (Blur de redimensionamento no loop da câmera):** Reduzir o frame inteiro 1080p da câmera para 640x360 pixels comprimia o QR Code físico (pequeno no papel) para menos de 45x45 pixels. Com a interpolação bilinear, os módulos pretos e brancos viravam uma mancha cinza ilegível para o `jsQR`.
+   - **Causa Raiz 2 (Crash silencioso no binarizador de fotos):** No arquivo `js/app.js`, a linha de cálculo do limiar de luminância continha `maxLum = lum` em vez de `maxB = lum`. Por estar em módulo ES (`strict mode`), causava `ReferenceError: maxLum is not defined`, abortando qualquer foto que necessitasse de binarização e interrompendo todas as demais regiões candidatas da cascata.
+2. **Leitor OCR congelando ou falhando:**
+   - **Causa Raiz 1 (Download de 7MB de modelo e dependência de CDN externa):** O Tesseract tentava baixar `por.traineddata.gz` completo (6.8 MB comprimido, 15 MB descompactado) de `tessdata.projectnaptha.com`. Em conexões móveis, o download demorava ou falhava silenciosamente por timeout/CORS.
+   - **Causa Raiz 2 (Incompatibilidade com WebAssembly SIMD):** O caminho forçado `tesseract-core-simd-lstm.wasm.js` causava falha imediata em smartphones ou navegadores sem suporte nativo a SIMD no WASM.
+   - **Causa Raiz 3 (Parsing de linhas de cupom SAT/NFC-e):** A regex não-gananciosa capturava sufixos de peso (ex: `5KG`) como quantidade `5` e o restante como produto, e linhas como `Extrato No. 045123` e a chave de acesso impressa eram indevidamente capturadas como produtos.
+
+### 🛠️ Correções Implementadas
+1. **Scanner de Câmera com Foco no Viewfinder Central (`js/app.js`):**
+   - **Passo 1 (Crop Central em Alta Resolução):** O loop agora recorta o quadrado central do vídeo (65% da menor dimensão, correspondente à mira guia `.qr-scan-guide`) em resolução nativa (até 600px). Sem blur de redimensionamento, os módulos do QR Code mantêm 4 a 6 pixels de nitidez, decodificando em 1 frame.
+   - **Passo 2 (Varredura Geral):** Se o QR Code estiver fora do centro, varre o frame completo redimensionado.
+   - **Passo 3 (Binarização Alternada):** A cada 2 quadros, aplica limiar dinâmico para papéis térmicos acinzentados ou iluminação desfavorável.
+2. **Correção do Binarizador de Imagens & Multi-Regiões (`js/app.js`):**
+   - Corrigida a variável `maxB = lum`.
+   - Adicionada varredura focada no centro (75% da foto), rodapé inferior (55% e 35%) e foto inteira em múltiplas escalas.
+3. **OCR Local com Modelo Fast de 1MB (`index.html`, `js/vendor/`, `js/app.js`, `sw.js`):**
+   - Scripts `tesseract.min.js` e `tesseract-worker.min.js` salvos localmente em `js/vendor/` e pré-carregados no `index.html` e no cache offline do Service Worker.
+   - Migrado para o modelo `4.0.0_fast` em português: apenas **1.0 MB** (em vez de 6.8 MB), carregando em menos de 1 segundo.
+   - Remoção da exigência estrita de SIMD: jsDelivr seleciona automaticamente a compilação WASM compatível com a CPU do aparelho.
+4. **Parser Robusto de Itens de Cupom Fiscal (`js/pdf-parser.js`):**
+   - Regex aprimorada que suporta produtos com medidas no nome (`ARROZ TIO JOAO 5KG`, `LEITE PIRACANJUBA 1L`) e extrai perfeitamente a quantidade, unidade, preço unitário e total.
+   - Stop-words ampliadas descartando `Extrato`, `Cupom`, `SAT`, `CF-e`, `Consumidor`, `CPF`, `Total bruto` e linhas de chaves numéricas.
+5. **Testes Automatizados:**
+   - 105 testes automatizados executados e 100% aprovados (`npm test`).
+6. **Bump de Versão:**
+   - Atualizado para **`v2.6.4`** em `config.js`, `sw.js` e `package.json`.
+
+---
+
 ## [2026-11-08 15:15] - Otimização Completa do Leitor de QR Code ao Vivo e OCR de Notas Fiscais (v2.6.3)
 
 ### 🔍 Problema Identificado & Causa Raiz

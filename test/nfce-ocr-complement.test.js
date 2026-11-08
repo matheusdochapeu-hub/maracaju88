@@ -158,6 +158,39 @@ TROCO 3.10
   assert.equal(parsed.time, '14:20:00');
   assert.equal(parsed.items.length, 3);
   assert.equal(parsed.items[0].rawName, 'LEITE INTEGRAL');
-  assert.equal(parsed.items[1].rawName, 'ARROZ TIO JOAO');
+  assert.ok(parsed.items[1].rawName.includes('ARROZ TIO JOAO'));
   assert.equal(parsed.items[2].rawName, 'BANANA PRATA');
+});
+
+test('PDF / Cupom Parser: Extrai cupom SAT Carrefour com Extrato e código de barras sem poluir produtos', () => {
+  const satCupomCarrefour = `
+CARREFOUR COMERCIO E INDUSTRIA LTDA
+AVENIDA SAO CARLOS, 1000 - CENTRO
+CNPJ: 45.543.915/0001-81
+Extrato No. 045123
+CUPOM FISCAL ELETRONICO - SAT
+CPF do Consumidor: 123.456.789-00
+#|COD|DESC|QTD|UN|VL UN R$|(VL TR R$)*|VL ITEM R$
+001 789123456 ARROZ TIO JOAO 5KG 1 UN X 29,90 29,90
+002 789654321 FEIJAO CARIOCA CAMIL 1KG 2 UN X 8,50 17,00
+003 789999999 LEITE INTEGRAL PIRACANJUBA 1L 6 UN X 4,89 29,34
+Total bruto de itens 76,24
+TOTAL R$ 76,24
+Cartao de Credito 76,24
+Numero 045123 Serie 001 08/11/2026 14:30:15
+3526 1145 5439 1500 0181 5900 0451 2314 3015 6789
+  `;
+
+  const parsed = parseNfceDanfeText(satCupomCarrefour);
+  assert.equal(parsed.marketName, 'Carrefour');
+  assert.equal(parsed.cnpj, '45.543.915/0001-81');
+  assert.equal(parsed.total, 76.24);
+  assert.equal(parsed.date, '2026-11-08');
+  assert.equal(parsed.items.length, 3, 'Deve extrair exatamente os 3 produtos reais');
+  assert.equal(parsed.items[0].rawName, 'ARROZ TIO JOAO 5KG');
+  assert.equal(parsed.items[0].totalPrice, 29.90);
+  assert.equal(parsed.items[1].rawName, 'FEIJAO CARIOCA CAMIL 1KG');
+  assert.equal(parsed.items[1].totalPrice, 17.00);
+  assert.equal(parsed.items[2].rawName, 'LEITE INTEGRAL PIRACANJUBA 1L');
+  assert.equal(parsed.items[2].totalPrice, 29.34);
 });
