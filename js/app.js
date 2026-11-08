@@ -1433,6 +1433,8 @@ function initCarroModule() {
           renderCarroTab(state, currentCarroCategory, currentCarroStatus);
         } catch (err) {
           showToast(`Erro na foto: ${err.message}`, 'error');
+        } finally {
+          e.target.value = '';
         }
       }
     });
@@ -1711,6 +1713,8 @@ function initReformasModule() {
           renderReformasTab(state, currentReformasFilter);
         } catch (err) {
           showToast(`Erro na foto: ${err.message}`, 'error');
+        } finally {
+          e.target.value = '';
         }
       }
     });
@@ -1974,6 +1978,8 @@ function initSonhosModule() {
           renderSonhosTab(state, currentSonhosFilter);
         } catch (err) {
           showToast(`Erro na foto: ${err.message}`, 'error');
+        } finally {
+          e.target.value = '';
         }
       }
     });
@@ -2539,6 +2545,8 @@ function initComprasModule() {
           renderComprasTab(state, currentComprasCategory, currentComprasView);
         } catch (err) {
           showToast(`Erro na foto: ${err.message}`, 'error');
+        } finally {
+          e.target.value = '';
         }
       }
     });
@@ -2645,6 +2653,8 @@ function initComprasModule() {
           renderComprasTab(state, currentComprasCategory, currentComprasView);
         } catch (err) {
           showToast(`Erro na foto: ${err.message}`, 'error');
+        } finally {
+          e.target.value = '';
         }
       }
     });
@@ -3284,6 +3294,8 @@ function initComprasModule() {
           renderComprasTab(state, currentComprasCategory, currentComprasView);
         } catch (err) {
           showToast('Erro na foto: ' + err.message, 'error');
+        } finally {
+          e.target.value = '';
         }
       }
     });

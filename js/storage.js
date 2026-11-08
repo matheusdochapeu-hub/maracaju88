@@ -282,7 +282,18 @@ export function saveState(state) {
       };
     } catch (e) {}
     if (typeof localStorage !== 'undefined' && localStorage && typeof localStorage.setItem === 'function') {
-      localStorage.setItem(APP_CONFIG.storageKey, JSON.stringify(state));
+      try {
+        localStorage.setItem(APP_CONFIG.storageKey, JSON.stringify(state));
+      } catch (storageErr) {
+        console.warn("[Maracaju] Quota de localStorage atingida, salvando de forma defensiva...", storageErr);
+        // Se a quota do localStorage for atingida, preserva compras, fotos e notas enxugando o catálogo transitório
+        if (state.catalog && state.catalog.length > 50) {
+          const trimmed = { ...state, catalog: state.catalog.slice(0, 30) };
+          localStorage.setItem(APP_CONFIG.storageKey, JSON.stringify(trimmed));
+        } else {
+          throw storageErr;
+        }
+      }
     }
 
     if (typeof stateSavedListener === 'function') {

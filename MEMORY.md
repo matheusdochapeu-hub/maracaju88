@@ -4,6 +4,34 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-08 13:50] - Persistência Permanente de Fotos e Proteção Anti-Perda no Auto-Sync (v2.6.0)
+
+### 🔍 Problema Identificado & Causa Raiz
+1. **Desaparecimento de Fotos após alguns segundos:**
+   - O usuário relatou: *"As fotos que tenho batido e as imagens que tenho colocado não estão ficando. Elas aparecem por uns segundos e depois desaparecem, principalmente na aba mercado."*
+   - **Causa Raiz:** Ao adicionar fotos, o app salvava o estado local e disparava o auto-sync para a nuvem (`backupToSheets`). Como a planilha Google Sheets possui limite de 50.000 caracteres por célula, a função `backupToSheets` remove intencionalmente strings base64 pesadas (`stripPhotosArr`). Logo em seguida (~400ms a 2s depois), o callback do sync (`applyCloudBackup`) mesclava os dados retornados pela nuvem sobrescrevendo as listas locais (`cloudList.forEach(item => map.set(item.id, item))`), substituindo os itens com fotos por versões sem fotos da nuvem.
+2. **Compressão Desbalanceada em Fotos Verticais (Portrait):**
+   - Na função `compressImageFile`, apenas `width > maxWidth` era verificado. Fotos tiradas em modo retrato (vertical) com smartphones modernos (ex: 3000x4000) mantinham 4000px de altura, gerando imagens base64 de mais de 1.5MB que podiam causar estouro de quota (`QuotaExceededError`) no `localStorage`.
+3. **Inputs de Câmera vs Galeria em templates dinâmicos:**
+   - Botões de Câmera em listas dinâmicas (`ui.js`) não continham `capture="environment"`, e eventos `change` não limpavam `e.target.value`, impedindo re-seleção da mesma imagem.
+
+### 🛠️ Correções Implementadas
+1. **Proteção Anti-Perda no Merge do Auto-Sync (`js/sheets.js`):**
+   - Atualizado `applyCloudBackup` em todas as coleções com fotos (`compras`, `comprasRegistros`, `catalog`, `carro`, `reformas`, `sonhos` e `pets`).
+   - Se o item na nuvem vier sem fotos ou com array vazio (devido ao strip de base64 da planilha), as fotos locais (`photos`, `photoUrl`, `imageUrl`, `foto`, `exames[].fotos`, `itens[].foto`) são preservadas integralmente.
+2. **Compressão Bidimensional Inteligente (`js/projects.js`):**
+   - `compressImageFile` agora restringe a maior dimensão (`Math.max(width, height) <= maxWidth`), redimensionando fotos verticais e horizontais para no máximo 800px no maior lado e JPEG qualidade 0.72 (~35KB-55KB), cabendo com extrema folga no `localStorage`.
+3. **Tratamento Defensivo de Quota (`js/storage.js`):**
+   - `saveState` intercepta `QuotaExceededError` e descarta caches transitórios do catálogo antes de falhar, garantindo persistência sem interrupções.
+4. **Câmera Nativa (`capture="environment"`) em todos os templates (`js/ui.js`):**
+   - Adicionado `capture="environment"` para todos os botões de câmera em listas e modais.
+   - Adicionado reset `e.target.value = ''` em bloco `finally` nos manipuladores de upload de fotos em `js/app.js`.
+5. **Testes Automatizados:**
+   - Criado `test/photos-persistence.test.js` com validações de retenção de fotos em todas as coleções e verificação de atributos nos botões.
+   - Suíte de 100 testes do projeto executada com 100% de sucesso.
+
+---
+
 ## [2026-11-08 13:20] - Separação Câmera vs Galeria e Eliminação de Sobreposições Visuais (v2.5.9)
 
 ### 🔍 Problema Identificado & Causa Raiz

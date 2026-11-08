@@ -615,7 +615,7 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
               <div style="display: flex; gap: 0.35rem;">
                 <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;" title="Bater foto com a câmera do celular">
                   📸 Câmera
-                  <input type="file" accept="image/*" class="input-carro-add-photo" data-car-id="${item.id}" style="display: none;" />
+                  <input type="file" accept="image/*" capture="environment" class="input-carro-add-photo" data-car-id="${item.id}" style="display: none;" />
                 </label>
                 <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;" title="Escolher foto da galeria">
                   🖼️ Galeria
@@ -804,7 +804,7 @@ export function renderReformasTab(state, statusFilter = 'todas', categoryFilter 
               <div style="display: flex; gap: 0.35rem;">
                 <label class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.725rem; cursor: pointer; margin-bottom: 0;" title="Bater foto com a câmera do celular">
                   📸 Câmera
-                  <input type="file" accept="image/*" class="input-reforma-add-photo" data-ref-id="${ref.id}" style="display: none;" />
+                  <input type="file" accept="image/*" capture="environment" class="input-reforma-add-photo" data-ref-id="${ref.id}" style="display: none;" />
                 </label>
                 <label class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.725rem; cursor: pointer; margin-bottom: 0;" title="Escolher foto da galeria">
                   🖼️ Galeria
@@ -999,7 +999,7 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
               <div style="display: flex; gap: 0.35rem;">
                 <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;" title="Bater foto com a câmera do celular">
                   📸 Câmera
-                  <input type="file" accept="image/*" class="input-sonho-add-photo" data-sonho-id="${sonho.id}" style="display: none;" />
+                  <input type="file" accept="image/*" capture="environment" class="input-sonho-add-photo" data-sonho-id="${sonho.id}" style="display: none;" />
                 </label>
                 <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;" title="Escolher foto da galeria">
                   🖼️ Galeria
@@ -1329,7 +1329,7 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
                   <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--text-muted);">
                     <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Bater foto do item ou embalagem com a câmera">
                       📸 Câmera
-                      <input type="file" accept="image/*" class="input-shopping-add-photo" data-shopping-id="${item.id}" style="display: none;" />
+                      <input type="file" accept="image/*" capture="environment" class="input-shopping-add-photo" data-shopping-id="${item.id}" style="display: none;" />
                     </label>
                     <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Escolher foto da galeria">
                       🖼️ Galeria
@@ -1727,7 +1727,7 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
               <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; color: var(--text-muted); flex-wrap: wrap;">
                 <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin: 0;" title="Bater foto do cupom fiscal ou recibo">
                   📸 Câmera
-                  <input type="file" accept="image/*" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
+                  <input type="file" accept="image/*" capture="environment" class="input-purchase-add-photo" data-purchase-id="${p.id}" style="display: none;" />
                 </label>
                 <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin: 0;" title="Escolher foto da galeria">
                   🖼️ Galeria
@@ -2221,7 +2221,7 @@ export function renderCatalogModal(state, query = '', categoryFilter = 'todos', 
           <div style="display: flex; align-items: center; gap: 0.3rem;">
             <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Bater foto da embalagem com a câmera">
               📸 Foto
-              <input type="file" accept="image/*" class="input-catalog-add-photo" data-catalog-id="${prod.id}" style="display: none;" />
+              <input type="file" accept="image/*" capture="environment" class="input-catalog-add-photo" data-catalog-id="${prod.id}" style="display: none;" />
             </label>
             <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Escolher da galeria">
               🖼️ Galeria
@@ -2357,7 +2357,7 @@ export function renderPdfInvoiceConfirmation(state, invoiceData) {
           <div style="display: flex; align-items: center; gap: 0.35rem;">
             <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Bater foto do produto com a câmera">
               📸 Foto
-              <input type="file" accept="image/*" class="input-pdf-item-photo" data-idx="${idx}" style="display: none;" />
+              <input type="file" accept="image/*" capture="environment" class="input-pdf-item-photo" data-idx="${idx}" style="display: none;" />
             </label>
             <label class="btn btn-secondary btn-xs" style="padding: 0.15rem 0.4rem; font-size: 0.68rem; cursor: pointer; margin: 0;" title="Escolher da galeria">
               🖼️ Galeria

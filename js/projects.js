@@ -146,7 +146,7 @@ export function getProjectsSummary(state, key, statusIds) {
   };
 }
 
-// Compressão de imagens no navegador (até 800px, JPEG ~70%)
+// Compressão de imagens no navegador (até 800px no maior lado, JPEG ~70%)
 export function compressImageFile(file, maxWidth = 800, quality = 0.72) {
   return new Promise((resolve, reject) => {
     if (!file || !file.type.startsWith('image/')) {
@@ -159,10 +159,16 @@ export function compressImageFile(file, maxWidth = 800, quality = 0.72) {
       const img = new Image();
       img.onerror = reject;
       img.onload = () => {
+        const maxDim = maxWidth || 800;
         let { width, height } = img;
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
+        if (width > maxDim || height > maxDim) {
+          if (width >= height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
         }
         const canvas = document.createElement('canvas');
         canvas.width = width;

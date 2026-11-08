@@ -350,7 +350,23 @@ export function applyCloudBackup(currentState, cloudData) {
       if (localList.length === 0) return cloudList;
       const map = new Map();
       localList.forEach(item => { if (item && item.id) map.set(item.id, item); });
-      cloudList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      cloudList.forEach(item => {
+        if (item && item.id) {
+          const existing = map.get(item.id);
+          if (!existing) {
+            map.set(item.id, item);
+          } else {
+            const mergedItem = { ...existing, ...item };
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+              mergedItem.photos = existing.photos;
+            }
+            if (existing.photoUrl && !item.photoUrl) {
+              mergedItem.photoUrl = existing.photoUrl;
+            }
+            map.set(item.id, mergedItem);
+          }
+        }
+      });
       return Array.from(map.values());
     })(),
     reformas: (() => {
@@ -360,7 +376,23 @@ export function applyCloudBackup(currentState, cloudData) {
       if (localList.length === 0) return cloudList;
       const map = new Map();
       localList.forEach(item => { if (item && item.id) map.set(item.id, item); });
-      cloudList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      cloudList.forEach(item => {
+        if (item && item.id) {
+          const existing = map.get(item.id);
+          if (!existing) {
+            map.set(item.id, item);
+          } else {
+            const mergedItem = { ...existing, ...item };
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+              mergedItem.photos = existing.photos;
+            }
+            if (existing.photoUrl && !item.photoUrl) {
+              mergedItem.photoUrl = existing.photoUrl;
+            }
+            map.set(item.id, mergedItem);
+          }
+        }
+      });
       return Array.from(map.values());
     })(),
     sonhos: (() => {
@@ -370,7 +402,26 @@ export function applyCloudBackup(currentState, cloudData) {
       if (localList.length === 0) return cloudList;
       const map = new Map();
       localList.forEach(item => { if (item && item.id) map.set(item.id, item); });
-      cloudList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      cloudList.forEach(item => {
+        if (item && item.id) {
+          const existing = map.get(item.id);
+          if (!existing) {
+            map.set(item.id, item);
+          } else {
+            const mergedItem = { ...existing, ...item };
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+              mergedItem.photos = existing.photos;
+            }
+            if (existing.photoUrl && !item.photoUrl) {
+              mergedItem.photoUrl = existing.photoUrl;
+            }
+            if (existing.imageUrl && !item.imageUrl) {
+              mergedItem.imageUrl = existing.imageUrl;
+            }
+            map.set(item.id, mergedItem);
+          }
+        }
+      });
       return Array.from(map.values());
     })(),
     shoppingWishlist: (() => {
@@ -390,6 +441,9 @@ export function applyCloudBackup(currentState, cloudData) {
             if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
               mergedItem.photos = existing.photos;
             }
+            if (existing.photoUrl && !item.photoUrl) {
+              mergedItem.photoUrl = existing.photoUrl;
+            }
             map.set(item.id, mergedItem);
           }
         }
@@ -403,7 +457,24 @@ export function applyCloudBackup(currentState, cloudData) {
       if (localList.length === 0) return cloudList;
       const map = new Map();
       localList.forEach(item => { if (item && item.id) map.set(item.id, item); });
-      cloudList.forEach(item => { if (item && item.id) map.set(item.id, item); });
+      cloudList.forEach(item => {
+        if (item && item.id) {
+          const existing = map.get(item.id);
+          if (!existing) {
+            map.set(item.id, item);
+          } else {
+            const mergedItem = { ...existing, ...item };
+            // PRESERVAÇÃO DE FOTOS LOCAIS DO ITEM DE MERCADO
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+              mergedItem.photos = existing.photos;
+            }
+            if (existing.imageUrl && !item.imageUrl) {
+              mergedItem.imageUrl = existing.imageUrl;
+            }
+            map.set(item.id, mergedItem);
+          }
+        }
+      });
       return Array.from(map.values());
     })(),
     comprasRegistros: (() => {
@@ -414,21 +485,41 @@ export function applyCloudBackup(currentState, cloudData) {
       const map = new Map();
       // 1. Carrega registros vindos da nuvem
       cloudList.forEach(p => { if (p && p.id) map.set(p.id, p); });
-      // 2. Mescla registros locais (preservando lançamentos novos e edições recentes de pagamento/totais)
+      // 2. Mescla registros locais (preservando lançamentos novos, fotos e edições recentes de pagamento/totais)
       localList.forEach(localItem => {
         if (localItem && localItem.id) {
           const cloudItem = map.get(localItem.id);
           if (!cloudItem) {
             map.set(localItem.id, localItem);
           } else {
-            map.set(localItem.id, {
+            // Mescla itens internos preservando fotos em cada item se existirem
+            const mergedItems = Array.isArray(localItem.items) && localItem.items.length > 0
+              ? localItem.items.map((it, idx) => {
+                  const cloudIt = (Array.isArray(cloudItem.items) && cloudItem.items[idx]) ? cloudItem.items[idx] : {};
+                  const itMerged = { ...cloudIt, ...it };
+                  if (Array.isArray(it.photos) && it.photos.length > 0 && (!cloudIt.photos || cloudIt.photos.length === 0)) {
+                    itMerged.photos = it.photos;
+                  }
+                  return itMerged;
+                })
+              : (Array.isArray(cloudItem.items) ? cloudItem.items : []);
+
+            const mergedItem = {
               ...cloudItem,
               ...localItem,
+              items: mergedItems,
               paymentMethod: localItem.paymentMethod || cloudItem.paymentMethod || 'va',
               total: (localItem.total !== undefined && localItem.total !== null) ? localItem.total : cloudItem.total,
               notes: localItem.notes || cloudItem.notes || '',
               date: localItem.date || cloudItem.date
-            });
+            };
+
+            // Preserva fotos do cupom fiscal / comprovante se a nuvem veio sem fotos
+            if (Array.isArray(localItem.photos) && localItem.photos.length > 0 && (!cloudItem.photos || cloudItem.photos.length === 0)) {
+              mergedItem.photos = localItem.photos;
+            }
+
+            map.set(localItem.id, mergedItem);
           }
         }
       });
@@ -470,11 +561,47 @@ export function applyCloudBackup(currentState, cloudData) {
       if (cloudList.length === 0) return localList;
       if (localList.length === 0) return cloudList;
       const map = new Map();
-      cloudList.forEach(p => { if (p && p.id) map.set(p.id, p); });
-      localList.forEach(p => {
-        if (p && p.id) {
-          const cloudP = map.get(p.id);
-          map.set(p.id, { ...(cloudP || {}), ...p });
+      localList.forEach(p => { if (p && p.id) map.set(p.id, p); });
+      cloudList.forEach(cloudP => {
+        if (cloudP && cloudP.id) {
+          const existing = map.get(cloudP.id);
+          if (!existing) {
+            map.set(cloudP.id, cloudP);
+          } else {
+            const mergedPet = { ...existing, ...cloudP };
+            // Preserva fotos do perfil do pet
+            if (existing.foto && !cloudP.foto) mergedPet.foto = existing.foto;
+            if (existing.photo && !cloudP.photo) mergedPet.photo = existing.photo;
+            if (existing.photoUrl && !cloudP.photoUrl) mergedPet.photoUrl = existing.photoUrl;
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!cloudP.photos || cloudP.photos.length === 0)) {
+              mergedPet.photos = existing.photos;
+            }
+            if (Array.isArray(existing.fotos) && existing.fotos.length > 0 && (!cloudP.fotos || cloudP.fotos.length === 0)) {
+              mergedPet.fotos = existing.fotos;
+            }
+            // Preserva fotos de exames
+            if (Array.isArray(existing.exames)) {
+              mergedPet.exames = existing.exames.map((ex, idx) => {
+                const cloudEx = (Array.isArray(cloudP.exames) && cloudP.exames[idx]) ? cloudP.exames[idx] : {};
+                const mergedEx = { ...cloudEx, ...ex };
+                if (ex.foto && !cloudEx.foto) mergedEx.foto = ex.foto;
+                if (Array.isArray(ex.fotos) && ex.fotos.length > 0 && (!cloudEx.fotos || cloudEx.fotos.length === 0)) {
+                  mergedEx.fotos = ex.fotos;
+                }
+                return mergedEx;
+              });
+            }
+            // Preserva fotos de itens/acessórios
+            if (Array.isArray(existing.itens)) {
+              mergedPet.itens = existing.itens.map((it, idx) => {
+                const cloudIt = (Array.isArray(cloudP.itens) && cloudP.itens[idx]) ? cloudP.itens[idx] : {};
+                const mergedIt = { ...cloudIt, ...it };
+                if (it.foto && !cloudIt.foto) mergedIt.foto = it.foto;
+                return mergedIt;
+              });
+            }
+            map.set(cloudP.id, mergedPet);
+          }
         }
       });
       return Array.from(map.values());

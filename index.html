@@ -1,16 +1,16 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Maracaju - GestÃ£o do Lar do Casal</title>
+  <title>Maracaju - Gestão do Lar do Casal</title>
   
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#1b3820" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Maracaju" />
-  <meta name="description" content="App do casal: tarefas diÃ¡rias e periÃ³dicas, mercado com leitor de nota fiscal, carro, reformas, sonhos e backup no Google Sheets" />
+  <meta name="description" content="App do casal: tarefas diárias e periódicas, mercado com leitor de nota fiscal, carro, reformas, sonhos e backup no Google Sheets" />
 
   <!-- Icons & Manifest -->
   <link rel="manifest" href="./manifest.json" />
@@ -22,7 +22,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('controllerchange', function() {
-        console.log('[Maracaju] Nova versÃ£o detectada. Atualizando tela...');
+        console.log('[Maracaju] Nova versão detectada. Atualizando tela...');
         window.location.reload();
       });
     }
@@ -51,7 +51,7 @@
 </head>
 <body>
 
-  <!-- Canvas para Chuva de Confetti em CelebraÃ§Ãµes -->
+  <!-- Canvas para Chuva de Confetti em Celebrações -->
   <canvas id="confetti-canvas"></canvas>
 
   <!-- ========================================== -->
@@ -64,30 +64,30 @@
           <img src="./icons/icon-192.png?v=2.4.0" alt="Maracaju" class="auth-logo" />
         </div>
         <h2 class="auth-title">Maracaju</h2>
-        <span class="auth-badge">Ãrea Restrita aos Moradores</span>
+        <span class="auth-badge">Área Restrita aos Moradores</span>
         <p class="auth-subtitle">
-          Bem-vindos ao Maracaju! Este app Ã© de uso exclusivo de <strong>Matheus</strong> e <strong>Scarlet</strong>.
+          Bem-vindos ao Maracaju! Este app é de uso exclusivo de <strong>Matheus</strong> e <strong>Scarlet</strong>.
         </p>
       </div>
 
       <div id="auth-error-box" class="auth-error-box" style="display: none;">
-        <span class="auth-error-icon">âš ï¸</span>
+        <span class="auth-error-icon">⚠️</span>
         <span id="auth-error-text"></span>
       </div>
 
       <!-- Atalho com 1 Toque (Ideal para Celular) -->
       <div class="auth-quick-section">
-        <label class="auth-quick-label">Selecione quem estÃ¡ acessando:</label>
+        <label class="auth-quick-label">Selecione quem está acessando:</label>
         <div class="auth-quick-buttons">
           <button type="button" class="auth-quick-btn active-profile-btn" id="btn-quick-matheus" data-email="matheusdochapeu@gmail.com">
-            <span class="auth-quick-avatar">ðŸ‘¨â€ðŸ’»</span>
+            <span class="auth-quick-avatar">👨‍💻</span>
             <div class="auth-quick-info">
               <strong>Matheus</strong>
               <small>matheusdochapeu@gmail.com</small>
             </div>
           </button>
           <button type="button" class="auth-quick-btn" id="btn-quick-scarlet" data-email="scarletsantos7@gmail.com">
-            <span class="auth-quick-avatar">ðŸ‘©â€ðŸ’¼</span>
+            <span class="auth-quick-avatar">👩‍💼</span>
             <div class="auth-quick-info">
               <strong>Scarlet</strong>
               <small>scarletsantos7@gmail.com</small>
@@ -96,10 +96,10 @@
         </div>
       </div>
 
-      <!-- OpÃ§Ã£o de Biometria / Desbloqueio de Tela do Celular -->
+      <!-- Opção de Biometria / Desbloqueio de Tela do Celular -->
       <div id="auth-biometrics-container" style="margin-top: 0.75rem; text-align: center;">
         <button type="button" id="btn-auth-biometrics" class="btn btn-secondary" style="width: 100%; justify-content: center; gap: 0.5rem; padding: 0.75rem; border-color: var(--brand-moss); background: rgba(46, 89, 51, 0.08);">
-          <span>ðŸ‘†</span>
+          <span>👆</span>
           <span>Desbloquear com Celular / Digital / Face</span>
         </button>
       </div>
@@ -117,33 +117,33 @@
               type="password" 
               id="auth-password-input" 
               class="form-control" 
-              placeholder="Digite sua senha (ou deixe vazia se nÃ£o definiu)" 
+              placeholder="Digite sua senha (ou deixe vazia se não definiu)" 
               autocomplete="current-password"
             />
-            <button type="button" id="btn-toggle-auth-password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-muted);" title="Ver senha">ðŸ‘ï¸</button>
+            <button type="button" id="btn-toggle-auth-password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-muted);" title="Ver senha">👁️</button>
           </div>
           <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
-            Se ainda nÃ£o definiu senha, basta tocar em Entrar e vocÃª poderÃ¡ configurar na aba Ajustes.
+            Se ainda não definiu senha, basta tocar em Entrar e você poderá configurar na aba Ajustes.
           </span>
         </div>
         <button type="submit" id="btn-auth-submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem;">
-          ðŸ”‘ Entrar no Maracaju
+          🔑 Entrar no Maracaju
         </button>
       </form>
 
       <div class="auth-footer" style="display: flex; flex-direction: column; gap: 0.6rem; align-items: center;">
-        <span>ðŸ”’ Acesso seguro: Seus dados sÃ£o mantidos no seu aparelho e sincronizados com a planilha Google do casal.</span>
+        <span>🔒 Acesso seguro: Seus dados são mantidos no seu aparelho e sincronizados com a planilha Google do casal.</span>
         <button type="button" id="btn-force-update-login" style="background: none; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.35rem 0.65rem; color: var(--brand-moss); font-size: 0.75rem; cursor: pointer; text-decoration: none;">
-          ðŸ”„ App desatualizado ou travado? Toque para Limpar Cache e Atualizar (v2.1.3)
+          🔄 App desatualizado ou travado? Toque para Limpar Cache e Atualizar (v2.1.3)
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Container de NotificaÃ§Ãµes Toast -->
+  <!-- Container de Notificações Toast -->
   <div id="toast-container" class="toast-container"></div>
 
-  <!-- CabeÃ§alho Fixo Superior -->
+  <!-- Cabeçalho Fixo Superior -->
   <header class="app-header">
     <div class="header-container">
       <div class="brand-wrapper">
@@ -154,77 +154,77 @@
       </div>
 
       <div class="header-actions">
-        <!-- BotÃ£o de Instalar App no Celular (VisÃ­vel no navegador) -->
+        <!-- Botão de Instalar App no Celular (Visível no navegador) -->
         <button type="button" id="btn-install-app" class="install-app-btn" title="Baixar e instalar aplicativo no celular">
-          <span>ðŸ“²</span>
+          <span>📲</span>
           <span>Instalar App</span>
         </button>
 
-        <!-- Seletor RÃ¡pido de Quem estÃ¡ Usando (Matheus / Scarlet) -->
-        <button type="button" id="active-user-btn" class="active-user-toggle" title="Alternar quem estÃ¡ marcando as tarefas">
-          <span class="user-avatar-sm">ðŸ‘¨â€ðŸ’»</span>
+        <!-- Seletor Rápido de Quem está Usando (Matheus / Scarlet) -->
+        <button type="button" id="active-user-btn" class="active-user-toggle" title="Alternar quem está marcando as tarefas">
+          <span class="user-avatar-sm">👨‍💻</span>
           <span>Matheus</span>
         </button>
 
-        <!-- Indicador de SincronizaÃ§Ã£o Google Sheets -->
-        <div id="sync-dot" class="sync-status-indicator" title="Status de SincronizaÃ§Ã£o Google Sheets"></div>
+        <!-- Indicador de Sincronização Google Sheets -->
+        <div id="sync-dot" class="sync-status-indicator" title="Status de Sincronização Google Sheets"></div>
       </div>
     </div>
   </header>
 
-  <!-- Barra de NavegaÃ§Ã£o Desktop / Topo Alternativo / Mobile Bottom Nav -->
+  <!-- Barra de Navegação Desktop / Topo Alternativo / Mobile Bottom Nav -->
   <nav class="bottom-nav" id="main-navigation">
     <button type="button" class="nav-item active" data-tab="tarefas">
-      <span class="nav-icon">ðŸ§¹</span>
+      <span class="nav-icon">🧹</span>
       <span>Tarefas</span>
     </button>
     <button type="button" class="nav-item" data-tab="pets">
-      <span class="nav-icon">ðŸ¾</span>
+      <span class="nav-icon">🐾</span>
       <span>Pets</span>
     </button>
     <button type="button" class="nav-item" data-tab="compras">
-      <span class="nav-icon">ðŸ›’</span>
+      <span class="nav-icon">🛒</span>
       <span>Mercado</span>
     </button>
     <button type="button" class="nav-item" data-tab="shopping">
-      <span class="nav-icon">ðŸ›ï¸</span>
+      <span class="nav-icon">🛍️</span>
       <span>Shopping</span>
     </button>
     <button type="button" class="nav-item" data-tab="carro">
-      <span class="nav-icon">ðŸš—</span>
+      <span class="nav-icon">🚗</span>
       <span>Carro</span>
     </button>
     <button type="button" class="nav-item" data-tab="reformas">
-      <span class="nav-icon">ðŸ”¨</span>
+      <span class="nav-icon">🔨</span>
       <span>Reformas</span>
     </button>
     <button type="button" class="nav-item" data-tab="sonhos">
-      <span class="nav-icon">âœ¨</span>
+      <span class="nav-icon">✨</span>
       <span>Sonhos</span>
     </button>
     <button type="button" class="nav-item" data-tab="ajustes">
-      <span class="nav-icon">âš™ï¸</span>
+      <span class="nav-icon">⚙️</span>
       <span>Ajustes</span>
     </button>
   </nav>
 
-  <!-- ConteÃºdo Principal das Abas -->
+  <!-- Conteúdo Principal das Abas -->
   <main class="app-main">
 
     <!-- ========================================== -->
-    <!-- ABA 1: TAREFAS (DIÃRIAS, SEMANAIS, MENSAIS, ANUAIS) -->
+    <!-- ABA 1: TAREFAS (DIÁRIAS, SEMANAIS, MENSAIS, ANUAIS) -->
     <!-- ========================================== -->
     <section id="tab-tarefas" class="tab-content active">
-      <!-- Card de Progresso da FrequÃªncia Selecionada -->
+      <!-- Card de Progresso da Frequência Selecionada -->
       <div id="daily-progress-card" class="dash-card"></div>
 
-      <!-- Barra Segmentada de FrequÃªncias -->
+      <!-- Barra Segmentada de Frequências -->
       <div id="frequency-segmented-bar" class="frequency-segmented-bar"></div>
 
-      <!-- Filtro por CÃ´modos -->
+      <!-- Filtro por Cômodos -->
       <div id="room-chips-container" class="chips-scroll"></div>
 
-      <!-- Barra de AÃ§Ãµes da SeÃ§Ã£o -->
+      <!-- Barra de Ações da Seção -->
       <div class="section-action-bar">
         <h2 class="section-heading">Tarefas a Realizar</h2>
       </div>
@@ -232,9 +232,9 @@
       <!-- Lista de Tarefas -->
       <div id="tasks-list" class="task-list"></div>
 
-      <!-- BotÃ£o Flutuante (FAB) no Canto Inferior Direito -->
+      <!-- Botão Flutuante (FAB) no Canto Inferior Direito -->
       <button type="button" class="fab-btn" data-open-modal="modal-add-task" aria-label="Nova Tarefa">
-        <span class="fab-icon">ï¼‹</span>
+        <span class="fab-icon">＋</span>
         <span class="fab-label">Nova Tarefa</span>
       </button>
     </section>
@@ -243,61 +243,61 @@
     <!-- ABA 2: MERCADO & LISTA DE COMPRAS          -->
     <!-- ========================================== -->
     <!-- ========================================== -->
-    <!-- ABA: PETS (MANDIOCA & BICHINHOS DA FAMÃLIA) -->
+    <!-- ABA: PETS (MANDIOCA & BICHINHOS DA FAMÍLIA) -->
     <!-- ========================================== -->
     <section id="tab-pets" class="tab-content">
-      <!-- Barra de NavegaÃ§Ã£o de Categorias dos Pets (Estilo FisioFlow) -->
+      <!-- Barra de Navegação de Categorias dos Pets (Estilo FisioFlow) -->
       <div class="pets-subnav-pills" id="pets-subnav-pills">
-        <button type="button" class="chip active" data-pet-subtab="pets">ðŸ¾ Nossos Pets</button>
-        <button type="button" class="chip" data-pet-subtab="racao">ðŸ¥£ RaÃ§Ã£o</button>
-        <button type="button" class="chip" data-pet-subtab="areia">ðŸ–ï¸ Areia</button>
-        <button type="button" class="chip" data-pet-subtab="higiene">ðŸ› Higiene</button>
-        <button type="button" class="chip" data-pet-subtab="vacinas">ðŸ’‰ VacinaÃ§Ãµes</button>
-        <button type="button" class="chip" data-pet-subtab="exames">ðŸ©º Exames</button>
-        <button type="button" class="chip" data-pet-subtab="itens">ðŸ¦´ Itens & AcessÃ³rios</button>
+        <button type="button" class="chip active" data-pet-subtab="pets">🐾 Nossos Pets</button>
+        <button type="button" class="chip" data-pet-subtab="racao">🥣 Ração</button>
+        <button type="button" class="chip" data-pet-subtab="areia">🏖️ Areia</button>
+        <button type="button" class="chip" data-pet-subtab="higiene">🛁 Higiene</button>
+        <button type="button" class="chip" data-pet-subtab="vacinas">💉 Vacinações</button>
+        <button type="button" class="chip" data-pet-subtab="exames">🩺 Exames</button>
+        <button type="button" class="chip" data-pet-subtab="itens">🦴 Itens & Acessórios</button>
       </div>
 
-      <!-- Container DinÃ¢mico do ConteÃºdo da Sub-aba Ativa -->
+      <!-- Container Dinâmico do Conteúdo da Sub-aba Ativa -->
       <div id="pets-content-view">
         <div id="pets-list-container"></div>
       </div>
     </section>
 
     <section id="tab-compras" class="tab-content">
-      <!-- Banner de Resumo da Lista & MÃªs -->
+      <!-- Banner de Resumo da Lista & Mês -->
       <div id="compras-benefits-banner"></div>
       <div id="compras-summary-banner" class="dash-card"></div>
 
-      <!-- Alternador de VisÃ£o: Lista de Compras vs Notas Fiscais Registradas -->
+      <!-- Alternador de Visão: Lista de Compras vs Notas Fiscais Registradas -->
       <div class="compras-view-pills" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-        <button type="button" class="chip active" data-compras-view="lista">ðŸ›’ Lista do MÃªs</button>
-        <button type="button" class="chip" data-compras-view="notas">ðŸ§¾ Notas & Compras Mensais</button>
+        <button type="button" class="chip active" data-compras-view="lista">🛒 Lista do Mês</button>
+        <button type="button" class="chip" data-compras-view="notas">🧾 Notas & Compras Mensais</button>
       </div>
 
-      <!-- Barra de AÃ§Ãµes: QR Code, Subir PDF da Nota, CatÃ¡logo/JÃ¡ Comprados e Limpar -->
+      <!-- Barra de Ações: QR Code, Subir PDF da Nota, Catálogo/Já Comprados e Limpar -->
       <div class="compras-actions-row" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
         <button type="button" class="btn btn-primary" id="btn-open-manual-purchase" data-open-modal="modal-add-manual-purchase" style="flex: 1; min-width: 140px; justify-content: center; background: linear-gradient(135deg, #15803d, #166534);">
-          <span>ðŸ“</span> LanÃ§ar Compra
+          <span>📝</span> Lançar Compra
         </button>
         <button type="button" class="btn btn-primary" id="btn-scan-nfce-qr" style="flex: 1; min-width: 130px; justify-content: center; background: linear-gradient(135deg, var(--brand-moss), #1e3a24);">
-          <span>ðŸ“·</span> QR Code
+          <span>📷</span> QR Code
         </button>
         <label class="btn btn-primary" style="flex: 1; min-width: 130px; justify-content: center; background: linear-gradient(135deg, #0d9488, #115e59); cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.4rem;">
-          <span>ðŸ“„</span> Subir PDF
+          <span>📄</span> Subir PDF
           <input type="file" id="input-upload-pdf-nfce" accept="application/pdf,.pdf" style="display: none;" />
         </label>
-        <button type="button" class="btn btn-secondary" id="btn-open-price-comparator" title="Comparador de preÃ§os entre mercados e produtos jÃ¡ comprados" style="flex: 1; min-width: 150px; justify-content: center;">
-          <span>ðŸ“Š</span> Comparar PreÃ§os
+        <button type="button" class="btn btn-secondary" id="btn-open-price-comparator" title="Comparador de preços entre mercados e produtos já comprados" style="flex: 1; min-width: 150px; justify-content: center;">
+          <span>📊</span> Comparar Preços
         </button>
-        <button type="button" class="btn btn-secondary" id="btn-open-catalog" title="Produtos jÃ¡ comprados e catÃ¡logo" style="flex: 1; min-width: 130px; justify-content: center;">
-          <span>âœ¨</span> JÃ¡ Comprados
+        <button type="button" class="btn btn-secondary" id="btn-open-catalog" title="Produtos já comprados e catálogo" style="flex: 1; min-width: 130px; justify-content: center;">
+          <span>✨</span> Já Comprados
         </button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-bought-items" title="Limpar itens marcados como comprados">
-          <span>ðŸ§¹</span> Limpar
+          <span>🧹</span> Limpar
         </button>
       </div>
 
-      <!-- SubseÃ§Ã£o: VisÃ£o Lista de Compras -->
+      <!-- Subseção: Visão Lista de Compras -->
       <div id="compras-view-lista-container">
         <!-- Filtros por Categoria de Compras -->
         <div id="compras-category-chips" class="chips-scroll"></div>
@@ -306,22 +306,22 @@
         <div id="shopping-items-list" class="shopping-list-container"></div>
       </div>
 
-      <!-- SubseÃ§Ã£o: VisÃ£o Notas Fiscais & Gastos Separados por MÃªs -->
+      <!-- Subseção: Visão Notas Fiscais & Gastos Separados por Mês -->
       <div id="compras-view-notas-container" style="display: none;">
-        <!-- Painel de AnÃ¡lise de Gastos & Mercados Recorrentes -->
+        <!-- Painel de Análise de Gastos & Mercados Recorrentes -->
         <div id="market-analytics-container" style="margin-bottom: 1rem;"></div>
         <div id="market-purchases-container"></div>
       </div>
 
-            <!-- BotÃµes Flutuantes (FABs) no Canto Inferior Direito: Lista de Mercado & LanÃ§ar Compra -->
+            <!-- Botões Flutuantes (FABs) no Canto Inferior Direito: Lista de Mercado & Lançar Compra -->
       <div class="fab-stack">
         <button type="button" class="fab-btn" data-open-modal="modal-add-shopping-item" aria-label="Novo Item na Lista de Mercado">
-          <span class="fab-icon">ï¼‹</span>
+          <span class="fab-icon">＋</span>
           <span class="fab-label">Novo Item na Lista de Mercado</span>
         </button>
-        <button type="button" class="fab-btn fab-btn-purchase" data-open-modal="modal-add-manual-purchase" aria-label="LanÃ§ar Compra">
-          <span class="fab-icon">ï¼‹</span>
-          <span class="fab-label">LanÃ§ar Compra</span>
+        <button type="button" class="fab-btn fab-btn-purchase" data-open-modal="modal-add-manual-purchase" aria-label="Lançar Compra">
+          <span class="fab-icon">＋</span>
+          <span class="fab-label">Lançar Compra</span>
         </button>
       </div>
     </section>
@@ -333,16 +333,16 @@
       <!-- Banner de Resumo de Shopping -->
       <div id="shopping-summary-banner" class="dash-card"></div>
 
-      <!-- Barra de Busca e OrdenaÃ§Ã£o -->
+      <!-- Barra de Busca e Ordenação -->
       <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
         <div style="flex: 1; min-width: 180px;">
-          <input type="text" id="input-search-shopping" class="form-control" placeholder="ðŸ” Buscar desejos, marcas ou lojas..." style="font-size: 0.85rem;" />
+          <input type="text" id="input-search-shopping" class="form-control" placeholder="🔍 Buscar desejos, marcas ou lojas..." style="font-size: 0.85rem;" />
         </div>
         <select id="shopping-sort-select" class="form-control" style="width: auto; min-width: 140px; font-size: 0.82rem;">
-          <option value="priority" selected>âš¡ Prioridade</option>
-          <option value="price-asc">ðŸ’µ Menor PreÃ§o</option>
-          <option value="price-desc">ðŸ’Ž Maior PreÃ§o</option>
-          <option value="recent">ðŸ•’ Mais Recentes</option>
+          <option value="priority" selected>⚡ Prioridade</option>
+          <option value="price-asc">💵 Menor Preço</option>
+          <option value="price-desc">💎 Maior Preço</option>
+          <option value="recent">🕒 Mais Recentes</option>
         </select>
       </div>
 
@@ -352,7 +352,7 @@
       <!-- Filtros por Status (Todos, Desejados, Pesquisando, Comprados) -->
       <div id="shopping-status-filters" class="chips-scroll" style="margin-bottom: 0.5rem;"></div>
 
-      <!-- Filtros por DestinatÃ¡rio (Todos, Casal, Matheus, Scarlet) -->
+      <!-- Filtros por Destinatário (Todos, Casal, Matheus, Scarlet) -->
       <div id="shopping-person-filters" class="chips-scroll" style="margin-bottom: 0.75rem;"></div>
 
       <!-- Grid / Lista de Cards de Shopping -->
@@ -361,43 +361,43 @@
       <!-- FAB Flutuante para Adicionar Item -->
       <div class="fab-wrapper">
         <button type="button" class="fab-btn fab-btn-primary" id="btn-open-add-shopping-fab" data-open-modal="modal-shopping-item" aria-label="Adicionar Item de Shopping">
-          <span class="fab-icon">ï¼‹</span>
+          <span class="fab-icon">＋</span>
           <span class="fab-label">Novo Item de Shopping</span>
         </button>
       </div>
     </section>
 
     <!-- ========================================== -->
-    <!-- ABA 3: CARRO & MANUTENÃ‡ÃƒO                  -->
+    <!-- ABA 3: CARRO & MANUTENÇÃO                  -->
     <!-- ========================================== -->
     <section id="tab-carro" class="tab-content">
       <!-- Banner Financeiro & Resumo do Carro -->
       <div id="carro-summary-banner" class="dash-card"></div>
 
-      <!-- Filtros por Categoria (DinÃ¢micos com Emojis) -->
+      <!-- Filtros por Categoria (Dinâmicos com Emojis) -->
       <div id="carro-category-chips" class="chips-scroll"></div>
 
       <!-- Filtros por Status -->
       <div class="chips-scroll" style="margin-top: -0.25rem;">
         <button type="button" class="chip active" data-carro-status-filter="todas">Todos Status</button>
-        <button type="button" class="chip" data-carro-status-filter="pendente">â³ Pendentes</button>
-        <button type="button" class="chip" data-carro-status-filter="orcamento">ðŸ“ Em OrÃ§amento</button>
-        <button type="button" class="chip" data-carro-status-filter="andamento">ðŸ› ï¸ Em Andamento</button>
-        <button type="button" class="chip" data-carro-status-filter="concluido">âœ… ConcluÃ­das</button>
+        <button type="button" class="chip" data-carro-status-filter="pendente">⏳ Pendentes</button>
+        <button type="button" class="chip" data-carro-status-filter="orcamento">📐 Em Orçamento</button>
+        <button type="button" class="chip" data-carro-status-filter="andamento">🛠️ Em Andamento</button>
+        <button type="button" class="chip" data-carro-status-filter="concluido">✅ Concluídas</button>
       </div>
 
-      <!-- Barra de AÃ§Ãµes -->
+      <!-- Barra de Ações -->
       <div class="section-action-bar">
-        <h2 class="section-heading">Cuidados & PeÃ§as do Carro</h2>
+        <h2 class="section-heading">Cuidados & Peças do Carro</h2>
       </div>
 
-      <!-- Grid de ManutenÃ§Ãµes do Carro -->
+      <!-- Grid de Manutenções do Carro -->
       <div id="carro-grid" class="carro-grid"></div>
 
-      <!-- BotÃ£o Flutuante (FAB) no Canto Inferior Direito -->
-      <button type="button" class="fab-btn" data-open-modal="modal-add-carro" aria-label="Nova ManutenÃ§Ã£o">
-        <span class="fab-icon">ï¼‹</span>
-        <span class="fab-label">Nova ManutenÃ§Ã£o</span>
+      <!-- Botão Flutuante (FAB) no Canto Inferior Direito -->
+      <button type="button" class="fab-btn" data-open-modal="modal-add-carro" aria-label="Nova Manutenção">
+        <span class="fab-icon">＋</span>
+        <span class="fab-label">Nova Manutenção</span>
       </button>
     </section>
 
@@ -407,16 +407,16 @@
     <section id="tab-reformas" class="tab-content">
       <div id="reformas-summary-banner" class="dash-card"></div>
 
-      <!-- Filtros por CÃ´modo/Categoria (DinÃ¢micos com Emojis) -->
+      <!-- Filtros por Cômodo/Categoria (Dinâmicos com Emojis) -->
       <div id="reformas-category-chips" class="chips-scroll"></div>
 
       <!-- Filtros por Status -->
       <div class="chips-scroll" style="margin-top: -0.25rem;">
         <button type="button" class="chip active" data-reforma-filter="todas">Todos Status</button>
-        <button type="button" class="chip" data-reforma-filter="ideia">ðŸ’¡ Ideias</button>
-        <button type="button" class="chip" data-reforma-filter="orcamento">ðŸ“ Em OrÃ§amento</button>
-        <button type="button" class="chip" data-reforma-filter="andamento">ðŸ› ï¸ Em Andamento</button>
-        <button type="button" class="chip" data-reforma-filter="concluido">âœ… ConcluÃ­das</button>
+        <button type="button" class="chip" data-reforma-filter="ideia">💡 Ideias</button>
+        <button type="button" class="chip" data-reforma-filter="orcamento">📐 Em Orçamento</button>
+        <button type="button" class="chip" data-reforma-filter="andamento">🛠️ Em Andamento</button>
+        <button type="button" class="chip" data-reforma-filter="concluido">✅ Concluídas</button>
       </div>
 
       <div class="section-action-bar">
@@ -425,9 +425,9 @@
 
       <div id="reformas-grid" class="reformas-grid"></div>
 
-      <!-- BotÃ£o Flutuante (FAB) no Canto Inferior Direito -->
+      <!-- Botão Flutuante (FAB) no Canto Inferior Direito -->
       <button type="button" class="fab-btn" data-open-modal="modal-add-reforma" aria-label="Nova Reforma">
-        <span class="fab-icon">ï¼‹</span>
+        <span class="fab-icon">＋</span>
         <span class="fab-label">Nova Reforma</span>
       </button>
     </section>
@@ -438,7 +438,7 @@
     <section id="tab-sonhos" class="tab-content">
       <div id="sonhos-summary-banner" class="dash-card"></div>
 
-      <!-- Filtros por Categoria (DinÃ¢micos com Emojis) -->
+      <!-- Filtros por Categoria (Dinâmicos com Emojis) -->
       <div id="sonhos-category-chips" class="chips-scroll"></div>
 
       <div class="section-action-bar">
@@ -447,9 +447,9 @@
 
       <div id="sonhos-grid" class="sonhos-grid"></div>
 
-      <!-- BotÃ£o Flutuante (FAB) no Canto Inferior Direito -->
+      <!-- Botão Flutuante (FAB) no Canto Inferior Direito -->
       <button type="button" class="fab-btn" data-open-modal="modal-add-sonho" aria-label="Novo Sonho">
-        <span class="fab-icon">ï¼‹</span>
+        <span class="fab-icon">＋</span>
         <span class="fab-label">Novo Sonho</span>
       </button>
     </section>
@@ -459,10 +459,10 @@
     <!-- ========================================== -->
     <section id="tab-ajustes" class="tab-content">
       <form id="form-settings">
-        <!-- SessÃ£o & Controle de Acesso (Exclusivo Matheus & Scarlet) -->
+        <!-- Sessão & Controle de Acesso (Exclusivo Matheus & Scarlet) -->
         <div class="dash-card">
           <div class="dash-header">
-            <h3 class="dash-title">ðŸ” SessÃ£o & Acesso Restrito</h3>
+            <h3 class="dash-title">🔐 Sessão & Acesso Restrito</h3>
             <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: var(--brand-emerald);">Autorizado</span>
           </div>
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
@@ -472,45 +472,45 @@
             <div>
               <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Morador Conectado</div>
               <div id="auth-session-user-display" style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.2rem;">
-                <span>ðŸ‘¨â€ðŸ’»</span> <span>Matheus</span> <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">(matheusdochapeu@gmail.com)</span>
+                <span>👨‍💻</span> <span>Matheus</span> <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">(matheusdochapeu@gmail.com)</span>
               </div>
             </div>
             <button type="button" id="btn-auth-logout" class="btn btn-secondary btn-sm" style="color: var(--brand-rose); border-color: rgba(244, 63, 94, 0.4);">
-              ðŸšª Sair / Trocar UsuÃ¡rio
+              🚪 Sair / Trocar Usuário
             </button>
           </div>
         </div>
 
         <!-- Perfis dos Moradores & Senhas Individuais -->
         <div class="dash-card">
-          <h3 class="dash-title" style="margin-bottom: 0.5rem;">ðŸ‘¥ Moradores & Senhas Individuais</h3>
+          <h3 class="dash-title" style="margin-bottom: 0.5rem;">👥 Moradores & Senhas Individuais</h3>
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-            Cada morador pode definir sua prÃ³pria senha ou PIN de acesso e habilitar a biometria do celular.
+            Cada morador pode definir sua própria senha ou PIN de acesso e habilitar a biometria do celular.
           </p>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
             <div class="form-group">
-              <label class="form-label">Nome UsuÃ¡rio 1</label>
+              <label class="form-label">Nome Usuário 1</label>
               <input type="text" id="settings-user1-name" class="form-control" required />
               <button type="button" class="btn btn-secondary btn-sm" id="btn-change-pass-matheus" style="width: 100%; margin-top: 0.5rem;">
-                ðŸ”‘ Senha do Matheus
+                🔑 Senha do Matheus
               </button>
             </div>
             <div class="form-group">
-              <label class="form-label">Nome UsuÃ¡rio 2</label>
+              <label class="form-label">Nome Usuário 2</label>
               <input type="text" id="settings-user2-name" class="form-control" required />
               <button type="button" class="btn btn-secondary btn-sm" id="btn-change-pass-scarlet" style="width: 100%; margin-top: 0.5rem;">
-                ðŸ”‘ Senha da Scarlet
+                🔑 Senha da Scarlet
               </button>
             </div>
           </div>
 
           <div style="border-top: 1px solid var(--border-subtle); padding-top: 0.75rem;">
             <label style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; cursor: pointer;">
-              <span>ðŸ‘† <strong>Desbloqueio com Biometria do Celular (Digital / Face ID)</strong></span>
+              <span>👆 <strong>Desbloqueio com Biometria do Celular (Digital / Face ID)</strong></span>
               <input type="checkbox" id="settings-biometrics-toggle" style="transform: scale(1.2);" />
             </label>
             <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
-              Usa a autenticaÃ§Ã£o do seu prÃ³prio aparelho (Face ID, impressÃ£o digital ou bloqueio de tela).
+              Usa a autenticação do seu próprio aparelho (Face ID, impressão digital ou bloqueio de tela).
             </div>
           </div>
         </div>
@@ -518,7 +518,7 @@
         <!-- Gerenciador de Categorias & Emojis -->
         <div class="dash-card">
           <div class="dash-header">
-            <h3 class="dash-title">ðŸ·ï¸ Categorias & Emojis de Filtro</h3>
+            <h3 class="dash-title">🏷️ Categorias & Emojis de Filtro</h3>
             <button type="button" class="btn btn-primary btn-sm" id="btn-add-category-settings">
               <span>+</span> Nova Categoria
             </button>
@@ -527,41 +527,41 @@
             Personalize as categorias e emojis usados para filtrar tarefas do lar, compras de mercado, cuidados do carro, reformas e sonhos.
           </p>
 
-          <!-- Seletor de MÃ³dulo para Gerenciar -->
+          <!-- Seletor de Módulo para Gerenciar -->
           <div class="chips-scroll" id="categories-module-selector" style="margin-bottom: 0.75rem;">
-            <button type="button" class="chip active" data-manage-module="tarefas">ðŸ§¹ Tarefas</button>
-            <button type="button" class="chip" data-manage-module="compras">ðŸ›’ Mercado</button>
-            <button type="button" class="chip" data-manage-module="carro">ðŸš— Carro</button>
-            <button type="button" class="chip" data-manage-module="reformas">ðŸ”¨ Reformas</button>
-            <button type="button" class="chip" data-manage-module="sonhos">âœ¨ Sonhos</button>
+            <button type="button" class="chip active" data-manage-module="tarefas">🧹 Tarefas</button>
+            <button type="button" class="chip" data-manage-module="compras">🛒 Mercado</button>
+            <button type="button" class="chip" data-manage-module="carro">🚗 Carro</button>
+            <button type="button" class="chip" data-manage-module="reformas">🔨 Reformas</button>
+            <button type="button" class="chip" data-manage-module="sonhos">✨ Sonhos</button>
           </div>
 
-          <!-- Lista de Categorias do MÃ³dulo Ativo -->
+          <!-- Lista de Categorias do Módulo Ativo -->
           <div id="categories-list-container" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
         </div>
 
-        <!-- InstalaÃ§Ã£o no Celular -->
+        <!-- Instalação no Celular -->
         <div class="dash-card">
-          <h3 class="dash-title" style="margin-bottom: 0.5rem;">ðŸ“± Aplicativo no Celular (PWA)</h3>
+          <h3 class="dash-title" style="margin-bottom: 0.5rem;">📱 Aplicativo no Celular (PWA)</h3>
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            Tenha o Ã­cone do Maracaju na tela inicial do seu celular, com abertura instantÃ¢nea em tela cheia e funcionamento offline.
+            Tenha o ícone do Maracaju na tela inicial do seu celular, com abertura instantânea em tela cheia e funcionamento offline.
           </p>
           <button type="button" class="btn btn-secondary btn-sm" data-open-modal="modal-install-guide">
-            Ver Passo a Passo de InstalaÃ§Ã£o (iPhone & Android)
+            Ver Passo a Passo de Instalação (iPhone & Android)
           </button>
         </div>
 
-        <!-- SincronizaÃ§Ã£o Google Sheets -->
+        <!-- Sincronização Google Sheets -->
         <div class="dash-card">
           <div class="dash-header">
-            <h3 class="dash-title">â˜ï¸ Backup no Google Sheets</h3>
+            <h3 class="dash-title">☁️ Backup no Google Sheets</h3>
             <button type="button" class="btn btn-secondary btn-sm" data-open-modal="modal-sheets-help">
               Como Configurar?
             </button>
           </div>
 
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-            Vincule o script <code style="color: var(--brand-cyan);">apps_script.gs</code> da pasta do projeto Ã  sua planilha Google pessoal. Todos os dados (tarefas periÃ³dicas, histÃ³rico diÃ¡rio, manutenÃ§Ãµes do carro, reformas e sonhos) sÃ£o salvos de forma organizada em abas!
+            Vincule o script <code style="color: var(--brand-cyan);">apps_script.gs</code> da pasta do projeto à sua planilha Google pessoal. Todos os dados (tarefas periódicas, histórico diário, manutenções do carro, reformas e sonhos) são salvos de forma organizada em abas!
           </p>
 
           <div class="form-group">
@@ -575,7 +575,7 @@
           </div>
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
-            <button type="button" id="btn-test-sheets" class="btn btn-secondary btn-sm">Testar ConexÃ£o</button>
+            <button type="button" id="btn-test-sheets" class="btn btn-secondary btn-sm">Testar Conexão</button>
             <button type="button" id="btn-sync-now" class="btn btn-primary btn-sm">Fazer Backup Agora</button>
             <button type="button" id="btn-restore-sheets" class="btn btn-secondary btn-sm">Restaurar do Google Sheets</button>
           </div>
@@ -585,28 +585,28 @@
           <div style="margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem;">
             <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
               <input type="checkbox" id="settings-autosync-toggle" />
-              <span>Sincronizar automaticamente no Google Sheets a cada alteraÃ§Ã£o</span>
+              <span>Sincronizar automaticamente no Google Sheets a cada alteração</span>
             </label>
           </div>
         </div>
 
-        <!-- PreferÃªncias & Ãudio -->
+        <!-- Preferências & Áudio -->
         <div class="dash-card">
-          <h3 class="dash-title" style="margin-bottom: 0.75rem;">ðŸ”Š PreferÃªncias</h3>
+          <h3 class="dash-title" style="margin-bottom: 0.75rem;">🔊 Preferências</h3>
           <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
             <input type="checkbox" id="settings-sound-toggle" checked />
-            <span>Ativar sons de conclusÃ£o de tarefas</span>
+            <span>Ativar sons de conclusão de tarefas</span>
           </label>
         </div>
 
         <!-- Backup Local JSON (Offline) -->
         <div class="dash-card">
-          <h3 class="dash-title" style="margin-bottom: 0.75rem;">ðŸ’¾ CÃ³pia de SeguranÃ§a Local</h3>
+          <h3 class="dash-title" style="margin-bottom: 0.75rem;">💾 Cópia de Segurança Local</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            VocÃª tambÃ©m pode exportar um arquivo JSON com 100% dos seus dados locais a qualquer momento.
+            Você também pode exportar um arquivo JSON com 100% dos seus dados locais a qualquer momento.
           </p>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button type="button" id="btn-restore-invoices" class="btn btn-secondary btn-sm" style="background: rgba(46, 125, 50, 0.08); border-color: var(--brand-moss); color: var(--brand-moss-dark); font-weight: 600;">ðŸ§¾ Recuperar Notas Fiscais</button>
+            <button type="button" id="btn-restore-invoices" class="btn btn-secondary btn-sm" style="background: rgba(46, 125, 50, 0.08); border-color: var(--brand-moss); color: var(--brand-moss-dark); font-weight: 600;">🧾 Recuperar Notas Fiscais</button>
             <button type="button" id="btn-export-json" class="btn btn-secondary btn-sm">Exportar Arquivo JSON</button>
             <label class="btn btn-secondary btn-sm" style="margin-bottom: 0;">
               Importar JSON
@@ -615,19 +615,19 @@
           </div>
         </div>
 
-        <!-- ManutenÃ§Ã£o & AtualizaÃ§Ã£o do Aplicativo -->
+        <!-- Manutenção & Atualização do Aplicativo -->
         <div class="dash-card">
-          <h3 class="dash-title" style="margin-bottom: 0.75rem;">ðŸ“² AtualizaÃ§Ã£o do Aplicativo</h3>
+          <h3 class="dash-title" style="margin-bottom: 0.75rem;">📲 Atualização do Aplicativo</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            VersÃ£o instalada: <strong>Maracaju v2.5.9</strong>. Se notar telas antigas ou travamentos no celular, force a atualizaÃ§Ã£o imediata abaixo.
+            Versão instalada: <strong>Maracaju v2.5.7</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
           </p>
           <button type="button" id="btn-force-update-settings" class="btn btn-secondary btn-sm" onclick="window.forceUpdateApp && window.forceUpdateApp()">
-            ðŸ”„ Limpar Cache e ForÃ§ar AtualizaÃ§Ã£o
+            🔄 Limpar Cache e Forçar Atualização
           </button>
         </div>
 
         <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-          Salvar ConfiguraÃ§Ãµes
+          Salvar Configurações
         </button>
       </form>
     </section>
@@ -643,44 +643,44 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Nova Tarefa do Lar</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-task">
         <div class="form-group">
-          <label class="form-label">TÃ­tulo da Tarefa</label>
+          <label class="form-label">Título da Tarefa</label>
           <input type="text" id="task-input-title" class="form-control" placeholder="Ex: Higienizar micro-ondas" required />
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
             <label class="form-label">Periodicidade</label>
             <select id="task-input-frequency" class="form-control">
-              <option value="diaria" selected>â˜€ï¸ DiÃ¡ria</option>
-              <option value="semanal">ðŸ“… Semanal</option>
-              <option value="mensal">ðŸ—“ï¸ Mensal</option>
-              <option value="anual">ðŸŽ¯ Anual</option>
+              <option value="diaria" selected>☀️ Diária</option>
+              <option value="semanal">📅 Semanal</option>
+              <option value="mensal">🗓️ Mensal</option>
+              <option value="anual">🎯 Anual</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">CÃ´modo / Ãrea</label>
+            <label class="form-label">Cômodo / Área</label>
             <select id="task-input-room" class="form-control">
-              <option value="suite">ðŸ›ï¸ Suite</option>
-              <option value="corredor">ðŸšª Corredor</option>
-              <option value="banheiro_azul">ðŸš¿ Banheiro Azul</option>
-              <option value="banheiro_rosa">ðŸ§¼ Banheiro Rosa</option>
-              <option value="cozinha" selected>ðŸ³ Cozinha</option>
-              <option value="lavanderia">ðŸ§º Lavanderia</option>
-              <option value="quintal">ðŸŒ¿ Quintal</option>
-              <option value="sala">ðŸ›‹ï¸ Sala</option>
-              <option value="escritorio">ðŸ’» EscritÃ³rio</option>
-              <option value="alpendre">ðŸ¡ Alpendre</option>
-              <option value="area_externa_garagem">ðŸš— Ãrea Externa - Garagem</option>
+              <option value="suite">🛏️ Suite</option>
+              <option value="corredor">🚪 Corredor</option>
+              <option value="banheiro_azul">🚿 Banheiro Azul</option>
+              <option value="banheiro_rosa">🧼 Banheiro Rosa</option>
+              <option value="cozinha" selected>🍳 Cozinha</option>
+              <option value="lavanderia">🧺 Lavanderia</option>
+              <option value="quintal">🌿 Quintal</option>
+              <option value="sala">🛋️ Sala</option>
+              <option value="escritorio">💻 Escritório</option>
+              <option value="alpendre">🏡 Alpendre</option>
+              <option value="area_externa_garagem">🚗 Área Externa - Garagem</option>
             </select>
           </div>
         </div>
-        <!-- Seletor de Dias da Semana (para tarefas DiÃ¡rias) -->
+        <!-- Seletor de Dias da Semana (para tarefas Diárias) -->
         <div id="task-weekdays-group" class="form-group" style="background: var(--bg-tertiary); padding: 0.65rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.25rem;">
-            <label class="form-label" style="margin: 0; font-size: 0.8rem;">ðŸ“… Dias da Semana (Opcional)</label>
+            <label class="form-label" style="margin: 0; font-size: 0.8rem;">📅 Dias da Semana (Opcional)</label>
             <span id="task-weekdays-label" style="font-size: 0.75rem; color: var(--brand-moss); font-weight: 700;">Todos os dias</span>
           </div>
           <div id="task-weekdays-buttons" class="task-weekdays-buttons" style="display: flex; gap: 0.35rem; justify-content: space-between; margin-bottom: 0.4rem;">
@@ -689,12 +689,12 @@
             <button type="button" class="btn-weekday" data-day="3">Qua</button>
             <button type="button" class="btn-weekday" data-day="4">Qui</button>
             <button type="button" class="btn-weekday" data-day="5">Sex</button>
-            <button type="button" class="btn-weekday" data-day="6">SÃ¡b</button>
+            <button type="button" class="btn-weekday" data-day="6">Sáb</button>
             <button type="button" class="btn-weekday" data-day="0">Dom</button>
           </div>
           <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-xs btn-weekday-preset" data-preset="all" data-target="add">Todos</button>
-            <button type="button" class="btn btn-secondary btn-xs btn-weekday-preset" data-preset="trash" data-target="add" style="font-weight: 700; color: var(--brand-moss-dark);">Ter, Qui, SÃ¡b (Lixo)</button>
+            <button type="button" class="btn btn-secondary btn-xs btn-weekday-preset" data-preset="trash" data-target="add" style="font-weight: 700; color: var(--brand-moss-dark);">Ter, Qui, Sáb (Lixo)</button>
             <button type="button" class="btn btn-secondary btn-xs btn-weekday-preset" data-preset="weekdays" data-target="add">Seg a Sex</button>
             <button type="button" class="btn btn-secondary btn-xs btn-weekday-preset" data-preset="weekend" data-target="add">Fim de Semana</button>
           </div>
@@ -702,15 +702,15 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label">Dificuldade / EsforÃ§o</label>
+            <label class="form-label">Dificuldade / Esforço</label>
             <select id="task-input-effort" class="form-control">
-              <option value="leve">âš¡ Leve</option>
-              <option value="media" selected>âš¡âš¡ MÃ©dia</option>
-              <option value="pesada">âš¡âš¡âš¡ Pesada</option>
+              <option value="leve">⚡ Leve</option>
+              <option value="media" selected>⚡⚡ Média</option>
+              <option value="pesada">⚡⚡⚡ Pesada</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">ResponsÃ¡vel PadrÃ£o</label>
+            <label class="form-label">Responsável Padrão</label>
             <select id="task-input-assignee" class="form-control">
               <option value="ambos">Casal (Quem puder)</option>
               <option value="matheus">Matheus</option>
@@ -719,7 +719,7 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">InstruÃ§Ãµes ou ObservaÃ§Ãµes (Opcional)</label>
+          <label class="form-label">Instruções ou Observações (Opcional)</label>
           <textarea id="task-input-notes" class="form-control" rows="2" placeholder="Dicas de produtos ou detalhes"></textarea>
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%;">Adicionar Tarefa</button>
@@ -731,34 +731,34 @@
   <div id="modal-edit-task" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">âœï¸ Editar Tarefa do Lar</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">✏️ Editar Tarefa do Lar</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-task">
         <input type="hidden" id="task-edit-id" value="" />
         <div class="form-group">
-          <label class="form-label">TÃ­tulo da Tarefa</label>
+          <label class="form-label">Título da Tarefa</label>
           <input type="text" id="task-edit-title" class="form-control" placeholder="Ex: Higienizar micro-ondas" required />
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
             <label class="form-label">Periodicidade</label>
             <select id="task-edit-frequency" class="form-control">
-              <option value="diaria">â˜€ï¸ DiÃ¡ria</option>
-              <option value="semanal">ðŸ“… Semanal</option>
-              <option value="mensal">ðŸ—“ï¸ Mensal</option>
-              <option value="anual">ðŸŽ¯ Anual</option>
+              <option value="diaria">☀️ Diária</option>
+              <option value="semanal">📅 Semanal</option>
+              <option value="mensal">🗓️ Mensal</option>
+              <option value="anual">🎯 Anual</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">CÃ´modo / Categoria</label>
+            <label class="form-label">Cômodo / Categoria</label>
             <select id="task-edit-room" class="form-control"></select>
           </div>
         </div>
-        <!-- Seletor de Dias da Semana (EdiÃ§Ã£o) -->
+        <!-- Seletor de Dias da Semana (Edição) -->
         <div id="task-edit-weekdays-group" class="form-group" style="background: var(--bg-tertiary); padding: 0.65rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.25rem;">
-            <label class="form-label" style="margin: 0; font-size: 0.8rem;">ðŸ“… Dias da Semana (Opcional)</label>
+            <label class="form-label" style="margin: 0; font-size: 0.8rem;">📅 Dias da Semana (Opcional)</label>
             <span id="task-edit-weekdays-label" style="font-size: 0.75rem; color: var(--brand-moss); font-weight: 700;">Todos os dias</span>
           </div>
           <div id="task-edit-weekdays-buttons" class="task-weekdays-buttons" style="display: flex; gap: 0.35rem; justify-content: space-between; margin-bottom: 0.4rem;">
@@ -767,12 +767,12 @@
             <button type="button" class="btn-weekday" data-day="3">Qua</button>
             <button type="button" class="btn-weekday" data-day="4">Qui</button>
             <button type="button" class="btn-weekday" data-day="5">Sex</button>
-            <button type="button" class="btn-weekday" data-day="6">SÃ¡b</button>
+            <button type="button" class="btn-weekday" data-day="6">Sáb</button>
             <button type="button" class="btn-weekday" data-day="0">Dom</button>
           </div>
           <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-xs btn-weekday-preset" data-preset="all" data-target="edit">Todos</button>
-            <button type="button" class="btn btn-secondary btn-xs btn-weekday-preset" data-preset="trash" data-target="edit" style="font-weight: 700; color: var(--brand-moss-dark);">Ter, Qui, SÃ¡b (Lixo)</button>
+            <button type="button" class="btn btn-secondary btn-xs btn-weekday-preset" data-preset="trash" data-target="edit" style="font-weight: 700; color: var(--brand-moss-dark);">Ter, Qui, Sáb (Lixo)</button>
             <button type="button" class="btn btn-secondary btn-xs btn-weekday-preset" data-preset="weekdays" data-target="edit">Seg a Sex</button>
             <button type="button" class="btn btn-secondary btn-xs btn-weekday-preset" data-preset="weekend" data-target="edit">Fim de Semana</button>
           </div>
@@ -780,15 +780,15 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label">Dificuldade / EsforÃ§o</label>
+            <label class="form-label">Dificuldade / Esforço</label>
             <select id="task-edit-effort" class="form-control">
-              <option value="leve">âš¡ Leve</option>
-              <option value="media">âš¡âš¡ MÃ©dia</option>
-              <option value="pesada">âš¡âš¡âš¡ Pesada</option>
+              <option value="leve">⚡ Leve</option>
+              <option value="media">⚡⚡ Média</option>
+              <option value="pesada">⚡⚡⚡ Pesada</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">ResponsÃ¡vel PadrÃ£o</label>
+            <label class="form-label">Responsável Padrão</label>
             <select id="task-edit-assignee" class="form-control">
               <option value="ambos">Casal (Quem puder)</option>
               <option value="matheus">Matheus</option>
@@ -797,23 +797,23 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">InstruÃ§Ãµes ou ObservaÃ§Ãµes (Opcional)</label>
+          <label class="form-label">Instruções ou Observações (Opcional)</label>
           <textarea id="task-edit-notes" class="form-control" rows="2" placeholder="Dicas de produtos ou detalhes"></textarea>
         </div>
         <div style="display: flex; gap: 0.5rem;">
-          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar AlteraÃ§Ãµes</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Modal: Nova ManutenÃ§Ã£o do Carro (NOVO!) -->
+  <!-- Modal: Nova Manutenção do Carro (NOVO!) -->
   <div id="modal-add-carro" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Nova ManutenÃ§Ã£o ou Cuidado do Carro</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">Nova Manutenção ou Cuidado do Carro</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-carro">
         <div class="form-group">
@@ -825,20 +825,20 @@
           <div class="form-group">
             <label class="form-label">Categoria</label>
             <select id="carro-input-category" class="form-control">
-              <option value="oleo_revisao">ðŸ›¢ï¸ RevisÃ£o & Ã“leo</option>
-              <option value="mecanica" selected>ðŸ”§ MecÃ¢nica Geral</option>
-              <option value="pneus_freios">ðŸ›ž Pneus & Freios</option>
-              <option value="estetica">âœ¨ EstÃ©tica & Lavagem</option>
-              <option value="eletrica_acessorios">ðŸ”Œ ElÃ©trica & AcessÃ³rios</option>
+              <option value="oleo_revisao">🛢️ Revisão & Óleo</option>
+              <option value="mecanica" selected>🔧 Mecânica Geral</option>
+              <option value="pneus_freios">🛞 Pneus & Freios</option>
+              <option value="estetica">✨ Estética & Lavagem</option>
+              <option value="eletrica_acessorios">🔌 Elétrica & Acessórios</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">Status</label>
             <select id="carro-input-status" class="form-control">
-              <option value="pendente" selected>â³ Pendente / Ideia</option>
-              <option value="orcamento">ðŸ“ Em OrÃ§amento</option>
-              <option value="andamento">ðŸ› ï¸ Em Andamento</option>
-              <option value="concluido">âœ… ConcluÃ­do</option>
+              <option value="pendente" selected>⏳ Pendente / Ideia</option>
+              <option value="orcamento">📐 Em Orçamento</option>
+              <option value="andamento">🛠️ Em Andamento</option>
+              <option value="concluido">✅ Concluído</option>
             </select>
           </div>
         </div>
@@ -847,14 +847,14 @@
           <div class="form-group">
             <label class="form-label">Prioridade</label>
             <select id="carro-input-priority" class="form-control">
-              <option value="baixa">Baixa (EstÃ©tica)</option>
-              <option value="media" selected>MÃ©dia</option>
-              <option value="alta">Alta (SeguranÃ§a)</option>
+              <option value="baixa">Baixa (Estética)</option>
+              <option value="media" selected>Média</option>
+              <option value="alta">Alta (Segurança)</option>
               <option value="urgente">Urgente</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">OrÃ§amento Estimado (R$)</label>
+            <label class="form-label">Orçamento Estimado (R$)</label>
             <input type="text" inputmode="decimal" id="carro-input-cost" class="form-control" placeholder="Ex: 264,33" />
           </div>
         </div>
@@ -871,40 +871,40 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Link de PeÃ§a ou Tutorial (Opcional)</label>
+          <label class="form-label">Link de Peça ou Tutorial (Opcional)</label>
           <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 0.5rem;">
-            <input type="text" id="carro-input-link-title" class="form-control" placeholder="TÃ­tulo (ex: Loja)" />
+            <input type="text" id="carro-input-link-title" class="form-control" placeholder="Título (ex: Loja)" />
             <input type="url" id="carro-input-link-url" class="form-control" placeholder="https://..." />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Foto da PeÃ§a / Defeito / ReferÃªncia (Opcional)</label>
+          <label class="form-label">Foto da Peça / Defeito / Referência (Opcional)</label>
           <input type="file" id="carro-input-photo" class="form-control" accept="image/*" />
-          <span style="font-size: 0.72rem; color: var(--text-muted);">Escolha uma foto da galeria, tire com a cÃ¢mera ou anexe um arquivo do computador.</span>
+          <span style="font-size: 0.72rem; color: var(--text-muted);">Escolha uma foto da galeria, tire com a câmera ou anexe um arquivo do computador.</span>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Notas e InstruÃ§Ãµes</label>
-          <textarea id="carro-input-notes" class="form-control" rows="3" placeholder="Marca da peÃ§a recomendada, especificaÃ§Ãµes, oficina de preferÃªncia"></textarea>
+          <label class="form-label">Notas e Instruções</label>
+          <textarea id="carro-input-notes" class="form-control" rows="3" placeholder="Marca da peça recomendada, especificações, oficina de preferência"></textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar ManutenÃ§Ã£o do Carro</button>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar Manutenção do Carro</button>
       </form>
     </div>
   </div>
 
-  <!-- Modal: Editar ManutenÃ§Ã£o do Carro -->
+  <!-- Modal: Editar Manutenção do Carro -->
   <div id="modal-edit-carro" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">âœï¸ Editar ManutenÃ§Ã£o do Carro</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">✏️ Editar Manutenção do Carro</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-carro">
         <input type="hidden" id="carro-edit-id" value="" />
         <div class="form-group">
-          <label class="form-label">TÃ­tulo da ManutenÃ§Ã£o ou PeÃ§a</label>
+          <label class="form-label">Título da Manutenção ou Peça</label>
           <input type="text" id="carro-edit-title" class="form-control" required />
         </div>
 
@@ -916,10 +916,10 @@
           <div class="form-group">
             <label class="form-label">Status</label>
             <select id="carro-edit-status" class="form-control">
-              <option value="pendente">â³ Pendente / Ideia</option>
-              <option value="orcamento">ðŸ“ Em OrÃ§amento</option>
-              <option value="andamento">ðŸ› ï¸ Em Andamento</option>
-              <option value="concluido">âœ… ConcluÃ­do</option>
+              <option value="pendente">⏳ Pendente / Ideia</option>
+              <option value="orcamento">📐 Em Orçamento</option>
+              <option value="andamento">🛠️ Em Andamento</option>
+              <option value="concluido">✅ Concluído</option>
             </select>
           </div>
         </div>
@@ -928,14 +928,14 @@
           <div class="form-group">
             <label class="form-label">Prioridade</label>
             <select id="carro-edit-priority" class="form-control">
-              <option value="baixa">Baixa (EstÃ©tica)</option>
-              <option value="media">MÃ©dia</option>
-              <option value="alta">Alta (SeguranÃ§a)</option>
+              <option value="baixa">Baixa (Estética)</option>
+              <option value="media">Média</option>
+              <option value="alta">Alta (Segurança)</option>
               <option value="urgente">Urgente</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">OrÃ§amento Estimado (R$)</label>
+            <label class="form-label">Orçamento Estimado (R$)</label>
             <input type="text" inputmode="decimal" id="carro-edit-estimated" class="form-control" placeholder="Ex: 270,00" />
           </div>
         </div>
@@ -957,12 +957,12 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Notas e InstruÃ§Ãµes</label>
-          <textarea id="carro-edit-notes" class="form-control" rows="2" placeholder="Oficina de preferÃªncia, marca recomendada"></textarea>
+          <label class="form-label">Notas e Instruções</label>
+          <textarea id="carro-edit-notes" class="form-control" rows="2" placeholder="Oficina de preferência, marca recomendada"></textarea>
         </div>
 
         <div style="display: flex; gap: 0.5rem;">
-          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar AlteraÃ§Ãµes</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
       </form>
@@ -974,23 +974,23 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Cadastrar Reforma ou Melhoria</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-reforma">
         <div class="form-group">
           <label class="form-label">Nome do Projeto</label>
-          <input type="text" id="reforma-input-title" class="form-control" placeholder="Ex: Troca de luminÃ¡rias e pintura" required />
+          <input type="text" id="reforma-input-title" class="form-control" placeholder="Ex: Troca de luminárias e pintura" required />
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label">CÃ´modo / Categoria</label>
+            <label class="form-label">Cômodo / Categoria</label>
             <select id="reforma-input-room" class="form-control" required></select>
           </div>
           <div class="form-group">
             <label class="form-label">Prioridade</label>
             <select id="reforma-input-priority" class="form-control">
               <option value="baixa">Baixa (Futuro)</option>
-              <option value="media" selected>MÃ©dia</option>
+              <option value="media" selected>Média</option>
               <option value="alta">Alta</option>
               <option value="urgente">Urgente</option>
             </select>
@@ -1000,39 +1000,39 @@
           <div class="form-group">
             <label class="form-label">Status Inicial</label>
             <select id="reforma-input-status" class="form-control">
-              <option value="ideia" selected>ðŸ’¡ Ideia / Planejamento</option>
-              <option value="orcamento">ðŸ“ Em OrÃ§amento</option>
-              <option value="andamento">ðŸ› ï¸ Em Andamento</option>
-              <option value="concluido">âœ… ConcluÃ­do</option>
+              <option value="ideia" selected>💡 Ideia / Planejamento</option>
+              <option value="orcamento">📐 Em Orçamento</option>
+              <option value="andamento">🛠️ Em Andamento</option>
+              <option value="concluido">✅ Concluído</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">OrÃ§amento Estimado (R$)</label>
+            <label class="form-label">Orçamento Estimado (R$)</label>
             <input type="text" inputmode="decimal" id="reforma-input-cost" class="form-control" placeholder="Ex: 264,33" />
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">PrevisÃ£o / Data Alvo</label>
+          <label class="form-label">Previsão / Data Alvo</label>
           <input type="date" id="reforma-input-date" class="form-control" />
         </div>
 
         <div class="form-group">
-          <label class="form-label">Link de InspiraÃ§Ã£o ou Loja (Opcional)</label>
+          <label class="form-label">Link de Inspiração ou Loja (Opcional)</label>
           <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 0.5rem;">
-            <input type="text" id="reforma-input-link-title" class="form-control" placeholder="TÃ­tulo (ex: Leroy)" />
+            <input type="text" id="reforma-input-link-title" class="form-control" placeholder="Título (ex: Leroy)" />
             <input type="url" id="reforma-input-link-url" class="form-control" placeholder="https://..." />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Foto de ReferÃªncia / Antes da Reforma (Opcional)</label>
+          <label class="form-label">Foto de Referência / Antes da Reforma (Opcional)</label>
           <input type="file" id="reforma-input-photo" class="form-control" accept="image/*" />
-          <span style="font-size: 0.72rem; color: var(--text-muted);">Escolha uma foto da galeria, tire com a cÃ¢mera ou anexe um arquivo do computador.</span>
+          <span style="font-size: 0.72rem; color: var(--text-muted);">Escolha uma foto da galeria, tire com a câmera ou anexe um arquivo do computador.</span>
         </div>
 
         <div class="form-group">
-          <label class="form-label">DescriÃ§Ã£o & InspiraÃ§Ãµes</label>
-          <textarea id="reforma-input-desc" class="form-control" rows="3" placeholder="Detalhes de materiais, medidas, referÃªncias"></textarea>
+          <label class="form-label">Descrição & Inspirações</label>
+          <textarea id="reforma-input-desc" class="form-control" rows="3" placeholder="Detalhes de materiais, medidas, referências"></textarea>
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar Projeto de Reforma</button>
       </form>
@@ -1043,8 +1043,8 @@
   <div id="modal-edit-reforma" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">âœï¸ Editar Projeto de Reforma</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">✏️ Editar Projeto de Reforma</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-reforma">
         <input type="hidden" id="reforma-edit-id" value="" />
@@ -1055,16 +1055,16 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label">CÃ´modo / Categoria</label>
+            <label class="form-label">Cômodo / Categoria</label>
             <select id="reforma-edit-room" class="form-control" required></select>
           </div>
           <div class="form-group">
             <label class="form-label">Status</label>
             <select id="reforma-edit-status" class="form-control">
-              <option value="ideia">ðŸ’¡ Ideia / Planejamento</option>
-              <option value="orcamento">ðŸ“ Em OrÃ§amento</option>
-              <option value="andamento">ðŸ› ï¸ Em Andamento</option>
-              <option value="concluido">âœ… ConcluÃ­do</option>
+              <option value="ideia">💡 Ideia / Planejamento</option>
+              <option value="orcamento">📐 Em Orçamento</option>
+              <option value="andamento">🛠️ Em Andamento</option>
+              <option value="concluido">✅ Concluído</option>
             </select>
           </div>
         </div>
@@ -1074,13 +1074,13 @@
             <label class="form-label">Prioridade</label>
             <select id="reforma-edit-priority" class="form-control">
               <option value="baixa">Baixa (Futuro)</option>
-              <option value="media">MÃ©dia</option>
+              <option value="media">Média</option>
               <option value="alta">Alta</option>
               <option value="urgente">Urgente</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">OrÃ§amento Estimado (R$)</label>
+            <label class="form-label">Orçamento Estimado (R$)</label>
             <input type="text" inputmode="decimal" id="reforma-edit-estimated" class="form-control" placeholder="Ex: 800,00" />
           </div>
         </div>
@@ -1091,18 +1091,18 @@
             <input type="text" inputmode="decimal" id="reforma-edit-actual" class="form-control" placeholder="Ex: 150,00" />
           </div>
           <div class="form-group">
-            <label class="form-label">PrevisÃ£o / Data Alvo</label>
+            <label class="form-label">Previsão / Data Alvo</label>
             <input type="date" id="reforma-edit-date" class="form-control" />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">DescriÃ§Ã£o & InspiraÃ§Ãµes</label>
-          <textarea id="reforma-edit-desc" class="form-control" rows="3" placeholder="Detalhes de materiais, medidas, referÃªncias"></textarea>
+          <label class="form-label">Descrição & Inspirações</label>
+          <textarea id="reforma-edit-desc" class="form-control" rows="3" placeholder="Detalhes de materiais, medidas, referências"></textarea>
         </div>
 
         <div style="display: flex; gap: 0.5rem;">
-          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar AlteraÃ§Ãµes</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
       </form>
@@ -1114,21 +1114,21 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Novo Sonho do Casal</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-sonho">
         <div class="form-group">
-          <label class="form-label">Qual Ã© o Sonho?</label>
+          <label class="form-label">Qual é o Sonho?</label>
           <input type="text" id="sonho-input-title" class="form-control" placeholder="Ex: Viagem para a Europa juntos" required />
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
             <label class="form-label">Categoria</label>
             <select id="sonho-input-category" class="form-control">
-              <option value="viagem">âœˆï¸ Viagens</option>
-              <option value="casa">ðŸ¡ Casa & Conforto</option>
-              <option value="bens">ðŸš— Conquistas</option>
-              <option value="experiencia">ðŸ’– Vida a Dois</option>
+              <option value="viagem">✈️ Viagens</option>
+              <option value="casa">🏡 Casa & Conforto</option>
+              <option value="bens">🚗 Conquistas</option>
+              <option value="experiencia">💖 Vida a Dois</option>
             </select>
           </div>
           <div class="form-group">
@@ -1141,8 +1141,8 @@
           <input type="date" id="sonho-input-date" class="form-control" />
         </div>
         <div class="form-group">
-          <label class="form-label">DescriÃ§Ã£o & Por que queremos isso?</label>
-          <textarea id="sonho-input-desc" class="form-control" rows="3" placeholder="O que esse sonho significa para nÃ³s"></textarea>
+          <label class="form-label">Descrição & Por que queremos isso?</label>
+          <textarea id="sonho-input-desc" class="form-control" rows="3" placeholder="O que esse sonho significa para nós"></textarea>
         </div>
         <button type="submit" class="btn btn-primary" style="width: 100%;">Adicionar ao Mural dos Sonhos</button>
       </form>
@@ -1153,13 +1153,13 @@
   <div id="modal-edit-sonho" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">âœï¸ Editar Sonho do Casal</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">✏️ Editar Sonho do Casal</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-sonho">
         <input type="hidden" id="sonho-edit-id" value="" />
         <div class="form-group">
-          <label class="form-label">TÃ­tulo do Sonho</label>
+          <label class="form-label">Título do Sonho</label>
           <input type="text" id="sonho-edit-title" class="form-control" required />
         </div>
 
@@ -1167,19 +1167,19 @@
           <div class="form-group">
             <label class="form-label">Categoria</label>
             <select id="sonho-edit-category" class="form-control">
-              <option value="viagem">âœˆï¸ Viagens</option>
-              <option value="casa">ðŸ¡ Casa & Conforto</option>
-              <option value="bens">ðŸš— Conquistas</option>
-              <option value="experiencia">ðŸ’– Vida a Dois</option>
+              <option value="viagem">✈️ Viagens</option>
+              <option value="casa">🏡 Casa & Conforto</option>
+              <option value="bens">🚗 Conquistas</option>
+              <option value="experiencia">💖 Vida a Dois</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">Status</label>
             <select id="sonho-edit-status" class="form-control">
-              <option value="sonhando">ðŸ’­ Sonhando</option>
-              <option value="planejando">ðŸ“ Planejando</option>
-              <option value="poupando">ðŸ’° Poupando</option>
-              <option value="realizado">ðŸŽ‰ Realizado</option>
+              <option value="sonhando">💭 Sonhando</option>
+              <option value="planejando">📐 Planejando</option>
+              <option value="poupando">💰 Poupando</option>
+              <option value="realizado">🎉 Realizado</option>
             </select>
           </div>
         </div>
@@ -1190,7 +1190,7 @@
             <input type="text" inputmode="decimal" id="sonho-edit-amount" class="form-control" placeholder="Ex: 12000,00" />
           </div>
           <div class="form-group">
-            <label class="form-label">Valor JÃ¡ Guardado (R$)</label>
+            <label class="form-label">Valor Já Guardado (R$)</label>
             <input type="text" inputmode="decimal" id="sonho-edit-current" class="form-control" placeholder="Ex: 3500,00" />
           </div>
         </div>
@@ -1201,12 +1201,12 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">DescriÃ§Ã£o & Por que queremos isso?</label>
-          <textarea id="sonho-edit-desc" class="form-control" rows="3" placeholder="O que esse sonho significa para nÃ³s"></textarea>
+          <label class="form-label">Descrição & Por que queremos isso?</label>
+          <textarea id="sonho-edit-desc" class="form-control" rows="3" placeholder="O que esse sonho significa para nós"></textarea>
         </div>
 
         <div style="display: flex; gap: 0.5rem;">
-          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar AlteraÃ§Ãµes</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
       </form>
@@ -1217,7 +1217,7 @@
   <div id="modal-photo-viewer" class="modal-overlay">
     <div class="modal-content" style="max-width: 650px; text-align: center; padding: 1rem;">
       <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem;">
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <img id="photo-viewer-target" src="" alt="Foto Ampliada" class="photo-viewer-img" />
     </div>
@@ -1227,8 +1227,8 @@
   <div id="modal-install-guide" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ“² Como Instalar no Celular</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">📲 Como Instalar no Celular</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
 
       <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 1.25rem;">
@@ -1236,29 +1236,29 @@
         <!-- Bloco iPhone / iOS -->
         <div style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem;">
           <h4 style="font-size: 1rem; color: #ffffff; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
-            ðŸ Se vocÃª usa <strong>iPhone / iPad (Safari)</strong>:
+            🍏 Se você usa <strong>iPhone / iPad (Safari)</strong>:
           </h4>
           <ol style="padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.4rem;">
             <li>Abra o link no navegador <strong>Safari</strong>.</li>
-            <li>Toque no botÃ£o de <strong>Compartilhar</strong> (o Ã­cone de quadrado com uma seta para cima <code style="color: var(--brand-cyan);">âŽ‹</code> no rodapÃ©).</li>
-            <li>Role a lista para baixo e toque em <strong>"Adicionar Ã  Tela de InÃ­cio"</strong> (Ã­cone com um <code style="color: var(--brand-teal);">+</code>).</li>
+            <li>Toque no botão de <strong>Compartilhar</strong> (o ícone de quadrado com uma seta para cima <code style="color: var(--brand-cyan);">⎋</code> no rodapé).</li>
+            <li>Role a lista para baixo e toque em <strong>"Adicionar à Tela de Início"</strong> (ícone com um <code style="color: var(--brand-teal);">+</code>).</li>
             <li>No topo direito, toque em <strong>"Adicionar"</strong>.</li>
           </ol>
           <div style="font-size: 0.75rem; color: var(--brand-amber); margin-top: 0.5rem;">
-            Pronto! O Ã­cone do Maracaju ficarÃ¡ na sua tela inicial junto aos seus outros aplicativos.
+            Pronto! O ícone do Maracaju ficará na sua tela inicial junto aos seus outros aplicativos.
           </div>
         </div>
 
         <!-- Bloco Android -->
         <div style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem;">
           <h4 style="font-size: 1rem; color: #ffffff; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
-            ðŸ¤– Se vocÃª usa <strong>Android (Chrome)</strong>:
+            🤖 Se você usa <strong>Android (Chrome)</strong>:
           </h4>
           <ol style="padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.4rem;">
             <li>Abra o link no <strong>Google Chrome</strong>.</li>
-            <li>Toque no botÃ£o verde <strong>"ðŸ“² Instalar App"</strong> no topo da tela (se disponÃ­vel).</li>
-            <li>Ou toque nos <strong>3 pontinhos</strong> (<code style="color: var(--brand-cyan);">â‹®</code>) no canto superior direito do Chrome.</li>
-            <li>Toque em <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar Ã  tela inicial"</strong>.</li>
+            <li>Toque no botão verde <strong>"📲 Instalar App"</strong> no topo da tela (se disponível).</li>
+            <li>Ou toque nos <strong>3 pontinhos</strong> (<code style="color: var(--brand-cyan);">⋮</code>) no canto superior direito do Chrome.</li>
+            <li>Toque em <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.</li>
           </ol>
         </div>
 
@@ -1276,12 +1276,12 @@
     <div class="modal-content modal-large">
       <div class="modal-header">
         <div>
-          <h3 class="modal-title">ðŸ§¾ Nota Fiscal Importada</h3>
+          <h3 class="modal-title">🧾 Nota Fiscal Importada</h3>
           <p id="pdf-invoice-header-meta" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
             Carregando detalhes da nota fiscal...
           </p>
         </div>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
 
       <div style="background: rgba(13, 148, 136, 0.08); border: 1px solid rgba(13, 148, 136, 0.25); border-radius: var(--radius-md); padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
@@ -1307,58 +1307,58 @@
       </div>
 
       <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.65rem;">
-        ðŸ’¡ <strong>Dica:</strong> Como os mercados lanÃ§am nomes estranhos na nota fiscal, vocÃª pode <strong>dar apelidos populares aos itens</strong>, alterar categorias e atÃ© tirar fotos dos produtos para achÃ¡-los facilmente no futuro!
+        💡 <strong>Dica:</strong> Como os mercados lançam nomes estranhos na nota fiscal, você pode <strong>dar apelidos populares aos itens</strong>, alterar categorias e até tirar fotos dos produtos para achá-los facilmente no futuro!
       </p>
 
       <!-- Lista de itens encontrados no PDF -->
       <div id="pdf-extracted-items-list" class="pdf-items-container"></div>
 
       <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;">
-        <button type="button" id="btn-add-all-pdf-to-list" class="btn btn-secondary" style="flex: 1; min-width: 180px; justify-content: center;" title="Colocar todos os itens desta nota na Lista de Compras do MÃªs">
-          ðŸ›’ Colocar Todos na Lista do MÃªs
+        <button type="button" id="btn-add-all-pdf-to-list" class="btn btn-secondary" style="flex: 1; min-width: 180px; justify-content: center;" title="Colocar todos os itens desta nota na Lista de Compras do Mês">
+          🛒 Colocar Todos na Lista do Mês
         </button>
         <button type="button" id="btn-save-pdf-invoice" class="btn btn-primary" style="flex: 1; min-width: 180px; justify-content: center; background: linear-gradient(135deg, #0d9488, #115e59);">
-          âœ… Salvar Apelidos & Fechar
+          ✅ Salvar Apelidos & Fechar
         </button>
       </div>
     </div>
   </div>
 
   <!-- ========================================== -->
-  <!-- MODAL: CATÃLOGO DE PRODUTOS & HISTÃ“RICO    -->
+  <!-- MODAL: CATÁLOGO DE PRODUTOS & HISTÓRICO    -->
   <!-- ========================================== -->
   <div id="modal-catalog-products" class="modal-overlay">
     <div class="modal-content modal-large">
       <div class="modal-header">
         <div>
-          <h3 id="catalog-modal-heading" class="modal-title">ðŸ“Š Comparador de PreÃ§os & JÃ¡ Comprados</h3>
+          <h3 id="catalog-modal-heading" class="modal-title">📊 Comparador de Preços & Já Comprados</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
-            Compare preÃ§os entre mercados, encontre onde Ã© mais barato e adicione Ã  lista com 1 toque!
+            Compare preços entre mercados, encontre onde é mais barato e adicione à lista com 1 toque!
           </p>
         </div>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
 
-      <!-- Abas Internas do CatÃ¡logo / Comparador -->
+      <!-- Abas Internas do Catálogo / Comparador -->
       <div class="catalog-mode-pills" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-        <button type="button" class="chip active" id="pill-catalog-mode-comparator" data-catalog-mode="comparator">ðŸ“Š Comparador de PreÃ§os</button>
-        <button type="button" class="chip" id="pill-catalog-mode-catalog" data-catalog-mode="catalog">âœ¨ Todos os JÃ¡ Comprados</button>
+        <button type="button" class="chip active" id="pill-catalog-mode-comparator" data-catalog-mode="comparator">📊 Comparador de Preços</button>
+        <button type="button" class="chip" id="pill-catalog-mode-catalog" data-catalog-mode="catalog">✨ Todos os Já Comprados</button>
       </div>
 
-      <!-- OrdenaÃ§Ã£o do Comparador -->
+      <!-- Ordenação do Comparador -->
       <div id="catalog-sort-pills" style="display: flex; gap: 0.4rem; margin-bottom: 0.75rem; overflow-x: auto; padding-bottom: 2px;">
-        <button type="button" class="chip active" data-catalog-sort="economy">ðŸ”» Maior Economia</button>
-        <button type="button" class="chip" data-catalog-sort="bought">ðŸ›’ Mais Comprados</button>
-        <button type="button" class="chip" data-catalog-sort="lowest">ðŸ’² Menor PreÃ§o</button>
-        <button type="button" class="chip" data-catalog-sort="alpha">ðŸ”¤ Nome (A-Z)</button>
+        <button type="button" class="chip active" data-catalog-sort="economy">🔻 Maior Economia</button>
+        <button type="button" class="chip" data-catalog-sort="bought">🛒 Mais Comprados</button>
+        <button type="button" class="chip" data-catalog-sort="lowest">💲 Menor Preço</button>
+        <button type="button" class="chip" data-catalog-sort="alpha">🔤 Nome (A-Z)</button>
       </div>
 
-      <!-- Barra de busca no catÃ¡logo -->
+      <!-- Barra de busca no catálogo -->
       <div style="margin-bottom: 0.75rem;">
-        <input type="text" id="catalog-search-input" class="form-control" placeholder="ðŸ” Buscar por nome popular, nome da nota ou cÃ³digo..." />
+        <input type="text" id="catalog-search-input" class="form-control" placeholder="🔍 Buscar por nome popular, nome da nota ou código..." />
       </div>
 
-      <!-- Filtro de categorias do catÃ¡logo -->
+      <!-- Filtro de categorias do catálogo -->
       <div id="catalog-category-chips" class="chips-scroll" style="margin-bottom: 0.75rem;"></div>
 
       <!-- Lista de produtos memorizados -->
@@ -1366,33 +1366,33 @@
 
       <div style="margin-top: 1rem; text-align: center;">
         <button type="button" class="btn btn-secondary" style="width: 100%;" data-close-modal>
-          Fechar CatÃ¡logo
+          Fechar Catálogo
         </button>
       </div>
     </div>
   </div>
 
   <!-- ========================================== -->
-  <!-- MODAL: DETALHES & HISTÃ“RICO DE UM PRODUTO  -->
+  <!-- MODAL: DETALHES & HISTÓRICO DE UM PRODUTO  -->
   <!-- ========================================== -->
   <div id="modal-product-history" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
         <div>
-          <h3 id="product-history-title" class="modal-title">ðŸ“Š HistÃ³rico do Produto</h3>
+          <h3 id="product-history-title" class="modal-title">📊 Histórico do Produto</h3>
           <p id="product-history-rawname" style="font-size: 0.75rem; color: var(--text-muted);"></p>
         </div>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
 
       <div id="product-history-summary-box" style="margin-bottom: 1rem;"></div>
 
-      <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">HistÃ³rico de Compras Registradas:</h4>
+      <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">Histórico de Compras Registradas:</h4>
       <div id="product-history-records-list" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 40vh; overflow-y: auto;"></div>
 
       <div style="margin-top: 1.25rem;">
         <button type="button" id="btn-add-to-list-from-history" class="btn btn-primary" style="width: 100%; justify-content: center;">
-          + Colocar na Lista de Compras do MÃªs
+          + Colocar na Lista de Compras do Mês
         </button>
       </div>
     </div>
@@ -1403,14 +1403,14 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Configurar Backup no Google Sheets</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <div style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary);">
         <ol style="padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;">
           <li>Abra o <strong>Google Sheets</strong> e crie uma nova planilha pessoal chamada <em>"Maracaju - Dados"</em>.</li>
-          <li>No menu da planilha, clique em <strong>ExtensÃµes > Apps Script</strong>.</li>
-          <li>Apague o cÃ³digo padrÃ£o e cole o conteÃºdo completo do arquivo <strong>apps_script.gs</strong> (que estÃ¡ na raiz deste repositÃ³rio).</li>
-          <li>Clique em <strong>Implantar > Nova implantaÃ§Ã£o</strong>.</li>
+          <li>No menu da planilha, clique em <strong>Extensões > Apps Script</strong>.</li>
+          <li>Apague o código padrão e cole o conteúdo completo do arquivo <strong>apps_script.gs</strong> (que está na raiz deste repositório).</li>
+          <li>Clique em <strong>Implantar > Nova implantação</strong>.</li>
           <li>Selecione o tipo <strong>App da Web</strong>.</li>
           <li>Configure:
             <ul style="padding-left: 1rem; margin-top: 0.25rem;">
@@ -1430,46 +1430,46 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title" id="category-modal-title">Nova Categoria</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-category-editor">
         <input type="hidden" id="category-edit-id" value="" />
         
         <div class="form-group">
-          <label class="form-label">Aplicar em qual MÃ³dulo?</label>
+          <label class="form-label">Aplicar em qual Módulo?</label>
           <select id="category-input-module" class="form-control">
-            <option value="tarefas">ðŸ§¹ Tarefas do Lar</option>
-            <option value="compras">ðŸ›’ Mercado & Lista de Compras</option>
-            <option value="carro">ðŸš— Carro & ManutenÃ§Ã£o</option>
-            <option value="reformas">ðŸ”¨ Reformas & Melhorias</option>
-            <option value="sonhos">âœ¨ Mural dos Sonhos</option>
+            <option value="tarefas">🧹 Tarefas do Lar</option>
+            <option value="compras">🛒 Mercado & Lista de Compras</option>
+            <option value="carro">🚗 Carro & Manutenção</option>
+            <option value="reformas">🔨 Reformas & Melhorias</option>
+            <option value="sonhos">✨ Mural dos Sonhos</option>
           </select>
         </div>
 
         <div class="form-group">
           <label class="form-label">Nome da Categoria</label>
-          <input type="text" id="category-input-label" class="form-control" placeholder="Ex: Varanda, EscritÃ³rio, Pet, Som" required />
+          <input type="text" id="category-input-label" class="form-control" placeholder="Ex: Varanda, Escritório, Pet, Som" required />
         </div>
 
         <div class="form-group">
           <label class="form-label">Emoji da Categoria</label>
           <div style="display: flex; gap: 0.75rem; align-items: center;">
-            <input type="text" id="category-input-icon" class="form-control" style="width: 75px; text-align: center; font-size: 1.6rem; padding: 0.35rem;" value="ðŸ·ï¸" maxlength="4" required />
-            <span style="font-size: 0.8rem; color: var(--text-secondary);">Escolha uma sugestÃ£o rÃ¡pida abaixo ou digite qualquer emoji no teclado.</span>
+            <input type="text" id="category-input-icon" class="form-control" style="width: 75px; text-align: center; font-size: 1.6rem; padding: 0.35rem;" value="🏷️" maxlength="4" required />
+            <span style="font-size: 0.8rem; color: var(--text-secondary);">Escolha uma sugestão rápida abaixo ou digite qualquer emoji no teclado.</span>
           </div>
         </div>
 
-        <!-- Grade de Emojis RÃ¡pidos -->
+        <!-- Grade de Emojis Rápidos -->
         <div class="form-group">
-          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">SugestÃµes RÃ¡pidas de Emojis:</label>
+          <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Sugestões Rápidas de Emojis:</label>
           <div id="quick-emoji-grid" style="display: flex; flex-wrap: wrap; gap: 0.35rem; max-height: 120px; overflow-y: auto; padding: 0.5rem; background: var(--bg-primary); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);"></div>
         </div>
 
-        <!-- PrÃ©-visualizaÃ§Ã£o ao Vivo -->
+        <!-- Pré-visualização ao Vivo -->
         <div style="background: var(--bg-primary); border: 1px dashed var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 1rem; text-align: center;">
-          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">PrÃ©-visualizaÃ§Ã£o do Filtro:</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">Pré-visualização do Filtro:</div>
           <div class="chip active" style="display: inline-flex; pointer-events: none;" id="category-preview-chip">
-            <span id="preview-chip-icon">ðŸ·ï¸</span>
+            <span id="preview-chip-icon">🏷️</span>
             <span id="preview-chip-label">Exemplo</span>
           </div>
         </div>
@@ -1486,16 +1486,16 @@
   <div id="modal-add-shopping-item" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ›’ Novo Item na Lista de Mercado</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">🛒 Novo Item na Lista de Mercado</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-shopping-item">
         <div class="form-group">
           <label class="form-label">O que precisamos comprar?</label>
           <div style="display: flex; gap: 0.35rem; align-items: center;">
-            <input type="text" id="shopping-input-title" list="catalog-suggestions-list" class="form-control" placeholder="Ex: CafÃ© moÃ­do 500g, Tomate, ChÃ¡ Matte" required autocomplete="off" />
-            <button type="button" id="btn-quick-catalog-from-add" class="btn btn-secondary btn-sm" title="Escolher dos jÃ¡ comprados" style="white-space: nowrap; padding: 0.45rem 0.65rem;">
-              âœ¨ CatÃ¡logo
+            <input type="text" id="shopping-input-title" list="catalog-suggestions-list" class="form-control" placeholder="Ex: Café moído 500g, Tomate, Chá Matte" required autocomplete="off" />
+            <button type="button" id="btn-quick-catalog-from-add" class="btn btn-secondary btn-sm" title="Escolher dos já comprados" style="white-space: nowrap; padding: 0.45rem 0.65rem;">
+              ✨ Catálogo
             </button>
           </div>
           <datalist id="catalog-suggestions-list"></datalist>
@@ -1515,7 +1515,7 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label">PreÃ§o UnitÃ¡rio (R$)</label>
+            <label class="form-label">Preço Unitário (R$)</label>
             <input type="text" inputmode="decimal" id="shopping-input-price" class="form-control" placeholder="Ex: 8,00" />
             <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 2px;">Valor de cada unidade</span>
           </div>
@@ -1529,17 +1529,17 @@
           </div>
         </div>
 
-        <!-- Feedback dinÃ¢mico de Subtotal em tempo real -->
+        <!-- Feedback dinâmico de Subtotal em tempo real -->
         <div id="shopping-add-subtotal-box" style="display: none; background: rgba(46, 89, 51, 0.08); border: 1px solid rgba(46, 89, 51, 0.25); border-radius: var(--radius-sm); padding: 0.45rem 0.65rem; margin-bottom: 0.85rem; font-size: 0.82rem; color: var(--brand-moss-dark); font-weight: 600;">
-          ðŸ’° Subtotal estimado: <span id="shopping-add-subtotal-val"></span>
+          💰 Subtotal estimado: <span id="shopping-add-subtotal-val"></span>
         </div>
 
         <div class="form-group">
           <label class="form-label">Marca ou Detalhes (Opcional)</label>
-          <input type="text" id="shopping-input-notes" class="form-control" placeholder="Ex: PreferÃªncia marca X ou embalagem econÃ´mica" />
+          <input type="text" id="shopping-input-notes" class="form-control" placeholder="Ex: Preferência marca X ou embalagem econômica" />
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width: 100%;">Adicionar Ã  Lista de Mercado</button>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Adicionar à Lista de Mercado</button>
       </form>
     </div>
   </div>
@@ -1548,8 +1548,8 @@
   <div id="modal-edit-shopping-item" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">âœï¸ Editar Item de Compra</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">✏️ Editar Item de Compra</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-shopping-item">
         <input type="hidden" id="shopping-edit-id" value="" />
@@ -1572,7 +1572,7 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label">PreÃ§o UnitÃ¡rio (R$)</label>
+            <label class="form-label">Preço Unitário (R$)</label>
             <input type="text" inputmode="decimal" id="shopping-edit-price" class="form-control" placeholder="Ex: 8,00" />
             <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 2px;">Valor de cada unidade</span>
           </div>
@@ -1586,9 +1586,9 @@
           </div>
         </div>
 
-        <!-- Feedback dinÃ¢mico de Subtotal em tempo real no edit -->
+        <!-- Feedback dinâmico de Subtotal em tempo real no edit -->
         <div id="shopping-edit-subtotal-box" style="display: none; background: rgba(46, 89, 51, 0.08); border: 1px solid rgba(46, 89, 51, 0.25); border-radius: var(--radius-sm); padding: 0.45rem 0.65rem; margin-bottom: 0.85rem; font-size: 0.82rem; color: var(--brand-moss-dark); font-weight: 600;">
-          ðŸ’° Subtotal estimado: <span id="shopping-edit-subtotal-val"></span>
+          💰 Subtotal estimado: <span id="shopping-edit-subtotal-val"></span>
         </div>
 
         <div class="form-group">
@@ -1597,7 +1597,7 @@
         </div>
 
         <div style="display: flex; gap: 0.5rem;">
-          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar AlteraÃ§Ãµes</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
       </form>
@@ -1606,33 +1606,33 @@
 
   
   <!-- ========================================== -->
-  <!-- MODAL: LANÃ‡AR COMPRA MANUAL (SEM NOTA)     -->
+  <!-- MODAL: LANÇAR COMPRA MANUAL (SEM NOTA)     -->
   <!-- ========================================== -->
   <div id="modal-add-manual-purchase" class="modal-overlay">
     <div class="modal-content modal-large">
       <div class="modal-header">
         <div>
-          <h3 class="modal-title">ðŸ“ LanÃ§ar Compra de Mercado</h3>
+          <h3 class="modal-title">📝 Lançar Compra de Mercado</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
             Lance compras manuais mesmo sem cupom fiscal ou QR Code.
           </p>
         </div>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-add-manual-purchase">
         <div class="form-group">
           <label class="form-label">Mercado / Estabelecimento</label>
-          <input type="text" id="manual-purchase-market" class="form-control" list="recurrent-markets-datalist" placeholder="Ex: Carrefour, AtacadÃ£o, AÃ§ougue, Feira..." required />
+          <input type="text" id="manual-purchase-market" class="form-control" list="recurrent-markets-datalist" placeholder="Ex: Carrefour, Atacadão, Açougue, Feira..." required />
           <datalist id="recurrent-markets-datalist">
             <option value="Carrefour"></option>
-            <option value="AtacadÃ£o"></option>
-            <option value="PÃ£o de AÃ§Ãºcar"></option>
-            <option value="AssaÃ­ Atacadista"></option>
-            <option value="AÃ§ougue Central"></option>
+            <option value="Atacadão"></option>
+            <option value="Pão de Açúcar"></option>
+            <option value="Assaí Atacadista"></option>
+            <option value="Açougue Central"></option>
             <option value="Feira Livre"></option>
             <option value="Hortifruti"></option>
             <option value="Padaria"></option>
-            <option value="FarmÃ¡cia"></option>
+            <option value="Farmácia"></option>
           </datalist>
         </div>
 
@@ -1659,12 +1659,12 @@
           </select>
         </div>
 
-        <!-- Produtos comprados (opcional, para alimentar o comparador de preÃ§os) -->
+        <!-- Produtos comprados (opcional, para alimentar o comparador de preços) -->
         <div class="form-group" style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
             <div>
               <strong style="font-size: 0.85rem; color: var(--text-primary);">Itens Comprados (Opcional)</strong>
-              <p style="font-size: 0.72rem; color: var(--text-muted);">Alimenta o comparador de preÃ§os e histÃ³rico</p>
+              <p style="font-size: 0.72rem; color: var(--text-muted);">Alimenta o comparador de preços e histórico</p>
             </div>
             <button type="button" id="btn-add-manual-item-row" class="btn btn-secondary btn-xs" style="font-weight: 700;">
               + Adicionar Item
@@ -1680,11 +1680,11 @@
           <label class="form-label">Foto do Recibo / Comprovante (opcional)</label>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="manual-purchase-camera" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ“¸ CÃ¢mera
+              📸 Câmera
             </button>
             <input type="file" id="manual-purchase-camera" accept="image/*" capture="environment" style="display: none;" />
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="manual-purchase-gallery" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ–¼ï¸ Galeria
+              🖼️ Galeria
             </button>
             <input type="file" id="manual-purchase-gallery" accept="image/*" style="display: none;" />
           </div>
@@ -1692,7 +1692,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">ObservaÃ§Ãµes</label>
+          <label class="form-label">Observações</label>
           <textarea id="manual-purchase-notes" class="form-control" rows="2" placeholder="Forma de pagamento, itens principais, etc."></textarea>
         </div>
 
@@ -1704,15 +1704,15 @@
     </div>
   </div>
 
-      <!-- Modal: HistÃ³rico de BenefÃ­cios VA & VR -->
+      <!-- Modal: Histórico de Benefícios VA & VR -->
   <div id="modal-benefits-history" class="modal-overlay">
     <div class="modal-content" style="max-width: 580px;">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ“œ HistÃ³rico de BenefÃ­cios VA & VR</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">📜 Histórico de Benefícios VA & VR</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <div id="benefits-history-content" style="max-height: 70vh; overflow-y: auto;">
-        <!-- ConteÃºdo gerado dinamicamente -->
+        <!-- Conteúdo gerado dinamicamente -->
       </div>
       <div style="margin-top: 1rem; text-align: right;">
         <button type="button" class="btn btn-secondary" data-close-modal>Fechar</button>
@@ -1720,39 +1720,39 @@
     </div>
   </div>
 
-<!-- Modal: Ajustar BenefÃ­cios VA / VR (SÃ£o Carlos SP) -->
+<!-- Modal: Ajustar Benefícios VA / VR (São Carlos SP) -->
   <div id="modal-adjust-benefits" class="modal-overlay">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title">âš™ï¸ Ajustar BenefÃ­cios VA / VR</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">⚙️ Ajustar Benefícios VA / VR</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-adjust-benefits">
         <div style="background: rgba(22, 163, 74, 0.08); border: 1px solid rgba(22, 163, 74, 0.2); border-radius: var(--radius-md); padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; font-size: 0.8rem; color: var(--brand-forest);">
-          ðŸ“ <strong>SÃ£o Carlos - SP:</strong> CrÃ©dito no <strong>4Âº dia Ãºtil</strong> do mÃªs. Feriados municipais, estaduais e nacionais sÃ£o deduzidos automaticamente dos dias Ãºteis.
+          📍 <strong>São Carlos - SP:</strong> Crédito no <strong>4º dia útil</strong> do mês. Feriados municipais, estaduais e nacionais são deduzidos automaticamente dos dias úteis.
         </div>
 
         <div class="form-group">
-          <label class="form-label">MÃªs de ReferÃªncia</label>
+          <label class="form-label">Mês de Referência</label>
           <input type="month" id="benefits-input-month" class="form-control" required style="font-weight: 700;" />
         </div>
 
-        <!-- Vale AlimentaÃ§Ã£o (VA) -->
+        <!-- Vale Alimentação (VA) -->
         <div class="form-group" style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-md); border-left: 4px solid #16a34a;">
-          <label class="form-label" style="color: #15803d; font-weight: 700;">ðŸ¥— Vale AlimentaÃ§Ã£o (VA) - Valor Fixo Mensal</label>
+          <label class="form-label" style="color: #15803d; font-weight: 700;">🥗 Vale Alimentação (VA) - Valor Fixo Mensal</label>
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             <span style="font-weight: 700; color: var(--text-muted);">R$</span>
             <input type="text" inputmode="decimal" id="benefits-input-va-fixed" class="form-control" placeholder="2.050,00" required style="font-weight: 700; font-size: 1.05rem;" />
           </div>
-          <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">Valor fixo mensal creditado no 4Âº dia Ãºtil</span>
+          <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">Valor fixo mensal creditado no 4º dia útil</span>
         </div>
 
-        <!-- Vale RefeiÃ§Ã£o (VR) -->
+        <!-- Vale Refeição (VR) -->
         <div class="form-group" style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-md); border-left: 4px solid #ea580c;">
-          <label class="form-label" style="color: #c2410c; font-weight: 700;">ðŸ½ï¸ Vale RefeiÃ§Ã£o (VR) - DiÃ¡ria e Dias</label>
+          <label class="form-label" style="color: #c2410c; font-weight: 700;">🍽️ Vale Refeição (VR) - Diária e Dias</label>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
             <div>
-              <label class="form-label" style="font-size: 0.75rem;">Valor DiÃ¡rio (R$)</label>
+              <label class="form-label" style="font-size: 0.75rem;">Valor Diário (R$)</label>
               <input type="text" inputmode="decimal" id="benefits-input-vr-daily" class="form-control" placeholder="65,00" required style="font-weight: 700;" />
             </div>
             <div>
@@ -1766,11 +1766,11 @@
           </div>
         </div>
 
-        <!-- Saldo Acumulado do MÃªs Anterior (Rollover) -->
+        <!-- Saldo Acumulado do Mês Anterior (Rollover) -->
         <div class="form-group" style="background: rgba(2, 132, 199, 0.06); padding: 0.75rem; border-radius: var(--radius-md); border-left: 4px solid #0284c7; margin-bottom: 0.85rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-            <label class="form-label" style="color: #0369a1; font-weight: 700; margin: 0;">âž• Saldo Acumulado do MÃªs Anterior</label>
-            <span style="font-size: 0.68rem; color: var(--text-muted);">Soma ao novo crÃ©dito</span>
+            <label class="form-label" style="color: #0369a1; font-weight: 700; margin: 0;">➕ Saldo Acumulado do Mês Anterior</label>
+            <span style="font-size: 0.68rem; color: var(--text-muted);">Soma ao novo crédito</span>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
             <div>
@@ -1787,12 +1787,12 @@
 
         <!-- Total Geral Previsto -->
         <div style="background: var(--brand-forest); color: #ffffff; padding: 0.75rem 0.95rem; border-radius: var(--radius-md); margin-bottom: 0.95rem; display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 0.85rem; font-weight: 600;">ðŸ’° Total Combinado (VA + VR):</span>
+          <span style="font-size: 0.85rem; font-weight: 600;">💰 Total Combinado (VA + VR):</span>
           <strong id="benefits-preview-combined-total" style="font-size: 1.15rem; font-weight: 800;">R$ 0,00</strong>
         </div>
 
         <div style="display: flex; gap: 0.5rem;">
-          <button type="submit" class="btn btn-primary" style="flex: 1; justify-content: center;">Salvar BenefÃ­cios</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1; justify-content: center;">Salvar Benefícios</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
       </form>
@@ -1803,14 +1803,14 @@
   <div id="modal-edit-purchase" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">âœï¸ Editar Compra de Mercado</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">✏️ Editar Compra de Mercado</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-edit-purchase">
         <input type="hidden" id="purchase-edit-id" value="" />
         <div class="form-group">
           <label class="form-label">Nome do Mercado / Estabelecimento</label>
-          <input type="text" id="purchase-edit-market" class="form-control" placeholder="Ex: PÃ£o de AÃ§Ãºcar, AtacadÃ£o" required />
+          <input type="text" id="purchase-edit-market" class="form-control" placeholder="Ex: Pão de Açúcar, Atacadão" required />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
@@ -1837,24 +1837,24 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">ObservaÃ§Ãµes / Detalhes</label>
+          <label class="form-label">Observações / Detalhes</label>
           <textarea id="purchase-edit-notes" class="form-control" rows="2" placeholder="Forma de pagamento, itens principais"></textarea>
         </div>
 
         <div style="display: flex; gap: 0.5rem;">
-          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar AlteraÃ§Ãµes</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Modal: ConciliaÃ§Ã£o Inteligente de Itens da Lista de Mercado -->
+  <!-- Modal: Conciliação Inteligente de Itens da Lista de Mercado -->
   <div id="modal-match-shopping-items" class="modal-overlay">
     <div class="modal-content" style="max-width: 520px;">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ›’ Itens Encontrados na Lista!</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title">🛒 Itens Encontrados na Lista!</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
         Identificamos que produtos desta compra coincidem com itens pendentes na sua <strong>Lista de Mercado</strong>. O que deseja fazer com eles?
@@ -1866,10 +1866,10 @@
 
       <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button type="button" id="btn-match-mark-bought" class="btn btn-primary" style="flex: 1; min-width: 150px; justify-content: center; background: linear-gradient(135deg, #15803d, #166534);">
-          âœ… Marcar Comprados
+          ✅ Marcar Comprados
         </button>
         <button type="button" id="btn-match-delete-items" class="btn btn-danger" style="flex: 1; min-width: 140px; justify-content: center;">
-          ðŸ—‘ï¸ Excluir da Lista
+          🗑️ Excluir da Lista
         </button>
         <button type="button" class="btn btn-secondary" data-close-modal style="flex: 1; min-width: 100px; justify-content: center;">
           Manter na Lista
@@ -1882,19 +1882,19 @@
     <div id="modal-qr-scanner" class="modal-overlay">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ§¾ Leitor de Nota Fiscal (NFC-e)</h3>
-        <button type="button" class="btn btn-icon btn-sm" id="btn-close-qr-scanner" data-close-modal>âœ•</button>
+        <h3 class="modal-title">🧾 Leitor de Nota Fiscal (NFC-e)</h3>
+        <button type="button" class="btn btn-icon btn-sm" id="btn-close-qr-scanner" data-close-modal>✕</button>
       </div>
 
       <!-- Abas de Modo de Leitura -->
       <div style="display: flex; gap: 0.35rem; margin-bottom: 0.85rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; justify-content: center; flex-wrap: wrap;">
-        <button type="button" class="chip active" id="tab-btn-qr-cam" style="font-size: 0.78rem;">ðŸ“· QR ao Vivo</button>
-        <button type="button" class="chip" id="tab-btn-qr-ocr" style="font-size: 0.78rem;">ðŸ“¸ Foto do Cupom (OCR)</button>
-        <button type="button" class="chip" id="tab-btn-qr-paste" style="font-size: 0.78rem;">ðŸ“‹ Colar / Arquivo</button>
+        <button type="button" class="chip active" id="tab-btn-qr-cam" style="font-size: 0.78rem;">📷 QR ao Vivo</button>
+        <button type="button" class="chip" id="tab-btn-qr-ocr" style="font-size: 0.78rem;">📸 Foto do Cupom (OCR)</button>
+        <button type="button" class="chip" id="tab-btn-qr-paste" style="font-size: 0.78rem;">📋 Colar / Arquivo</button>
       </div>
 
       <div class="qr-scanner-wrapper">
-        <!-- Modo 1: CÃ¢mera QR Code ao Vivo -->
+        <!-- Modo 1: Câmera QR Code ao Vivo -->
         <div id="qr-section-camera" style="width: 100%;">
           <div class="qr-camera-viewport" id="qr-camera-container">
             <video id="qr-video" playsinline muted autoplay></video>
@@ -1904,14 +1904,14 @@
 
           <div style="display: flex; gap: 0.4rem; width: 100%; justify-content: center; margin-top: 0.6rem; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-camera">
-              ðŸ”„ Alternar CÃ¢mera
+              🔄 Alternar Câmera
             </button>
             <label class="btn btn-secondary btn-sm" style="margin-bottom: 0; cursor: pointer;">
-              ðŸ“ Foto do QR Code
+              📁 Foto do QR Code
               <input type="file" id="qr-file-input" accept="image/*" style="display: none;" />
             </label>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-paste-cam-shortcut" title="Colar link ou HTML da Ã¡rea de transferÃªncia">
-              ðŸ“‹ Colar RÃ¡pido
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-paste-cam-shortcut" title="Colar link ou HTML da área de transferência">
+              📋 Colar Rápido
             </button>
           </div>
         </div>
@@ -1919,47 +1919,47 @@
         <!-- Modo 2: Foto do Cupom Impresso com OCR -->
         <div id="qr-section-ocr" style="display: none; width: 100%;">
           <div style="background: var(--bg-surface); border: 2px dashed var(--border-subtle); border-radius: var(--radius-md); padding: 1.2rem; text-align: center; margin-bottom: 0.75rem;">
-            <div style="font-size: 2.2rem; margin-bottom: 0.4rem;">ðŸ§¾</div>
+            <div style="font-size: 2.2rem; margin-bottom: 0.4rem;">🧾</div>
             <strong style="display: block; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem;">
               Fotografar Cupom Fiscal (OCR)
             </strong>
             <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 0.85rem;">
-              Tire uma foto nÃ­tida e reta do cupom fiscal em papel. Nosso leitor reconhecerÃ¡ os produtos, quantidades e valores da compra automaticamente!
+              Tire uma foto nítida e reta do cupom fiscal em papel. Nosso leitor reconhecerá os produtos, quantidades e valores da compra automaticamente!
             </p>
             <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
               <button type="button" class="btn btn-primary btn-sm" data-pick-file="input-ocr-cupom-camera" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-                ðŸ“· Tirar Foto do Cupom
+                📸 Tirar Foto do Cupom
               </button>
               <input type="file" id="input-ocr-cupom-camera" accept="image/*" capture="environment" style="display: none;" />
               <button type="button" class="btn btn-secondary btn-sm" data-pick-file="input-ocr-cupom-gallery" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-                ðŸ“ Escolher da Galeria
+                🖼️ Escolher da Galeria
               </button>
               <input type="file" id="input-ocr-cupom-gallery" accept="image/*" style="display: none;" />
             </div>
           </div>
         </div>
 
-        <!-- Modo 3: Colar da Ãrea de TransferÃªncia ou Importar Arquivo -->
+        <!-- Modo 3: Colar da Área de Transferência ou Importar Arquivo -->
         <div id="qr-section-paste" style="display: none; width: 100%;">
           <div style="display: flex; flex-direction: column; gap: 0.6rem; width: 100%;">
             <button type="button" class="btn btn-primary btn-sm" id="btn-qr-clipboard-paste" style="width: 100%; justify-content: center; display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem;">
-              <span>ðŸ“‹</span> Colar da Ãrea de TransferÃªncia (1 Toque)
+              <span>📋</span> Colar da Área de Transferência (1 Toque)
             </button>
 
             <label class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; margin: 0;">
-              <span>ðŸ“„</span> Importar Arquivo da Nota (.html, .pdf, .txt)
+              <span>📄</span> Importar Arquivo da Nota (.html, .pdf, .txt)
               <input type="file" id="input-qr-file-any" accept=".html,.htm,.pdf,.txt,image/*" style="display: none;" />
             </label>
 
             <div>
-              <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Ou cole o link, chave, texto ou cÃ³digo HTML:</label>
-              <textarea id="qr-universal-input" class="form-control" rows="3" placeholder="Cole aqui o link da NFC-e, chave de 44 dÃ­gitos, texto do cupom ou cÃ³digo da Fazenda..." style="font-size: 0.75rem; font-family: monospace;"></textarea>
+              <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.25rem;">Ou cole o link, chave, texto ou código HTML:</label>
+              <textarea id="qr-universal-input" class="form-control" rows="3" placeholder="Cole aqui o link da NFC-e, chave de 44 dígitos, texto do cupom ou código da Fazenda..." style="font-size: 0.75rem; font-family: monospace;"></textarea>
               <div style="display: flex; gap: 0.5rem; margin-top: 0.4rem;">
                 <button type="button" id="btn-qr-process-universal" class="btn btn-primary btn-sm" style="flex: 1;">
-                  âš¡ Processar ConteÃºdo
+                  ⚡ Processar Conteúdo
                 </button>
                 <a href="https://www.nfce.fazenda.sp.gov.br/consulta" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">
-                  ðŸŒ Abrir Fazenda
+                  🌐 Abrir Fazenda
                 </a>
               </div>
             </div>
@@ -1968,13 +1968,13 @@
 
         <!-- Feedback / Status do Scanner -->
         <div id="qr-status-msg" style="font-size: 0.85rem; color: var(--text-secondary); text-align: center; margin: 0.5rem 0; min-height: 1.2rem;">
-          Aponte a cÃ¢mera para o QR Code impresso no cupom fiscal (NFC-e).
+          Aponte a câmera para o QR Code impresso no cupom fiscal (NFC-e).
         </div>
 
-        <!-- Card de Resultado PrÃ©-visualizado -->
+        <!-- Card de Resultado Pré-visualizado -->
         <div id="qr-preview-result" style="display: none; width: 100%;" class="qr-result-box">
           <h4 style="font-size: 0.95rem; color: var(--brand-moss-dark); margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between;">
-            <span style="display: flex; align-items: center; gap: 0.4rem;"><span>ðŸ§¾</span> Dados ExtraÃ­dos da Nota:</span>
+            <span style="display: flex; align-items: center; gap: 0.4rem;"><span>🧾</span> Dados Extraídos da Nota:</span>
             <span id="qr-res-badge-items" class="badge" style="background: var(--brand-sage); color: var(--brand-moss-dark); font-size: 0.75rem;">0 itens</span>
           </h4>
           <div style="font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); margin-bottom: 0.75rem; background: var(--bg-card); padding: 0.6rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
@@ -1987,11 +1987,11 @@
             <div style="margin-top: 0.35rem;">
               <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.2rem;">Forma de Pagamento:</label>
               <select id="qr-res-payment" class="form-control" style="font-size: 0.8rem; padding: 0.3rem 0.5rem;">
-                <option value="va">Vale AlimentaÃ§Ã£o (VA)</option>
-                <option value="vr">Vale RefeiÃ§Ã£o (VR)</option>
+                <option value="va">Vale Alimentação (VA)</option>
+                <option value="vr">Vale Refeição (VR)</option>
                 <option value="pix">PIX</option>
-                <option value="credito">CartÃ£o de CrÃ©dito</option>
-                <option value="debito">CartÃ£o de DÃ©bito</option>
+                <option value="credito">Cartão de Crédito</option>
+                <option value="debito">Cartão de Débito</option>
                 <option value="dinheiro">Dinheiro</option>
               </select>
             </div>
@@ -2000,40 +2000,40 @@
             </div>
           </div>
 
-          <!-- Lista de Itens ExtraÃ­dos -->
+          <!-- Lista de Itens Extraídos -->
           <div id="qr-items-list-container" style="display: none; margin-bottom: 0.75rem;">
             <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.35rem; display: flex; justify-content: space-between;">
               <span>Itens da Nota (<span id="qr-items-count">0</span>)</span>
-              <span style="font-size: 0.72rem; color: var(--text-muted);">VÃ£o para o CatÃ¡logo e JÃ¡ Comprados</span>
+              <span style="font-size: 0.72rem; color: var(--text-muted);">Vão para o Catálogo e Já Comprados</span>
             </div>
             <div id="qr-items-list" style="max-height: 160px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.4rem; background: var(--bg-surface); font-size: 0.78rem;">
               <!-- Linhas de itens geradas dinamicamente -->
             </div>
           </div>
 
-          <!-- AÃ§Ãµes -->
+          <!-- Ações -->
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
             <button type="button" class="btn btn-primary" id="btn-confirm-qr-purchase" style="width: 100%;">
-              âœ… Confirmar e Registrar Compra no App
+              ✅ Confirmar e Registrar Compra no App
             </button>
             <div id="qr-complement-ocr-wrapper">
               <div id="qr-complement-ocr-btns" style="display: none; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-complement-ocr-cam" data-pick-file="input-qr-complement-ocr" style="flex: 1; min-width: 130px; text-align: center; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: var(--bg-card); border: 1px dashed var(--brand-sage); padding: 0.5rem;">
-                  ðŸ“¸ CÃ¢mera (Tirar Foto)
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-complement-ocr-cam" data-pick-file="input-qr-complement-ocr" style="flex: 1; min-width: 130px; text-align: center; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: var(--bg-card); border: 1px dashed var(--brand-sage); padding: 0.65rem 0.5rem;">
+                  📸 Câmera
                 </button>
                 <input type="file" id="input-qr-complement-ocr" accept="image/*" capture="environment" style="display: none;" />
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-complement-ocr-gal" data-pick-file="input-qr-complement-gallery" style="flex: 1; min-width: 130px; text-align: center; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: var(--bg-card); border: 1px dashed var(--brand-sage); padding: 0.5rem;">
-                  ðŸ–¼ï¸ Galeria (Escolher Foto)
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-complement-ocr-gal" data-pick-file="input-qr-complement-gallery" style="flex: 1; min-width: 130px; text-align: center; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: var(--bg-card); border: 1px dashed var(--brand-sage); padding: 0.65rem 0.5rem;">
+                  🖼️ Galeria
                 </button>
                 <input type="file" id="input-qr-complement-gallery" accept="image/*" style="display: none;" />
               </div>
             </div>
             <div style="display: flex; gap: 0.5rem;">
               <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" id="btn-qr-open-sefaz" style="flex: 1; text-align: center; text-decoration: none; display: none;">
-                ðŸŒ Abrir na Fazenda
+                🌐 Abrir na Fazenda
               </a>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-paste-html" style="flex: 1;">
-                ðŸ“‹ Colar PÃ¡gina/HTML
+                📋 Colar Página/HTML
               </button>
             </div>
           </div>
@@ -2055,17 +2055,17 @@
     <div class="modal-content" style="max-width: 400px;">
       <div class="modal-header">
         <h3 class="modal-title" id="pass-modal-title">Definir Senha de Acesso</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-change-password">
         <input type="hidden" id="pass-modal-user-id" value="" />
         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-          Defina uma senha pessoal ou PIN numÃ©rico para <strong id="pass-modal-user-name">Morador</strong>.
+          Defina uma senha pessoal ou PIN numérico para <strong id="pass-modal-user-name">Morador</strong>.
         </p>
 
         <div class="form-group">
           <label class="form-label">Nova Senha ou PIN</label>
-          <input type="password" id="pass-modal-new-input" class="form-control" placeholder="MÃ­nimo 4 caracteres" minlength="4" required />
+          <input type="password" id="pass-modal-new-input" class="form-control" placeholder="Mínimo 4 caracteres" minlength="4" required />
         </div>
 
         <div class="form-group">
@@ -2084,7 +2084,7 @@
   </div>
 
   <!-- ======================================================= -->
-  <!-- MODAIS DO MÃ“DULO PETS (PASTAS, RAÃ‡ÃƒO, HIGIENE, VACINAS)  -->
+  <!-- MODAIS DO MÓDULO PETS (PASTAS, RAÇÃO, HIGIENE, VACINAS)  -->
   <!-- ======================================================= -->
 
   <!-- MODAL: PASTA COMPLETA DO PET (Estilo FisioFlow) -->
@@ -2092,10 +2092,10 @@
     <div class="modal-content" style="max-width: 620px;">
       <div class="modal-header">
         <div id="pet-folder-header" style="flex: 1; min-width: 0;"></div>
-        <button type="button" class="modal-close" data-close-modal>âœ•</button>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
 
-      <!-- Abas internas da pasta (RaÃ§Ã£o, Areia, Higiene, Vacinas, Exames, Cadastro) -->
+      <!-- Abas internas da pasta (Ração, Areia, Higiene, Vacinas, Exames, Cadastro) -->
       <nav id="pet-folder-tabs-nav" class="pet-folder-nav"></nav>
 
       <!-- Corpo da Aba Selecionada -->
@@ -2111,8 +2111,8 @@
   <div id="modal-add-pet" class="modal-overlay">
     <div class="modal-content" style="max-width: 520px;">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ¾ Cadastrar Novo Pet</h3>
-        <button type="button" class="modal-close" data-close-modal>âœ•</button>
+        <h3 class="modal-title">🐾 Cadastrar Novo Pet</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet">
         <div class="form-group">
@@ -2122,18 +2122,18 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label" for="add-pet-especie">EspÃ©cie *</label>
+            <label class="form-label" for="add-pet-especie">Espécie *</label>
             <select id="add-pet-especie" class="form-control">
-              <option value="cachorro" selected>ðŸ¶ Cachorro</option>
-              <option value="gato">ðŸ± Gato</option>
-              <option value="outro">ðŸ¾ Outro</option>
+              <option value="cachorro" selected>🐶 Cachorro</option>
+              <option value="gato">🐱 Gato</option>
+              <option value="outro">🐾 Outro</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label" for="add-pet-sexo">Sexo</label>
             <select id="add-pet-sexo" class="form-control">
-              <option value="femea" selected>â™€ FÃªmea</option>
-              <option value="macho">â™‚ Macho</option>
+              <option value="femea" selected>♀ Fêmea</option>
+              <option value="macho">♂ Macho</option>
             </select>
           </div>
         </div>
@@ -2142,7 +2142,7 @@
           <div class="form-group">
             <label class="form-label" for="add-pet-nascimento">Data de Nascimento</label>
             <input type="date" id="add-pet-nascimento" class="form-control" />
-            <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 2px;">A idade serÃ¡ calculada automaticamente!</span>
+            <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 2px;">A idade será calculada automaticamente!</span>
           </div>
           <div class="form-group">
             <label class="form-label" for="add-pet-peso">Peso Atual (kg)</label>
@@ -2152,7 +2152,7 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label" for="add-pet-raca">RaÃ§a</label>
+            <label class="form-label" for="add-pet-raca">Raça</label>
             <input type="text" id="add-pet-raca" class="form-control" placeholder="Ex: Vira-lata (SRD), Golden..." />
           </div>
           <div class="form-group">
@@ -2165,11 +2165,11 @@
           <label class="form-label">Foto do Pet</label>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="add-pet-camera" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ“¸ CÃ¢mera
+              📸 Câmera
             </button>
             <input type="file" id="add-pet-camera" accept="image/*" capture="environment" style="display: none;" />
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="add-pet-gallery" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ“ Galeria
+              🖼️ Galeria
             </button>
             <input type="file" id="add-pet-gallery" accept="image/*" style="display: none;" />
             <span id="add-pet-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
@@ -2180,13 +2180,13 @@
         </div>
 
 
-            VacinaÃ§Ã£o em dia
+            Vacinação em dia
           </label>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="add-pet-observacoes">ObservaÃ§Ãµes / Cuidados Especiais</label>
-          <textarea id="add-pet-observacoes" class="form-control" rows="2" placeholder="Alergias, manias, horÃ¡rios de passeio..."></textarea>
+          <label class="form-label" for="add-pet-observacoes">Observações / Cuidados Especiais</label>
+          <textarea id="add-pet-observacoes" class="form-control" rows="2" placeholder="Alergias, manias, horários de passeio..."></textarea>
         </div>
 
         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
@@ -2201,8 +2201,8 @@
   <div id="modal-edit-pet" class="modal-overlay">
     <div class="modal-content" style="max-width: 520px;">
       <div class="modal-header">
-        <h3 class="modal-title">âœï¸ Editar Dados do Pet</h3>
-        <button type="button" class="modal-close" data-close-modal>âœ•</button>
+        <h3 class="modal-title">✏️ Editar Dados do Pet</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-edit-pet">
         <input type="hidden" id="edit-pet-id" />
@@ -2214,18 +2214,18 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label" for="edit-pet-especie">EspÃ©cie</label>
+            <label class="form-label" for="edit-pet-especie">Espécie</label>
             <select id="edit-pet-especie" class="form-control">
-              <option value="cachorro">ðŸ¶ Cachorro</option>
-              <option value="gato">ðŸ± Gato</option>
-              <option value="outro">ðŸ¾ Outro</option>
+              <option value="cachorro">🐶 Cachorro</option>
+              <option value="gato">🐱 Gato</option>
+              <option value="outro">🐾 Outro</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label" for="edit-pet-sexo">Sexo</label>
             <select id="edit-pet-sexo" class="form-control">
-              <option value="femea">â™€ FÃªmea</option>
-              <option value="macho">â™‚ Macho</option>
+              <option value="femea">♀ Fêmea</option>
+              <option value="macho">♂ Macho</option>
             </select>
           </div>
         </div>
@@ -2243,7 +2243,7 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label" for="edit-pet-raca">RaÃ§a</label>
+            <label class="form-label" for="edit-pet-raca">Raça</label>
             <input type="text" id="edit-pet-raca" class="form-control" />
           </div>
           <div class="form-group">
@@ -2256,15 +2256,15 @@
           <label class="form-label">Foto do Pet</label>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="edit-pet-camera" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ“¸ CÃ¢mera
+              📸 Câmera
             </button>
             <input type="file" id="edit-pet-camera" accept="image/*" capture="environment" style="display: none;" />
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="edit-pet-gallery" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ“ Galeria
+              🖼️ Galeria
             </button>
             <input type="file" id="edit-pet-gallery" accept="image/*" style="display: none;" />
             <button type="button" id="edit-pet-remove-photo" class="btn btn-outline btn-xs" style="color: var(--accent-danger); border-color: rgba(239, 68, 68, 0.3); display: none;">
-              ðŸ—‘ï¸ Remover
+              🗑️ Remover
             </button>
             <span id="edit-pet-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
           </div>
@@ -2276,29 +2276,29 @@
         <div class="form-group">
           <label style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
             <input type="checkbox" id="edit-pet-vacinas-status" />
-            VacinaÃ§Ã£o em dia
+            Vacinação em dia
           </label>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="edit-pet-observacoes">ObservaÃ§Ãµes</label>
+          <label class="form-label" for="edit-pet-observacoes">Observações</label>
           <textarea id="edit-pet-observacoes" class="form-control" rows="2"></textarea>
         </div>
 
         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar AlteraÃ§Ãµes</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: LANÃ‡AR COMPRA DE RAÃ‡ÃƒO -->
+  <!-- MODAL: LANÇAR COMPRA DE RAÇÃO -->
   <div id="modal-add-pet-racao" class="modal-overlay">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ¥£ Registrar Compra de RaÃ§Ã£o</h3>
-        <button type="button" class="modal-close" data-close-modal>âœ•</button>
+        <h3 class="modal-title">🥣 Registrar Compra de Ração</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-racao">
         <div class="form-group">
@@ -2312,8 +2312,8 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="pet-racao-marca">Marca / Tipo de RaÃ§Ã£o</label>
-          <input type="text" id="pet-racao-marca" class="form-control" placeholder="Ex: Premier RaÃ§as, Golden Especial, Royal Canin..." />
+          <label class="form-label" for="pet-racao-marca">Marca / Tipo de Ração</label>
+          <input type="text" id="pet-racao-marca" class="form-control" placeholder="Ex: Premier Raças, Golden Especial, Royal Canin..." />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
@@ -2322,14 +2322,14 @@
             <input type="number" id="pet-racao-kg" class="form-control" step="0.1" min="0.1" placeholder="Ex: 15" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="pet-racao-consumo-g">Consumo DiÃ¡rio (gramas/dia)</label>
+            <label class="form-label" for="pet-racao-consumo-g">Consumo Diário (gramas/dia)</label>
             <input type="number" id="pet-racao-consumo-g" class="form-control" step="1" min="1" placeholder="Ex: 250" />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label" for="pet-racao-duracao-dias">DuraÃ§Ã£o Estimada (dias)</label>
+            <label class="form-label" for="pet-racao-duracao-dias">Duração Estimada (dias)</label>
             <input type="number" id="pet-racao-duracao-dias" class="form-control" step="1" min="1" placeholder="Ex: 60" />
           </div>
           <div class="form-group">
@@ -2338,30 +2338,30 @@
           </div>
         </div>
 
-        <!-- Feedback dinÃ¢mico da data provÃ¡vel da prÃ³xima compra -->
+        <!-- Feedback dinâmico da data provável da próxima compra -->
         <div id="pet-racao-previsao-preview" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); padding: 0.6rem 0.8rem; font-size: 0.82rem; color: #065f46; margin-bottom: 0.75rem; font-weight: 600;">
-          ðŸ“… Data provÃ¡vel da prÃ³xima compra: informe os dados
+          📅 Data provável da próxima compra: informe os dados
         </div>
 
         <div class="form-group">
           <label class="form-label" for="pet-racao-notas">Notas / Onde comprou</label>
-          <input type="text" id="pet-racao-notas" class="form-control" placeholder="Ex: Cobasi, Petz, PromoÃ§Ã£o..." />
+          <input type="text" id="pet-racao-notas" class="form-control" placeholder="Ex: Cobasi, Petz, Promoção..." />
         </div>
 
         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-          <button type="submit" class="btn btn-primary" style="flex: 1;">Registrar RaÃ§Ã£o</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Registrar Ração</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: LANÃ‡AR COMPRA DE AREIA -->
+  <!-- MODAL: LANÇAR COMPRA DE AREIA -->
   <div id="modal-add-pet-areia" class="modal-overlay">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ–ï¸ Registrar Compra de Areia</h3>
-        <button type="button" class="modal-close" data-close-modal>âœ•</button>
+        <h3 class="modal-title">🏖️ Registrar Compra de Areia</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-areia">
         <div class="form-group">
@@ -2385,7 +2385,7 @@
             <input type="number" id="pet-areia-kg" class="form-control" step="0.1" min="0.1" placeholder="Ex: 4" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="pet-areia-duracao-dias">DuraÃ§Ã£o Estimada (dias)</label>
+            <label class="form-label" for="pet-areia-duracao-dias">Duração Estimada (dias)</label>
             <input type="number" id="pet-areia-duracao-dias" class="form-control" step="1" min="1" value="25" />
           </div>
         </div>
@@ -2412,8 +2412,8 @@
   <div id="modal-add-pet-banho" class="modal-overlay">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ› Registrar Banho & Higiene</h3>
-        <button type="button" class="modal-close" data-close-modal>âœ•</button>
+        <h3 class="modal-title">🛁 Registrar Banho & Higiene</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-banho">
         <div class="form-group">
@@ -2430,8 +2430,8 @@
           <div class="form-group">
             <label class="form-label" for="pet-banho-tipo">Onde foi o banho? *</label>
             <select id="pet-banho-tipo" class="form-control">
-              <option value="casa" selected>ðŸ  Em Casa</option>
-              <option value="petshop">ðŸ› Pet Shop</option>
+              <option value="casa" selected>🏠 Em Casa</option>
+              <option value="petshop">🛁 Pet Shop</option>
             </select>
           </div>
           <div class="form-group">
@@ -2446,8 +2446,8 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="pet-banho-notas">ObservaÃ§Ãµes (tosa, unhas, perfume, etc.)</label>
-          <input type="text" id="pet-banho-notas" class="form-control" placeholder="Ex: Tosa higiÃªnica, corte de unhas e limpeza de orelhas..." />
+          <label class="form-label" for="pet-banho-notas">Observações (tosa, unhas, perfume, etc.)</label>
+          <input type="text" id="pet-banho-notas" class="form-control" placeholder="Ex: Tosa higiênica, corte de unhas e limpeza de orelhas..." />
         </div>
 
         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
@@ -2462,8 +2462,8 @@
   <div id="modal-add-pet-vacina" class="modal-overlay">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ’‰ Registrar VacinaÃ§Ã£o</h3>
-        <button type="button" class="modal-close" data-close-modal>âœ•</button>
+        <h3 class="modal-title">💉 Registrar Vacinação</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-vacina">
         <div class="form-group">
@@ -2473,43 +2473,43 @@
 
         <div class="form-group">
           <label class="form-label" for="pet-vacina-nome">Vacina *</label>
-          <input type="text" id="pet-vacina-nome" class="form-control" placeholder="Ex: V10, V4, AntirrÃ¡bica, Gripe Canina..." required list="vacinas-datalist" />
+          <input type="text" id="pet-vacina-nome" class="form-control" placeholder="Ex: V10, V4, Antirrábica, Gripe Canina..." required list="vacinas-datalist" />
           <datalist id="vacinas-datalist">
-            <option value="V10 (DÃ©cupla Canina)" />
-            <option value="AntirrÃ¡bica" />
-            <option value="V4 (QuÃ¡drupla Felina)" />
-            <option value="V5 (QuÃ­ntupla Felina)" />
-            <option value="V8 (Ã“ctupla Canina)" />
+            <option value="V10 (Décupla Canina)" />
+            <option value="Antirrábica" />
+            <option value="V4 (Quádrupla Felina)" />
+            <option value="V5 (Quíntupla Felina)" />
+            <option value="V8 (Óctupla Canina)" />
             <option value="Gripe Canina (Tosse dos Canis)" />
-            <option value="GiÃ¡rgia" />
+            <option value="Giárgia" />
           </datalist>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label" for="pet-vacina-data">Data de AplicaÃ§Ã£o *</label>
+            <label class="form-label" for="pet-vacina-data">Data de Aplicação *</label>
             <input type="date" id="pet-vacina-data" class="form-control" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="pet-vacina-proxima-data">PrÃ³xima Dose Anual</label>
+            <label class="form-label" for="pet-vacina-proxima-data">Próxima Dose Anual</label>
             <input type="date" id="pet-vacina-proxima-data" class="form-control" />
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label" for="pet-vacina-lote">NÃºmero do Lote</label>
+            <label class="form-label" for="pet-vacina-lote">Número do Lote</label>
             <input type="text" id="pet-vacina-lote" class="form-control" placeholder="Ex: BR-8492" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="pet-vacina-clinica">ClÃ­nica VeterinÃ¡ria</label>
-            <input type="text" id="pet-vacina-clinica" class="form-control" placeholder="Ex: ClÃ­nica Vet SÃ£o Carlos" />
+            <label class="form-label" for="pet-vacina-clinica">Clínica Veterinária</label>
+            <input type="text" id="pet-vacina-clinica" class="form-control" placeholder="Ex: Clínica Vet São Carlos" />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="pet-vacina-notas">ObservaÃ§Ãµes</label>
-          <input type="text" id="pet-vacina-notas" class="form-control" placeholder="ReaÃ§Ãµes, recomendaÃ§Ãµes..." />
+          <label class="form-label" for="pet-vacina-notas">Observações</label>
+          <input type="text" id="pet-vacina-notas" class="form-control" placeholder="Reações, recomendações..." />
         </div>
 
         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
@@ -2520,12 +2520,12 @@
     </div>
   </div>
 
-  <!-- MODAL: REGISTRAR VERMÃFUGO -->
+  <!-- MODAL: REGISTRAR VERMÍFUGO -->
   <div id="modal-add-pet-vermifugo" class="modal-overlay">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ’Š Registrar VermifugaÃ§Ã£o</h3>
-        <button type="button" class="modal-close" data-close-modal>âœ•</button>
+        <h3 class="modal-title">💊 Registrar Vermifugação</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-vermifugo">
         <div class="form-group">
@@ -2534,13 +2534,13 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="pet-vermifugo-nome">Nome do VermÃ­fugo *</label>
-          <input type="text" id="pet-vermifugo-nome" class="form-control" value="VermÃ­fugo Amplo Espectro / Ivermectina" required />
+          <label class="form-label" for="pet-vermifugo-nome">Nome do Vermífugo *</label>
+          <input type="text" id="pet-vermifugo-nome" class="form-control" value="Vermífugo Amplo Espectro / Ivermectina" required />
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label" for="pet-vermifugo-data">Data de AplicaÃ§Ã£o *</label>
+            <label class="form-label" for="pet-vermifugo-data">Data de Aplicação *</label>
             <input type="date" id="pet-vermifugo-data" class="form-control" required />
           </div>
           <div class="form-group">
@@ -2555,13 +2555,13 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="pet-vermifugo-proxima-data">PrÃ³xima Dose Programada</label>
+          <label class="form-label" for="pet-vermifugo-proxima-data">Próxima Dose Programada</label>
           <input type="date" id="pet-vermifugo-proxima-data" class="form-control" />
         </div>
 
         <div class="form-group">
           <label class="form-label" for="pet-vermifugo-notas">Notas</label>
-          <input type="text" id="pet-vermifugo-notas" class="form-control" placeholder="Ex: Tomou junto com patÃª sem rejeiÃ§Ã£o..." />
+          <input type="text" id="pet-vermifugo-notas" class="form-control" placeholder="Ex: Tomou junto com patê sem rejeição..." />
         </div>
 
         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
@@ -2576,8 +2576,8 @@
   <div id="modal-add-pet-exame" class="modal-overlay">
     <div class="modal-content" style="max-width: 520px;">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ©º Consulta & Exame VeterinÃ¡rio</h3>
-        <button type="button" class="modal-close" data-close-modal>âœ•</button>
+        <h3 class="modal-title">🩺 Consulta & Exame Veterinário</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-exame">
         <div class="form-group">
@@ -2596,7 +2596,7 @@
               <option value="Consulta de Rotina" selected>Consulta de Rotina</option>
               <option value="Exame de Sangue (Hemograma)">Exame de Sangue</option>
               <option value="Ultrassom / Raio-X">Ultrassom / Raio-X</option>
-              <option value="Retorno VeterinÃ¡rio">Retorno</option>
+              <option value="Retorno Veterinário">Retorno</option>
               <option value="Procedimento / Cirurgia">Procedimento / Cirurgia</option>
               <option value="Outro">Outro</option>
             </select>
@@ -2605,34 +2605,34 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
-            <label class="form-label" for="pet-exame-clinica">ClÃ­nica / Hospital</label>
-            <input type="text" id="pet-exame-clinica" class="form-control" placeholder="Ex: Hospital Vet SÃ£o Carlos" />
+            <label class="form-label" for="pet-exame-clinica">Clínica / Hospital</label>
+            <input type="text" id="pet-exame-clinica" class="form-control" placeholder="Ex: Hospital Vet São Carlos" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="pet-exame-veterinario">VeterinÃ¡rio(a)</label>
-            <input type="text" id="pet-exame-veterinario" class="form-control" placeholder="Ex: Dr(a). AndrÃ©" />
+            <label class="form-label" for="pet-exame-veterinario">Veterinário(a)</label>
+            <input type="text" id="pet-exame-veterinario" class="form-control" placeholder="Ex: Dr(a). André" />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="pet-exame-descricao">DescriÃ§Ã£o / DiagnÃ³stico</label>
-          <textarea id="pet-exame-descricao" class="form-control" rows="2" placeholder="Sintomas, diagnÃ³stico ou resultados observados..."></textarea>
+          <label class="form-label" for="pet-exame-descricao">Descrição / Diagnóstico</label>
+          <textarea id="pet-exame-descricao" class="form-control" rows="2" placeholder="Sintomas, diagnóstico ou resultados observados..."></textarea>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="pet-exame-pendencias">PendÃªncias MÃ©dicas / Medicamentos / Retorno</label>
-          <input type="text" id="pet-exame-pendencias" class="form-control" placeholder="Ex: Retorno em 15 dias, dar antibiÃ³tico 12/12h por 7 dias..." />
+          <label class="form-label" for="pet-exame-pendencias">Pendências Médicas / Medicamentos / Retorno</label>
+          <input type="text" id="pet-exame-pendencias" class="form-control" placeholder="Ex: Retorno em 15 dias, dar antibiótico 12/12h por 7 dias..." />
         </div>
 
         <div class="form-group">
           <label class="form-label">Foto do Laudo / Receita</label>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="pet-exame-camera" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ“¸ CÃ¢mera
+              📸 Câmera
             </button>
             <input type="file" id="pet-exame-camera" accept="image/*" capture="environment" style="display: none;" />
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="pet-exame-gallery" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ“ Galeria
+              🖼️ Galeria
             </button>
             <input type="file" id="pet-exame-gallery" accept="image/*" style="display: none;" />
             <span id="pet-exame-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
@@ -2647,12 +2647,12 @@
     </div>
   </div>
 
-  <!-- MODAL: LANÃ‡AR ITEM / ACESSÃ“RIO DO PET (COMEDOURO, COLEIRA, BRINQUEDO) -->
+  <!-- MODAL: LANÇAR ITEM / ACESSÓRIO DO PET (COMEDOURO, COLEIRA, BRINQUEDO) -->
   <div id="modal-add-pet-item" class="modal-overlay">
     <div class="modal-content" style="max-width: 500px;">
       <div class="modal-header">
-        <h3 class="modal-title">ðŸ¦´ Comedouro, Coleira, Brinquedo & Itens</h3>
-        <button type="button" class="modal-close" data-close-modal>âœ•</button>
+        <h3 class="modal-title">🦴 Comedouro, Coleira, Brinquedo & Itens</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
       </div>
       <form id="form-add-pet-item">
         <div class="form-group">
@@ -2664,11 +2664,11 @@
           <div class="form-group">
             <label class="form-label" for="pet-item-tipo">Tipo de Item *</label>
             <select id="pet-item-tipo" class="form-control" required>
-              <option value="comedouro" selected>ðŸ¥£ Comedouro / Bebedouro</option>
-              <option value="coleira">ðŸ¦® Coleira / Guia / Peitoral</option>
-              <option value="brinquedo">ðŸ§¸ Brinquedo / Mordedor</option>
-              <option value="cama_transporte">ðŸ§º Caminha / Transporte</option>
-              <option value="outros">ðŸ¦´ Outros AcessÃ³rios</option>
+              <option value="comedouro" selected>🥣 Comedouro / Bebedouro</option>
+              <option value="coleira">🦮 Coleira / Guia / Peitoral</option>
+              <option value="brinquedo">🧸 Brinquedo / Mordedor</option>
+              <option value="cama_transporte">🧺 Caminha / Transporte</option>
+              <option value="outros">🦴 Outros Acessórios</option>
             </select>
           </div>
 
@@ -2679,7 +2679,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="pet-item-nome">Nome / DescriÃ§Ã£o do Item *</label>
+          <label class="form-label" for="pet-item-nome">Nome / Descrição do Item *</label>
           <input type="text" id="pet-item-nome" class="form-control" placeholder="Ex: Comedouro elevado inox, Coleira com placa, Bolinha..." required />
         </div>
 
@@ -2696,19 +2696,19 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="pet-item-observacoes">ObservaÃ§Ãµes (Tamanho, Cor, Material)</label>
-          <textarea id="pet-item-observacoes" class="form-control" rows="2" placeholder="Ex: Tamanho M, cor rosa, material silicone, lavÃ¡vel..."></textarea>
+          <label class="form-label" for="pet-item-observacoes">Observações (Tamanho, Cor, Material)</label>
+          <textarea id="pet-item-observacoes" class="form-control" rows="2" placeholder="Ex: Tamanho M, cor rosa, material silicone, lavável..."></textarea>
         </div>
 
         <div class="form-group">
           <label class="form-label">Foto do Item</label>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="pet-item-camera" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ“· CÃ¢mera
+              📸 Câmera
             </button>
             <input type="file" id="pet-item-camera" accept="image/*" capture="environment" style="display: none;" />
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="pet-item-gallery" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ“ Galeria
+              🖼️ Galeria
             </button>
             <input type="file" id="pet-item-gallery" accept="image/*" style="display: none;" />
             <span id="pet-item-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
@@ -2729,8 +2729,8 @@
   <div id="modal-shopping-item" class="modal-overlay">
     <div class="modal-content" style="max-width: 500px;">
       <div class="modal-header">
-        <h3 class="modal-title" id="shopping-modal-title">ðŸ›ï¸ Novo Item de Shopping</h3>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <h3 class="modal-title" id="shopping-modal-title">🛍️ Novo Item de Shopping</h3>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <form id="form-shopping-item">
         <input type="hidden" id="shopping-item-id" value="" />
@@ -2744,18 +2744,18 @@
           <div class="form-group">
             <label class="form-label" for="shopping-input-category">Categoria *</label>
             <select id="shopping-input-category" class="form-control" required>
-              <option value="roupas_calcados">ðŸ‘• Roupas & CalÃ§ados</option>
-              <option value="eletrodomesticos">ðŸ”Œ EletrodomÃ©sticos</option>
-              <option value="eletronicos">ðŸ“± EletrÃ´nicos & Tech</option>
-              <option value="casa_decoracao">ðŸ  Casa & DecoraÃ§Ã£o</option>
-              <option value="beleza_pessoal">âœ¨ Beleza & Cuidados</option>
-              <option value="esporte_lazer">ðŸ‘Ÿ Esporte & Lazer</option>
-              <option value="outros">ðŸ›ï¸ Outros & Variados</option>
+              <option value="roupas_calcados">👕 Roupas & Calçados</option>
+              <option value="eletrodomesticos">🔌 Eletrodomésticos</option>
+              <option value="eletronicos">📱 Eletrônicos & Tech</option>
+              <option value="casa_decoracao">🏠 Casa & Decoração</option>
+              <option value="beleza_pessoal">✨ Beleza & Cuidados</option>
+              <option value="esporte_lazer">👟 Esporte & Lazer</option>
+              <option value="outros">🛍️ Outros & Variados</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="shopping-input-price">PreÃ§o Visto / Estimado</label>
+            <label class="form-label" for="shopping-input-price">Preço Visto / Estimado</label>
             <input type="text" id="shopping-input-price" class="form-control" placeholder="R$ 0,00" inputmode="decimal" />
           </div>
         </div>
@@ -2763,15 +2763,15 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="form-group">
             <label class="form-label" for="shopping-input-store">Loja / Marca</label>
-            <input type="text" id="shopping-input-store" class="form-control" placeholder="Ex: New Balance, Amazon, Loja fÃ­sica..." />
+            <input type="text" id="shopping-input-store" class="form-control" placeholder="Ex: New Balance, Amazon, Loja física..." />
           </div>
 
           <div class="form-group">
             <label class="form-label" for="shopping-input-for-whom">Para Quem?</label>
             <select id="shopping-input-for-whom" class="form-control">
-              <option value="casal" selected>ðŸ’‘ Casal (NÃ³s dois)</option>
-              <option value="matheus">ðŸ§¢ Matheus</option>
-              <option value="scarlet">ðŸŽ€ Scarlet</option>
+              <option value="casal" selected>💑 Casal (Nós dois)</option>
+              <option value="matheus">🧢 Matheus</option>
+              <option value="scarlet">🎀 Scarlet</option>
             </select>
           </div>
         </div>
@@ -2780,19 +2780,19 @@
           <div class="form-group">
             <label class="form-label" for="shopping-input-priority">Prioridade</label>
             <select id="shopping-input-priority" class="form-control">
-              <option value="baixa">ðŸŸ¢ Baixa (Quando der)</option>
-              <option value="media" selected>ðŸŸ¡ MÃ©dia (Planejado)</option>
-              <option value="alta">ðŸŸ  Alta (PrÃ³xima compra)</option>
-              <option value="urgente">ðŸ”´ Urgente</option>
+              <option value="baixa">🟢 Baixa (Quando der)</option>
+              <option value="media" selected>🟡 Média (Planejado)</option>
+              <option value="alta">🟠 Alta (Próxima compra)</option>
+              <option value="urgente">🔴 Urgente</option>
             </select>
           </div>
 
           <div class="form-group">
             <label class="form-label" for="shopping-input-status">Status</label>
             <select id="shopping-input-status" class="form-control">
-              <option value="desejado" selected>ðŸ’¡ Na Lista de Desejos</option>
-              <option value="pesquisando">ðŸ” Pesquisando PreÃ§o</option>
-              <option value="comprado">âœ… JÃ¡ Comprado</option>
+              <option value="desejado" selected>💡 Na Lista de Desejos</option>
+              <option value="pesquisando">🔍 Pesquisando Preço</option>
+              <option value="comprado">✅ Já Comprado</option>
             </select>
           </div>
         </div>
@@ -2803,20 +2803,20 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="shopping-input-notes">ObservaÃ§Ãµes (Tamanho, Voltagem, Cor, Modelo)</label>
+          <label class="form-label" for="shopping-input-notes">Observações (Tamanho, Voltagem, Cor, Modelo)</label>
           <textarea id="shopping-input-notes" class="form-control" rows="2" placeholder="Ex: Tamanho M 34-38, voltagem 110V, cor branca..."></textarea>
         </div>
 
-        <!-- SeÃ§Ã£o de Foto da PeÃ§a / Etiqueta -->
+        <!-- Seção de Foto da Peça / Etiqueta -->
         <div class="form-group">
-          <label class="form-label">Foto do Produto ou Etiqueta de PreÃ§o</label>
+          <label class="form-label">Foto do Produto ou Etiqueta de Preço</label>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="shopping-input-camera" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ“· Tirar Foto (CÃ¢mera)
+              📸 Tirar Foto (Câmera)
             </button>
             <input type="file" id="shopping-input-camera" accept="image/*" capture="environment" style="display: none;" />
             <button type="button" class="btn btn-secondary btn-sm" data-pick-file="shopping-input-gallery" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
-              ðŸ–¼ï¸ Escolher da Galeria
+              🖼️ Escolher da Galeria
             </button>
             <input type="file" id="shopping-input-gallery" accept="image/*" style="display: none;" />
             <span id="shopping-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
@@ -2824,8 +2824,8 @@
 
           <!-- Preview da Imagem -->
           <div id="shopping-photo-preview-container" style="display: none; margin-top: 0.5rem; position: relative; max-width: 200px;">
-            <img id="shopping-photo-preview-img" src="" alt="PrÃ©via da foto" style="width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); max-height: 140px; object-fit: cover;" />
-            <button type="button" id="btn-remove-shopping-preview-photo" class="btn btn-icon btn-sm" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.65); color: #fff; border-radius: 50%; width: 24px; height: 24px; min-width: 24px; font-size: 0.7rem;" title="Remover foto">âœ•</button>
+            <img id="shopping-photo-preview-img" src="" alt="Prévia da foto" style="width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); max-height: 140px; object-fit: cover;" />
+            <button type="button" id="btn-remove-shopping-preview-photo" class="btn btn-icon btn-sm" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.65); color: #fff; border-radius: 50%; width: 24px; height: 24px; min-width: 24px; font-size: 0.7rem;" title="Remover foto">✕</button>
           </div>
         </div>
 
@@ -2842,7 +2842,7 @@
     <div class="modal-content" style="max-width: 480px; padding: 1rem; text-align: center;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
         <h4 id="shopping-photo-viewer-title" style="font-size: 1rem; font-weight: 700; margin: 0; color: var(--text-primary); text-align: left;">Foto do Produto</h4>
-        <button type="button" class="btn btn-icon btn-sm" data-close-modal>âœ•</button>
+        <button type="button" class="btn btn-icon btn-sm" data-close-modal>✕</button>
       </div>
       <div style="background: #000; border-radius: var(--radius-md); overflow: hidden; max-height: 70vh; display: flex; align-items: center; justify-content: center;">
         <img id="shopping-photo-viewer-img" src="" alt="Foto em tamanho grande" style="max-width: 100%; max-height: 70vh; object-fit: contain;" />
