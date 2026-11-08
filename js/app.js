@@ -3312,6 +3312,9 @@ function initComprasModule() {
           playSubtleClick(state.settings.soundEnabled);
           showToast(`"${item.name}" adicionado à lista de compras! 🛒`, 'success');
           renderComprasTab(state, currentComprasCategory, currentComprasView);
+          // Fecha o modal de catálogo e também o de adicionar item se este estiver aberto por baixo
+          closeModal('modal-catalog-products');
+          closeModal('modal-add-shopping-item');
         } catch (err) {
           showToast(err.message, 'error');
         }
@@ -3372,6 +3375,8 @@ function initComprasModule() {
           playSubtleClick(state.settings.soundEnabled);
           showToast(`"${item.name}" adicionado à lista de compras! 🛒`, 'success');
           closeModal('modal-product-history');
+          closeModal('modal-catalog-products');
+          closeModal('modal-add-shopping-item');
           renderComprasTab(state, currentComprasCategory, currentComprasView);
         } catch (err) {
           showToast(err.message, 'error');
@@ -5830,6 +5835,17 @@ function initModals() {
     }
   });
 
+  // Atualiza z-index de cada modal aberto de acordo com a profundidade da pilha
+  function updateModalStackZIndexes() {
+    const baseZIndex = 1000;
+    activeModalStack.forEach((modalId, idx) => {
+      const el = document.getElementById(modalId);
+      if (el) {
+        el.style.zIndex = String(baseZIndex + (idx * 20));
+      }
+    });
+  }
+
   // Intercepta botão Voltar do celular (Android Back / Gestos) para fechar o modal aberto sem fechar o app
   window.addEventListener('popstate', (e) => {
     if (activeModalStack.length > 0) {
@@ -5839,8 +5855,10 @@ function initModals() {
         const modal = document.getElementById(topModalId);
         if (modal) {
           modal.classList.remove('active');
+          modal.style.zIndex = '';
           playSubtleClick(state?.settings?.soundEnabled);
         }
+        updateModalStackZIndexes();
       } finally {
         setTimeout(() => {
           isHandlingPopstate = false;
@@ -5863,13 +5881,24 @@ function openModal(id) {
   if (id === 'modal-benefits-history' && typeof renderBenefitsHistoryModal === 'function') renderBenefitsHistoryModal(state);
   const modal = document.getElementById(id);
   if (modal) {
-    if (!modal.classList.contains('active')) {
-      modal.classList.add('active');
-      activeModalStack.push(id);
-      try {
-        window.history.pushState({ maracajuModal: id }, '');
-      } catch (err) {}
+    // Se o modal já estava na pilha, remove da posição anterior para ficar no topo
+    const existingIdx = activeModalStack.indexOf(id);
+    if (existingIdx !== -1) {
+      activeModalStack.splice(existingIdx, 1);
     }
+    modal.classList.add('active');
+    activeModalStack.push(id);
+    // Aplica z-index dinâmico baseado na ordem de abertura para nunca ficar atrás de outro modal
+    const baseZIndex = 1000;
+    activeModalStack.forEach((modalId, idx) => {
+      const el = document.getElementById(modalId);
+      if (el) {
+        el.style.zIndex = String(baseZIndex + (idx * 20));
+      }
+    });
+    try {
+      window.history.pushState({ maracajuModal: id }, '');
+    } catch (err) {}
     playSubtleClick(state?.settings?.soundEnabled);
   }
 }
@@ -5878,12 +5907,21 @@ function closeModal(id, fromPopstate = false) {
   const modal = document.getElementById(id);
   if (modal) {
     modal.classList.remove('active');
+    modal.style.zIndex = '';
   }
 
   const stackIdx = activeModalStack.lastIndexOf(id);
   if (stackIdx !== -1) {
     activeModalStack.splice(stackIdx, 1);
   }
+
+  const baseZIndex = 1000;
+  activeModalStack.forEach((modalId, idx) => {
+    const el = document.getElementById(modalId);
+    if (el) {
+      el.style.zIndex = String(baseZIndex + (idx * 20));
+    }
+  });
 
   // Se o fechamento foi pelo botão/backdrop (e não pelo popstate), limpa o histórico
   if (!fromPopstate && !isHandlingPopstate) {

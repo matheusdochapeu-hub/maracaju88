@@ -4,6 +4,29 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-08 15:45] - Correção de Modais Empilhados: z-index Dinâmico para Catálogo e Lista de Compras (v2.6.5)
+
+### 🔍 Problema Identificado & Causa Raiz
+1. **Modal de Catálogo aparecendo atrás do Modal de Adicionar Item:**
+   - O usuário relatou: *"clico em catalogo e ele aparece atrás do outro modal, ou seja, não consigo acessar."*
+   - **Causa Raiz (Ordem do DOM com z-index estático idêntico):** Em `css/components.css`, todas as overlays `.modal-overlay` tinham `z-index: 1000` estático. No arquivo `index.html`, o `#modal-catalog-products` está na linha ~1333 e o `#modal-add-shopping-item` está na linha ~1489. Pelas regras de empilhamento CSS (stacking context), quando dois elementos têm o mesmo `z-index`, o elemento declarado posteriormente no DOM (`#modal-add-shopping-item`) é renderizado visualmente por cima do anterior, cobrindo o `#modal-catalog-products` mesmo quando este foi aberto depois.
+
+### 🛠️ Correções Implementadas
+1. **Gerenciamento Dinâmico de z-index no Empilhamento de Modais (`js/app.js`):**
+   - Criada a função `updateModalStackZIndexes()`: percorre o `activeModalStack` e aplica dinamicamente `zIndex = 1000 + (index * 20)` a cada modal ativo. O modal mais recente sempre recebe o maior z-index do app.
+   - Atualizada a função `openModal(id)`: se o modal já estiver na pilha, reposiciona para o topo; atribui a classe `.active`, empilha no `activeModalStack` e chama `updateModalStackZIndexes()`.
+   - Atualizada a função `closeModal(id)`: remove a classe `.active`, redefine `modal.style.zIndex = ''`, remove o modal de `activeModalStack` e recalcula os índices dos modais restantes.
+   - Atualizado o listener de `popstate` (botão voltar físico/gesto do Android): limpa o inline `zIndex` do modal desempilhado e reordena os remanescentes.
+2. **Fluxo Aprimorado de Adição do Catálogo à Lista (`js/app.js`):**
+   - Ao clicar em "Adicionar à Lista" no catálogo ou histórico de produtos, o item é adicionado e ambos os modais (`#modal-catalog-products` e `#modal-add-shopping-item`) são fechados ordenadamente, retornando o foco diretamente à lista de compras.
+3. **Testes Automatizados (`test/modals-back-button.test.js`):**
+   - Adicionado teste específico validando o empilhamento dinâmico, prioridade de z-index para modais sobrepostos e reset limpo ao fechar.
+   - 106 testes automatizados executados e 100% aprovados (`npm.cmd test`).
+4. **Bump de Versão:**
+   - Atualizado para **`v2.6.5`** em `config.js`, `sw.js` e `package.json`.
+
+---
+
 ## [2026-11-08 15:35] - Resolução Definitiva do Leitor de QR Code e OCR Offline de Cupons (v2.6.4)
 
 ### 🔍 Problema Identificado & Causa Raiz

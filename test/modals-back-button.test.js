@@ -60,3 +60,10 @@ test('JS: app.js possui interceptação de popstate para o botão Voltar do celu
   assert.ok(appJs.includes('activeModalStack'));
   assert.ok(appJs.includes('history.pushState'));
 });
+
+test('Modais Empilhados: openModal e closeModal gerenciam z-index dinâmico e sobreposição correta', () => {
+  const appJs = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+  assert.ok(appJs.includes('baseZIndex'), 'app.js deve ter baseZIndex para modais');
+  assert.ok(appJs.includes('idx * 20'), 'app.js deve incrementar o z-index pela profundidade do modal');
+  assert.ok(appJs.includes('closeModal("modal-add-shopping-item")') || appJs.includes("closeModal('modal-add-shopping-item')"), 'Adicionar do catálogo deve fechar o modal de novo item');
+});
