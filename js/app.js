@@ -601,7 +601,11 @@ function switchTab(targetTab, forceDirection = null) {
 
   if (activeContent) {
     activeContent.classList.add('active');
-    activeContent.classList.add(dir === 'right' ? 'carousel-slide-right' : 'carousel-slide-left');
+    const animClass = dir === 'right' ? 'carousel-slide-right' : 'carousel-slide-left';
+    activeContent.classList.add(animClass);
+    setTimeout(() => {
+      activeContent.classList.remove(animClass);
+    }, 280);
   }
 
   currentTab = targetTab;

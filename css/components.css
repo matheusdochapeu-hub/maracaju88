@@ -1803,6 +1803,18 @@ input[type="file"].form-control::file-selector-button:hover {
   pointer-events: none;
 }
 
+@media (min-width: 768px) {
+  .fab-stack {
+    bottom: 2rem;
+    right: max(2rem, calc((100vw - var(--max-content-width)) / 2 + 1.5rem));
+  }
+
+  .fab-btn {
+    bottom: 2rem;
+    right: max(2rem, calc((100vw - var(--max-content-width)) / 2 + 1.5rem));
+  }
+}
+
 .fab-stack .fab-btn {
   position: static;
   pointer-events: auto;

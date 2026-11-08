@@ -55,7 +55,7 @@
   }
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: none;
   }
 }
 
@@ -66,18 +66,16 @@
   }
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
+    transform: none;
   }
 }
 
 .tab-content.carousel-slide-right {
-  animation: carouselSlideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: transform, opacity;
+  animation: carouselSlideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tab-content.carousel-slide-left {
-  animation: carouselSlideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: transform, opacity;
+  animation: carouselSlideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
