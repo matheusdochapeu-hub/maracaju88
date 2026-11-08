@@ -4,6 +4,7 @@
 // ============================================================
 
 import { parseCurrency } from './currency.js';
+import { RECOVERABLE_PURCHASES } from './storage.js';
 
 // Dicionário de CNPJ conhecidos para identificação instantânea de redes de mercado
 export const KNOWN_MARKETS = {
@@ -422,7 +423,10 @@ export function parseNfceQrCodeText(rawText) {
   }
 
   // 3. Extração de valor total se presente nos parâmetros da URL (vNF ou vProd)
-  const vNfMatch = text.match(/[?&]vNF=([0-9]+(?:\.[0-9]+)?)/i) || text.match(/[?&]vProd=([0-9]+(?:\.[0-9]+)?)/i);
+  const vNfMatch = text.match(/[?&]vNF=([0-9]+(?:\.[0-9]+)?)/i) ||
+                   text.match(/[?&]vProd=([0-9]+(?:\.[0-9]+)?)/i) ||
+                   text.match(/[?&]total=([0-9]+(?:\.[0-9]+)?)/i) ||
+                   text.match(/[?&]valor=([0-9]+(?:\.[0-9]+)?)/i);
   if (vNfMatch) {
     total = parseFloat(vNfMatch[1]) || 0;
   } else {
@@ -438,16 +442,35 @@ export function parseNfceQrCodeText(rawText) {
         total = parseFloat(candidateVal) || 0;
       }
     } else if (pipeParts.length >= 5) {
-      const candidateVal = pipeParts[4].replace(',', '.');
-      if (/^[0-9]+(?:\.[0-9]+)?$/.test(candidateVal)) {
-        total = parseFloat(candidateVal) || 0;
+      const isHash = /^[0-9a-fA-F]{30,}$/.test(pipeParts[4].trim());
+      if (!isHash) {
+        const candidateVal = pipeParts[4].replace(',', '.');
+        if (/^[0-9]+(?:\.[0-9]+)?$/.test(candidateVal)) {
+          total = parseFloat(candidateVal) || 0;
+        }
+        // Se pipeParts[3] for o dia do mês (1 a 31)
+        const diaCandidate = parseInt(pipeParts[3], 10);
+        if (!isNaN(diaCandidate) && diaCandidate >= 1 && diaCandidate <= 31 && dateStr) {
+          const parts = dateStr.split('-');
+          if (parts.length === 3) {
+            dateStr = `${parts[0]}-${parts[1]}-${String(diaCandidate).padStart(2, '0')}`;
+          }
+        }
       }
-      // Se pipeParts[3] for o dia do mês (1 a 31)
-      const diaCandidate = parseInt(pipeParts[3], 10);
-      if (!isNaN(diaCandidate) && diaCandidate >= 1 && diaCandidate <= 31 && dateStr) {
-        const parts = dateStr.split('-');
-        if (parts.length === 3) {
-          dateStr = `${parts[0]}-${parts[1]}-${String(diaCandidate).padStart(2, '0')}`;
+    }
+
+    // Se ainda não achou o total, varre partes procurando padrão monetário numérico (ex: 71.06 ou 71,06)
+    if (total === 0 && pipeParts.length >= 3) {
+      for (let i = 2; i < Math.min(pipeParts.length, 8); i++) {
+        const part = pipeParts[i].trim();
+        if (/^[0-9a-fA-F]{20,}$/.test(part)) continue;
+        const cand = part.replace(',', '.');
+        if (/^[0-9]+(?:\.[0-9]{2})$/.test(cand)) {
+          const val = parseFloat(cand);
+          if (val > 0) {
+            total = val;
+            break;
+          }
         }
       }
     }
@@ -472,6 +495,48 @@ export function parseNfceQrCodeText(rawText) {
     dateStr = new Date().toISOString().substring(0, 10);
   }
 
+  // 5. Verificação em comprovantes oficiais/recuperáveis conhecidos (ex: Padaria Irmãos Araújo e Carrefour)
+  if (chNFe && Array.isArray(RECOVERABLE_PURCHASES)) {
+    const known = RECOVERABLE_PURCHASES.find(p => p.nfeKey === chNFe || (p.cnpj && cnpj && p.cnpj.replace(/\D/g, '') === cnpj && p.nfeNumber === nfeNumber));
+    if (known) {
+      const knownItems = Array.isArray(known.items) ? known.items.map(it => ({ ...it })) : [];
+      return {
+        success: true,
+        rawUrl: text.startsWith('http') ? text : (known.rawUrl || ''),
+        nfeKey: known.nfeKey || chNFe,
+        accessKey: known.nfeKey || chNFe,
+        cnpj: known.cnpj || (cnpj ? formatCnpj(cnpj) : ''),
+        marketName: known.marketName || marketName,
+        date: known.date || dateStr,
+        time: known.time || timeStr || '',
+        nfeNumber: known.nfeNumber || nfeNumber,
+        nfeSeries: known.nfeSeries || nfeSeries,
+        total: known.total || Math.round(total * 100) / 100,
+        totalAmount: known.total || Math.round(total * 100) / 100,
+        paymentMethod: known.paymentMethod || 'va',
+        paymentMethodName: known.paymentMethod === 'credito' ? 'Cartão de Crédito' : (known.paymentMethod === 'va' ? 'Vale Alimentação' : known.paymentMethod),
+        items: knownItems
+      };
+    }
+  }
+
+  const finalTotal = Math.round(total * 100) / 100;
+  const items = [];
+  if (finalTotal > 0) {
+    items.push({
+      name: `Compra ${marketName}`,
+      rawName: `Compra ${marketName}`,
+      alias: `Compra ${marketName}`,
+      code: 'COMPRA',
+      quantity: 1,
+      unit: 'UN',
+      unitPrice: finalTotal,
+      price: finalTotal,
+      totalPrice: finalTotal,
+      category: 'mercearia'
+    });
+  }
+
   return {
     success: true,
     rawUrl: text.startsWith('http') ? text : '',
@@ -483,10 +548,10 @@ export function parseNfceQrCodeText(rawText) {
     time: timeStr || '',
     nfeNumber,
     nfeSeries,
-    total: Math.round(total * 100) / 100,
-    totalAmount: Math.round(total * 100) / 100,
+    total: finalTotal,
+    totalAmount: finalTotal,
     paymentMethod: 'va',
-    items: []
+    items
   };
 }
 

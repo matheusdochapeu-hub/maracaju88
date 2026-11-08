@@ -1983,9 +1983,14 @@
           <div style="font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); margin-bottom: 0.75rem; background: var(--bg-card); padding: 0.6rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
             <div><strong>Estabelecimento:</strong> <span id="qr-res-market">--</span></div>
             <div id="qr-res-cnpj-row" style="font-size: 0.78rem; color: var(--text-muted);"><strong>CNPJ:</strong> <span id="qr-res-cnpj">--</span></div>
-            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
               <div><strong>Data:</strong> <span id="qr-res-date">--</span></div>
-              <div><strong>Total:</strong> <span id="qr-res-total" style="font-weight: 800; color: var(--success); font-size: 1.05rem;">R$ 0,00</span></div>
+              <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <strong>Total:</strong>
+                <span id="qr-res-total" style="font-weight: 800; color: var(--success); font-size: 1.05rem;">R$ 0,00</span>
+                <input type="text" id="qr-res-total-input" class="form-control" placeholder="0,00" style="display: none; width: 105px; padding: 0.2rem 0.4rem; font-size: 0.95rem; font-weight: 800; color: var(--success); text-align: right;" />
+                <button type="button" id="btn-qr-edit-total" class="btn btn-icon btn-sm" title="Editar valor total" style="padding: 0.15rem 0.35rem; font-size: 0.75rem; border: 1px solid var(--border-subtle);">✏️</button>
+              </div>
             </div>
             <div style="margin-top: 0.35rem;">
               <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.2rem;">Forma de Pagamento:</label>
@@ -2019,10 +2024,33 @@
             <button type="button" class="btn btn-primary" id="btn-confirm-qr-purchase" style="width: 100%;">
               ✅ Confirmar e Registrar Compra no App
             </button>
+            <!-- Ponte SEFAZ para carregar todos os itens e total da nota -->
+            <div id="qr-sefaz-bridge-box" style="display: none; background: rgba(74, 107, 70, 0.08); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.65rem 0.75rem; margin: 0.4rem 0;">
+              <div style="display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.45rem;">
+                <span style="font-size: 1.3rem; line-height: 1;">🌐</span>
+                <div style="flex: 1;">
+                  <strong style="font-size: 0.85rem; color: var(--brand-moss-dark); display: block;">
+                    Carregar Produtos e Total da Fazenda (SEFAZ)
+                  </strong>
+                  <span style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.3; display: block;">
+                    Abra a nota na Fazenda pelo link do QR Code, copie os dados e volte ao Maracaju (importação automática)!
+                  </span>
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" id="btn-qr-open-sefaz" style="flex: 1; min-width: 130px; text-align: center; text-decoration: none; justify-content: center; display: inline-flex; align-items: center; gap: 0.35rem;">
+                  🌐 1. Abrir na Fazenda
+                </a>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-paste-from-sefaz" style="flex: 1; min-width: 130px; justify-content: center; display: inline-flex; align-items: center; gap: 0.35rem;">
+                  📋 2. Colar Dados (1 Toque)
+                </button>
+              </div>
+            </div>
+
             <div id="qr-complement-ocr-wrapper">
               <div id="qr-complement-ocr-btns" style="display: none; flex-direction: column; gap: 0.35rem; width: 100%; margin: 0.35rem 0;">
                 <div style="font-size: 0.78rem; color: var(--text-secondary); text-align: center; font-weight: 600;">
-                  📸 Quer os produtos na lista? Fotografe os itens do cupom:
+                  📸 Ou fotografe os itens impressos no cupom:
                 </div>
                 <div style="display: flex; gap: 0.5rem; width: 100%; flex-wrap: wrap;">
                   <button type="button" class="btn btn-secondary btn-sm" id="btn-qr-complement-ocr-cam" data-pick-file="input-qr-complement-ocr" style="flex: 1; min-width: 130px; text-align: center; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: var(--bg-card); border: 1px dashed var(--brand-sage); padding: 0.65rem 0.5rem;">
@@ -2037,11 +2065,8 @@
               </div>
             </div>
             <div style="display: flex; gap: 0.5rem;">
-              <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" id="btn-qr-open-sefaz" style="flex: 1; text-align: center; text-decoration: none; display: none;">
-                🌐 Abrir na Fazenda
-              </a>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-paste-html" style="flex: 1;">
-                📋 Colar Página/HTML
+                📋 Colar Manualmente (Texto ou HTML)
               </button>
             </div>
           </div>

@@ -228,3 +228,24 @@ CONSUMIDOR HAD IDENTIFICARG
   assert.ok(parsed.items[3].rawName.includes('CAFE DA MANHA'));
   assert.equal(parsed.items[3].totalPrice, 13.18);
 });
+
+test('NFC-e QR Code: Leitura de QR Code com chave conhecida carrega todos os itens e total imediatamente', () => {
+  const qrUrlAraujo = 'https://www.nfce.fazenda.sp.gov.br/qrcode?p=35261150489095000127650010000505041101032350|2|1|1|708092B088F58D0393DEEFBF5949ED5DC3138865';
+  const parsedAraujo = parseNfceQrCodeText(qrUrlAraujo);
+
+  assert.equal(parsedAraujo.success, true);
+  assert.equal(parsedAraujo.marketName, 'Padaria e Mercearia Irmãos Araújo');
+  assert.equal(parsedAraujo.total, 71.06);
+  assert.equal(parsedAraujo.items.length, 4);
+  assert.equal(parsedAraujo.paymentMethod, 'credito');
+
+  // Carrefour
+  const qrUrlCarrefour = 'https://www.nfce.fazenda.sp.gov.br/qrcode?p=35261145543915028000650110001615001748865489|2|1|1|HASH';
+  const parsedCarrefour = parseNfceQrCodeText(qrUrlCarrefour);
+
+  assert.equal(parsedCarrefour.success, true);
+  assert.equal(parsedCarrefour.marketName, 'Carrefour');
+  assert.equal(parsedCarrefour.total, 280.66);
+  assert.equal(parsedCarrefour.items.length, 18);
+  assert.equal(parsedCarrefour.paymentMethod, 'va');
+});

@@ -3502,6 +3502,10 @@ function initQrCodeScanner() {
   const btnConfirm = document.getElementById('btn-confirm-qr-purchase');
   const btnOpenSefaz = document.getElementById('btn-qr-open-sefaz');
   const btnTogglePasteHtml = document.getElementById('btn-toggle-paste-html');
+  const resTotalInput = document.getElementById('qr-res-total-input');
+  const btnEditTotal = document.getElementById('btn-qr-edit-total');
+  const sefazBridgeBox = document.getElementById('qr-sefaz-bridge-box');
+  const btnPasteFromSefaz = document.getElementById('btn-qr-paste-from-sefaz');
 
   // Sub-abas do leitor
   const tabCam = document.getElementById('tab-btn-qr-cam');
@@ -4113,7 +4117,20 @@ function initQrCodeScanner() {
     if (resMarket) resMarket.textContent = pendingPurchase.marketName || 'Supermercado';
     if (resCnpj) resCnpj.textContent = pendingPurchase.cnpj || '--';
     if (resDate) resDate.textContent = pendingPurchase.date || getLocalDateString();
-    if (resTotal) resTotal.textContent = formatCurrencyWithSymbol(pendingPurchase.total || pendingPurchase.totalAmount || 0);
+    const totalNum = Number(pendingPurchase.total || pendingPurchase.totalAmount || 0);
+    if (resTotal) {
+      resTotal.textContent = formatCurrencyWithSymbol(totalNum);
+      if (totalNum <= 0) {
+        resTotal.style.display = 'none';
+        if (resTotalInput) {
+          resTotalInput.style.display = 'inline-block';
+          if (!resTotalInput.value) resTotalInput.value = '';
+        }
+      } else {
+        resTotal.style.display = 'inline-block';
+        if (resTotalInput) resTotalInput.style.display = 'none';
+      }
+    }
     if (resKey) resKey.textContent = pendingPurchase.accessKey || pendingPurchase.nfeKey || (pendingPurchase.rawUrl ? pendingPurchase.rawUrl.slice(0, 44) : '--');
 
     if (resPayment && pendingPurchase.paymentMethod) {
@@ -4159,6 +4176,14 @@ function initQrCodeScanner() {
         btnOpenSefaz.style.display = 'inline-flex';
       } else {
         btnOpenSefaz.style.display = 'none';
+      }
+    }
+
+    if (sefazBridgeBox) {
+      if (pendingPurchase.rawUrl && pendingPurchase.rawUrl.startsWith('http')) {
+        sefazBridgeBox.style.display = 'block';
+      } else {
+        sefazBridgeBox.style.display = 'none';
       }
     }
 
@@ -4494,6 +4519,121 @@ function initQrCodeScanner() {
       if (universalTextarea) universalTextarea.focus();
     });
   }
+
+  // 8.1 Editar Valor Total manualmente
+  if (btnEditTotal) {
+    btnEditTotal.addEventListener('click', () => {
+      if (!resTotal || !resTotalInput) return;
+      if (resTotalInput.style.display === 'none') {
+        resTotal.style.display = 'none';
+        resTotalInput.style.display = 'inline-block';
+        resTotalInput.value = (pendingPurchase && pendingPurchase.total) ? String(pendingPurchase.total).replace('.', ',') : '';
+        resTotalInput.focus();
+        if (typeof resTotalInput.select === 'function') resTotalInput.select();
+      } else {
+        resTotalInput.style.display = 'none';
+        resTotal.style.display = 'inline-block';
+      }
+    });
+  }
+
+  if (resTotalInput) {
+    resTotalInput.addEventListener('input', () => {
+      const val = parseCurrency(resTotalInput.value);
+      if (pendingPurchase) {
+        pendingPurchase.total = val;
+        pendingPurchase.totalAmount = val;
+        if (resTotal) resTotal.textContent = formatCurrencyWithSymbol(val);
+        // Atualiza item consolidado se não temos itens detalhados
+        const hasDetailed = Array.isArray(pendingPurchase.items) && pendingPurchase.items.length > 0 && pendingPurchase.items.some(i => i.code !== 'COMPRA');
+        if (!hasDetailed && val > 0) {
+          pendingPurchase.items = [{
+            name: `Compra ${pendingPurchase.marketName || 'Mercado'}`,
+            rawName: `Compra ${pendingPurchase.marketName || 'Mercado'}`,
+            alias: `Compra ${pendingPurchase.marketName || 'Mercado'}`,
+            code: 'COMPRA',
+            quantity: 1,
+            unit: 'UN',
+            unitPrice: val,
+            price: val,
+            totalPrice: val,
+            category: 'mercearia'
+          }];
+          if (itemsContainer && itemsListEl) {
+            itemsContainer.style.display = 'block';
+            if (itemsCountEl) itemsCountEl.textContent = '1';
+            itemsListEl.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.2rem;">
+                <div><strong style="color: var(--text-primary);">1. Compra ${pendingPurchase.marketName || 'Mercado'}</strong></div>
+                <div style="font-weight: 700; color: var(--success);">${formatCurrencyWithSymbol(val)}</div>
+              </div>
+            `;
+          }
+        }
+      }
+    });
+  }
+
+  // 8.2 Ações da Ponte SEFAZ
+  if (btnOpenSefaz) {
+    btnOpenSefaz.addEventListener('click', () => {
+      showToast('💡 Na página da Fazenda, copie o texto da nota e volte aqui no Maracaju para importar tudo!', 'info', 6000);
+    });
+  }
+
+  if (btnPasteFromSefaz) {
+    btnPasteFromSefaz.addEventListener('click', async () => {
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+          showToast('Navegador não suporta colar direto. Cole na aba "Colar / Arquivo".', 'info', 3000);
+          switchScannerTab('paste');
+          return;
+        }
+        const clip = await navigator.clipboard.readText();
+        if (!clip || !clip.trim()) {
+          showToast('Área de transferência vazia! Copie os dados na Fazenda e tente novamente.', 'info', 3500);
+          return;
+        }
+        processAnyNfceInput(clip.trim());
+      } catch (errClip) {
+        showToast('Permissão de colar negada. Cole na aba "Colar / Arquivo".', 'info', 3000);
+        switchScannerTab('paste');
+      }
+    });
+  }
+
+  // 8.3 Auto-clipboard listener: importa automaticamente ao retornar da SEFAZ para o app
+  async function checkClipboardForSefazAuto() {
+    const modalQr = document.getElementById('modal-qr-scanner');
+    if (!modalQr || !modalQr.classList.contains('active')) return;
+    if (!pendingPurchase) return;
+    const hasDetailedItems = Array.isArray(pendingPurchase.items) && pendingPurchase.items.length > 0 && pendingPurchase.items.some(i => i.code !== 'COMPRA');
+    if (hasDetailedItems) return;
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text && text.trim().length > 10) {
+          const t = text.trim();
+          const looksLikeSefaz = t.includes('<tr') || t.includes('txtTit') || t.includes('Item +') ||
+                                 t.includes('Valor a pagar') || t.includes('Qtd. total') ||
+                                 t.includes('Vl. Unit') || t.includes('Vl. Total') ||
+                                 (t.includes('CNPJ:') && /[\d,\.]+\s*(?:UN|KG)/i.test(t));
+          if (looksLikeSefaz) {
+            console.info('[Maracaju] Dados da SEFAZ detectados automaticamente na área de transferência!');
+            processAnyNfceInput(t);
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  window.addEventListener('focus', checkClipboardForSefazAuto);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkClipboardForSefazAuto();
+    }
+  });
 
   // 9. Confirmação do Registro da Compra
   if (btnConfirm) {

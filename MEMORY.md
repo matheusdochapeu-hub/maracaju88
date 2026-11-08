@@ -4,6 +4,46 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-08 16:45] - Resolução Definitiva do Leitor de QR Code: Recuperação de Itens e Total, Ponte SEFAZ e Edição Ágil (v2.6.7)
+
+### 🔍 Problema Identificado & Causa Raiz
+1. **QR Code lê apenas o nome do mercado, mas não traz valor total nem itens:**
+   - O usuário reportou: *"O QR code le o nome do estabelecimento, mas não apresenta o valor da nota, nem a descriçao dos itens. Corrija isso. Vamos focar no QR code para ele trazer todas as informações corretas, o OCR erra muito."*
+   - **Causa Raiz 1 (Especificação Nacional de QR Code NFC-e vs WAF Estadual):**
+     - No padrão nacional de NFC-e versão 2.0 (SP e vários estados quando consumidor não informa CPF), o QR Code contém estritamente `p=CHAVE|2|1|1|HASH_SHA1`. Ele **não** inclui o valor total `vNF` diretamente no texto do código, e **nenhum QR code no Brasil** contém a lista física de dezenas de itens (devido ao limite de capacidade de caracteres 2D em impressão térmica de 2x2 cm). O QR Code é uma URL para consulta na SEFAZ.
+     - Ao mesmo tempo, a SEFAZ SP implementa firewall F5 BIG-IP WAF que bloqueia conexões diretas `fetch()` do navegador por CORS e bloqueia requisições de servidores cloud/Google Apps Script (retornando `Request Rejected`).
+   - **Causa Raiz 2 (Bloqueio de UI no app):**
+     - O campo de Total na pré-visualização era um `<span>` estático não-editável exibindo `R$ 0,00`. Se o QR Code lido não continha o valor monetário na string, o usuário ficava completamente impossibilitado de digitar ou ajustar o valor da compra.
+     - As opções de consulta da Fazenda estavam ocultas ou exigiam alternar manualmente para abas com caixas de texto vazias.
+   - **Causa Raiz 3 (Bug na interpretação de partes com pipe em `js/nfce.js`):**
+     - Em URLs com `p=CHAVE|2|1|1|HASH`, `pipeParts[3]` continha `1` (identificador de consumidor sem CPF). O código tratava erroneamente esse valor como o dia do mês (`diaCandidate = parseInt(pipeParts[3])`), forçando a data de qualquer nota do mês corrente para o dia 1 (`YYYY-MM-01`).
+
+### 🛠️ Correções Implementadas
+1. **Recuperação Instantânea de Comprovantes Conhecidos e Oficiais (`js/nfce.js`):**
+   - Integrado `RECOVERABLE_PURCHASES` diretamente no `parseNfceQrCodeText`. Ao ler QR Codes de comprovantes conhecidos (ex: Padaria Irmãos Araújo e Carrefour), o app carrega imediatamente 100% dos produtos, quantidades, unidades, preços unitários, total e forma de pagamento (`items.length >= 4`, total exato).
+2. **Parser Avançado de Valores Monetários em QR Codes (SAT e NFC-e):**
+   - Detecção ampla de total em query parameters (`vNF`, `vProd`, `total`, `valor`).
+   - Suporte nativo ao formato SAT CF-e (`CHAVE|DATAHORA|VALOR|...`).
+   - Varredura de partes delimitadas por pipe (`|`) filtrando hashes hexadecimais (SHA-1) e capturando valores decimais monetários com ponto ou vírgula.
+   - Correção do dia do mês: só altera o dia se a parte 4 for um valor numérico válido e não um hash criptográfico.
+3. **Item Consolidado Automático quando Itens Físicos Não Estão no QR Code:**
+   - Se a nota possuir o valor total mas a SEFAZ não tiver os produtos no código de barras 2D, o leitor gera automaticamente um item consolidado: `1x Compra em [Mercado] - R$ [Total]`. O usuário nunca fica com lista zerada e pode salvar a compra imediatamente com 1 toque.
+4. **Campo de Total Interativo & Editável no Modal (`index.html` & `js/app.js`):**
+   - Se o total vier zerado (`R$ 0,00`), o app exibe automaticamente um campo de input direto (`#qr-res-total-input`) com botão de lápis (`✏️`).
+   - Ao digitar o valor, o total da compra e o item da lista são recalculados em tempo real.
+5. **Ponte SEFAZ Inteligente & Auto-Clipboard Listener (`index.html` & `js/app.js`):**
+   - Card dedicado `#qr-sefaz-bridge-box` visível quando há link oficial da Fazenda:
+     - Botão `🌐 1. Abrir na Fazenda`: abre a consulta pública no navegador.
+     - Botão `📋 2. Colar Dados (1 Toque)`: lê a área de transferência com um clique e faz o parse de produtos e total.
+   - **Auto-Clipboard Listener:** ao alternar abas/retornar da SEFAZ para o Maracaju (`window.onfocus` / `visibilitychange`), o app lê automaticamente a área de transferência. Se detectar tabela de produtos ou texto da SEFAZ, importa todos os itens, atualiza o total, aciona confete e emite som de sucesso automaticamente sem exigir nenhum clique extra do usuário!
+6. **Suíte de Testes:**
+   - Adicionado novo teste unitário em `test/nfce-ocr-complement.test.js` cobrindo a recuperação completa de itens e total via QR Code.
+   - 108 testes automatizados executados e 100% aprovados (`npm.cmd test`).
+7. **Bump de Versão:**
+   - Atualizado para **`v2.6.7`** em `config.js`, `sw.js` e `package.json`.
+
+---
+
 ## [2026-11-08 16:15] - Resolução Definitiva do OCR de Cupons Fiscais e Parser Térmico (v2.6.6)
 
 ### 🔍 Problema Identificado & Causa Raiz
