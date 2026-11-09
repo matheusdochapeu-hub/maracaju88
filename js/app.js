@@ -3484,6 +3484,7 @@ function initComprasModule() {
 
 function initQrCodeScanner() {
   const btnScan = document.getElementById('btn-scan-nfce-qr');
+  const btnScanFab = document.getElementById('btn-scan-nfce-qr-fab');
   const videoEl = document.getElementById('qr-video');
   const btnToggleCam = document.getElementById('btn-toggle-camera');
   const fileInput = document.getElementById('qr-file-input');
@@ -4346,25 +4347,36 @@ function initQrCodeScanner() {
   }
 
   // 1. Abrir modal
-  if (btnScan) {
-    btnScan.addEventListener('click', () => {
-      openModal('modal-qr-scanner');
-      if (previewBox) previewBox.style.display = 'none';
-      pendingPurchase = null;
-      switchScannerTab('cam');
+  function openScannerFlow() {
+    openModal('modal-qr-scanner');
+    if (previewBox) previewBox.style.display = 'none';
+    pendingPurchase = null;
+    switchScannerTab('cam');
 
-      // Tenta verificar se há link de NFC-e na área de transferência ao abrir (com permissão)
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        navigator.clipboard.readText().then(clipText => {
-          if (clipText && (clipText.includes('nfce.fazenda') || /^[0-9]{44}$/.test(clipText.trim()))) {
-            if (confirm('Identificamos uma Nota Fiscal na sua Área de Transferência! Deseja carregar agora?')) {
-              processAnyNfceInput(clipText.trim());
-            }
+    // Tenta verificar se há link de NFC-e na área de transferência ao abrir (com permissão)
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(clipText => {
+        if (clipText && (clipText.includes('nfce.fazenda') || /^[0-9]{44}$/.test(clipText.trim()))) {
+          if (confirm('Identificamos uma Nota Fiscal na sua Área de Transferência! Deseja carregar agora?')) {
+            processAnyNfceInput(clipText.trim());
           }
-        }).catch(() => {});
-      }
-    });
+        }
+      }).catch(() => {});
+    }
   }
+
+  if (btnScan) {
+    btnScan.addEventListener('click', openScannerFlow);
+  }
+  if (btnScanFab) {
+    btnScanFab.addEventListener('click', openScannerFlow);
+  }
+  document.addEventListener('click', (e) => {
+    const trigger = e.target.closest('#btn-scan-nfce-qr, #btn-scan-nfce-qr-fab, [data-open-modal="modal-qr-scanner"]');
+    if (trigger && !trigger.closest('#modal-qr-scanner')) {
+      openScannerFlow();
+    }
+  });
 
   // 2. Alternar câmera
   if (btnToggleCam) {

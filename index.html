@@ -316,11 +316,15 @@
         <div id="market-purchases-container"></div>
       </div>
 
-            <!-- Botões Flutuantes (FABs) no Canto Inferior Direito: Lista de Mercado & Lançar Compra -->
+            <!-- Botões Flutuantes (FABs) no Canto Inferior Direito: Lista de Mercado, QR Code & Lançar Compra -->
       <div class="fab-stack">
         <button type="button" class="fab-btn" data-open-modal="modal-add-shopping-item" aria-label="Novo Item na Lista de Mercado">
           <span class="fab-icon">＋</span>
           <span class="fab-label">Novo Item na Lista de Mercado</span>
+        </button>
+        <button type="button" class="fab-btn fab-btn-qr" id="btn-scan-nfce-qr-fab" data-open-modal="modal-qr-scanner" aria-label="Ler QR Code da Nota Fiscal">
+          <span class="fab-icon">📷</span>
+          <span class="fab-label">Ler QR Code</span>
         </button>
         <button type="button" class="fab-btn fab-btn-purchase" data-open-modal="modal-add-manual-purchase" aria-label="Lançar Compra">
           <span class="fab-icon">＋</span>

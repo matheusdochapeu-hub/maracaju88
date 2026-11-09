@@ -127,5 +127,7 @@ test('HTML: Modal de Conciliação e Botões Flutuantes atualizados', () => {
   // Verifica Botões Flutuantes (FABs)
   assert.ok(html.includes('Novo Item na Lista de Mercado'));
   assert.ok(html.includes('Lançar Compra'));
+  assert.ok(html.includes('Ler QR Code'));
+  assert.ok(html.includes('id="btn-scan-nfce-qr-fab"'));
   assert.ok(html.includes('class="fab-stack"'));
 });

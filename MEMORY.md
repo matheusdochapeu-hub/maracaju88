@@ -4,6 +4,27 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-08 23:30] - Botão Flutuante (FAB) de QR Code na Aba Mercado (v2.6.8)
+
+### 🔍 Solicitação do Usuário
+- *"coloque um botão para QR code flutuante junto com o lançar nova compra."*
+
+### 🛠️ Implementação
+1. **Novo Botão Flutuante de Ação (FAB) para QR Code (`index.html` & `css/components.css`):**
+   - Inserido na pilha de botões flutuantes (`.fab-stack`) da aba de Mercado (`#tab-compras`), posicionado estrategicamente ao lado/junto de "Lançar Compra" e "Novo Item na Lista de Mercado".
+   - Estilo próprio e elegante `.fab-btn-qr`: gradiente esmeralda/teal (`#0d9488` a `#115e59`), ícone `📷` e label `Ler QR Code`.
+   - Touch feedback suave (`scale(1.03)` no hover e `scale(0.96)` no clique) com sombras refinadas.
+2. **Integração no Fluxo do Scanner (`js/app.js`):**
+   - O botão `id="btn-scan-nfce-qr-fab"` está plenamente vinculado à função `openScannerFlow()`.
+   - Ao tocar no botão flutuante, o leitor abre imediatamente com a câmera ligada, pré-visualização resetada e verificação de clipboard ativa para colar dados da SEFAZ com 1 toque.
+3. **Testes Automatizados & Validação (`test/shopping-reconciliation.test.js`):**
+   - Atualizados os testes para validar a presença e acessibilidade do novo botão flutuante no HTML.
+   - 108 testes executados e 100% aprovados.
+4. **Bump de Versão:**
+   - Atualizado para **`v2.6.8`** em `config.js`, `sw.js` e `package.json`.
+
+---
+
 ## [2026-11-08 16:45] - Resolução Definitiva do Leitor de QR Code: Recuperação de Itens e Total, Ponte SEFAZ e Edição Ágil (v2.6.7)
 
 ### 🔍 Problema Identificado & Causa Raiz
