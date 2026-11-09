@@ -44,13 +44,13 @@ test('Validação de Sintaxe: Todos os arquivos JavaScript do app compilam perfe
   for (const file of jsFiles) {
     const fullPath = path.join(jsDir, file);
     assert.doesNotThrow(() => {
-      execSync(`node --check "${fullPath}"`);
+      execSync(`"${process.execPath}" --check "${fullPath}"`);
     }, `Arquivo ${file} deve compilar sem erro de sintaxe`);
   }
 
   // Verifica também o Service Worker
   const swPath = path.resolve(__dirname, '../sw.js');
   assert.doesNotThrow(() => {
-    execSync(`node --check "${swPath}"`);
+    execSync(`"${process.execPath}" --check "${swPath}"`);
   }, 'sw.js deve compilar sem erro de sintaxe');
 });
