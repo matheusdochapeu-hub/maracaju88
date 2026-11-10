@@ -2765,7 +2765,454 @@
   <!-- ======================================================= -->
   <!-- MODAL: ADICIONAR / EDITAR ITEM DE SHOPPING & DESEJOS      -->
   <!-- ======================================================= -->
-  <div id="modal-shopping-item" class="modal-overlay">
+    <!-- ======================================================= -->
+  <!-- MODAIS DE EDIÇÃO DE SUB-REGISTROS PETS (RAÇÃO, AREIA, ETC) -->
+  <!-- ======================================================= -->
+
+  <!-- MODAL: EDITAR COMPRA DE RAÇÃO -->
+  <div id="modal-edit-pet-racao" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Compra de Ração</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-pet-racao">
+        <input type="hidden" id="edit-pet-racao-id" />
+        <input type="hidden" id="edit-pet-racao-pet-orig" />
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-racao-pet-id">Pet *</label>
+          <select id="edit-pet-racao-pet-id" class="form-control select-pet-target" required></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-racao-data">Data da Compra *</label>
+          <input type="date" id="edit-pet-racao-data" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-racao-marca">Marca / Tipo de Ração</label>
+          <input type="text" id="edit-pet-racao-marca" class="form-control" placeholder="Ex: Premier Raças, Golden Especial, Royal Canin..." />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-racao-kg">Quantidade Comprada (kg) *</label>
+            <input type="number" id="edit-pet-racao-kg" class="form-control" step="0.1" min="0.1" placeholder="Ex: 15" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-racao-consumo-g">Consumo Diário (gramas/dia)</label>
+            <input type="number" id="edit-pet-racao-consumo-g" class="form-control" step="1" min="1" placeholder="Ex: 250" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-racao-duracao-dias">Duração Estimada (dias)</label>
+            <input type="number" id="edit-pet-racao-duracao-dias" class="form-control" step="1" min="1" placeholder="Ex: 60" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-racao-valor">Valor Pago (R$)</label>
+            <input type="text" id="edit-pet-racao-valor" class="form-control" placeholder="R$ 0,00" />
+          </div>
+        </div>
+
+        <div id="edit-pet-racao-previsao-preview" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); padding: 0.6rem 0.8rem; font-size: 0.82rem; color: #065f46; margin-bottom: 0.75rem; font-weight: 600;">
+          📅 Data provável da próxima compra: informe os dados
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-racao-notas">Notas / Onde comprou</label>
+          <input type="text" id="edit-pet-racao-notas" class="form-control" placeholder="Ex: Cobasi, Petz, Promoção..." />
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR COMPRA DE AREIA -->
+  <div id="modal-edit-pet-areia" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Compra de Areia</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-pet-areia">
+        <input type="hidden" id="edit-pet-areia-id" />
+        <input type="hidden" id="edit-pet-areia-pet-orig" />
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-areia-pet-id">Pet *</label>
+          <select id="edit-pet-areia-pet-id" class="form-control select-pet-target" required></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-areia-data">Data da Compra *</label>
+          <input type="date" id="edit-pet-areia-data" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-areia-marca">Marca / Tipo da Areia</label>
+          <input type="text" id="edit-pet-areia-marca" class="form-control" placeholder="Ex: Viva Verde, Pipicat, Katbom..." />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-areia-kg">Quantidade (kg ou pacotes)</label>
+            <input type="number" id="edit-pet-areia-kg" class="form-control" step="0.1" min="0.1" placeholder="Ex: 4" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-areia-duracao-dias">Duração Estimada (dias)</label>
+            <input type="number" id="edit-pet-areia-duracao-dias" class="form-control" step="1" min="1" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-areia-valor">Valor Pago (R$)</label>
+          <input type="text" id="edit-pet-areia-valor" class="form-control" placeholder="R$ 0,00" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-areia-notas">Notas</label>
+          <input type="text" id="edit-pet-areia-notas" class="form-control" placeholder="Ex: Pacote de 4 kg com granulado fino..." />
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR BANHO / HIGIENE -->
+  <div id="modal-edit-pet-banho" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Banho & Higiene</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-pet-banho">
+        <input type="hidden" id="edit-pet-banho-id" />
+        <input type="hidden" id="edit-pet-banho-pet-orig" />
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-banho-pet-id">Pet *</label>
+          <select id="edit-pet-banho-pet-id" class="form-control select-pet-target" required></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-banho-data">Data do Banho *</label>
+          <input type="date" id="edit-pet-banho-data" class="form-control" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-banho-tipo">Onde foi o banho? *</label>
+            <select id="edit-pet-banho-tipo" class="form-control">
+              <option value="casa">🏠 Em Casa</option>
+              <option value="petshop">🛁 Pet Shop</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-banho-valor">Valor Pago (R$)</label>
+            <input type="text" id="edit-pet-banho-valor" class="form-control" placeholder="R$ 0,00" />
+          </div>
+        </div>
+
+        <div class="form-group" id="edit-pet-banho-local-wrap">
+          <label class="form-label" for="edit-pet-banho-local">Nome do Pet Shop / Local</label>
+          <input type="text" id="edit-pet-banho-local" class="form-control" placeholder="Ex: Pet Shop Bicho Mimado, Cobasi..." />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-banho-notas">Observações (tosa, unhas, perfume, etc.)</label>
+          <input type="text" id="edit-pet-banho-notas" class="form-control" placeholder="Ex: Tosa higiênica, corte de unhas e limpeza de orelhas..." />
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR VACINA -->
+  <div id="modal-edit-pet-vacina" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Vacinação</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-pet-vacina">
+        <input type="hidden" id="edit-pet-vacina-id" />
+        <input type="hidden" id="edit-pet-vacina-pet-orig" />
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-vacina-pet-id">Pet *</label>
+          <select id="edit-pet-vacina-pet-id" class="form-control select-pet-target" required></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-vacina-nome">Vacina *</label>
+          <input type="text" id="edit-pet-vacina-nome" class="form-control" placeholder="Ex: V10, V4, Antirrábica, Gripe Canina..." required list="vacinas-datalist" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-vacina-data">Data de Aplicação *</label>
+            <input type="date" id="edit-pet-vacina-data" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-vacina-proxima-data">Próxima Dose Anual</label>
+            <input type="date" id="edit-pet-vacina-proxima-data" class="form-control" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-vacina-lote">Número do Lote</label>
+            <input type="text" id="edit-pet-vacina-lote" class="form-control" placeholder="Ex: BR-8492" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-vacina-clinica">Clínica Veterinária</label>
+            <input type="text" id="edit-pet-vacina-clinica" class="form-control" placeholder="Ex: Clínica Vet São Carlos" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-vacina-notas">Observações</label>
+          <input type="text" id="edit-pet-vacina-notas" class="form-control" placeholder="Reações, recomendações..." />
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR VERMÍFUGO -->
+  <div id="modal-edit-pet-vermifugo" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Vermifugação</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-pet-vermifugo">
+        <input type="hidden" id="edit-pet-vermifugo-id" />
+        <input type="hidden" id="edit-pet-vermifugo-pet-orig" />
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-vermifugo-pet-id">Pet *</label>
+          <select id="edit-pet-vermifugo-pet-id" class="form-control select-pet-target" required></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-vermifugo-nome">Nome do Vermífugo *</label>
+          <input type="text" id="edit-pet-vermifugo-nome" class="form-control" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-vermifugo-data">Data de Aplicação *</label>
+            <input type="date" id="edit-pet-vermifugo-data" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-vermifugo-peso">Peso do Animal (kg) *</label>
+            <input type="number" id="edit-pet-vermifugo-peso" class="form-control" step="0.1" min="0.1" placeholder="Ex: 14.5" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-vermifugo-dose">Dose Calculada por Peso</label>
+          <input type="text" id="edit-pet-vermifugo-dose" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-vermifugo-proxima-data">Próxima Dose Programada</label>
+          <input type="date" id="edit-pet-vermifugo-proxima-data" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-vermifugo-notas">Notas</label>
+          <input type="text" id="edit-pet-vermifugo-notas" class="form-control" />
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR EXAME / CONSULTA -->
+  <div id="modal-edit-pet-exame" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Consulta & Exame Veterinário</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-pet-exame">
+        <input type="hidden" id="edit-pet-exame-id" />
+        <input type="hidden" id="edit-pet-exame-pet-orig" />
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-exame-pet-id">Pet *</label>
+          <select id="edit-pet-exame-pet-id" class="form-control select-pet-target" required></select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-exame-data">Data *</label>
+            <input type="date" id="edit-pet-exame-data" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-exame-tipo">Tipo de Atendimento *</label>
+            <select id="edit-pet-exame-tipo" class="form-control">
+              <option value="Consulta de Rotina">Consulta de Rotina</option>
+              <option value="Exame de Sangue (Hemograma)">Exame de Sangue</option>
+              <option value="Ultrassom / Raio-X">Ultrassom / Raio-X</option>
+              <option value="Retorno Veterinário">Retorno</option>
+              <option value="Procedimento / Cirurgia">Procedimento / Cirurgia</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-exame-clinica">Clínica / Hospital</label>
+            <input type="text" id="edit-pet-exame-clinica" class="form-control" placeholder="Ex: Hospital Vet São Carlos" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-exame-veterinario">Veterinário(a)</label>
+            <input type="text" id="edit-pet-exame-veterinario" class="form-control" placeholder="Ex: Dr(a). André" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-exame-descricao">Descrição / Diagnóstico</label>
+          <textarea id="edit-pet-exame-descricao" class="form-control" rows="2" placeholder="Sintomas, diagnóstico ou resultados observados..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-exame-pendencias">Pendências Médicas / Medicamentos / Retorno</label>
+          <input type="text" id="edit-pet-exame-pendencias" class="form-control" placeholder="Ex: Retorno em 15 dias, dar antibiótico 12/12h por 7 dias..." />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Foto do Laudo / Receita</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" data-pick-file="edit-pet-exame-camera" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📸 Câmera
+            </button>
+            <input type="file" id="edit-pet-exame-camera" accept="image/*" capture="environment" style="display: none;" />
+            <button type="button" class="btn btn-secondary btn-sm" data-pick-file="edit-pet-exame-gallery" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              🖼️ Galeria
+            </button>
+            <input type="file" id="edit-pet-exame-gallery" accept="image/*" style="display: none;" />
+            <span id="edit-pet-exame-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
+          </div>
+          <div id="edit-pet-exame-existing-photos" style="display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;"></div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR ITEM / ACESSÓRIO -->
+  <div id="modal-edit-pet-item" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Item & Acessório</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-edit-pet-item">
+        <input type="hidden" id="edit-pet-item-id" />
+        <input type="hidden" id="edit-pet-item-pet-orig" />
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-item-pet-id">Pet *</label>
+          <select id="edit-pet-item-pet-id" class="form-control select-pet-target" required></select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-item-tipo">Tipo de Item *</label>
+            <select id="edit-pet-item-tipo" class="form-control" required>
+              <option value="comedouro">🥣 Comedouro / Bebedouro</option>
+              <option value="coleira">🦮 Coleira / Guia / Peitoral</option>
+              <option value="brinquedo">🧸 Brinquedo / Mordedor</option>
+              <option value="cama_transporte">🧺 Caminha / Transporte</option>
+              <option value="outros">🦴 Outros Acessórios</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-item-data">Data da Compra *</label>
+            <input type="date" id="edit-pet-item-data" class="form-control" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-item-nome">Nome / Descrição do Item *</label>
+          <input type="text" id="edit-pet-item-nome" class="form-control" required />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-item-valor">Valor Pago (R$)</label>
+            <input type="text" id="edit-pet-item-valor" class="form-control" placeholder="R$ 0,00" inputmode="decimal" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="edit-pet-item-loja">Loja / Pet Shop</label>
+            <input type="text" id="edit-pet-item-loja" class="form-control" placeholder="Ex: Cobasi, Petz, Shopee..." />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-pet-item-observacoes">Observações (Tamanho, Cor, Material)</label>
+          <textarea id="edit-pet-item-observacoes" class="form-control" rows="2" placeholder="Ex: Tamanho M, cor rosa, material silicone, lavável..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Foto do Item</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" data-pick-file="edit-pet-item-camera" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              📸 Câmera
+            </button>
+            <input type="file" id="edit-pet-item-camera" accept="image/*" capture="environment" style="display: none;" />
+            <button type="button" class="btn btn-secondary btn-sm" data-pick-file="edit-pet-item-gallery" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.35rem;">
+              🖼️ Galeria
+            </button>
+            <input type="file" id="edit-pet-item-gallery" accept="image/*" style="display: none;" />
+            <span id="edit-pet-item-photo-feedback" style="font-size: 0.75rem; color: #047857; font-weight: 600;"></span>
+          </div>
+          <div id="edit-pet-item-existing-photos" style="display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;"></div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<div id="modal-shopping-item" class="modal-overlay">
     <div class="modal-content" style="max-width: 500px;">
       <div class="modal-header">
         <h3 class="modal-title" id="shopping-modal-title">🛍️ Novo Item de Shopping</h3>

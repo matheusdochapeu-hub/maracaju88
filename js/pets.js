@@ -448,8 +448,8 @@ export function addPetRacaoPurchase(state, petId, racaoData) {
   if (!pet.racao) pet.racao = [];
 
   const quantidadeKg = parseFloat(racaoData.quantidadeKg) || 0;
-  const consumoDiarioG = parseFloat(racaoData.consumoDiarioG) || 0;
-  let duracaoDias = parseInt(racaoData.duracaoDias, 10) || 0;
+  const consumoDiarioG = racaoData.consumoDiarioG !== undefined ? parseFloat(racaoData.consumoDiarioG) : (racaoData.consumoDiarioGramas !== undefined ? parseFloat(racaoData.consumoDiarioGramas) : 0);
+  let duracaoDias = racaoData.duracaoDias !== undefined ? parseInt(racaoData.duracaoDias, 10) : (racaoData.duracaoDiasEstimada !== undefined ? parseInt(racaoData.duracaoDiasEstimada, 10) : 0);
 
   if (duracaoDias <= 0 && quantidadeKg > 0 && consumoDiarioG > 0) {
     duracaoDias = Math.round((quantidadeKg * 1000) / consumoDiarioG);
@@ -474,6 +474,54 @@ export function addPetRacaoPurchase(state, petId, racaoData) {
 
   pet.racao.unshift(entry);
   pet.updatedAt = new Date().toISOString();
+  return entry;
+}
+
+
+export function updatePetRacaoPurchase(state, petId, racaoId, racaoData) {
+  let targetPet = (state.pets || []).find(p => p.id === petId);
+  if (!targetPet) {
+    targetPet = (state.pets || []).find(p => (p.racao || []).some(r => r.id === racaoId));
+  }
+  if (!targetPet) throw new Error('Pet não encontrado.');
+
+  const entry = (targetPet.racao || []).find(r => r.id === racaoId);
+  if (!entry) throw new Error('Lançamento de ração não encontrado.');
+
+  const newPetId = racaoData.petId || petId;
+  const quantidadeKg = racaoData.quantidadeKg !== undefined ? parseFloat(racaoData.quantidadeKg) || 0 : entry.quantidadeKg;
+  const consumoDiarioG = racaoData.consumoDiarioG !== undefined ? parseFloat(racaoData.consumoDiarioG) : (racaoData.consumoDiarioGramas !== undefined ? parseFloat(racaoData.consumoDiarioGramas) : entry.consumoDiarioG);
+  let duracaoDias = racaoData.duracaoDias !== undefined ? parseInt(racaoData.duracaoDias, 10) : (racaoData.duracaoDiasEstimada !== undefined ? parseInt(racaoData.duracaoDiasEstimada, 10) : entry.duracaoDias);
+
+  if ((duracaoDias === undefined || duracaoDias <= 0) && quantidadeKg > 0 && consumoDiarioG > 0) {
+    duracaoDias = Math.round((quantidadeKg * 1000) / consumoDiarioG);
+  }
+  if (!duracaoDias || duracaoDias <= 0) duracaoDias = entry.duracaoDias || 30;
+
+  const dataCompra = racaoData.dataCompra || entry.dataCompra || new Date().toISOString().split('T')[0];
+  const dataPrevisaoFim = racaoData.dataPrevisaoFim || addDaysToDateStr(dataCompra, duracaoDias);
+
+  entry.dataCompra = dataCompra;
+  if (racaoData.marca !== undefined) entry.marca = (racaoData.marca || '').trim() || 'Ração Padrão';
+  entry.quantidadeKg = quantidadeKg;
+  entry.consumoDiarioG = consumoDiarioG || 0;
+  entry.duracaoDias = duracaoDias;
+  entry.dataPrevisaoFim = dataPrevisaoFim;
+  if (racaoData.valor !== undefined) entry.valor = parseCurrency(racaoData.valor);
+  if (racaoData.notas !== undefined) entry.notas = (racaoData.notas || '').trim();
+  entry.updatedAt = new Date().toISOString();
+
+  if (newPetId && newPetId !== targetPet.id) {
+    const destPet = (state.pets || []).find(p => p.id === newPetId);
+    if (destPet) {
+      if (!destPet.racao) destPet.racao = [];
+      targetPet.racao = targetPet.racao.filter(r => r.id !== racaoId);
+      destPet.racao.unshift(entry);
+      destPet.updatedAt = new Date().toISOString();
+    }
+  }
+
+  targetPet.updatedAt = new Date().toISOString();
   return entry;
 }
 
@@ -515,6 +563,45 @@ export function addPetAreiaPurchase(state, petId, areiaData) {
   return entry;
 }
 
+
+export function updatePetAreiaPurchase(state, petId, areiaId, areiaData) {
+  let targetPet = (state.pets || []).find(p => p.id === petId);
+  if (!targetPet) {
+    targetPet = (state.pets || []).find(p => (p.areia || []).some(a => a.id === areiaId));
+  }
+  if (!targetPet) throw new Error('Pet não encontrado.');
+
+  const entry = (targetPet.areia || []).find(a => a.id === areiaId);
+  if (!entry) throw new Error('Lançamento de areia não encontrado.');
+
+  const newPetId = areiaData.petId || petId;
+  const duracaoDias = areiaData.duracaoDias !== undefined ? parseInt(areiaData.duracaoDias, 10) : (areiaData.duracaoDiasEstimada !== undefined ? parseInt(areiaData.duracaoDiasEstimada, 10) : (entry.duracaoDias || 25));
+  const dataCompra = areiaData.dataCompra || entry.dataCompra || new Date().toISOString().split('T')[0];
+  const dataPrevisaoFim = areiaData.dataPrevisaoFim || addDaysToDateStr(dataCompra, duracaoDias);
+
+  entry.dataCompra = dataCompra;
+  if (areiaData.marca !== undefined) entry.marca = (areiaData.marca || '').trim() || 'Areia Higiênica';
+  if (areiaData.quantidadeKg !== undefined) entry.quantidadeKg = parseFloat(areiaData.quantidadeKg) || 0;
+  entry.duracaoDias = duracaoDias;
+  entry.dataPrevisaoFim = dataPrevisaoFim;
+  if (areiaData.valor !== undefined) entry.valor = parseCurrency(areiaData.valor);
+  if (areiaData.notas !== undefined) entry.notas = (areiaData.notas || '').trim();
+  entry.updatedAt = new Date().toISOString();
+
+  if (newPetId && newPetId !== targetPet.id) {
+    const destPet = (state.pets || []).find(p => p.id === newPetId);
+    if (destPet) {
+      if (!destPet.areia) destPet.areia = [];
+      targetPet.areia = targetPet.areia.filter(a => a.id !== areiaId);
+      destPet.areia.unshift(entry);
+      destPet.updatedAt = new Date().toISOString();
+    }
+  }
+
+  targetPet.updatedAt = new Date().toISOString();
+  return entry;
+}
+
 export function deletePetAreiaPurchase(state, petId, areiaId) {
   const pet = (state.pets || []).find(p => p.id === petId);
   if (!pet || !pet.areia) return false;
@@ -544,6 +631,41 @@ export function addPetBanho(state, petId, banhoData) {
 
   pet.higiene.unshift(entry);
   pet.updatedAt = new Date().toISOString();
+  return entry;
+}
+
+
+export function updatePetBanho(state, petId, banhoId, banhoData) {
+  let targetPet = (state.pets || []).find(p => p.id === petId);
+  if (!targetPet) {
+    targetPet = (state.pets || []).find(p => (p.higiene || []).some(h => h.id === banhoId));
+  }
+  if (!targetPet) throw new Error('Pet não encontrado.');
+
+  const entry = (targetPet.higiene || []).find(h => h.id === banhoId);
+  if (!entry) throw new Error('Registro de banho não encontrado.');
+
+  const newPetId = banhoData.petId || petId;
+  if (banhoData.data !== undefined) entry.data = banhoData.data;
+  if (banhoData.tipo !== undefined) entry.tipo = banhoData.tipo === 'petshop' ? 'petshop' : 'casa';
+  if (banhoData.local !== undefined) entry.local = (banhoData.local || '').trim() || (entry.tipo === 'petshop' ? 'Pet Shop' : 'Em Casa');
+  if (banhoData.valor !== undefined) entry.valor = parseCurrency(banhoData.valor);
+  if (banhoData.notas !== undefined) entry.notas = (banhoData.notas || '').trim();
+  if (banhoData.tosa !== undefined) entry.tosa = !!banhoData.tosa;
+  if (banhoData.corteUnhas !== undefined) entry.corteUnhas = !!banhoData.corteUnhas;
+  entry.updatedAt = new Date().toISOString();
+
+  if (newPetId && newPetId !== targetPet.id) {
+    const destPet = (state.pets || []).find(p => p.id === newPetId);
+    if (destPet) {
+      if (!destPet.higiene) destPet.higiene = [];
+      targetPet.higiene = targetPet.higiene.filter(h => h.id !== banhoId);
+      destPet.higiene.unshift(entry);
+      destPet.updatedAt = new Date().toISOString();
+    }
+  }
+
+  targetPet.updatedAt = new Date().toISOString();
   return entry;
 }
 
@@ -592,6 +714,49 @@ export function addPetVacina(state, petId, vacinaData) {
   return entry;
 }
 
+
+export function updatePetVacina(state, petId, vacinaId, vacinaData) {
+  let targetPet = (state.pets || []).find(p => p.id === petId);
+  if (!targetPet) {
+    targetPet = (state.pets || []).find(p => (p.vacinas || []).some(v => v.id === vacinaId));
+  }
+  if (!targetPet) throw new Error('Pet não encontrado.');
+
+  const entry = (targetPet.vacinas || []).find(v => v.id === vacinaId);
+  if (!entry) throw new Error('Registro de vacina não encontrado.');
+
+  const newPetId = vacinaData.petId || petId;
+  const vacinaNome = (vacinaData.vacina || vacinaData.nome || vacinaData.tipoVacina || entry.vacina || '').trim();
+  const dataAplicacao = vacinaData.dataAplicacao || entry.dataAplicacao || new Date().toISOString().split('T')[0];
+  const dataProximaDose = vacinaData.dataProximaDose || vacinaData.proximaData || entry.dataProximaDose || addDaysToDateStr(dataAplicacao, 365);
+
+  entry.vacina = vacinaNome;
+  entry.tipoVacina = vacinaNome;
+  entry.nome = vacinaNome;
+  entry.dataAplicacao = dataAplicacao;
+  entry.dataProximaDose = dataProximaDose;
+  if (vacinaData.lote !== undefined) entry.lote = (vacinaData.lote || '').trim();
+  if (vacinaData.clinica !== undefined) entry.clinica = (vacinaData.clinica || '').trim();
+  if (vacinaData.veterinario !== undefined) entry.veterinario = (vacinaData.veterinario || '').trim();
+  if (vacinaData.notas !== undefined) entry.notas = (vacinaData.notas || '').trim();
+  entry.updatedAt = new Date().toISOString();
+
+  if (newPetId && newPetId !== targetPet.id) {
+    const destPet = (state.pets || []).find(p => p.id === newPetId);
+    if (destPet) {
+      if (!destPet.vacinas) destPet.vacinas = [];
+      targetPet.vacinas = targetPet.vacinas.filter(v => v.id !== vacinaId);
+      destPet.vacinas.unshift(entry);
+      destPet.vacinacaoEmDia = getPetVaccinesStatus(destPet).emDia;
+      destPet.updatedAt = new Date().toISOString();
+    }
+  }
+
+  targetPet.vacinacaoEmDia = getPetVaccinesStatus(targetPet).emDia;
+  targetPet.updatedAt = new Date().toISOString();
+  return entry;
+}
+
 export function deletePetVacina(state, petId, vacinaId) {
   const pet = (state.pets || []).find(p => p.id === petId);
   if (!pet || !pet.vacinas) return false;
@@ -631,6 +796,47 @@ export function addPetVermifugo(state, petId, vermifugoData) {
   return entry;
 }
 
+
+export function updatePetVermifugo(state, petId, vermifugoId, vermifugoData) {
+  let targetPet = (state.pets || []).find(p => p.id === petId);
+  if (!targetPet) {
+    targetPet = (state.pets || []).find(p => (p.vermifugos || []).some(v => v.id === vermifugoId));
+  }
+  if (!targetPet) throw new Error('Pet não encontrado.');
+
+  const entry = (targetPet.vermifugos || []).find(v => v.id === vermifugoId);
+  if (!entry) throw new Error('Registro de vermífugo não encontrado.');
+
+  const newPetId = vermifugoData.petId || petId;
+  const dataAplicacao = vermifugoData.dataAplicacao || entry.dataAplicacao || new Date().toISOString().split('T')[0];
+  const intervaloDias = parseInt(vermifugoData.intervaloDias, 10) || 180;
+  const dataProximaDose = vermifugoData.dataProximaDose || vermifugoData.proximaData || entry.dataProximaDose || addDaysToDateStr(dataAplicacao, intervaloDias);
+  const pesoAnimalKg = parseFloat(vermifugoData.pesoAnimalKg || vermifugoData.pesoKg || entry.pesoAnimalKg || targetPet.pesoKg) || 0;
+
+  if (vermifugoData.nome !== undefined || vermifugoData.medicamento !== undefined) {
+    entry.nome = (vermifugoData.nome || vermifugoData.medicamento || entry.nome || '').trim();
+  }
+  entry.dataAplicacao = dataAplicacao;
+  entry.dataProximaDose = dataProximaDose;
+  entry.pesoAnimalKg = pesoAnimalKg;
+  if (vermifugoData.dose !== undefined) entry.dose = (vermifugoData.dose || formatPetDoseVermifugo(pesoAnimalKg)).trim();
+  if (vermifugoData.notas !== undefined) entry.notas = (vermifugoData.notas || '').trim();
+  entry.updatedAt = new Date().toISOString();
+
+  if (newPetId && newPetId !== targetPet.id) {
+    const destPet = (state.pets || []).find(p => p.id === newPetId);
+    if (destPet) {
+      if (!destPet.vermifugos) destPet.vermifugos = [];
+      targetPet.vermifugos = targetPet.vermifugos.filter(v => v.id !== vermifugoId);
+      destPet.vermifugos.unshift(entry);
+      destPet.updatedAt = new Date().toISOString();
+    }
+  }
+
+  targetPet.updatedAt = new Date().toISOString();
+  return entry;
+}
+
 export function deletePetVermifugo(state, petId, vermifugoId) {
   const pet = (state.pets || []).find(p => p.id === petId);
   if (!pet || !pet.vermifugos) return false;
@@ -662,6 +868,45 @@ export function addPetExame(state, petId, exameData) {
 
   pet.exames.unshift(entry);
   pet.updatedAt = new Date().toISOString();
+  return entry;
+}
+
+
+export function updatePetExame(state, petId, exameId, exameData) {
+  let targetPet = (state.pets || []).find(p => p.id === petId);
+  if (!targetPet) {
+    targetPet = (state.pets || []).find(p => (p.exames || []).some(e => e.id === exameId));
+  }
+  if (!targetPet) throw new Error('Pet não encontrado.');
+
+  const entry = (targetPet.exames || []).find(e => e.id === exameId);
+  if (!entry) throw new Error('Registro de exame não encontrado.');
+
+  const newPetId = exameData.petId || petId;
+  if (exameData.data !== undefined) entry.data = exameData.data;
+  if (exameData.tipo !== undefined) entry.tipo = (exameData.tipo || entry.tipo || '').trim();
+  if (exameData.clinica !== undefined) entry.clinica = (exameData.clinica || '').trim();
+  if (exameData.veterinario !== undefined) entry.veterinario = (exameData.veterinario || '').trim();
+  if (exameData.descricao !== undefined) entry.descricao = (exameData.descricao || '').trim();
+  if (exameData.pendencias !== undefined) entry.pendencias = (exameData.pendencias || '').trim();
+  if (Array.isArray(exameData.fotos)) entry.fotos = exameData.fotos;
+  else if (exameData.foto) {
+    if (!Array.isArray(entry.fotos)) entry.fotos = [];
+    entry.fotos.unshift(exameData.foto);
+  }
+  entry.updatedAt = new Date().toISOString();
+
+  if (newPetId && newPetId !== targetPet.id) {
+    const destPet = (state.pets || []).find(p => p.id === newPetId);
+    if (destPet) {
+      if (!destPet.exames) destPet.exames = [];
+      targetPet.exames = targetPet.exames.filter(e => e.id !== exameId);
+      destPet.exames.unshift(entry);
+      destPet.updatedAt = new Date().toISOString();
+    }
+  }
+
+  targetPet.updatedAt = new Date().toISOString();
   return entry;
 }
 
@@ -788,6 +1033,48 @@ export function addPetItem(state, petId, itemData) {
 /**
  * Exclui um item ou acessório do pet
  */
+
+export function updatePetItem(state, petId, itemId, itemData) {
+  let targetPet = (state.pets || []).find(p => p.id === petId);
+  if (!targetPet) {
+    targetPet = (state.pets || []).find(p => (p.itens || []).some(it => it.id === itemId));
+  }
+  if (!targetPet) throw new Error('Pet não encontrado.');
+
+  const entry = (targetPet.itens || []).find(it => it.id === itemId);
+  if (!entry) throw new Error('Item/acessório não encontrado.');
+
+  const newPetId = itemData.petId || petId;
+  if (itemData.nome !== undefined || itemData.titulo !== undefined) {
+    entry.nome = (itemData.nome || itemData.titulo || entry.nome || '').trim();
+  }
+  if (itemData.tipo !== undefined) entry.tipo = itemData.tipo;
+  if (itemData.dataCompra !== undefined) entry.dataCompra = itemData.dataCompra;
+  if (itemData.valor !== undefined) entry.valor = Number(itemData.valor || 0);
+  if (itemData.loja !== undefined) entry.loja = (itemData.loja || '').trim();
+  if (itemData.observacoes !== undefined) entry.observacoes = (itemData.observacoes || '').trim();
+  if (Array.isArray(itemData.fotos)) entry.fotos = [...itemData.fotos];
+  else if (itemData.foto) {
+    if (!Array.isArray(entry.fotos)) entry.fotos = [];
+    entry.fotos.unshift(itemData.foto);
+  }
+  entry.updatedAt = new Date().toISOString();
+
+  if (newPetId && newPetId !== targetPet.id) {
+    const destPet = (state.pets || []).find(p => p.id === newPetId);
+    if (destPet) {
+      if (!Array.isArray(destPet.itens)) destPet.itens = [];
+      targetPet.itens = targetPet.itens.filter(it => it.id !== itemId);
+      entry.petId = destPet.id;
+      destPet.itens.unshift(entry);
+      destPet.updatedAt = new Date().toISOString();
+    }
+  }
+
+  targetPet.updatedAt = new Date().toISOString();
+  return entry;
+}
+
 export function deletePetItem(state, petId, itemId) {
   const pet = (state.pets || []).find(p => p.id === petId);
   if (!pet || !Array.isArray(pet.itens)) return false;

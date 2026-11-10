@@ -2825,7 +2825,10 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
               </div>
               ${r.notas ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${r.notas}</div>` : ''}
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-racao="${r.id}" data-pet-id="${r.petId}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-racao="${r.id}" data-pet-id="${r.petId}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-racao="${r.id}" data-pet-id="${r.petId}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -2887,7 +2890,10 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
               </div>
               ${a.notas ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${a.notas}</div>` : ''}
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-areia="${a.id}" data-pet-id="${a.petId}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-areia="${a.id}" data-pet-id="${a.petId}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-areia="${a.id}" data-pet-id="${a.petId}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -2953,7 +2959,10 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
                 ${h.tosa ? '✂️ Com Tosa ' : ''} ${h.corteUnhas ? '💅 Corte de Unhas ' : ''} ${h.observacoes ? `• ${h.observacoes}` : ''}
               </div>
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-banho="${h.id}" data-pet-id="${h.petId}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-banho="${h.id}" data-pet-id="${h.petId}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-banho="${h.id}" data-pet-id="${h.petId}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -3015,7 +3024,10 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
                 ${v.veterinario ? `Dr(a): ${v.veterinario} ` : ''} ${v.clinica ? `• Clínica: ${v.clinica} ` : ''} ${v.lote ? `• Lote: ${v.lote}` : ''}
               </div>
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-vacina="${v.id}" data-pet-id="${v.petId}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-vacina="${v.id}" data-pet-id="${v.petId}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-vacina="${v.id}" data-pet-id="${v.petId}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -3054,7 +3066,10 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
               ` : ''}
               ${vm.observacoes ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${vm.observacoes}</div>` : ''}
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-vermifugo="${vm.id}" data-pet-id="${vm.petId}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-vermifugo="${vm.id}" data-pet-id="${vm.petId}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-vermifugo="${vm.id}" data-pet-id="${vm.petId}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -3119,7 +3134,10 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
                 </div>
               ` : ''}
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-exame="${e.id}" data-pet-id="${e.petId}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-exame="${e.id}" data-pet-id="${e.petId}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-exame="${e.id}" data-pet-id="${e.petId}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -3188,7 +3206,10 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
                   </div>
                 ` : ''}
               </div>
+              <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-pet-item="${it.id}" data-pet-id="${it.petId}" title="Editar">✏️</button>
               <button type="button" class="btn btn-icon btn-sm" data-del-pet-item="${it.id}" data-pet-id="${it.petId}" title="Excluir">🗑️</button>
+            </div>
             </div>
           `;
         }).join('')}
@@ -3313,7 +3334,10 @@ export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
               </div>
               ${r.notas ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${r.notas}</div>` : ''}
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-racao="${r.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-racao="${r.id}" data-pet-id="${pet.id}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-racao="${r.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -3354,7 +3378,10 @@ export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
               </div>
               ${a.notas ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${a.notas}</div>` : ''}
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-areia="${a.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-areia="${a.id}" data-pet-id="${pet.id}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-areia="${a.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -3387,7 +3414,10 @@ export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
               </div>
               ${b.notas ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${b.notas}</div>` : ''}
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-banho="${b.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-banho="${b.id}" data-pet-id="${pet.id}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-banho="${b.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -3430,7 +3460,10 @@ export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
               </div>
               ${v.clinica ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">Clínica: ${v.clinica}</div>` : ''}
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-vacina="${v.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-vacina="${v.id}" data-pet-id="${pet.id}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-vacina="${v.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -3457,7 +3490,10 @@ export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
               </div>
               ${vm.notas ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${vm.notas}</div>` : ''}
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-vermifugo="${vm.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-vermifugo="${vm.id}" data-pet-id="${pet.id}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-vermifugo="${vm.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -3490,7 +3526,10 @@ export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
                 </div>
               ` : ''}
             </div>
-            <button type="button" class="btn btn-icon btn-sm" data-del-exame="${e.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-exame="${e.id}" data-pet-id="${pet.id}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-exame="${e.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            </div>
           </div>
         `).join('')}
       </div>

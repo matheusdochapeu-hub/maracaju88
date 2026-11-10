@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -44,13 +44,13 @@ test('Validação de Sintaxe: Todos os arquivos JavaScript do app compilam perfe
   for (const file of jsFiles) {
     const fullPath = path.join(jsDir, file);
     assert.doesNotThrow(() => {
-      execSync(`"${process.execPath}" --check "${fullPath}"`);
+      execFileSync(process.execPath, ['--check', fullPath]);
     }, `Arquivo ${file} deve compilar sem erro de sintaxe`);
   }
 
   // Verifica também o Service Worker
   const swPath = path.resolve(__dirname, '../sw.js');
   assert.doesNotThrow(() => {
-    execSync(`"${process.execPath}" --check "${swPath}"`);
+    execFileSync(process.execPath, ['--check', swPath]);
   }, 'sw.js deve compilar sem erro de sintaxe');
 });
