@@ -811,10 +811,12 @@ test('Sheets: Prioridade da planilha Google e sincronização completa dos dados
   assert.equal(merged.categories.compras.length, 1);
   assert.equal(merged.userPasswords.scarlet, "5678");
 
-  // Valida que a conexão local foi mantida e autoSync foi forçado para true
+  // Valida que a conexão local foi mantida e que a preferência de autoSync do
+  // aparelho é preservada (antes a restauração forçava autoSync=true, religando
+  // a sincronização que o usuário desligou nos Ajustes).
   assert.equal(merged.settings.sheetsUrl, localState.settings.sheetsUrl);
   assert.equal(merged.settings.sheetsToken, localState.settings.sheetsToken);
-  assert.equal(merged.settings.autoSync, true);
+  assert.equal(merged.settings.autoSync, false);
   assert.ok(merged.settings.lastSyncTimestamp);
 });
 

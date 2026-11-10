@@ -5,6 +5,7 @@
 
 import { parseCurrency } from './currency.js';
 import { RECOVERABLE_PURCHASES } from './storage.js';
+import { getLocalDateString } from './dates.js';
 
 // Dicionário de CNPJ conhecidos para identificação instantânea de redes de mercado
 export const KNOWN_MARKETS = {
@@ -330,7 +331,7 @@ export function parseNfceHtml(htmlString) {
   }
 
   if (!date) {
-    date = new Date().toISOString().substring(0, 10);
+    date = getLocalDateString();
   }
 
   return {
@@ -415,7 +416,7 @@ export function parseNfceQrCodeText(rawText) {
       const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
       // Se for do mês atual, usa a data de hoje, senão dia 1 do mês da nota
       if (fullYear === currentYear && mm === currentMonth) {
-        dateStr = today.toISOString().substring(0, 10);
+        dateStr = getLocalDateString(today);
       } else {
         dateStr = `${fullYear}-${mm}-01`;
       }
@@ -492,7 +493,7 @@ export function parseNfceQrCodeText(rawText) {
   }
 
   if (!dateStr) {
-    dateStr = new Date().toISOString().substring(0, 10);
+    dateStr = getLocalDateString();
   }
 
   // 5. Verificação em comprovantes oficiais/recuperáveis conhecidos (ex: Padaria Irmãos Araújo e Carrefour)
@@ -660,7 +661,7 @@ export function mergeNfceComplementary(qrData = {}, ocrData = {}) {
   }
 
   // 4. Data
-  const todayStr = new Date().toISOString().substring(0, 10);
+  const todayStr = getLocalDateString();
   if (!merged.date || merged.date === todayStr) {
     if (ocrData.date) {
       merged.date = ocrData.date;

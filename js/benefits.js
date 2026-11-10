@@ -2,6 +2,8 @@
 //  MARACAJU - GESTÃO DE BENEFÍCIOS (VA & VR - SÃO CARLOS / SP)
 // ============================================================
 
+import { getLocalDateString } from './dates.js';
+
 export const DEFAULT_BENEFITS_CONFIG = {
   vaFixedAmount: 2050.00,
   vrDailyAmount: 65.00,
@@ -639,7 +641,7 @@ export function closeBenefitCycleEarly(state, fromCycleKey, effectiveNewDateStr,
     vrEndingBalance: Math.round(vrFinal * 100) / 100
   };
 
-  const cleanDate = (effectiveNewDateStr || new Date().toISOString().slice(0, 10)).substring(0, 10);
+  const cleanDate = (effectiveNewDateStr || getLocalDateString()).substring(0, 10);
   const nextCycleKey = cleanDate.substring(0, 7);
 
   config.monthlyCreditDates[nextCycleKey] = cleanDate;

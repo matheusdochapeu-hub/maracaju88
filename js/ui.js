@@ -224,7 +224,8 @@ export function showToast(message, type = 'info', duration = 3000) {
 export function renderHeaderStats(state) {
   // Active User Toggle
   const activeId = state.activeUserId || 'matheus';
-  const activeUser = (activeId === 'esposa' || activeId === 'scarlet') ? state.users.user2 : state.users.user1;
+  const users = (state && state.users) || {};
+  const activeUser = (activeId === 'esposa' || activeId === 'scarlet') ? users.user2 : users.user1;
   const userBtn = document.getElementById('active-user-btn');
   if (userBtn && activeUser) {
     userBtn.innerHTML = `
@@ -634,11 +635,11 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
           <div style="background: var(--bg-secondary); padding: 0.6rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem; font-size: 0.8rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem;">
             <div>
               <span style="color: var(--text-muted);">Estimado:</span>
-              <strong>R$ ${item.estimatedCost.toLocaleString('pt-BR')}</strong>
+              <strong>${formatCurrencyWithSymbol(item.estimatedCost || 0)}</strong>
             </div>
             <div>
               <span style="color: var(--text-muted);">Gasto Real:</span>
-              <strong style="color: var(--success);">R$ ${item.actualCost.toLocaleString('pt-BR')}</strong>
+              <strong style="color: var(--success);">${formatCurrencyWithSymbol(item.actualCost || 0)}</strong>
             </div>
             ${item.targetKm > 0 ? `
               <div>
@@ -829,11 +830,11 @@ export function renderReformasTab(state, statusFilter = 'todas', categoryFilter 
           <div style="background: var(--bg-tertiary); padding: 0.6rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem; font-size: 0.8rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem;">
             <div>
               <span style="color: var(--text-muted);">Estimado:</span>
-              <strong>R$ ${ref.estimatedCost.toLocaleString('pt-BR')}</strong>
+              <strong>${formatCurrencyWithSymbol(ref.estimatedCost || 0)}</strong>
             </div>
             <div>
               <span style="color: var(--text-muted);">Gasto:</span>
-              <strong style="color: var(--success);">R$ ${ref.actualCost.toLocaleString('pt-BR')}</strong>
+              <strong style="color: var(--success);">${formatCurrencyWithSymbol(ref.actualCost || 0)}</strong>
             </div>
           </div>
 
@@ -1008,7 +1009,7 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
           ${sonho.targetAmount > 0 ? `
             <div style="background: var(--bg-secondary); padding: 0.5rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem; font-size: 0.8rem;">
               <span style="color: var(--text-muted);">Meta Financeira:</span>
-              <strong style="color: var(--brand-amber);"> R$ ${sonho.targetAmount.toLocaleString('pt-BR')}</strong>
+              <strong style="color: var(--brand-amber);">${formatCurrencyWithSymbol(sonho.targetAmount || 0)}</strong>
             </div>
           ` : ''}
 
@@ -1812,8 +1813,8 @@ export function renderSettingsTab(state, activeCategoryModule = 'tarefas') {
   if (tokenInput && document.activeElement !== tokenInput) tokenInput.value = state.settings.sheetsToken || '';
   if (autoSyncCheck) autoSyncCheck.checked = !!state.settings.autoSync;
   if (soundCheck) soundCheck.checked = !!state.settings.soundEnabled;
-  if (user1Name && document.activeElement !== user1Name) user1Name.value = state.users.user1.name || 'Matheus';
-  if (user2Name && document.activeElement !== user2Name) user2Name.value = state.users.user2.name || 'Scarlet';
+  if (user1Name && document.activeElement !== user1Name) user1Name.value = (state.users && state.users.user1 && state.users.user1.name) || 'Matheus';
+  if (user2Name && document.activeElement !== user2Name) user2Name.value = (state.users && state.users.user2 && state.users.user2.name) || 'Scarlet';
 
   const lastSyncEl = document.getElementById('settings-last-sync-label');
   if (lastSyncEl) {

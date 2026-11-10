@@ -6,6 +6,7 @@
 import { parseCurrency } from './currency.js';
 import { makeId } from './projects.js';
 import { getBenefitCycleKey, getCurrentBenefitCycleKey, getBenefitCycleRange } from './benefits.js';
+import { getLocalDateString } from './dates.js';
 
 function list(state) {
   if (!Array.isArray(state.compras)) state.compras = [];
@@ -236,10 +237,31 @@ export function getMonthLabel(monthKey) {
 
 export function addMarketPurchase(state, data, userId = 'matheus') {
   const marketName = (data.marketName || 'Supermercado').trim();
-  const dateStr = data.date ? String(data.date).substring(0, 10) : new Date().toISOString().substring(0, 10);
+  const dateStr = data.date ? String(data.date).substring(0, 10) : getLocalDateString();
   const monthKey = formatMonthKey(dateStr);
   const total = parseCurrency(data.total);
   const paymentMethod = (data.paymentMethod || 'va').toLowerCase();
+  const nfeKey = (data.nfeKey || '').trim();
+
+  // Uma NFC-e só pode existir uma vez no estado: reescanear a mesma nota
+  // (ou tocar duas vezes em Confirmar) duplicava a compra e o valor entrava
+  // duas vezes nos totais de VA/VR. Aqui atualizamos o registro existente.
+  if (nfeKey) {
+    const existing = purchasesList(state).find(p => (p.nfeKey || '').trim() === nfeKey);
+    if (existing) {
+      existing.marketName = marketName;
+      existing.date = dateStr;
+      existing.monthKey = monthKey;
+      existing.total = total;
+      existing.paymentMethod = paymentMethod;
+      if (Array.isArray(data.items) && data.items.length > 0) existing.items = data.items;
+      if (Array.isArray(data.photos) && data.photos.length > 0) existing.photos = data.photos;
+      if (data.notes) existing.notes = data.notes.trim();
+      if (data.nfeUrl) existing.nfeUrl = String(data.nfeUrl).trim();
+      existing.updatedAt = new Date().toISOString();
+      return existing;
+    }
+  }
 
   const purchase = {
     id: makeId('nfe'),
@@ -250,7 +272,7 @@ export function addMarketPurchase(state, data, userId = 'matheus') {
     paymentMethod,
     items: Array.isArray(data.items) ? data.items : [],
     photos: Array.isArray(data.photos) ? data.photos : [],
-    nfeKey: (data.nfeKey || '').trim(),
+    nfeKey,
     nfeUrl: (data.nfeUrl || '').trim(),
     notes: (data.notes || '').trim(),
     registeredBy: userId || 'matheus',

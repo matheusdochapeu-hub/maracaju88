@@ -4,19 +4,7 @@
 // ============================================================
 
 import { parseCurrency } from './currency.js';
-
-/**
- * Data de "hoje" no fuso local, no formato 'YYYY-MM-DD'.
- * `toISOString()` converte para UTC e, no Brasil (UTC-3), devolve o dia
- * seguinte entre 21:00 e 23:59 — o que jogava lançamentos para o dia/mês errado.
- */
-function todayStr() {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+import { getLocalDateString } from './dates.js';
 
 /**
  * Calcula a idade do pet em anos e meses com precisão.
@@ -538,7 +526,11 @@ export function addPetPhoto(state, petId, photoDataUrl) {
  */
 export function removePetPhoto(state, petId, photoIdx) {
   const pet = (state.pets || []).find(p => p.id === petId);
-  if (!pet || !pet.fotos) return false;
+  if (!pet) return false;
+  // Pets antigos podem ter apenas `photos` (sem `fotos`); normaliza antes de remover
+  if (!Array.isArray(pet.fotos)) {
+    pet.fotos = Array.isArray(pet.photos) ? [...pet.photos] : [];
+  }
   if (photoIdx >= 0 && photoIdx < pet.fotos.length) {
     pet.fotos.splice(photoIdx, 1);
     pet.photos = pet.fotos;
@@ -683,7 +675,7 @@ export function addPetRacaoPurchase(state, petId, racaoData) {
   }
   if (duracaoDias <= 0) duracaoDias = 30;
 
-  const dataCompra = racaoData.dataCompra || todayStr();
+  const dataCompra = racaoData.dataCompra || getLocalDateString();
   const dataPrevisaoFim = racaoData.dataPrevisaoFim || addDaysToDateStr(dataCompra, duracaoDias);
 
   const entry = {
@@ -725,7 +717,7 @@ export function updatePetRacaoPurchase(state, petId, racaoId, racaoData) {
   }
   if (!duracaoDias || duracaoDias <= 0) duracaoDias = entry.duracaoDias || 30;
 
-  const dataCompra = racaoData.dataCompra || entry.dataCompra || todayStr();
+  const dataCompra = racaoData.dataCompra || entry.dataCompra || getLocalDateString();
   const dataPrevisaoFim = racaoData.dataPrevisaoFim || addDaysToDateStr(dataCompra, duracaoDias);
 
   entry.dataCompra = dataCompra;
@@ -770,7 +762,7 @@ export function addPetAreiaPurchase(state, petId, areiaData) {
   if (!pet.areia) pet.areia = [];
 
   const duracaoDias = parseInt(areiaData.duracaoDias, 10) || 25;
-  const dataCompra = areiaData.dataCompra || todayStr();
+  const dataCompra = areiaData.dataCompra || getLocalDateString();
   const dataPrevisaoFim = areiaData.dataPrevisaoFim || addDaysToDateStr(dataCompra, duracaoDias);
 
   const entry = {
@@ -803,7 +795,7 @@ export function updatePetAreiaPurchase(state, petId, areiaId, areiaData) {
 
   const newPetId = areiaData.petId || petId;
   const duracaoDias = areiaData.duracaoDias !== undefined ? parseInt(areiaData.duracaoDias, 10) : (areiaData.duracaoDiasEstimada !== undefined ? parseInt(areiaData.duracaoDiasEstimada, 10) : (entry.duracaoDias || 25));
-  const dataCompra = areiaData.dataCompra || entry.dataCompra || todayStr();
+  const dataCompra = areiaData.dataCompra || entry.dataCompra || getLocalDateString();
   const dataPrevisaoFim = areiaData.dataPrevisaoFim || addDaysToDateStr(dataCompra, duracaoDias);
 
   entry.dataCompra = dataCompra;
@@ -848,7 +840,7 @@ export function addPetBanho(state, petId, banhoData) {
 
   const entry = {
     id: `banho_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    data: banhoData.data || todayStr(),
+    data: banhoData.data || getLocalDateString(),
     tipo: banhoData.tipo === 'petshop' ? 'petshop' : 'casa',
     local: (banhoData.local || '').trim() || (banhoData.tipo === 'petshop' ? 'Pet Shop' : 'Em Casa'),
     valor: parseCurrency(banhoData.valor || 0),
@@ -916,7 +908,7 @@ export function addPetVacina(state, petId, vacinaData) {
   const vacinaNome = (vacinaData.vacina || vacinaData.nome || vacinaData.tipoVacina || '').trim();
   if (!vacinaNome) throw new Error('Informe o nome da vacina.');
 
-  const dataAplicacao = vacinaData.dataAplicacao || todayStr();
+  const dataAplicacao = vacinaData.dataAplicacao || getLocalDateString();
   // Vacinas são anuais por padrão (1 ano após aplicação)
   const dataProximaDose = vacinaData.dataProximaDose || addDaysToDateStr(dataAplicacao, 365);
 
@@ -954,7 +946,7 @@ export function updatePetVacina(state, petId, vacinaId, vacinaData) {
 
   const newPetId = vacinaData.petId || petId;
   const vacinaNome = (vacinaData.vacina || vacinaData.nome || vacinaData.tipoVacina || entry.vacina || '').trim();
-  const dataAplicacao = vacinaData.dataAplicacao || entry.dataAplicacao || todayStr();
+  const dataAplicacao = vacinaData.dataAplicacao || entry.dataAplicacao || getLocalDateString();
   const dataProximaDose = vacinaData.dataProximaDose || vacinaData.proximaData || entry.dataProximaDose || addDaysToDateStr(dataAplicacao, 365);
 
   entry.vacina = vacinaNome;
@@ -1002,7 +994,7 @@ export function addPetVermifugo(state, petId, vermifugoData) {
   if (!pet) throw new Error('Pet não encontrado.');
   if (!pet.vermifugos) pet.vermifugos = [];
 
-  const dataAplicacao = vermifugoData.dataAplicacao || todayStr();
+  const dataAplicacao = vermifugoData.dataAplicacao || getLocalDateString();
   const intervaloDias = parseInt(vermifugoData.intervaloDias, 10) || 180; // semestral por padrão
   const dataProximaDose = vermifugoData.dataProximaDose || addDaysToDateStr(dataAplicacao, intervaloDias);
   const pesoAnimalKg = parseFloat(vermifugoData.pesoAnimalKg || pet.pesoKg) || 0;
@@ -1035,7 +1027,7 @@ export function updatePetVermifugo(state, petId, vermifugoId, vermifugoData) {
   if (!entry) throw new Error('Registro de vermífugo não encontrado.');
 
   const newPetId = vermifugoData.petId || petId;
-  const dataAplicacao = vermifugoData.dataAplicacao || entry.dataAplicacao || todayStr();
+  const dataAplicacao = vermifugoData.dataAplicacao || entry.dataAplicacao || getLocalDateString();
   const intervaloDias = parseInt(vermifugoData.intervaloDias, 10) || 180;
   const dataProximaDose = vermifugoData.dataProximaDose || vermifugoData.proximaData || entry.dataProximaDose || addDaysToDateStr(dataAplicacao, intervaloDias);
   const pesoAnimalKg = parseFloat(vermifugoData.pesoAnimalKg || vermifugoData.pesoKg || entry.pesoAnimalKg || targetPet.pesoKg) || 0;
@@ -1083,7 +1075,7 @@ export function addPetExame(state, petId, exameData) {
 
   const entry = {
     id: `ex_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    data: exameData.data || todayStr(),
+    data: exameData.data || getLocalDateString(),
     tipo: (exameData.tipo || 'Consulta Veterinária').trim(),
     clinica: (exameData.clinica || '').trim(),
     veterinario: (exameData.veterinario || '').trim(),
@@ -1244,7 +1236,7 @@ export function addPetItem(state, petId, itemData) {
     petId: pet.id,
     nome,
     tipo: itemData.tipo || 'comedouro',
-    dataCompra: itemData.dataCompra || todayStr(),
+    dataCompra: itemData.dataCompra || getLocalDateString(),
     valor: parseCurrency(itemData.valor),
     loja: (itemData.loja || '').trim(),
     observacoes: (itemData.observacoes || '').trim(),

@@ -36,6 +36,7 @@ import {
 } from './auth.js';
 import { playTaskCompleteSound, playSubtleClick } from './audio.js';
 import { toggleTaskDone, addTask, deleteTask, updateTask, getLocalDateString, formatTaskWeekDays } from './tasks.js';
+import { getLocalMonthKey } from './dates.js';
 import {
   addShoppingItem,
   toggleShoppingItem,
@@ -735,6 +736,41 @@ function initNavigation() {
 }
 
 // -------------------------------------------------------------
+// CONCILIAÇÃO INTELIGENTE DE ITENS DA LISTA COM A COMPRA FEITA
+// -------------------------------------------------------------
+// Preenche e abre o modal de conciliação. Fica no escopo do módulo porque é
+// usado tanto pelo lançamento manual quanto pela confirmação da NFC-e
+// (initQrCodeScanner), que são funções diferentes.
+function showMatchedShoppingItemsModal(matches) {
+  if (!Array.isArray(matches) || matches.length === 0) return false;
+
+  const listContainer = document.getElementById('match-shopping-items-list');
+  if (!listContainer) return false;
+
+  listContainer.innerHTML = matches.map((m) => `
+    <label style="display: flex; align-items: center; gap: 0.65rem; background: rgba(22, 163, 74, 0.06); border: 1px solid rgba(22, 163, 74, 0.25); border-radius: var(--radius-md); padding: 0.6rem 0.75rem; cursor: pointer;">
+      <input type="checkbox" class="match-item-checkbox" data-match-id="${m.shoppingItem.id}" checked style="width: 1.15rem; height: 1.15rem; accent-color: #16a34a; cursor: pointer;" />
+      <div style="flex: 1; min-width: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <strong style="font-size: 0.88rem; color: var(--text-primary);">${m.shoppingItem.name || m.shoppingItem.title}</strong>
+          ${m.shoppingItem.quantity ? `<span class="badge" style="font-size: 0.7rem; background: rgba(0,0,0,0.06);">${m.shoppingItem.quantity}</span>` : ''}
+        </div>
+        <div style="font-size: 0.73rem; color: #15803d; margin-top: 0.15rem;">
+          🧾 Identificado na compra: <em>${m.matchedWith}</em>
+        </div>
+      </div>
+    </label>
+  `).join('');
+
+  // Pequeno atraso para o history.back() do modal anterior terminar antes de
+  // empilhar o próximo (senão o popstate fecharia o modal recém-aberto).
+  setTimeout(() => {
+    openModal('modal-match-shopping-items');
+  }, 250);
+  return true;
+}
+
+// -------------------------------------------------------------
 // CONTROLES DO CABEÇALHO (Perfil: Matheus / Scarlet)
 // -------------------------------------------------------------
 function initHeaderControls() {
@@ -883,7 +919,7 @@ function initHeaderControls() {
 
       const dateInput = document.getElementById('manual-purchase-date');
       if (dateInput) {
-        dateInput.value = new Date().toISOString().substring(0, 10);
+        dateInput.value = getLocalDateString();
       }
       let paySelect = document.getElementById('manual-purchase-payment-method');
       if (!paySelect) {
@@ -927,30 +963,7 @@ function initHeaderControls() {
   function checkAndPromptMatchedShoppingItems(purchase) {
     if (!purchase) return false;
     const matches = findMatchingShoppingItems(state, purchase);
-    if (!matches || matches.length === 0) return false;
-
-    const listContainer = document.getElementById('match-shopping-items-list');
-    if (!listContainer) return false;
-
-    listContainer.innerHTML = matches.map((m) => `
-      <label style="display: flex; align-items: center; gap: 0.65rem; background: rgba(22, 163, 74, 0.06); border: 1px solid rgba(22, 163, 74, 0.25); border-radius: var(--radius-md); padding: 0.6rem 0.75rem; cursor: pointer;">
-        <input type="checkbox" class="match-item-checkbox" data-match-id="${m.shoppingItem.id}" checked style="width: 1.15rem; height: 1.15rem; accent-color: #16a34a; cursor: pointer;" />
-        <div style="flex: 1; min-width: 0;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 0.88rem; color: var(--text-primary);">${m.shoppingItem.name || m.shoppingItem.title}</strong>
-            ${m.shoppingItem.quantity ? `<span class="badge" style="font-size: 0.7rem; background: rgba(0,0,0,0.06);">${m.shoppingItem.quantity}</span>` : ''}
-          </div>
-          <div style="font-size: 0.73rem; color: #15803d; margin-top: 0.15rem;">
-            🧾 Identificado na compra: <em>${m.matchedWith}</em>
-          </div>
-        </div>
-      </label>
-    `).join('');
-
-    setTimeout(() => {
-      openModal('modal-match-shopping-items');
-    }, 250);
-    return true;
+    return showMatchedShoppingItemsModal(matches);
   }
 
   const btnMatchBought = document.getElementById('btn-match-mark-bought');
@@ -996,7 +1009,7 @@ function initHeaderControls() {
     formManualPurchase.addEventListener('submit', (e) => {
       e.preventDefault();
       const marketName = (document.getElementById('manual-purchase-market')?.value || 'Supermercado').trim();
-      const date = document.getElementById('manual-purchase-date')?.value || new Date().toISOString().substring(0, 10);
+      const date = document.getElementById('manual-purchase-date')?.value || getLocalDateString();
       const totalRaw = document.getElementById('manual-purchase-total')?.value || '0';
       const notes = (document.getElementById('manual-purchase-notes')?.value || '').trim();
       const total = parseCurrency(totalRaw);
@@ -3480,7 +3493,7 @@ function initComprasModule() {
     formAdjustBenefits.addEventListener('submit', (e) => {
       e.preventDefault();
       try {
-        const monthKey = benefitsMonthInput?.value || new Date().toISOString().slice(0, 7);
+        const monthKey = benefitsMonthInput?.value || getLocalMonthKey();
         const vaFixed = benefitsVaInput ? parseCurrency(benefitsVaInput.value) : 2050;
         const vrDaily = benefitsVrDailyInput ? parseCurrency(benefitsVrDailyInput.value) : 65;
         const vrDays = benefitsVrDaysInput ? (parseInt(benefitsVrDaysInput.value, 10) || 0) : 0;
@@ -4717,12 +4730,10 @@ function initQrCodeScanner() {
 
       showToast(`🧾 Compra no ${purchaseData.marketName} registrada com sucesso!`, 'success', 3500);
 
-      // Verifica itens correspondentes na lista de compras
+      // Verifica itens correspondentes na lista de compras e abre a conciliação
       try {
         const matches = findMatchingShoppingItems(state, purchaseData);
-        if (matches && matches.length > 0) {
-          openReconciliationModal(matches, purchaseData);
-        }
+        showMatchedShoppingItemsModal(matches);
       } catch (err) {
         console.warn('Erro ao conciliar itens de compras:', err);
       }
@@ -5027,7 +5038,7 @@ function initGlobalEditDelegation() {
 function handleCloseBenefitCycle() {
   const cycleKey = currentBenefitsCycle || getCurrentBenefitCycleKey(state);
   const details = getMonthlyBenefitDetails(state, cycleKey);
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = getLocalDateString();
 
   const confirmMsg = `Deseja encerrar o ${details.cycleLabel} e transferir as sobras para o próximo período?\n\n` +
     `• VA restante: ${formatCurrencyWithSymbol(details.vaBalance)}\n` +
@@ -5166,7 +5177,7 @@ function initPetsModule() {
       if (!file || !petId) return;
       try {
         showToast('Atualizando foto do pet... 📸', 'info', 1500);
-        const compressed = await compressImageFile(file, 800, 800, 0.82);
+        const compressed = await compressImageFile(file, 800, 0.82);
         addPetPhoto(state, petId, compressed);
         saveState(state);
         triggerAutoSyncIfEnabled();

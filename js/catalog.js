@@ -5,6 +5,7 @@
 // ============================================================
 
 import { addShoppingItem } from './shopping.js';
+import { getLocalDateString } from './dates.js';
 
 /**
  * Normaliza strings para busca sem acentos e minúscula
@@ -191,7 +192,7 @@ export function upsertCatalogProduct(state, itemData, purchaseInfo = {}) {
 export function registerInvoiceInCatalog(state, invoiceData) {
   const purchaseInfo = {
     marketName: invoiceData.marketName || 'Supermercado',
-    date: invoiceData.date || new Date().toISOString().substring(0, 10),
+    date: invoiceData.date || getLocalDateString(),
     nfeKey: invoiceData.nfeKey || ''
   };
 

@@ -4,6 +4,36 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-10 17:05] - Auditoria de Bugs: Conciliação NFC-e, Datas Locais e Robustez de Render (v2.7.4)
+
+### 🔍 Como a auditoria foi feita
+- Varredura de chamadas a funções não declaradas (pegou `openReconciliationModal`).
+- Checagem de escopo: funções usadas fora do `init` onde foram declaradas.
+- Auditoria de campos de formulário sem nenhuma referência em JS (2 mortos).
+- Smoke test novo (`test/render-smoke.test.js`) que renderiza **todas** as abas/modais com DOM falso, com estado completo, estado legado e inicialização real do `app.js`.
+- Auditoria de `toISOString()` para datas de calendário e de chamadas de `compressImageFile`.
+
+### 🐛 Bugs corrigidos
+1. **Conciliação de itens após NFC-e nunca abria:** o handler chamava `openReconciliationModal(...)`, função que **não existe** (o erro era engolido por um `try/catch`). O helper real virou `showMatchedShoppingItemsModal()` no escopo do módulo — antes de ficar no escopo do módulo ele estava dentro de `initHeaderControls` e não seria acessível a partir de `initQrCodeScanner`.
+2. **Mesma NFC-e registrada duas vezes:** `addMarketPurchase` não deduplicava por `nfeKey`; reescanear a nota (ou tocar 2x em Confirmar) duplicava a compra e o valor entrava 2x nos totais de VA/VR. Agora é upsert por chave.
+3. **Datas "hoje" em UTC:** 11 pontos (`app`, `benefits`, `catalog`, `nfce`, `pdf-parser`, `shopping`, `shopping-items`, `pets`) usavam `new Date().toISOString()...`, que no Brasil (UTC-3) devolve o dia seguinte entre 21h e 23h59 — compras/benefícios caíam no dia/mês errado. Novo módulo **`js/dates.js`** (`getLocalDateString`, `getLocalMonthKey`); `tasks.js` passou a reexportar dali.
+4. **Toggle de sincronização automática era religado pela nuvem:** `applyCloudBackup` forçava `autoSync: true` a cada pull. Agora preserva a preferência do aparelho (teste atualizado).
+5. **Foto do pet com compressão errada:** `compressImageFile(file, 800, 800, 0.82)` passava a qualidade como 800 (4º argumento inexistente) — gerava base64 maior em vez de comprimir. Corrigido para `(file, 800, 0.82)`.
+6. **Pet da nuvem descartado em vez de mesclado:** no merge, pet com mesmo nome/espécie era ignorado (`return`), perdendo ração/vacinas/exames da duplicata. Agora entra no mapa e o `deduplicatePets()` mescla os sub-registros.
+7. **Aba Carro/Reformas/Sonhos em branco com registros antigos:** `item.estimatedCost.toLocaleString()` quebrava quando o campo não existia (registro legado). Valores passaram a usar `formatCurrencyWithSymbol(x || 0)`; `renderSettingsTab` tolera `state.users` incompleto.
+8. **Remover foto de pet legado:** `removePetPhoto` exigia `pet.fotos`; pets antigos só com `photos` não removiam. Normaliza o array antes.
+9. **Markup morto do QR Code removido:** `#qr-manual-input`, `#btn-qr-manual-submit`, `#qr-paste-html-wrapper`, `#qr-manual-html-textarea`, `#btn-qr-process-html` não eram referenciados em nenhum JS/CSS.
+
+### 🧪 Testes
+- `test/render-smoke.test.js` (3): render de todas as abas/modais, inicialização real do app com estado salvo e estado legado/incompleto.
+- `test/market-and-dates.test.js` (6): datas locais, default de data, dedupe por NFC-e, analytics, `monthKey` ao editar data e conciliação no escopo do módulo.
+- Suíte total: **151 testes, 0 falhas**.
+
+### 📦 Versão
+- Bump para **v2.7.4** (`config.js`, `sw.js`, `package.json`) e `js/dates.js` incluído no cache do Service Worker.
+
+---
+
 ## [2026-11-10 15:35] - HOTFIX: Aba "Nossos Pets" em branco (v2.7.3)
 
 ### 🔍 Problema relatado

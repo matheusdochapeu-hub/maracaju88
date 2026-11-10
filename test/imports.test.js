@@ -12,6 +12,7 @@ test('Módulos ES: Todos os arquivos JS do app importam sem erros sintáticos ou
   const files = [
     '../js/config.js',
     '../js/currency.js',
+    '../js/dates.js',
     '../js/categories.js',
     '../js/projects.js',
     '../js/auth.js',

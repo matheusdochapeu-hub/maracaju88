@@ -582,11 +582,10 @@ export function applyCloudBackup(currentState, cloudData) {
         if (!cloudP || !cloudP.id || deletedIds.has(cloudP.id)) return;
         const existing = map.get(cloudP.id);
         if (!existing) {
-          // Checa se já existe pet com o mesmo nome e espécie para evitar duplicidade
-          const existingByName = Array.from(map.values()).find(
-            p => (p.nome || p.name || '').trim().toLowerCase() === (cloudP.nome || cloudP.name || '').trim().toLowerCase()
-          );
-          if (existingByName) return;
+          // Pet com mesmo nome/espécie mas id diferente (duplicata antiga da nuvem)
+          // é adicionado ao mapa e o deduplicatePets() no fim deste bloco mescla os
+          // sub-registros no pet principal + registra o id em deletedPetIds.
+          // Antes ele era descartado aqui, perdendo ração/vacinas/exames da duplicata.
           map.set(cloudP.id, cloudP);
         } else {
           const mergedPet = { ...existing, ...cloudP };
@@ -709,7 +708,11 @@ export function applyCloudBackup(currentState, cloudData) {
       },
       sheetsUrl: preservedSheetsUrl,
       sheetsToken: preservedSheetsToken,
-      autoSync: true,
+      // Preserva a preferência do aparelho: um pull da nuvem não pode religar
+      // a sincronização automática que o usuário desligou nos Ajustes.
+      autoSync: safeCurrentSettings.autoSync !== undefined
+        ? safeCurrentSettings.autoSync
+        : (safeCloudSettings.autoSync !== undefined ? safeCloudSettings.autoSync : true),
       lastSyncTimestamp: new Date().toISOString()
     }
   };

@@ -5,6 +5,7 @@
 
 import { parseCurrency } from './currency.js';
 import { guessMarketNameFromCnpj, formatCnpj, mapPaymentMethodToApp } from './nfce.js';
+import { getLocalDateString } from './dates.js';
 
 // Dicionário de abreviações comuns de cupom fiscal para nomes populares
 const POPULAR_ABBREVIATIONS = [
@@ -140,7 +141,7 @@ export function parseNfceDanfeText(rawTextInput, altTextInput = '') {
 
 function _parseSingleNfceDanfeText(rawText) {
   if (!rawText || typeof rawText !== 'string') {
-    return { marketName: 'Supermercado', cnpj: '', date: new Date().toISOString().substring(0, 10), total: 0, nfeKey: '', items: [] };
+    return { marketName: 'Supermercado', cnpj: '', date: getLocalDateString(), total: 0, nfeKey: '', items: [] };
   }
 
   const lines = rawText
@@ -198,7 +199,7 @@ function _parseSingleNfceDanfeText(rawText) {
     if (year.length === 2) year = `20${year}`;
     dateStr = `${year}-${month}-${day}`;
   } else {
-    dateStr = new Date().toISOString().substring(0, 10);
+    dateStr = getLocalDateString();
   }
 
   // 4. Razão Social / Mercado

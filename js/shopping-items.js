@@ -6,6 +6,7 @@
 
 import { parseCurrency } from './currency.js';
 import { makeId } from './projects.js';
+import { getLocalDateString } from './dates.js';
 
 /**
  * Retorna a lista de itens de shopping do estado com garantia de array
@@ -41,7 +42,7 @@ export function addShoppingWishlistItem(state, data, userId = 'matheus') {
     notes: (data.notes || data.description || '').trim(),
     photos: Array.isArray(data.photos) ? [...data.photos] : (data.photo ? [data.photo] : []),
     purchasedPrice: data.status === 'comprado' ? (parseCurrency(data.purchasedPrice) || price) : 0,
-    purchasedAt: data.status === 'comprado' ? (data.purchasedAt || new Date().toISOString().substring(0, 10)) : null,
+    purchasedAt: data.status === 'comprado' ? (data.purchasedAt || getLocalDateString()) : null,
     createdBy: userId || 'matheus',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -74,7 +75,7 @@ export function updateShoppingWishlistItem(state, id, data) {
   if (data.status !== undefined) {
     item.status = data.status;
     if (data.status === 'comprado') {
-      if (!item.purchasedAt) item.purchasedAt = new Date().toISOString().substring(0, 10);
+      if (!item.purchasedAt) item.purchasedAt = getLocalDateString();
       if (!item.purchasedPrice) item.purchasedPrice = item.price;
     } else {
       item.purchasedAt = null;
@@ -121,7 +122,7 @@ export function toggleShoppingItemBought(state, id, purchasedPrice = null) {
     item.purchasedPrice = 0;
   } else {
     item.status = 'comprado';
-    item.purchasedAt = new Date().toISOString().substring(0, 10);
+    item.purchasedAt = getLocalDateString();
     item.purchasedPrice = purchasedPrice !== null ? parseCurrency(purchasedPrice) : item.price;
   }
 
