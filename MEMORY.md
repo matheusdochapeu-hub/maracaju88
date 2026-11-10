@@ -4,6 +4,30 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-10 15:35] - HOTFIX: Aba "Nossos Pets" em branco (v2.7.3)
+
+### 🔍 Problema relatado
+Usuário abriu a aba **Pets → Nossos Pets** e a área de conteúdo estava vazia (só as pills de categoria apareciam), sem os cards dos animais nem os atalhos rápidos para as outras abas.
+
+### 🎯 Causa raiz
+Em `js/ui.js`, o render dos cards passou a usar `getPetAvatarUrl(pet)` (feature de persistência de avatar da v2.7.1), mas a função **não foi adicionada ao import de `./pets.js`**. Resultado: `ReferenceError: getPetAvatarUrl is not defined` dentro de `renderPetsListView`.
+
+Como o `renderPetsMainListView` monta o HTML e só atribui `container.innerHTML` no final, a exceção abortava o render antes de pintar qualquer coisa. O `refreshAllUI` engole o erro com `console.error` por aba, então o restante do app continuava funcionando — daí o sintoma ser só na aba de pets. Os dados **não** foram perdidos (o erro acontecia ao montar os cards, ou seja, havia pets na lista).
+
+### 🛠️ Correção
+1. Adicionado `getPetAvatarUrl` ao import de `js/pets.js` em `js/ui.js`.
+2. Novo `test/module-wiring.test.js`:
+   - teste estático que acusa qualquer função exportada usada em `ui.js`/`app.js` sem o import correspondente (foi exatamente o que pegou esse bug);
+   - teste funcional de `renderPetsTab(state, 'pets')` com DOM stub, garantindo que o card, o nome e os atalhos (`data-nav-pet-subtab`) aparecem;
+   - teste funcional da aba "Itens & Acessórios" da Pasta do Pet.
+3. Bump para **v2.7.3** em `config.js`, `sw.js` (`CACHE_NAME`) e `package.json` para forçar a atualização nos aparelhos com o service worker antigo.
+
+### 🧪 Validação
+- Suíte completa: **142 testes, 0 falhas**.
+- Deploy no GitHub Pages conferido (versão e `CACHE_NAME`).
+
+---
+
 ## [2026-11-10 14:50] - Revisão de Código, Correções de UX e Robustez da Edição de Pets (v2.7.2)
 
 ### 🔍 Contexto

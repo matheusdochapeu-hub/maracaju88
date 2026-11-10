@@ -26,7 +26,8 @@ import {
   getPetsVacinasList,
   getPetsVermifugosList,
   getPetsExamesList,
-  getPetsItensList
+  getPetsItensList,
+  getPetAvatarUrl
 } from './pets.js';
 // ============================================================
 //  MARACAJU - INTERFACE, RENDERIZAÇÃO & MODAIS
