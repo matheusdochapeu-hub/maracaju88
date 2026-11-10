@@ -4,6 +4,47 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-09 21:40] - Correção de Layout nos Cards de Reformas, Carro, Sonhos e Shopping (v2.6.9)
+
+### 🔍 Problema Identificado & Causa Raiz
+1. **Quebra horizontal de layout ao cadastrar projeto com link/URL na descrição:**
+   - O usuário reportou: *"ta bugado. Estava inserindo coisas nas reformas e bugou."* com captura de tela da aba de Reformas mostrando o card "Projeto Irrigação Corredor".
+   - **Causa Raiz Técnica (CSS Grid Track Min-Content blowout & falta de word-break):**
+     - O usuário colou na descrição do projeto um link/fragmento da Amazon sem espaços de mais de 250 caracteres (`...Duas Sa%C3%ADdas Metal/dp/B0F92XZ7F8/ref=asc_df_B0F92XZ7F8?mcid=94162cc22954334ea567e8ffb06247fb&tag=googleshopp0020&linkCode=df0...`).
+     - No CSS Grid, o valor padrão das colunas `.reformas-grid` (`grid-template-columns: 1fr`) equivale a `minmax(auto, 1fr)`. Em navegadores, `auto` calcula a largura intrínseca mínima dos filhos (`min-content`).
+     - Como a URL não possuía espaços nem regra de `overflow-wrap: anywhere`, o texto esticou a coluna do grid para mais de 1600px de largura.
+     - Como consequência, o card inteiro esticou horizontalmente para 1600px, e todas as ações alinhadas à direita via `justify-content: space-between` (botões `✏️ Editar`, `Alterar Status`, `🗑️ Excluir`, botões de `📸 Câmera`, `🖼️ Galeria`, `+ Link` e a badge de Cômodo) foram empurradas para fora da tela (1200px para a direita), impedindo o usuário de editar ou interagir com o card. Além disso, o card superior ("Pintar teto sala") também foi esticado para 1600px pela mesma coluna do grid.
+
+### 🛠️ Implementação
+1. **CSS Grid Defensivo e Restrição de Largura (`css/components.css`):**
+   - Alterado `.carro-grid, .reformas-grid, .sonhos-grid, .cards-grid` para `grid-template-columns: minmax(0, 1fr)` (mobile) e `repeat(2, minmax(0, 1fr))` (desktop). O `minmax(0, 1fr)` anula a restrição `min-content` padrão do CSS Grid, impedindo qualquer expansão além de 100% da tela.
+   - Atualizado `.project-card` com:
+     ```css
+     min-width: 0;
+     max-width: 100%;
+     box-sizing: border-box;
+     overflow: hidden;
+     word-break: break-word;
+     overflow-wrap: anywhere;
+     ```
+   - Adicionadas regras defensivas para os filhos de `.project-card` (`h3, p, div, span`) garantindo `min-width: 0`, `max-width: 100%` e `overflow-wrap: anywhere; white-space: pre-wrap;`.
+   - Adicionada truncagem com elipse em `.carro-link-chip a` para que links com títulos gigantes não estiquem os chips.
+2. **Formatador Defensivo com Auto-link (`js/ui.js`):**
+   - Criada a função `formatDescriptionWithLinks(text)`:
+     - Sanitiza o texto contra injeção de HTML/XSS.
+     - Detecta URLs completas (`http://`, `https://`) e domínios conhecidos (`amazon`, `mercadolivre`, `shopee`, `aliexpress`, etc.) e converte automaticamente em links clicáveis (`<a>`), encurtando o texto de exibição e abrindo em nova aba com `target="_blank"`.
+     - Aplica `word-break: break-all;` no elemento `<a>`.
+   - Integrada em `renderReformasTab`, `renderCarroTab`, `renderSonhosTab` e `renderShoppingTab`.
+3. **Flex-Wrap Defensivo nas Barras de Ações (`js/ui.js`):**
+   - Todos os cabeçalhos e rodapés de ação dos cards agora contam com `flex-wrap: wrap; gap: 0.4rem;`, garantindo que os botões `✏️ Editar`, `Alterar Status` e `🗑️` nunca sejam cortados mesmo em celulares estreitos.
+4. **Testes Automatizados (`test/project-cards-layout-defense.test.js`):**
+   - Criada suíte com 4 testes automatizados validando sanitização, formatação de links, propriedades CSS de grid/card e integração nos renderizadores.
+   - 112 testes executados e 100% aprovados.
+5. **Bump de Versão:**
+   - Atualizado para **`v2.6.9`** em `config.js`, `sw.js` e `package.json`.
+
+---
+
 ## [2026-11-08 23:30] - Botão Flutuante (FAB) de QR Code na Aba Mercado (v2.6.8)
 
 ### 🔍 Solicitação do Usuário

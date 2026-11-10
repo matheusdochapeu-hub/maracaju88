@@ -91,6 +91,45 @@ export function setAnalyticsPeriod(period) {
   currentAnalyticsPeriod = period;
 }
 
+// -------------------------------------------------------------
+// FORMATADOR DEFENSIVO DE TEXTO / LINKS (EVITA ESTICAR CARDS)
+// -------------------------------------------------------------
+export function formatDescriptionWithLinks(text) {
+  if (!text) return '';
+  const str = String(text);
+  // Sanitização HTML segura
+  const safe = str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  // Reconhece URLs completas (http/https) ou domínios comuns mesmo sem protocolo
+  const urlPattern = /(https?:\/\/[^\s<]+|(?:www\.|(?:[a-zA-Z0-9-]+\.)?(?:amazon|mercadolivre|shopee|aliexpress|magazineluiza|globo|google|youtube)\.[a-z]{2,}(?:\.[a-z]{2})?)(?:\/[^\s<]*)?)/gi;
+
+  return safe.replace(urlPattern, (matched) => {
+    let href = matched;
+    if (!href.startsWith('http://') && !href.startsWith('https://')) {
+      href = 'https://' + href;
+    }
+    let label = matched;
+    try {
+      const parsed = new URL(href);
+      const host = parsed.hostname.replace(/^www\./, '');
+      const path = parsed.pathname && parsed.pathname !== '/' ? parsed.pathname : '';
+      label = `${host}${path}`;
+      if (label.length > 36) {
+        label = label.substring(0, 33) + '...';
+      }
+    } catch (e) {
+      if (label.length > 36) {
+        label = label.substring(0, 33) + '...';
+      }
+    }
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color: var(--brand-forest); text-decoration: underline; font-weight: 600; word-break: break-all;" title="${href}">🔗 ${label} ↗</a>`;
+  });
+}
 
 // SISTEMA DE CONFETTI NATIVO (HTML5 Canvas Particle Engine)
 // -------------------------------------------------------------
@@ -581,14 +620,14 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
     return `
       <div class="project-card" data-carro-id="${item.id}">
         <div>
-          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem;">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem; flex-wrap: wrap;">
             <span class="project-status-badge status-${item.status}">${item.status}</span>
             <span class="tag-room">${catObj.icon} ${catObj.label}</span>
           </div>
 
-          <h3 style="font-size: 1.05rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.35rem;">${item.title}</h3>
+          <h3 style="font-size: 1.05rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.35rem; word-break: break-word; overflow-wrap: anywhere;">${item.title}</h3>
 
-          ${item.notes ? `<p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.65rem;">${item.notes}</p>` : ''}
+          ${item.notes ? `<p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.65rem; word-break: break-word; overflow-wrap: anywhere; line-height: 1.45;">${formatDescriptionWithLinks(item.notes)}</p>` : ''}
 
           <!-- Valores Financeiros & KM -->
           <div style="background: var(--bg-secondary); padding: 0.6rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem; font-size: 0.8rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem;">
@@ -610,7 +649,7 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
 
           <!-- Galeria de Fotos da Manutenção -->
           <div style="margin-bottom: 0.65rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; flex-wrap: wrap; gap: 0.35rem;">
               <span>📷 Fotos da Peça / Manutenção (${photos.length})</span>
               <div style="display: flex; gap: 0.35rem;">
                 <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;" title="Bater foto com a câmera do celular">
@@ -779,14 +818,14 @@ export function renderReformasTab(state, statusFilter = 'todas', categoryFilter 
     return `
       <div class="project-card" data-reforma-id="${ref.id}">
         <div>
-          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
             <span class="project-status-badge status-${ref.status}">${ref.status}</span>
             <span class="tag-room">${roomObj.icon} ${roomObj.label}</span>
           </div>
-          <h3 style="font-size: 1.05rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.4rem;">${ref.title}</h3>
-          ${ref.description ? `<p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">${ref.description}</p>` : ''}
+          <h3 style="font-size: 1.05rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.4rem; word-break: break-word; overflow-wrap: anywhere;">${ref.title}</h3>
+          ${ref.description ? `<p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem; word-break: break-word; overflow-wrap: anywhere; line-height: 1.45;">${formatDescriptionWithLinks(ref.description)}</p>` : ''}
           
-          <div style="background: var(--bg-tertiary); padding: 0.6rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem; font-size: 0.8rem; display: flex; justify-content: space-between;">
+          <div style="background: var(--bg-tertiary); padding: 0.6rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem; font-size: 0.8rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem;">
             <div>
               <span style="color: var(--text-muted);">Estimado:</span>
               <strong>R$ ${ref.estimatedCost.toLocaleString('pt-BR')}</strong>
@@ -799,7 +838,7 @@ export function renderReformasTab(state, statusFilter = 'todas', categoryFilter 
 
           <!-- Galeria de Fotos da Reforma / Inspirações -->
           <div style="margin-bottom: 0.75rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
               <span style="font-weight: 600;">📷 Fotos e Inspirações (${photos.length})</span>
               <div style="display: flex; gap: 0.35rem;">
                 <label class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.725rem; cursor: pointer; margin-bottom: 0;" title="Bater foto com a câmera do celular">
@@ -828,7 +867,7 @@ export function renderReformasTab(state, statusFilter = 'todas', categoryFilter 
 
           <!-- Links de Inspirações / Peças / Materiais -->
           <div style="margin-bottom: 0.75rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
               <span style="font-weight: 600;">🔗 Links e Lojas (${links.length})</span>
               <button class="btn btn-secondary btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.725rem;" data-add-reforma-link-to="${ref.id}">+ Link</button>
             </div>
@@ -869,11 +908,11 @@ export function renderReformasTab(state, statusFilter = 'todas', categoryFilter 
           ` : ''}
         </div>
 
-        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; margin-top: 0.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; margin-top: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
           <div style="font-size: 0.75rem; color: var(--text-muted);">
             ${ref.targetDate ? `📅 Alvo: ${ref.targetDate}` : ''}
           </div>
-          <div style="display: flex; gap: 0.35rem;">
+          <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
             <button class="btn btn-secondary btn-sm" data-edit-reforma="${ref.id}" title="Editar Reforma">✏️ Editar</button>
             <button class="btn btn-secondary btn-sm" data-edit-reforma-status="${ref.id}">Alterar Status</button>
             <button class="btn btn-icon btn-sm" data-delete-reforma="${ref.id}" title="Excluir">🗑️</button>
@@ -958,12 +997,12 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
     return `
       <div class="project-card" data-sonho-id="${sonho.id}">
         <div>
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.35rem;">
             <span class="project-status-badge status-andamento">${sonho.status}</span>
             <span class="tag-room">${catObj.icon} ${catObj.label}</span>
           </div>
-          <h3 style="font-size: 1.1rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.4rem;">${sonho.title}</h3>
-          ${sonho.description ? `<p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">${sonho.description}</p>` : ''}
+          <h3 style="font-size: 1.1rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.4rem; word-break: break-word; overflow-wrap: anywhere;">${sonho.title}</h3>
+          ${sonho.description ? `<p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem; word-break: break-word; overflow-wrap: anywhere; line-height: 1.45;">${formatDescriptionWithLinks(sonho.description)}</p>` : ''}
 
           ${sonho.targetAmount > 0 ? `
             <div style="background: var(--bg-secondary); padding: 0.5rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 0.75rem; font-size: 0.8rem;">
@@ -994,7 +1033,7 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
 
           <!-- Fotos & Inspirações do Sonho -->
           <div style="margin-top: 0.75rem; border-top: 1px solid var(--border-subtle); padding-top: 0.5rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.35rem;">
               <span style="font-weight: 600;">✨ Fotos e Inspirações (${(sonho.photos || []).length})</span>
               <div style="display: flex; gap: 0.35rem;">
                 <label class="btn btn-secondary btn-sm" style="padding: 0.15rem 0.45rem; font-size: 0.7rem; cursor: pointer; margin-bottom: 0;" title="Bater foto com a câmera do celular">
@@ -1022,11 +1061,11 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; margin-top: 0.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; margin-top: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
           <div style="font-size: 0.75rem; color: var(--text-muted);">
             ${sonho.targetDate ? `🎯 Prazo: ${sonho.targetDate}` : ''}
           </div>
-          <div style="display: flex; gap: 0.35rem;">
+          <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
             <button class="btn btn-secondary btn-sm" data-edit-sonho="${sonho.id}" title="Editar Sonho">✏️ Editar</button>
             <button class="btn btn-secondary btn-sm" data-edit-sonho-status="${sonho.id}">Status</button>
             <button class="btn btn-icon btn-sm" data-delete-sonho="${sonho.id}" title="Excluir">🗑️</button>
@@ -3704,23 +3743,23 @@ export function renderShoppingTab(
         </div>
 
         <!-- Título e Loja -->
-        <h3 style="font-size: 1.05rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.25rem; color: var(--text-primary); ${isBought ? 'text-decoration: line-through;' : ''}">
+        <h3 style="font-size: 1.05rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.25rem; color: var(--text-primary); word-break: break-word; overflow-wrap: anywhere; ${isBought ? 'text-decoration: line-through;' : ''}">
           ${it.title}
         </h3>
 
         ${it.store ? `
-          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.3rem;">
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
             <span>🏷️</span> <strong>${it.store}</strong>
-            ${it.link ? `<a href="${it.link}" target="_blank" rel="noopener noreferrer" style="color: var(--brand-moss); font-size: 0.75rem; margin-left: 0.25rem; text-decoration: underline;" title="Abrir link da loja">🔗 Ver Loja</a>` : ''}
+            ${it.link ? `<a href="${it.link}" target="_blank" rel="noopener noreferrer" style="color: var(--brand-moss); font-size: 0.75rem; margin-left: 0.25rem; text-decoration: underline; word-break: break-all;" title="Abrir link da loja">🔗 Ver Loja</a>` : ''}
           </div>
         ` : (it.link ? `
-          <div style="font-size: 0.75rem; margin-bottom: 0.4rem;">
-            <a href="${it.link}" target="_blank" rel="noopener noreferrer" style="color: var(--brand-moss); text-decoration: underline;">🔗 Abrir link da loja</a>
+          <div style="font-size: 0.75rem; margin-bottom: 0.4rem; word-break: break-all;">
+            <a href="${it.link}" target="_blank" rel="noopener noreferrer" style="color: var(--brand-moss); text-decoration: underline; word-break: break-all;">🔗 Abrir link da loja</a>
           </div>
         ` : '')}
 
         <!-- Preço e Detalhes Financeiros -->
-        <div style="background: var(--bg-surface); padding: 0.5rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin: 0.5rem 0; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: var(--bg-surface); padding: 0.5rem 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin: 0.5rem 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem;">
           <div>
             <span style="font-size: 0.7rem; color: var(--text-muted); display: block;">${isBought ? 'Preço Pago:' : 'Preço Estimado / Visto:'}</span>
             <strong style="font-size: 1.15rem; color: ${isBought ? 'var(--success)' : 'var(--brand-moss-dark)'}; font-weight: 800;">
@@ -3737,13 +3776,13 @@ export function renderShoppingTab(
 
         <!-- Observações (Tamanho, voltagem, etc.) -->
         ${it.notes ? `
-          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem; line-height: 1.4; background: rgba(0,0,0,0.02); padding: 0.35rem 0.5rem; border-radius: var(--radius-sm); border-left: 2px solid var(--brand-moss);">
-            ${it.notes}
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem; line-height: 1.4; background: rgba(0,0,0,0.02); padding: 0.35rem 0.5rem; border-radius: var(--radius-sm); border-left: 2px solid var(--brand-moss); word-break: break-word; overflow-wrap: anywhere;">
+            ${formatDescriptionWithLinks(it.notes)}
           </p>
         ` : ''}
 
         <!-- Barra de Ações do Card -->
-        <div style="display: flex; gap: 0.4rem; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 0.6rem; margin-top: 0.4rem;">
+        <div style="display: flex; gap: 0.4rem; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 0.6rem; margin-top: 0.4rem; flex-wrap: wrap;">
           <button type="button" class="btn btn-sm ${isBought ? 'btn-secondary' : 'btn-primary'}" data-shopping-toggle-bought="${it.id}" style="flex: 1; justify-content: center; font-size: 0.78rem;">
             ${isBought ? '↩️ Desfazer Compra' : '✅ Marcar Comprado'}
           </button>
