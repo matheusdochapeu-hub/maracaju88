@@ -219,7 +219,9 @@ export function loadState() {
         ...(parsed.settings || {}),
         sheetsUrl: (parsed.settings && parsed.settings.sheetsUrl && parsed.settings.sheetsUrl.trim()) ? parsed.settings.sheetsUrl.trim() : initial.settings.sheetsUrl,
         sheetsToken: (parsed.settings && parsed.settings.sheetsToken && parsed.settings.sheetsToken.trim()) ? parsed.settings.sheetsToken.trim() : initial.settings.sheetsToken,
-        autoSync: true
+        autoSync: (parsed.settings && parsed.settings.autoSync !== undefined)
+          ? !!parsed.settings.autoSync
+          : (initial.settings.autoSync !== undefined ? initial.settings.autoSync : true)
       },
       tasks: Array.isArray(parsed.tasks) && parsed.tasks.length > 0 ? parsed.tasks : initial.tasks,
       history: parsed.history || {},
@@ -254,6 +256,17 @@ export function loadState() {
     ensureRecoveredPurchases(merged);
 
     deduplicatePets(merged);
+
+    // Migração: remove a chave legada assim que o estado novo já existe no
+    // localStorage. Antes ela ficava para sempre (com fotos em base64),
+    // consumindo cota e podendo ressuscitar dados antigos.
+    if (APP_CONFIG.legacyStorageKeys && APP_CONFIG.legacyStorageKeys.length > 0) {
+      try {
+        if (localStorage.getItem(APP_CONFIG.storageKey)) {
+          APP_CONFIG.legacyStorageKeys.forEach(legacyKey => localStorage.removeItem(legacyKey));
+        }
+      } catch (e) {}
+    }
     return merged;
   } catch (err) {
     console.error("Erro ao carregar estado do localStorage:", err);
@@ -262,9 +275,19 @@ export function loadState() {
 }
 
 let stateSavedListener = null;
+let stateSaveErrorListener = null;
 
 export function setOnStateSavedListener(fn) {
   stateSavedListener = fn;
+}
+
+/**
+ * Registra um callback chamado quando o saveState falha (ex: cota do
+ * localStorage cheia). Sem isso a alteração era perdida em silêncio,
+ * com toast de sucesso na tela.
+ */
+export function setOnStateSaveErrorListener(fn) {
+  stateSaveErrorListener = fn;
 }
 
 export function saveState(state) {
@@ -311,6 +334,11 @@ export function saveState(state) {
     return true;
   } catch (err) {
     console.error("Erro ao salvar estado no localStorage:", err);
+    if (typeof stateSaveErrorListener === 'function') {
+      try {
+        stateSaveErrorListener(err);
+      } catch (e) {}
+    }
     return false;
   }
 }
@@ -320,7 +348,8 @@ export function exportBackupJson(state) {
   const blob = new Blob([jsonStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  const dateStr = new Date().toISOString().split("T")[0];
+  const d = new Date();
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   a.href = url;
   a.download = `maracaju-backup-${dateStr}.json`;
   a.click();

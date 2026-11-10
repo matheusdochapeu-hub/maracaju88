@@ -2951,7 +2951,7 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
               <div style="font-size: 0.78rem; color: var(--text-secondary);">
                 📅 Data: <strong>${(h.data || '').split('-').reverse().join('/')}</strong>
                 ${h.petShopNome ? `• Local: <em>${h.petShopNome}</em>` : ''}
-                ${h.valor ? `• Valor: <strong>R$ ${Number(h.valor).toFixed(2).replace('.', ',')}</strong>` : ''}
+                ${h.valor ? `• Valor: <strong>${formatCurrencyWithSymbol(h.valor)}</strong>` : ''}
               </div>
               <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
                 ${h.tosa ? '✂️ Com Tosa ' : ''} ${h.corteUnhas ? '💅 Corte de Unhas ' : ''} ${h.observacoes ? `• ${h.observacoes}` : ''}
@@ -3406,7 +3406,7 @@ export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
                 ${b.tipo === 'casa' ? '🏠 Em Casa' : '🛁 Pet Shop'} ${b.local && b.tipo !== 'casa' ? `(${b.local})` : ''}
               </div>
               <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
-                📅 Data: ${b.data.split('-').reverse().join('/')} ${b.valor ? `• R$ ${Number(b.valor).toFixed(2).replace('.', ',')}` : ''}
+                📅 Data: ${b.data.split('-').reverse().join('/')} ${b.valor ? `• ${formatCurrencyWithSymbol(b.valor)}` : ''}
               </div>
               ${b.notas ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${b.notas}</div>` : ''}
             </div>

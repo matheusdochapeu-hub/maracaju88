@@ -1,4 +1,4 @@
-# AGENTS.md — Maracaju 88 (Casa, Mercado, VA & VR)
+﻿# AGENTS.md — Maracaju 88 (Casa, Mercado, VA & VR)
 
 > Contexto para agentes de IA. Escopo: **esta pasta**.
 
@@ -24,7 +24,7 @@ python -m http.server 8000   # abrir http://localhost:8000
 ## Testes
 
 ```powershell
-node --test test/**/*.test.js   # 119 testes
+node --test test/**/*.test.js   # 139 testes
 ```
 
 ## Deploy

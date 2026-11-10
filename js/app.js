@@ -20,7 +20,7 @@ import {
 //  MARACAJU - APP CONTROLLER PRINCIPAL (v1.3.3)
 // ============================================================
 
-import { loadState, saveState, exportBackupJson, importBackupJson, getInitialState, ensureRecoveredPurchases, setOnStateSavedListener } from './storage.js';
+import { loadState, saveState, exportBackupJson, importBackupJson, getInitialState, ensureRecoveredPurchases, setOnStateSavedListener, setOnStateSaveErrorListener } from './storage.js';
 import {
   getAuthSession,
   loginWithEmail,
@@ -267,6 +267,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Sincronização automática em nuvem: qualquer alteração salva localmente dispara auto-sync
   setOnStateSavedListener(() => {
     triggerAutoSyncIfEnabled();
+  });
+
+  // Avisa o usuário quando o navegador recusa a gravação (cota cheia), para a
+  // alteração não "sumir" com um toast de sucesso na tela.
+  let lastSaveErrorToast = 0;
+  setOnStateSaveErrorListener(() => {
+    const now = Date.now();
+    if (now - lastSaveErrorToast < 15000) return;
+    lastSaveErrorToast = now;
+    showToast('⚠️ Não foi possível salvar no aparelho (armazenamento cheio). Libere espaço ou remova fotos antigas para não perder alterações.', 'error', 8000);
   });
 
   // Render inicial ultra-rápido (< 20ms) a partir do cache local
@@ -2388,6 +2398,9 @@ function initSettingsModule() {
 let autoSyncTimeout = null;
 function triggerAutoSyncIfEnabled(immediate = false) {
   if (!state.settings.sheetsUrl) return;
+  // Respeita o botão "Sincronização automática" dos Ajustes. Antes o toggle
+  // era ignorado e o app continuava enviando backups com ele desligado.
+  if (state.settings.autoSync === false) return;
 
   const syncDot = document.getElementById('sync-dot');
   if (syncDot) {
@@ -5212,6 +5225,24 @@ function initPetsModule() {
     }
   });
 
+  // Remover foto do pet pela Pasta do Pet (aba Dados Cadastrais)
+  document.addEventListener('click', (e) => {
+    const removePhotoBtn = e.target.closest('[data-remove-pet-photo]');
+    if (!removePhotoBtn) return;
+    const petId = removePhotoBtn.getAttribute('data-remove-pet-photo');
+    if (!petId) return;
+    if (!confirm('Remover a foto deste pet?')) return;
+    const removido = removePetPhoto(state, petId, 0);
+    if (!removido) return;
+    saveState(state);
+    triggerAutoSyncIfEnabled();
+    renderPetFolderModal(state, petId, 'cadastrais');
+    currentTab = 'pets';
+    renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
+    refreshAllUI();
+    showToast('Foto do pet removida.', 'info');
+  });
+
   // Abrir modal de edição de Pet (suporta data-open-edit-pet e data-edit-pet)
   document.addEventListener('click', (e) => {
     const editBtn = e.target.closest('[data-open-edit-pet]') || e.target.closest('[data-edit-pet]');
@@ -5235,7 +5266,7 @@ function initPetsModule() {
         if (espEl) espEl.value = pet.especie || 'cachorro';
         if (sexoEl) sexoEl.value = pet.sexo || 'femea';
         if (nascEl) nascEl.value = pet.dataNascimento || '';
-        if (pesoEl) pesoEl.value = pet.peso || '';
+        if (pesoEl) pesoEl.value = pet.pesoKg || pet.peso || '';
         if (racaEl) racaEl.value = pet.raca || '';
         if (apelidoEl) apelidoEl.value = pet.apelido || '';
         if (vacStatusEl) vacStatusEl.checked = pet.vacinacaoEmDia !== false;
@@ -5520,11 +5551,13 @@ function initPetsModule() {
         const pesoInput = document.getElementById('pet-vermifugo-peso');
         const doseInput = document.getElementById('pet-vermifugo-dose');
         const proxInput = document.getElementById('pet-vermifugo-proxima-data');
-        if (pet && pet.peso) {
-          if (pesoInput) pesoInput.value = pet.peso;
-          if (doseInput) doseInput.value = formatPetDoseVermifugo(pet.peso);
+        const pesoPet = pet ? (parseFloat(pet.pesoKg || pet.peso) || 0) : 0;
+        if (pesoPet > 0) {
+          if (pesoInput && !pesoInput.value) pesoInput.value = pesoPet;
+          if (doseInput && !doseInput.value) doseInput.value = formatPetDoseVermifugo(pesoPet);
         }
-        if (proxInput && !proxInput.value) proxInput.value = addDaysToDateStr(getLocalDateString(), 365);
+        // Vermifugação é semestral por padrão (mesma regra de pets.js)
+        if (proxInput && !proxInput.value) proxInput.value = addDaysToDateStr(getLocalDateString(), 180);
       } else if (modalId === 'modal-add-pet-vacina') {
         const proxInput = document.getElementById('pet-vacina-proxima-data');
         if (proxInput && !proxInput.value) proxInput.value = addDaysToDateStr(getLocalDateString(), 365);
@@ -6029,12 +6062,19 @@ function initPetsModule() {
     openModal('modal-edit-pet-banho');
   }
 
+  let editPetVacinaOriginal = null;
+
   function openEditPetVacinaModal(petId, vacinaId) {
     let pet = (state.pets || []).find(p => p.id === petId);
     if (!pet) pet = (state.pets || []).find(p => (p.vacinas || []).some(v => v.id === vacinaId));
     if (!pet) return;
     const entry = (pet.vacinas || []).find(v => v.id === vacinaId);
     if (!entry) return;
+
+    editPetVacinaOriginal = {
+      dataAplicacao: entry.dataAplicacao || '',
+      dataProximaDose: entry.dataProximaDose || ''
+    };
 
     document.getElementById('edit-pet-vacina-id').value = entry.id;
     document.getElementById('edit-pet-vacina-pet-orig').value = pet.id;
@@ -6049,12 +6089,19 @@ function initPetsModule() {
     openModal('modal-edit-pet-vacina');
   }
 
+  let editPetVermifugoOriginal = null;
+
   function openEditPetVermifugoModal(petId, vermId) {
     let pet = (state.pets || []).find(p => p.id === petId);
     if (!pet) pet = (state.pets || []).find(p => (p.vermifugos || []).some(v => v.id === vermId));
     if (!pet) return;
     const entry = (pet.vermifugos || []).find(v => v.id === vermId);
     if (!entry) return;
+
+    editPetVermifugoOriginal = {
+      dataAplicacao: entry.dataAplicacao || '',
+      dataProximaDose: entry.dataProximaDose || ''
+    };
 
     document.getElementById('edit-pet-vermifugo-id').value = entry.id;
     document.getElementById('edit-pet-vermifugo-pet-orig').value = pet.id;
@@ -6249,7 +6296,18 @@ function initPetsModule() {
 
       const vacina = document.getElementById('edit-pet-vacina-nome')?.value?.trim() || 'Vacina';
       const dataAplicacao = document.getElementById('edit-pet-vacina-data')?.value || getLocalDateString();
-      const dataProximaDose = document.getElementById('edit-pet-vacina-proxima-data')?.value || addDaysToDateStr(dataAplicacao, 365);
+      const proximaInput = document.getElementById('edit-pet-vacina-proxima-data');
+      let dataProximaDose = proximaInput?.value || '';
+      // Vacinas são anuais: se o usuário mudou a data de aplicação e não tocou na
+      // próxima dose, recalcula em vez de manter a data antiga (que podia ficar
+      // anterior à aplicação e marcar a carteira como vencida).
+      if (!dataProximaDose) {
+        dataProximaDose = addDaysToDateStr(dataAplicacao, 365);
+      } else if (editPetVacinaOriginal &&
+                 dataProximaDose === editPetVacinaOriginal.dataProximaDose &&
+                 dataAplicacao !== editPetVacinaOriginal.dataAplicacao) {
+        dataProximaDose = addDaysToDateStr(dataAplicacao, 365);
+      }
       const lote = document.getElementById('edit-pet-vacina-lote')?.value?.trim() || '';
       const clinica = document.getElementById('edit-pet-vacina-clinica')?.value?.trim() || '';
       const notas = document.getElementById('edit-pet-vacina-notas')?.value?.trim() || '';
@@ -6289,7 +6347,17 @@ function initPetsModule() {
       const dataAplicacao = document.getElementById('edit-pet-vermifugo-data')?.value || getLocalDateString();
       const pesoAnimalKg = parseFloat(document.getElementById('edit-pet-vermifugo-peso')?.value) || 0;
       const dose = document.getElementById('edit-pet-vermifugo-dose')?.value?.trim() || formatPetDoseVermifugo(pesoAnimalKg);
-      const dataProximaDose = document.getElementById('edit-pet-vermifugo-proxima-data')?.value || addDaysToDateStr(dataAplicacao, 365);
+      const proximaInput = document.getElementById('edit-pet-vermifugo-proxima-data');
+      let dataProximaDose = proximaInput?.value || '';
+      // Vermifugação é semestral (180 dias) por padrão em pets.js; antes o fallback
+      // da edição usava 365 dias, divergindo do restante do app.
+      if (!dataProximaDose) {
+        dataProximaDose = addDaysToDateStr(dataAplicacao, 180);
+      } else if (editPetVermifugoOriginal &&
+                 dataProximaDose === editPetVermifugoOriginal.dataProximaDose &&
+                 dataAplicacao !== editPetVermifugoOriginal.dataAplicacao) {
+        dataProximaDose = addDaysToDateStr(dataAplicacao, 180);
+      }
       const notas = document.getElementById('edit-pet-vermifugo-notas')?.value?.trim() || '';
 
       updatePetVermifugo(state, petOrig || petId, vermId, {
@@ -6598,6 +6666,13 @@ function initPetsModule() {
 const activeModalStack = [];
 let isHandlingPopstate = false;
 
+// Trava o scroll do fundo enquanto houver modal aberto (evita o "scroll bleed"
+// no celular, em que a tela de trás rola ao arrastar sobre o modal).
+function syncBodyScrollLock() {
+  if (typeof document === 'undefined' || !document.body) return;
+  document.body.classList.toggle('modal-open', activeModalStack.length > 0);
+}
+
 function initModals() {
   document.addEventListener('click', (e) => {
     // Gatilho universal Câmera / Galeria
@@ -6659,6 +6734,16 @@ function initModals() {
 
   // Intercepta botão Voltar do celular (Android Back / Gestos) para fechar o modal aberto sem fechar o app
   window.addEventListener('popstate', (e) => {
+    // Fechamentos programáticos (ex.: salvar a edição de um pet aberta a partir da
+    // Pasta do Pet) chamam history.back(); ao voltar, o estado é o de um modal que
+    // continua aberto — fechá-lo faria a pasta sumir junto com o modal de edição.
+    const stateModal = e.state && e.state.maracajuModal;
+    const topModal = activeModalStack[activeModalStack.length - 1];
+    if (stateModal && stateModal === topModal) {
+      updateModalStackZIndexes();
+      return;
+    }
+
     if (activeModalStack.length > 0) {
       isHandlingPopstate = true;
       try {
@@ -6670,6 +6755,7 @@ function initModals() {
           playSubtleClick(state?.settings?.soundEnabled);
         }
         updateModalStackZIndexes();
+        syncBodyScrollLock();
       } finally {
         setTimeout(() => {
           isHandlingPopstate = false;
@@ -6716,6 +6802,7 @@ function openModal(id) {
         window.history.pushState({ maracajuModal: id }, '');
       } catch (err) {}
     }
+    syncBodyScrollLock();
     playSubtleClick(state?.settings?.soundEnabled);
   }
 }
@@ -6739,6 +6826,7 @@ function closeModal(id, fromPopstate = false) {
       el.style.zIndex = String(baseZIndex + (idx * 20));
     }
   });
+  syncBodyScrollLock();
 
   // Se o fechamento foi pelo botão/backdrop (e não pelo popstate), limpa o histórico
   if (!fromPopstate && !isHandlingPopstate) {
@@ -6754,7 +6842,8 @@ function closeModal(id, fromPopstate = false) {
 // MÓDULO SHOPPING: ROUPAS, ELETRODOMÉSTICOS & DESEJOS DO CASAL
 // ============================================================
 function initShoppingModule() {
-  const searchInput = document.getElementById('shopping-search-input');
+  const searchInput = document.getElementById('input-search-shopping') || document.getElementById('shopping-search-input');
+  const sortSelect = document.getElementById('shopping-sort-select');
   const categoryChips = document.getElementById('shopping-category-chips');
   const statusFilters = document.getElementById('shopping-status-filters');
   const personFilters = document.getElementById('shopping-person-filters');
@@ -6785,6 +6874,17 @@ function initShoppingModule() {
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       currentShoppingSearch = (e.target.value || '').trim();
+      if (currentTab === 'shopping') {
+        renderShoppingTab(state, currentShoppingCategory, currentShoppingStatus, currentShoppingForWhom, currentShoppingSearch, currentShoppingSort);
+      }
+    });
+  }
+
+  // 1.1 Ordenação (prioridade, preço, mais recentes)
+  if (sortSelect) {
+    sortSelect.value = currentShoppingSort;
+    sortSelect.addEventListener('change', (e) => {
+      currentShoppingSort = e.target.value || 'priority';
       if (currentTab === 'shopping') {
         renderShoppingTab(state, currentShoppingCategory, currentShoppingStatus, currentShoppingForWhom, currentShoppingSearch, currentShoppingSort);
       }
@@ -6846,8 +6946,12 @@ function initShoppingModule() {
   }
 
   // Botões de Adicionar Novo Item
-  document.querySelectorAll('#btn-open-add-shopping-item, #btn-quick-add-shopping, #btn-fab-add-shopping, #btn-empty-add-shopping-item').forEach(btn => {
-    btn.addEventListener('click', () => {
+  document.querySelectorAll('#btn-open-add-shopping-item, #btn-quick-add-shopping, #btn-fab-add-shopping, #btn-empty-add-shopping-item, #btn-open-add-shopping-fab').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      // Evita que o abridor genérico de modais ([data-open-modal]) abra o mesmo
+      // modal de novo sem limpar o formulário — era assim que o FAB reabria o
+      // último item editado e salvava por cima dele.
+      e.stopPropagation();
       openNewShoppingModal();
     });
   });

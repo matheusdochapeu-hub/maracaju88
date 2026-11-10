@@ -4,6 +4,42 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-10 14:50] - Revisão de Código, Correções de UX e Robustez da Edição de Pets (v2.7.2)
+
+### 🔍 Contexto
+Revisão completa do app após a entrega de edição de sub-registros de pets (v2.7.0) e da deduplicação de pets (v2.7.1): auditoria estática de IDs/handlers, revisão de sincronização, bateria de testes e revisão de UX desktop/celular.
+
+### 🛠️ Correções de bugs
+1. **Edição de pet zerava o peso:** o modal lia `pet.peso` (campo inexistente) em vez de `pet.pesoKg`; o campo abria vazio e salvar sobrescrevia o peso com 0. Corrigido em `app.js`.
+2. **Foto removida voltava:** `updatePet({fotos: []})` limpava o array mas não `pet.foto/photo/photoUrl` nem o espelho `MARACAJU_PET_AVATAR_*` do localStorage — o `deduplicatePets` restaurava a foto no load seguinte. Criado `persistPetAvatar()` em `pets.js`, usado por `addPetPhoto`, `removePetPhoto` e `updatePet` (inclui migração da chave quando o pet é renomeado).
+3. **Botão "Remover" foto da Pasta do Pet morto:** `data-remove-pet-photo` existia no HTML sem handler. Adicionada delegação que chama `removePetPhoto` + re-render.
+4. **Vacina/vermífugo com próxima dose errada:** alterar a data de aplicação mantinha a próxima dose antiga (podia ficar antes da aplicação e marcar a carteira como vencida). Agora, se o campo não foi tocado, recalcula (+365 dias vacina / +180 vermífugo); fallback da edição do vermífugo passou de 365 → 180, alinhado a `pets.js`.
+5. **Pasta do Pet fechava ao salvar uma edição:** `closeModal()` chamava `history.back()` e o `popstate` fechava o modal de baixo. Agora o popstate ignora o retorno para um modal que continua aberto.
+6. **Mercado/Shopping:** busca (`input-search-shopping` vs `shopping-search-input`) e ordenação nunca funcionaram; valores das opções (`price-asc`) não casavam com `filterShoppingItems` (`price_asc`). Ligados.
+7. **FAB de novo item do Shopping salvava por cima do último item editado:** o abridor genérico de modais não resetava o formulário. FAB incluído no fluxo `openNewShoppingModal()` (com `stopPropagation`).
+8. **Sincronização automática ignorava o toggle dos Ajustes:** `loadState` forçava `autoSync: true` e `triggerAutoSyncIfEnabled` não lia a preferência. Corrigido.
+9. **Datas "hoje" em UTC:** lançamentos entre 21h e 23h caíam no dia/mês seguinte. `pets.js` e o nome do backup JSON passaram a usar data local (`todayStr()`); `addDaysToDateStr` já tinha sido corrigido para não usar `toISOString()`.
+10. **`applyCloudBackup` mesclava exames/itens por índice:** exclusão/reordenação cruzava dados de registros diferentes. Agora mescla por `id` (com fallback para índice).
+11. **Service Worker devolvia `undefined` no fallback offline** (`Promise || Promise`): agora devolve resposta HTML de contingência e `Response` 504 para JS/CSS.
+
+### 🎨 UX (desktop + celular)
+1. Removido `user-scalable=no`/`maximum-scale=1` (zoom liberado, acessibilidade).
+2. Inputs a 16px no mobile (evita o auto-zoom do Safari/iOS ao focar).
+3. Modais: `dvh` + `env(safe-area-inset-*)`, `overscroll-behavior: contain` e trava de scroll do fundo (`body.modal-open`).
+4. `:focus-visible` global (navegação por teclado visível).
+5. Alvos de toque ≥40px em telas de toque (`pointer: coarse`).
+6. Toasts reposicionados no desktop (nav fica no topo); botão "Instalar App" vira ícone em telas estreitas; `--text-muted` escurecido para contraste AA.
+7. Falha de gravação no `localStorage` (cota cheia) agora avisa o usuário em vez de perder a alteração em silêncio.
+
+### 🧪 Testes
+- Novos: `test/ux-and-modal-regressions.test.js` (11 testes) cobrindo peso do pet, avatar persistido/renomeado, botão remover foto, `parseCurrency` em itens, busca/ordenação/FAB do shopping, toggle de auto-sync, scroll lock/popstate, viewport/inputs 16px e fallback do Service Worker.
+- Suíte completa: **139 testes** (1 falha apenas ambiental em `imports.test.js`, que usa `spawnSync` e é bloqueado pelo sandbox local; passa no CI).
+
+### 📦 Versão
+- Bump para **v2.7.2** em `config.js`, `sw.js` (`CACHE_NAME`) e `package.json`.
+
+---
+
 ## [2026-11-09 21:40] - Correção de Layout nos Cards de Reformas, Carro, Sonhos e Shopping (v2.6.9)
 
 ### 🔍 Problema Identificado & Causa Raiz

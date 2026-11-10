@@ -2,7 +2,25 @@
 //  MARACAJU - SERVICE WORKER (PWA Offline Cache)
 // ============================================================
 
-const CACHE_NAME = 'maracaju-v2.7.1';
+const CACHE_NAME = 'maracaju-v2.7.2';
+
+// Página de contingência quando o app abre offline e o index.html não está no cache
+const OFFLINE_HTML = `<!doctype html>
+<html lang="pt-BR"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maracaju — offline</title>
+<body style="font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:#f4f6f1;color:#19331d;padding:2rem;line-height:1.5">
+  <h1 style="font-size:1.3rem">📴 Você está sem conexão</h1>
+  <p>O Maracaju não encontrou esta página no cache do aparelho.</p>
+  <p>Conecte-se à internet e abra o app novamente.</p>
+</body></html>`;
+
+function offlineHtmlResponse() {
+  return new Response(OFFLINE_HTML, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+  });
+}
 
 const ASSETS_TO_CACHE = [
   './',
@@ -102,8 +120,10 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => {
-          return caches.match('./index.html', { ignoreSearch: true }) || caches.match('./', { ignoreSearch: true });
+        .catch(async () => {
+          return (await caches.match('./index.html', { ignoreSearch: true })) ||
+                 (await caches.match('./', { ignoreSearch: true })) ||
+                 offlineHtmlResponse();
         })
     );
     return;
@@ -122,8 +142,12 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => {
-          return caches.match(event.request, { ignoreSearch: true });
+        .catch(async () => {
+          return (await caches.match(event.request, { ignoreSearch: true })) ||
+                 new Response('// Recurso indisponível offline', {
+                   status: 504,
+                   headers: { 'Content-Type': 'text/javascript; charset=utf-8' }
+                 });
         })
     );
     return;
@@ -147,7 +171,7 @@ self.addEventListener('fetch', (event) => {
         });
 
         return networkResponse;
-      }).catch(() => null);
+      }).catch(() => new Response('', { status: 504 }));
     })
   );
 });

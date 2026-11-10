@@ -608,24 +608,30 @@ export function applyCloudBackup(currentState, cloudData) {
             mergedPet.fotos = [avatar];
             if (!mergedPet.photos || mergedPet.photos.length === 0) mergedPet.photos = [avatar];
           }
+          // Mescla sub-registros por id (e não por índice): quando um exame/item era
+          // excluído ou reordenado, o merge por posição cruzava os dados de dois
+          // registros diferentes. Fallback para índice mantém compatibilidade com
+          // registros antigos sem id.
+          const mergeSubRecord = (localRec, cloudArr, idx) => {
+            const cloudRec = (localRec && localRec.id
+              ? cloudArr.find(c => c && c.id === localRec.id)
+              : null) || cloudArr[idx] || {};
+            const merged = { ...cloudRec, ...localRec };
+            if (localRec && localRec.foto && !cloudRec.foto) merged.foto = localRec.foto;
+            if (localRec && Array.isArray(localRec.fotos) && localRec.fotos.length > 0 &&
+                (!cloudRec.fotos || cloudRec.fotos.length === 0)) {
+              merged.fotos = localRec.fotos;
+            }
+            return merged;
+          };
+
           if (Array.isArray(existing.exames)) {
-            mergedPet.exames = existing.exames.map((ex, idx) => {
-              const cloudEx = (Array.isArray(cloudP.exames) && cloudP.exames[idx]) ? cloudP.exames[idx] : {};
-              const mergedEx = { ...cloudEx, ...ex };
-              if (ex.foto && !cloudEx.foto) mergedEx.foto = ex.foto;
-              if (Array.isArray(ex.fotos) && ex.fotos.length > 0 && (!cloudEx.fotos || cloudEx.fotos.length === 0)) {
-                mergedEx.fotos = ex.fotos;
-              }
-              return mergedEx;
-            });
+            const cloudExames = Array.isArray(cloudP.exames) ? cloudP.exames : [];
+            mergedPet.exames = existing.exames.map((ex, idx) => mergeSubRecord(ex, cloudExames, idx));
           }
           if (Array.isArray(existing.itens)) {
-            mergedPet.itens = existing.itens.map((it, idx) => {
-              const cloudIt = (Array.isArray(cloudP.itens) && cloudP.itens[idx]) ? cloudP.itens[idx] : {};
-              const mergedIt = { ...cloudIt, ...it };
-              if (it.foto && !cloudIt.foto) mergedIt.foto = it.foto;
-              return mergedIt;
-            });
+            const cloudItens = Array.isArray(cloudP.itens) ? cloudP.itens : [];
+            mergedPet.itens = existing.itens.map((it, idx) => mergeSubRecord(it, cloudItens, idx));
           }
           map.set(cloudP.id, mergedPet);
         }

@@ -2438,3 +2438,74 @@ input[type="file"].form-control::file-selector-button:hover {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
   outline: none !important;
 }
+
+/* ============================================================
+   AJUSTES DE UX / ACESSIBILIDADE (desktop + celular)
+   ============================================================ */
+
+/* Foco visível para quem navega por teclado (antes só os inputs tinham feedback) */
+:focus-visible {
+  outline: 2px solid var(--brand-moss);
+  outline-offset: 2px;
+}
+
+/* Trava o scroll do fundo enquanto há modal aberto (evita scroll bleed no celular) */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Alvos de toque confortáveis em telas de toque */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 40px; padding: 0.45rem 0.7rem; }
+  .btn-pill { min-height: 40px; }
+  .btn-icon { width: 42px; height: 42px; }
+  .btn-icon.btn-sm { width: 40px; height: 40px; }
+  .modal-close { min-width: 40px; min-height: 40px; }
+  .chip { min-height: 36px; }
+}
+
+/* iOS: input com font-size < 16px faz o Safari dar zoom ao focar.
+   O !important vence o font-size inline de alguns campos do app. */
+@media (max-width: 767px) {
+  .form-control:not(#category-input-icon),
+  .form-input,
+  .form-select,
+  textarea.form-control {
+    font-size: 16px !important;
+  }
+}
+
+/* Modal: dvh acompanha a barra de endereço móvel e respeita a safe area */
+.modal-content {
+  max-height: 90vh;
+  max-height: min(90vh, 90dvh);
+  overscroll-behavior: contain;
+}
+
+.modal-overlay {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+  }
+  .modal-content {
+    max-height: 88dvh;
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* No desktop a navegação fica no topo: o toast não precisa flutuar tão alto */
+@media (min-width: 768px) {
+  .toast-container { bottom: 1.5rem; }
+}
+
+/* Telas estreitas: botão Instalar vira só o ícone para o header não estourar */
+@media (max-width: 430px) {
+  .install-app-btn span:last-child { display: none; }
+  .install-app-btn { padding: 0.45rem 0.55rem; }
+  .brand-text h1 { font-size: 0.95rem; }
+}

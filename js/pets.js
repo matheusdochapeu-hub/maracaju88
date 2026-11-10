@@ -6,6 +6,19 @@
 import { parseCurrency } from './currency.js';
 
 /**
+ * Data de "hoje" no fuso local, no formato 'YYYY-MM-DD'.
+ * `toISOString()` converte para UTC e, no Brasil (UTC-3), devolve o dia
+ * seguinte entre 21:00 e 23:59 — o que jogava lançamentos para o dia/mês errado.
+ */
+function todayStr() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Calcula a idade do pet em anos e meses com precisão.
  * @param {string} birthDateStr Formato 'YYYY-MM-DD'
  * @param {Date|string} referenceDate Data de referência (padrão: hoje)
@@ -372,6 +385,7 @@ export function updatePet(state, petId, data) {
   if (!state.pets) state.pets = [];
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) throw new Error('Pet não encontrado.');
+  const oldNome = pet.nome;
 
   if (data.nome !== undefined) {
     const nome = data.nome.trim();
@@ -397,6 +411,10 @@ export function updatePet(state, petId, data) {
   if (newFotos !== null) {
     pet.fotos = newFotos;
     pet.photos = newFotos;
+    persistPetAvatar(pet, oldNome);
+  } else if (data.nome !== undefined && oldNome !== pet.nome) {
+    // Renomear também precisa migrar a chave de avatar guardada por nome
+    persistPetAvatar(pet, oldNome);
   }
 
   pet.updatedAt = new Date().toISOString();
@@ -422,6 +440,9 @@ export function deletePet(state, petId) {
     if (typeof localStorage !== 'undefined' && deleted) {
       try {
         localStorage.removeItem('MARACAJU_PET_AVATAR_' + deleted.id);
+        if (deleted.nome) {
+          localStorage.removeItem('MARACAJU_PET_AVATAR_' + deleted.nome.trim().toLowerCase());
+        }
       } catch (e) {}
     }
     return deleted;
@@ -455,6 +476,48 @@ export function getPetAvatarUrl(pet) {
   return null;
 }
 
+function petAvatarStorageKeys(pet, nomeOverride) {
+  const keys = [];
+  if (pet && pet.id) keys.push('MARACAJU_PET_AVATAR_' + pet.id);
+  const nome = nomeOverride !== undefined ? nomeOverride : (pet && pet.nome);
+  if (nome) keys.push('MARACAJU_PET_AVATAR_' + String(nome).trim().toLowerCase());
+  return keys;
+}
+
+/**
+ * Mantém pet.foto/photo/photoUrl e o espelho em localStorage coerentes com pet.fotos.
+ * Sem isso, a foto "removida" voltava no próximo load através do restore de avatar
+ * do deduplicatePets, e uma foto nova não ficava disponível offline.
+ */
+function persistPetAvatar(pet, oldNome) {
+  if (!pet) return;
+  const fotos = Array.isArray(pet.fotos) ? pet.fotos : (Array.isArray(pet.photos) ? pet.photos : []);
+  const first = fotos[0] || null;
+
+  if (first) {
+    pet.foto = first;
+    pet.photo = first;
+    pet.photoUrl = first;
+  } else {
+    delete pet.foto;
+    delete pet.photo;
+    delete pet.photoUrl;
+  }
+
+  if (typeof localStorage === 'undefined' || !localStorage) return;
+  try {
+    if (oldNome && oldNome !== pet.nome) {
+      localStorage.removeItem('MARACAJU_PET_AVATAR_' + String(oldNome).trim().toLowerCase());
+    }
+    petAvatarStorageKeys(pet).forEach((key) => {
+      if (first) localStorage.setItem(key, first);
+      else localStorage.removeItem(key);
+    });
+  } catch (e) {
+    console.warn('[Pets] Falha ao persistir avatar no localStorage:', e);
+  }
+}
+
 /**
  * Adiciona uma foto ao pet (coloca no início para ser o avatar ativo) e garante
  * persistência no localStorage para nunca sumir em sincronizações com a nuvem.
@@ -465,21 +528,8 @@ export function addPetPhoto(state, petId, photoDataUrl) {
   if (!pet.fotos) pet.fotos = [];
   pet.fotos.unshift(photoDataUrl);
   pet.photos = pet.fotos;
-  pet.foto = photoDataUrl;
-  pet.photo = photoDataUrl;
-  pet.photoUrl = photoDataUrl;
   pet.updatedAt = new Date().toISOString();
-
-  if (typeof localStorage !== 'undefined') {
-    try {
-      localStorage.setItem('MARACAJU_PET_AVATAR_' + pet.id, photoDataUrl);
-      if (pet.nome) {
-        localStorage.setItem('MARACAJU_PET_AVATAR_' + pet.nome.trim().toLowerCase(), photoDataUrl);
-      }
-    } catch (e) {
-      console.warn('[Pets] LocalStorage quota excedida ao salvar avatar:', e);
-    }
-  }
+  persistPetAvatar(pet);
   return pet;
 }
 
@@ -492,28 +542,8 @@ export function removePetPhoto(state, petId, photoIdx) {
   if (photoIdx >= 0 && photoIdx < pet.fotos.length) {
     pet.fotos.splice(photoIdx, 1);
     pet.photos = pet.fotos;
-    if (pet.fotos.length === 0) {
-      delete pet.foto;
-      delete pet.photo;
-      delete pet.photoUrl;
-      if (typeof localStorage !== 'undefined') {
-        try {
-          localStorage.removeItem('MARACAJU_PET_AVATAR_' + pet.id);
-          if (pet.nome) localStorage.removeItem('MARACAJU_PET_AVATAR_' + pet.nome.trim().toLowerCase());
-        } catch (e) {}
-      }
-    } else {
-      pet.foto = pet.fotos[0];
-      pet.photo = pet.fotos[0];
-      pet.photoUrl = pet.fotos[0];
-      if (typeof localStorage !== 'undefined') {
-        try {
-          localStorage.setItem('MARACAJU_PET_AVATAR_' + pet.id, pet.fotos[0]);
-          if (pet.nome) localStorage.setItem('MARACAJU_PET_AVATAR_' + pet.nome.trim().toLowerCase(), pet.fotos[0]);
-        } catch (e) {}
-      }
-    }
     pet.updatedAt = new Date().toISOString();
+    persistPetAvatar(pet);
     return true;
   }
   return false;
@@ -653,7 +683,7 @@ export function addPetRacaoPurchase(state, petId, racaoData) {
   }
   if (duracaoDias <= 0) duracaoDias = 30;
 
-  const dataCompra = racaoData.dataCompra || new Date().toISOString().split('T')[0];
+  const dataCompra = racaoData.dataCompra || todayStr();
   const dataPrevisaoFim = racaoData.dataPrevisaoFim || addDaysToDateStr(dataCompra, duracaoDias);
 
   const entry = {
@@ -695,7 +725,7 @@ export function updatePetRacaoPurchase(state, petId, racaoId, racaoData) {
   }
   if (!duracaoDias || duracaoDias <= 0) duracaoDias = entry.duracaoDias || 30;
 
-  const dataCompra = racaoData.dataCompra || entry.dataCompra || new Date().toISOString().split('T')[0];
+  const dataCompra = racaoData.dataCompra || entry.dataCompra || todayStr();
   const dataPrevisaoFim = racaoData.dataPrevisaoFim || addDaysToDateStr(dataCompra, duracaoDias);
 
   entry.dataCompra = dataCompra;
@@ -740,7 +770,7 @@ export function addPetAreiaPurchase(state, petId, areiaData) {
   if (!pet.areia) pet.areia = [];
 
   const duracaoDias = parseInt(areiaData.duracaoDias, 10) || 25;
-  const dataCompra = areiaData.dataCompra || new Date().toISOString().split('T')[0];
+  const dataCompra = areiaData.dataCompra || todayStr();
   const dataPrevisaoFim = areiaData.dataPrevisaoFim || addDaysToDateStr(dataCompra, duracaoDias);
 
   const entry = {
@@ -773,7 +803,7 @@ export function updatePetAreiaPurchase(state, petId, areiaId, areiaData) {
 
   const newPetId = areiaData.petId || petId;
   const duracaoDias = areiaData.duracaoDias !== undefined ? parseInt(areiaData.duracaoDias, 10) : (areiaData.duracaoDiasEstimada !== undefined ? parseInt(areiaData.duracaoDiasEstimada, 10) : (entry.duracaoDias || 25));
-  const dataCompra = areiaData.dataCompra || entry.dataCompra || new Date().toISOString().split('T')[0];
+  const dataCompra = areiaData.dataCompra || entry.dataCompra || todayStr();
   const dataPrevisaoFim = areiaData.dataPrevisaoFim || addDaysToDateStr(dataCompra, duracaoDias);
 
   entry.dataCompra = dataCompra;
@@ -818,7 +848,7 @@ export function addPetBanho(state, petId, banhoData) {
 
   const entry = {
     id: `banho_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    data: banhoData.data || new Date().toISOString().split('T')[0],
+    data: banhoData.data || todayStr(),
     tipo: banhoData.tipo === 'petshop' ? 'petshop' : 'casa',
     local: (banhoData.local || '').trim() || (banhoData.tipo === 'petshop' ? 'Pet Shop' : 'Em Casa'),
     valor: parseCurrency(banhoData.valor || 0),
@@ -886,7 +916,7 @@ export function addPetVacina(state, petId, vacinaData) {
   const vacinaNome = (vacinaData.vacina || vacinaData.nome || vacinaData.tipoVacina || '').trim();
   if (!vacinaNome) throw new Error('Informe o nome da vacina.');
 
-  const dataAplicacao = vacinaData.dataAplicacao || new Date().toISOString().split('T')[0];
+  const dataAplicacao = vacinaData.dataAplicacao || todayStr();
   // Vacinas são anuais por padrão (1 ano após aplicação)
   const dataProximaDose = vacinaData.dataProximaDose || addDaysToDateStr(dataAplicacao, 365);
 
@@ -924,7 +954,7 @@ export function updatePetVacina(state, petId, vacinaId, vacinaData) {
 
   const newPetId = vacinaData.petId || petId;
   const vacinaNome = (vacinaData.vacina || vacinaData.nome || vacinaData.tipoVacina || entry.vacina || '').trim();
-  const dataAplicacao = vacinaData.dataAplicacao || entry.dataAplicacao || new Date().toISOString().split('T')[0];
+  const dataAplicacao = vacinaData.dataAplicacao || entry.dataAplicacao || todayStr();
   const dataProximaDose = vacinaData.dataProximaDose || vacinaData.proximaData || entry.dataProximaDose || addDaysToDateStr(dataAplicacao, 365);
 
   entry.vacina = vacinaNome;
@@ -972,7 +1002,7 @@ export function addPetVermifugo(state, petId, vermifugoData) {
   if (!pet) throw new Error('Pet não encontrado.');
   if (!pet.vermifugos) pet.vermifugos = [];
 
-  const dataAplicacao = vermifugoData.dataAplicacao || new Date().toISOString().split('T')[0];
+  const dataAplicacao = vermifugoData.dataAplicacao || todayStr();
   const intervaloDias = parseInt(vermifugoData.intervaloDias, 10) || 180; // semestral por padrão
   const dataProximaDose = vermifugoData.dataProximaDose || addDaysToDateStr(dataAplicacao, intervaloDias);
   const pesoAnimalKg = parseFloat(vermifugoData.pesoAnimalKg || pet.pesoKg) || 0;
@@ -1005,7 +1035,7 @@ export function updatePetVermifugo(state, petId, vermifugoId, vermifugoData) {
   if (!entry) throw new Error('Registro de vermífugo não encontrado.');
 
   const newPetId = vermifugoData.petId || petId;
-  const dataAplicacao = vermifugoData.dataAplicacao || entry.dataAplicacao || new Date().toISOString().split('T')[0];
+  const dataAplicacao = vermifugoData.dataAplicacao || entry.dataAplicacao || todayStr();
   const intervaloDias = parseInt(vermifugoData.intervaloDias, 10) || 180;
   const dataProximaDose = vermifugoData.dataProximaDose || vermifugoData.proximaData || entry.dataProximaDose || addDaysToDateStr(dataAplicacao, intervaloDias);
   const pesoAnimalKg = parseFloat(vermifugoData.pesoAnimalKg || vermifugoData.pesoKg || entry.pesoAnimalKg || targetPet.pesoKg) || 0;
@@ -1053,7 +1083,7 @@ export function addPetExame(state, petId, exameData) {
 
   const entry = {
     id: `ex_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    data: exameData.data || new Date().toISOString().split('T')[0],
+    data: exameData.data || todayStr(),
     tipo: (exameData.tipo || 'Consulta Veterinária').trim(),
     clinica: (exameData.clinica || '').trim(),
     veterinario: (exameData.veterinario || '').trim(),
@@ -1214,8 +1244,8 @@ export function addPetItem(state, petId, itemData) {
     petId: pet.id,
     nome,
     tipo: itemData.tipo || 'comedouro',
-    dataCompra: itemData.dataCompra || new Date().toISOString().substring(0, 10),
-    valor: Number(itemData.valor || 0),
+    dataCompra: itemData.dataCompra || todayStr(),
+    valor: parseCurrency(itemData.valor),
     loja: (itemData.loja || '').trim(),
     observacoes: (itemData.observacoes || '').trim(),
     fotos: Array.isArray(itemData.fotos) ? [...itemData.fotos] : (itemData.foto ? [itemData.foto] : []),
@@ -1247,7 +1277,7 @@ export function updatePetItem(state, petId, itemId, itemData) {
   }
   if (itemData.tipo !== undefined) entry.tipo = itemData.tipo;
   if (itemData.dataCompra !== undefined) entry.dataCompra = itemData.dataCompra;
-  if (itemData.valor !== undefined) entry.valor = Number(itemData.valor || 0);
+  if (itemData.valor !== undefined) entry.valor = parseCurrency(itemData.valor);
   if (itemData.loja !== undefined) entry.loja = (itemData.loja || '').trim();
   if (itemData.observacoes !== undefined) entry.observacoes = (itemData.observacoes || '').trim();
   if (Array.isArray(itemData.fotos)) entry.fotos = [...itemData.fotos];

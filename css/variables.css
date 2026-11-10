@@ -16,7 +16,7 @@
   /* Texto com alto contraste e leitura repousante */
   --text-primary: #19331d;     /* Verde musgo escuro / Floresta profunda */
   --text-secondary: #405943;   /* Musgo médio aconchegante */
-  --text-muted: #6b826f;       /* Cinza esverdeado para legendas e dicas */
+  --text-muted: #5a7260;       /* Cinza esverdeado para legendas e dicas (contraste AA) */
   --text-inverse: #ffffff;
 
   /* Acentos da Marca Maracaju 88 - Verde Musgo & Complementares */
