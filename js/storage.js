@@ -12,6 +12,7 @@ import {
   INITIAL_PETS
 } from './config.js';
 import { DEFAULT_CATEGORIES } from './categories.js';
+import { deduplicatePets } from './pets.js';
 import { getMonthlyBenefitDetails, getCurrentBenefitCycleKey } from './benefits.js';
 
 /**
@@ -171,6 +172,7 @@ export function getInitialState() {
     compras: [],
     comprasRegistros: [],
     pets: JSON.parse(JSON.stringify(INITIAL_PETS)),
+    deletedPetIds: [],
     catalog: [],
     categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)),
     settings: {
@@ -227,6 +229,7 @@ export function loadState() {
       compras: Array.isArray(parsed.compras) ? parsed.compras : initial.compras,
       comprasRegistros: Array.isArray(parsed.comprasRegistros) ? parsed.comprasRegistros : initial.comprasRegistros,
       pets: Array.isArray(parsed.pets) ? parsed.pets : JSON.parse(JSON.stringify(INITIAL_PETS)),
+      deletedPetIds: Array.isArray(parsed.deletedPetIds) ? parsed.deletedPetIds : [],
       catalog: Array.isArray(parsed.catalog) ? parsed.catalog : [],
       categories: {
         tarefas: (parsed.categories && Array.isArray(parsed.categories.tarefas) && parsed.categories.tarefas.length > 0)
@@ -250,6 +253,7 @@ export function loadState() {
     // Garante recuperação automática e permanente das notas fiscais do casal
     ensureRecoveredPurchases(merged);
 
+    deduplicatePets(merged);
     return merged;
   } catch (err) {
     console.error("Erro ao carregar estado do localStorage:", err);

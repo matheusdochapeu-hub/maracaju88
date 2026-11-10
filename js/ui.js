@@ -2630,9 +2630,7 @@ function renderPetsMainListView(container, state, pets, speciesFilter, searchQue
     const isGato = pet.especie === 'gato';
     const speciesEmoji = isGato ? '🐱' : (isCachorro ? '🐶' : '🐾');
 
-    const photoSrc = (pet.fotos && pet.fotos.length > 0 && pet.fotos[0]) ||
-                     (pet.photos && pet.photos.length > 0 && pet.photos[0]) ||
-                     null;
+    const photoSrc = getPetAvatarUrl(pet);
 
     return `
       <div class="pet-card" id="pet-card-${pet.id}" data-pet-id="${pet.id}">
@@ -2747,8 +2745,8 @@ function renderPetCategoryView(container, state, subTab, selectedPetId, pets) {
     <div class="pet-active-filter-banner">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
         <span style="font-size: 1.25rem;">
-          ${(selectedPet.fotos && selectedPet.fotos[0]) || (selectedPet.photos && selectedPet.photos[0]) || selectedPet.foto || selectedPet.photo
-            ? `<img src="${(selectedPet.fotos && selectedPet.fotos[0]) || (selectedPet.photos && selectedPet.photos[0]) || selectedPet.foto || selectedPet.photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border-subtle);" />`
+          ${getPetAvatarUrl(selectedPet)
+            ? `<img src="${getPetAvatarUrl(selectedPet)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1.5px solid var(--border-subtle);" />`
             : (selectedPet.especie === 'gato' ? '🐱' : '🐶')}
         </span>
         <div>
@@ -3240,9 +3238,7 @@ export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
   const isCachorro = (pet.especie || 'cachorro') === 'cachorro';
   const isGato = pet.especie === 'gato';
   const speciesEmoji = isGato ? '🐱' : (isCachorro ? '🐶' : '🐾');
-  const photoSrc = (pet.fotos && pet.fotos.length > 0 && pet.fotos[0]) ||
-                   (pet.photos && pet.photos.length > 0 && pet.photos[0]) ||
-                   null;
+  const photoSrc = getPetAvatarUrl(pet);
 
   // Header do Modal
   const headerEl = document.getElementById('pet-folder-header');
@@ -3532,6 +3528,47 @@ export function renderPetFolderModal(state, petId, activeFolderTab = 'racao') {
             </div>
           </div>
         `).join('')}
+      </div>
+    `;
+  } else if (activeFolderTab === 'itens') {
+    const list = Array.isArray(pet.itens) ? pet.itens : [];
+    const tipoLabels = {
+      comedouro: { label: 'Comedouro/Bebedouro', icon: '🥣' },
+      coleira: { label: 'Coleira/Guia/Peitoral', icon: '🦮' },
+      brinquedo: { label: 'Brinquedo', icon: '🧸' },
+      cama_transporte: { label: 'Caminha/Transporte', icon: '🧺' },
+      outros: { label: 'Outros Acessórios', icon: '🦴' }
+    };
+    const totalInvestido = list.reduce((acc, it) => acc + (Number(it.valor) || 0), 0);
+
+    bodyEl.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
+        <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">🦴 Itens & Acessórios (${formatCurrencyWithSymbol(totalInvestido)})</span>
+        <button type="button" class="btn btn-secondary btn-sm" data-action-add-item="${pet.id}">+ Lançar Item</button>
+      </div>
+
+      <div class="pet-records-list">
+        ${list.length === 0 ? `<p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1.5rem;">Nenhum item ou acessório cadastrado ainda.</p>` : list.map(it => {
+          const tipoInfo = tipoLabels[it.tipo] || tipoLabels.outros;
+          const fotos = Array.isArray(it.fotos) ? it.fotos : (it.foto ? [it.foto] : []);
+          return `
+          <div class="pet-sub-entry-card">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 700; font-size: 0.85rem; color: var(--brand-moss-dark);">${it.nome}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                ${tipoInfo.icon} ${tipoInfo.label} • 📅 Compra: ${(it.dataCompra || '').split('-').reverse().join('/')}
+                ${it.valor ? ` • Valor: ${formatCurrencyWithSymbol(it.valor)}` : ''}
+                ${it.loja ? ` • Loja: ${it.loja}` : ''}
+              </div>
+              ${it.observacoes ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${it.observacoes}</div>` : ''}
+              ${fotos.length ? `<div style="display: flex; gap: 0.4rem; margin-top: 6px; overflow-x: auto;">${fotos.map(src => `<img src="${src}" alt="Item" style="width: 50px; height: 50px; border-radius: 6px; object-fit: cover; cursor: pointer;" data-view-photo="${src}" />`).join('')}</div>` : ''}
+            </div>
+            <div style="display: flex; gap: 0.25rem; align-items: center;">
+              <button type="button" class="btn btn-icon btn-sm" data-edit-pet-item="${it.id}" data-pet-id="${pet.id}" title="Editar">✏️</button>
+              <button type="button" class="btn btn-icon btn-sm" data-del-pet-item="${it.id}" data-pet-id="${pet.id}" title="Excluir">🗑️</button>
+            </div>
+          </div>`;
+        }).join('')}
       </div>
     `;
   } else if (activeFolderTab === 'cadastrais') {

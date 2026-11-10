@@ -1,3 +1,4 @@
+import { deduplicatePets, getPetAvatarUrl } from './pets.js';
 import { DEFAULT_ROOM_CATEGORIES } from './categories.js';
 import { getMonthlyBenefitDetails, getCurrentBenefitCycleKey } from './benefits.js';
 // ============================================================
@@ -114,6 +115,7 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
         photos: stripPhotosArr(it.photos)
       })) : []
     })),
+    deletedPetIds: Array.isArray(state.deletedPetIds) ? state.deletedPetIds : [],
     pets: (state.pets || []).map(p => ({
       ...p,
       photoUrl: stripBase64(p.photoUrl),
@@ -555,56 +557,84 @@ export function applyCloudBackup(currentState, cloudData) {
       });
       return Array.from(map.values());
     })(),
+    deletedPetIds: (() => {
+      const local = Array.isArray(safeCurrent.deletedPetIds) ? safeCurrent.deletedPetIds : [];
+      const cloud = Array.isArray(cloudData.deletedPetIds) ? cloudData.deletedPetIds : [];
+      return Array.from(new Set([...local, ...cloud]));
+    })(),
     pets: (() => {
       const cloudList = Array.isArray(cloudData.pets) ? cloudData.pets : [];
       const localList = Array.isArray(safeCurrent.pets) ? safeCurrent.pets : [];
-      if (cloudList.length === 0) return localList;
-      if (localList.length === 0) return cloudList;
+      const deletedIds = new Set([
+        ...(Array.isArray(safeCurrent.deletedPetIds) ? safeCurrent.deletedPetIds : []),
+        ...(Array.isArray(cloudData.deletedPetIds) ? cloudData.deletedPetIds : [])
+      ]);
+
+      if (cloudList.length === 0 && localList.length === 0) return [];
       const map = new Map();
-      localList.forEach(p => { if (p && p.id) map.set(p.id, p); });
-      cloudList.forEach(cloudP => {
-        if (cloudP && cloudP.id) {
-          const existing = map.get(cloudP.id);
-          if (!existing) {
-            map.set(cloudP.id, cloudP);
-          } else {
-            const mergedPet = { ...existing, ...cloudP };
-            // Preserva fotos do perfil do pet
-            if (existing.foto && !cloudP.foto) mergedPet.foto = existing.foto;
-            if (existing.photo && !cloudP.photo) mergedPet.photo = existing.photo;
-            if (existing.photoUrl && !cloudP.photoUrl) mergedPet.photoUrl = existing.photoUrl;
-            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!cloudP.photos || cloudP.photos.length === 0)) {
-              mergedPet.photos = existing.photos;
-            }
-            if (Array.isArray(existing.fotos) && existing.fotos.length > 0 && (!cloudP.fotos || cloudP.fotos.length === 0)) {
-              mergedPet.fotos = existing.fotos;
-            }
-            // Preserva fotos de exames
-            if (Array.isArray(existing.exames)) {
-              mergedPet.exames = existing.exames.map((ex, idx) => {
-                const cloudEx = (Array.isArray(cloudP.exames) && cloudP.exames[idx]) ? cloudP.exames[idx] : {};
-                const mergedEx = { ...cloudEx, ...ex };
-                if (ex.foto && !cloudEx.foto) mergedEx.foto = ex.foto;
-                if (Array.isArray(ex.fotos) && ex.fotos.length > 0 && (!cloudEx.fotos || cloudEx.fotos.length === 0)) {
-                  mergedEx.fotos = ex.fotos;
-                }
-                return mergedEx;
-              });
-            }
-            // Preserva fotos de itens/acessórios
-            if (Array.isArray(existing.itens)) {
-              mergedPet.itens = existing.itens.map((it, idx) => {
-                const cloudIt = (Array.isArray(cloudP.itens) && cloudP.itens[idx]) ? cloudP.itens[idx] : {};
-                const mergedIt = { ...cloudIt, ...it };
-                if (it.foto && !cloudIt.foto) mergedIt.foto = it.foto;
-                return mergedIt;
-              });
-            }
-            map.set(cloudP.id, mergedPet);
-          }
+      localList.forEach(p => {
+        if (p && p.id && !deletedIds.has(p.id)) {
+          map.set(p.id, p);
         }
       });
-      return Array.from(map.values());
+
+      cloudList.forEach(cloudP => {
+        if (!cloudP || !cloudP.id || deletedIds.has(cloudP.id)) return;
+        const existing = map.get(cloudP.id);
+        if (!existing) {
+          // Checa se já existe pet com o mesmo nome e espécie para evitar duplicidade
+          const existingByName = Array.from(map.values()).find(
+            p => (p.nome || p.name || '').trim().toLowerCase() === (cloudP.nome || cloudP.name || '').trim().toLowerCase()
+          );
+          if (existingByName) return;
+          map.set(cloudP.id, cloudP);
+        } else {
+          const mergedPet = { ...existing, ...cloudP };
+          // Preserva fotos do perfil do pet
+          if (existing.foto && !cloudP.foto) mergedPet.foto = existing.foto;
+          if (existing.photo && !cloudP.photo) mergedPet.photo = existing.photo;
+          if (existing.photoUrl && !cloudP.photoUrl) mergedPet.photoUrl = existing.photoUrl;
+          if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!cloudP.photos || cloudP.photos.length === 0)) {
+            mergedPet.photos = existing.photos;
+          }
+          if (Array.isArray(existing.fotos) && existing.fotos.length > 0 && (!cloudP.fotos || cloudP.fotos.length === 0)) {
+            mergedPet.fotos = existing.fotos;
+          }
+          const avatar = getPetAvatarUrl(existing) || getPetAvatarUrl(cloudP);
+          if (avatar && !mergedPet.foto && (!mergedPet.fotos || mergedPet.fotos.length === 0)) {
+            mergedPet.foto = avatar;
+            mergedPet.photo = avatar;
+            mergedPet.photoUrl = avatar;
+            mergedPet.fotos = [avatar];
+            if (!mergedPet.photos || mergedPet.photos.length === 0) mergedPet.photos = [avatar];
+          }
+          if (Array.isArray(existing.exames)) {
+            mergedPet.exames = existing.exames.map((ex, idx) => {
+              const cloudEx = (Array.isArray(cloudP.exames) && cloudP.exames[idx]) ? cloudP.exames[idx] : {};
+              const mergedEx = { ...cloudEx, ...ex };
+              if (ex.foto && !cloudEx.foto) mergedEx.foto = ex.foto;
+              if (Array.isArray(ex.fotos) && ex.fotos.length > 0 && (!cloudEx.fotos || cloudEx.fotos.length === 0)) {
+                mergedEx.fotos = ex.fotos;
+              }
+              return mergedEx;
+            });
+          }
+          if (Array.isArray(existing.itens)) {
+            mergedPet.itens = existing.itens.map((it, idx) => {
+              const cloudIt = (Array.isArray(cloudP.itens) && cloudP.itens[idx]) ? cloudP.itens[idx] : {};
+              const mergedIt = { ...cloudIt, ...it };
+              if (it.foto && !cloudIt.foto) mergedIt.foto = it.foto;
+              return mergedIt;
+            });
+          }
+          map.set(cloudP.id, mergedPet);
+        }
+      });
+
+      const mergedList = Array.from(map.values()).filter(p => !deletedIds.has(p.id));
+      const dummyState = { pets: mergedList, deletedPetIds: Array.from(deletedIds) };
+      deduplicatePets(dummyState);
+      return dummyState.pets;
     })(),
     categories: (() => {
       const mergedCats = {};

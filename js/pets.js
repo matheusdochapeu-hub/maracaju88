@@ -57,7 +57,12 @@ export function addDaysToDateStr(dateStr, days) {
   const d = new Date(dateStr + 'T12:00:00');
   if (isNaN(d.getTime())) return '';
   d.setDate(d.getDate() + Math.round(Number(days) || 0));
-  return d.toISOString().split('T')[0];
+  // Formata pelos componentes locais: toISOString() converte para UTC e pode
+  // devolver o dia anterior em fusos positivos (ex: UTC+13).
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -401,17 +406,58 @@ export function updatePet(state, petId, data) {
 /**
  * Exclui um pet do estado
  */
+/**
+ * Exclui um pet do estado registrando o ID na lista de excluídos para evitar
+ * ressurreição ao sincronizar com backup antigo da nuvem.
+ */
 export function deletePet(state, petId) {
   if (!state.pets) return null;
+  state.deletedPetIds = Array.isArray(state.deletedPetIds) ? state.deletedPetIds : [];
+  if (!state.deletedPetIds.includes(petId)) {
+    state.deletedPetIds.push(petId);
+  }
   const idx = state.pets.findIndex(p => p.id === petId);
   if (idx !== -1) {
-    return state.pets.splice(idx, 1)[0];
+    const deleted = state.pets.splice(idx, 1)[0];
+    if (typeof localStorage !== 'undefined' && deleted) {
+      try {
+        localStorage.removeItem('MARACAJU_PET_AVATAR_' + deleted.id);
+      } catch (e) {}
+    }
+    return deleted;
   }
   return null;
 }
 
 /**
- * Adiciona uma foto ao pet (coloca no início para ser o avatar ativo)
+ * Retorna o data URL da foto/avatar do pet consultando as propriedades do objeto
+ * e com fallback direto ao armazenamento local persistente.
+ */
+export function getPetAvatarUrl(pet) {
+  if (!pet) return null;
+  const direct = (Array.isArray(pet.fotos) && pet.fotos.length > 0 && pet.fotos[0]) ||
+                 (Array.isArray(pet.photos) && pet.photos.length > 0 && pet.photos[0]) ||
+                 pet.foto || pet.photo || pet.photoUrl;
+  if (direct) return direct;
+
+  if (typeof localStorage !== 'undefined') {
+    try {
+      if (pet.id) {
+        const byId = localStorage.getItem('MARACAJU_PET_AVATAR_' + pet.id);
+        if (byId) return byId;
+      }
+      if (pet.nome) {
+        const byName = localStorage.getItem('MARACAJU_PET_AVATAR_' + pet.nome.trim().toLowerCase());
+        if (byName) return byName;
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
+/**
+ * Adiciona uma foto ao pet (coloca no início para ser o avatar ativo) e garante
+ * persistência no localStorage para nunca sumir em sincronizações com a nuvem.
  */
 export function addPetPhoto(state, petId, photoDataUrl) {
   const pet = (state.pets || []).find(p => p.id === petId);
@@ -419,7 +465,21 @@ export function addPetPhoto(state, petId, photoDataUrl) {
   if (!pet.fotos) pet.fotos = [];
   pet.fotos.unshift(photoDataUrl);
   pet.photos = pet.fotos;
+  pet.foto = photoDataUrl;
+  pet.photo = photoDataUrl;
+  pet.photoUrl = photoDataUrl;
   pet.updatedAt = new Date().toISOString();
+
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem('MARACAJU_PET_AVATAR_' + pet.id, photoDataUrl);
+      if (pet.nome) {
+        localStorage.setItem('MARACAJU_PET_AVATAR_' + pet.nome.trim().toLowerCase(), photoDataUrl);
+      }
+    } catch (e) {
+      console.warn('[Pets] LocalStorage quota excedida ao salvar avatar:', e);
+    }
+  }
   return pet;
 }
 
@@ -432,10 +492,147 @@ export function removePetPhoto(state, petId, photoIdx) {
   if (photoIdx >= 0 && photoIdx < pet.fotos.length) {
     pet.fotos.splice(photoIdx, 1);
     pet.photos = pet.fotos;
+    if (pet.fotos.length === 0) {
+      delete pet.foto;
+      delete pet.photo;
+      delete pet.photoUrl;
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.removeItem('MARACAJU_PET_AVATAR_' + pet.id);
+          if (pet.nome) localStorage.removeItem('MARACAJU_PET_AVATAR_' + pet.nome.trim().toLowerCase());
+        } catch (e) {}
+      }
+    } else {
+      pet.foto = pet.fotos[0];
+      pet.photo = pet.fotos[0];
+      pet.photoUrl = pet.fotos[0];
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('MARACAJU_PET_AVATAR_' + pet.id, pet.fotos[0]);
+          if (pet.nome) localStorage.setItem('MARACAJU_PET_AVATAR_' + pet.nome.trim().toLowerCase(), pet.fotos[0]);
+        } catch (e) {}
+      }
+    }
     pet.updatedAt = new Date().toISOString();
     return true;
   }
   return false;
+}
+
+/**
+ * Deduplica pets por espécie e nome normalizado (ex: duas "Mandiocas").
+ * Mescla sub-registros (ração, banhos, vacinas, exames, itens) e fotos na ficha
+ * primária e registra o ID secundário na lista de excluídos para bloquear ressurreição.
+ */
+export function deduplicatePets(state) {
+  if (!state || !Array.isArray(state.pets)) return false;
+  let changed = false;
+  state.deletedPetIds = Array.isArray(state.deletedPetIds) ? state.deletedPetIds : [];
+
+  const survivingPets = [];
+  const grouped = new Map();
+  state.pets.forEach(pet => {
+    if (!pet) return;
+    const petNome = (pet.nome || pet.name || '').trim().toLowerCase();
+    if (!petNome) {
+      survivingPets.push(pet);
+      return;
+    }
+    const key = `${(pet.especie || 'cachorro').trim().toLowerCase()}__${petNome}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(pet);
+  });
+
+  for (const [, petGroup] of grouped.entries()) {
+    if (petGroup.length === 1) {
+      survivingPets.push(petGroup[0]);
+      continue;
+    }
+
+    // Duplicidade identificada!
+    changed = true;
+    let primary = petGroup.find(p => p.id === 'pet_mandioca');
+    if (!primary) {
+      primary = petGroup.reduce((best, curr) => {
+        const countRecords = (p) =>
+          (p.racao?.length || 0) + (p.areia?.length || 0) + (p.higiene?.length || 0) +
+          (p.vacinas?.length || 0) + (p.vermifugos?.length || 0) + (p.exames?.length || 0) +
+          (p.itens?.length || 0);
+        return countRecords(curr) > countRecords(best) ? curr : best;
+      }, petGroup[0]);
+    }
+
+    petGroup.forEach(other => {
+      if (other.id === primary.id) return;
+
+      // Adiciona o outro ID aos excluídos para que nunca ressuscite
+      if (!state.deletedPetIds.includes(other.id)) {
+        state.deletedPetIds.push(other.id);
+      }
+
+      // Prioriza a data de nascimento real e apelido autêntico do usuário
+      if (other.dataNascimento && (other.dataNascimento === '2019-11-15' || primary.dataNascimento === '2022-04-10')) {
+        primary.dataNascimento = other.dataNascimento;
+      }
+      if (other.apelido && (other.apelido.toLowerCase().includes('boizin') || !primary.apelido)) {
+        primary.apelido = other.apelido;
+      }
+      if (other.raca && (!primary.raca || primary.raca === 'SRD')) {
+        primary.raca = other.raca;
+      }
+      if (other.pesoKg && !primary.pesoKg) {
+        primary.pesoKg = other.pesoKg;
+      }
+      if (other.observacoes && !primary.observacoes) {
+        primary.observacoes = other.observacoes;
+      }
+
+      // Mescla fotos
+      const otherPhotos = [...(other.fotos || []), ...(other.photos || [])];
+      if (otherPhotos.length > 0) {
+        primary.fotos = primary.fotos || [];
+        otherPhotos.forEach(ph => {
+          if (ph && !primary.fotos.includes(ph)) primary.fotos.push(ph);
+        });
+        primary.photos = primary.fotos;
+      }
+
+      // Mescla sub-registros sem duplicar IDs
+      ['racao', 'areia', 'higiene', 'vacinas', 'vermifugos', 'exames', 'itens'].forEach(recKey => {
+        if (Array.isArray(other[recKey]) && other[recKey].length > 0) {
+          primary[recKey] = Array.isArray(primary[recKey]) ? primary[recKey] : [];
+          other[recKey].forEach(item => {
+            if (!primary[recKey].some(existing => existing.id === item.id)) {
+              item.petId = primary.id;
+              primary[recKey].push(item);
+            }
+          });
+        }
+      });
+    });
+
+    survivingPets.push(primary);
+  }
+
+  // Remove pets marcados como excluídos
+  const deletedSet = new Set(state.deletedPetIds);
+  state.pets = survivingPets.filter(p => !deletedSet.has(p.id));
+
+  // Restaura avatar do localStorage caso o pet esteja sem fotos locais
+  state.pets.forEach(p => {
+    if (!p.foto && !p.photo && (!p.fotos || p.fotos.length === 0) && (!p.photos || p.photos.length === 0)) {
+      const stored = getPetAvatarUrl(p);
+      if (stored) {
+        p.fotos = [stored];
+        p.photos = [stored];
+        p.foto = stored;
+        p.photo = stored;
+        p.photoUrl = stored;
+      }
+    }
+  });
+
+  return changed;
 }
 
 // -------------------------------------------------------------

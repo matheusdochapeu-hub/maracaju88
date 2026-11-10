@@ -110,6 +110,8 @@ import {
   deletePetExame,
   addPetItem,
   deletePetItem,
+  deduplicatePets,
+  getPetAvatarUrl,
   updatePetRacaoPurchase,
   updatePetAreiaPurchase,
   updatePetBanho,
@@ -217,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state = loadState();
     ensureRecoveredPurchases(state);
     syncPurchasesIntoCatalog(state);
+    deduplicatePets(state);
     saveState(state);
   } catch (err) {
     console.error('[Maracaju] Erro ao carregar estado inicial:', err);
@@ -1191,6 +1194,7 @@ function initTasksModule() {
 
         saveState(state);
         triggerAutoSyncIfEnabled();
+        if (currentActivePetFolderId === petId) { renderPetFolderModal(state, petId, currentActivePetFolderTab); }
         refreshAllUI();
       }
     });
@@ -5143,9 +5147,9 @@ function initPetsModule() {
 
   // Upload rápido de foto diretamente pelo badge de câmera no Avatar do Pet
   document.addEventListener('change', async (e) => {
-    if (e.target && e.target.classList.contains('input-pet-photo-card')) {
+    if (e.target && (e.target.classList.contains('input-pet-photo-card') || e.target.classList.contains('input-pet-photo-upload'))) {
       const file = e.target.files && e.target.files[0];
-      const petId = e.target.getAttribute('data-pet-id');
+      const petId = e.target.getAttribute('data-pet-id') || currentActivePetFolderId;
       if (!file || !petId) return;
       try {
         showToast('Atualizando foto do pet... 📸', 'info', 1500);
@@ -5242,17 +5246,18 @@ function initPetsModule() {
         const editPreviewWrap = document.getElementById('edit-pet-photo-preview-wrap');
         const editPreviewImg = document.getElementById('edit-pet-photo-img');
         const editFeedback = document.getElementById('edit-pet-photo-feedback');
-        const petPhoto = (pet.fotos && pet.fotos.length > 0 && pet.fotos[0]) ||
-                         (pet.photos && pet.photos.length > 0 && pet.photos[0]) ||
-                         null;
+        const petPhoto = getPetAvatarUrl(pet);
+        const editRemoveBtn = document.getElementById('edit-pet-remove-photo');
         if (editPreviewWrap && editPreviewImg) {
           if (petPhoto) {
             editPreviewImg.src = petPhoto;
             editPreviewWrap.style.display = 'block';
           } else {
+            editPreviewImg.removeAttribute('src');
             editPreviewWrap.style.display = 'none';
           }
         }
+        if (editRemoveBtn) editRemoveBtn.style.display = petPhoto ? 'inline-flex' : 'none';
         if (editFeedback) editFeedback.textContent = '';
 
         openModal('modal-edit-pet');
@@ -5261,14 +5266,17 @@ function initPetsModule() {
   });
 
   // Remover foto no modal de edição
-  const btnRemoveEditPhoto = document.getElementById('btn-remove-edit-pet-photo');
+  const btnRemoveEditPhoto = document.getElementById('edit-pet-remove-photo');
   if (btnRemoveEditPhoto) {
     btnRemoveEditPhoto.addEventListener('click', () => {
       tempEditPetPhotoDataUrl = ''; // string vazia indica remoção da foto
       const editPreviewWrap = document.getElementById('edit-pet-photo-preview-wrap');
+      const editPreviewImg = document.getElementById('edit-pet-photo-img');
       const editFeedback = document.getElementById('edit-pet-photo-feedback');
       if (editPreviewWrap) editPreviewWrap.style.display = 'none';
+      if (editPreviewImg) editPreviewImg.removeAttribute('src');
       if (editFeedback) editFeedback.textContent = 'Foto removida (salve para confirmar).';
+      btnRemoveEditPhoto.style.display = 'none';
     });
   }
 
@@ -5291,10 +5299,12 @@ function initPetsModule() {
     const previewWrap = document.getElementById('edit-pet-photo-preview-wrap');
     const previewImg = document.getElementById('edit-pet-photo-img');
     const feedback = document.getElementById('edit-pet-photo-feedback');
+    const removeBtn = document.getElementById('edit-pet-remove-photo');
     if (previewWrap && previewImg) {
       previewImg.src = dataUrl;
       previewWrap.style.display = 'block';
     }
+    if (removeBtn) removeBtn.style.display = 'inline-flex';
     if (feedback) feedback.textContent = '✓ Nova foto pronta para salvar!';
   });
 
@@ -6684,7 +6694,8 @@ function openModal(id) {
   if (modal) {
     // Se o modal já estava na pilha, remove da posição anterior para ficar no topo
     const existingIdx = activeModalStack.indexOf(id);
-    if (existingIdx !== -1) {
+    const alreadyOpen = existingIdx !== -1;
+    if (alreadyOpen) {
       activeModalStack.splice(existingIdx, 1);
     }
     modal.classList.add('active');
@@ -6697,9 +6708,14 @@ function openModal(id) {
         el.style.zIndex = String(baseZIndex + (idx * 20));
       }
     });
-    try {
-      window.history.pushState({ maracajuModal: id }, '');
-    } catch (err) {}
+    // Só empilha um estado de histórico por modal aberto: handlers duplicados
+    // (ex: clique em Editar registrado em dois listeners) chamavam openModal duas
+    // vezes e deixavam um estado "fantasma", exigindo 2 toques no Voltar do Android.
+    if (!alreadyOpen) {
+      try {
+        window.history.pushState({ maracajuModal: id }, '');
+      } catch (err) {}
+    }
     playSubtleClick(state?.settings?.soundEnabled);
   }
 }

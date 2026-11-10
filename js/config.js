@@ -4,7 +4,7 @@
 
 export const APP_CONFIG = {
   appName: "Maracaju",
-  version: "2.7.0",
+  version: "2.7.1",
   storageKey: "MARACAJU_STATE_v1",
   legacyStorageKeys: ["MARACAJU88_STATE_v1"],
   deviceStorageKey: "MARACAJU_DEVICE_v1",
@@ -211,8 +211,8 @@ export const INITIAL_PETS = [
     id: "pet_mandioca",
     nome: "Mandioca",
     especie: "cachorro",
-    dataNascimento: "2022-04-10",
-    apelido: "Dioca",
+    dataNascimento: "2019-11-15",
+    apelido: "Boizin",
     sexo: "femea",
     raca: "Vira-lata (SRD)",
     pesoKg: 14.5,
