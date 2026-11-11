@@ -4,6 +4,46 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-10 22:10] - NFC-e: ponte nativa autorizada e validada contra a SEFAZ real (v2.7.8)
+
+### ✅ O que foi testado ao vivo (nota real da Padaria Irmãos Araújo, 07/11/2026)
+- `action=ping` → `Maracaju 88 - Dados`.
+- `action=beneficios` → ciclo 2026-11, VA saldo 1.350,65 / VR saldo 343,26.
+- `fetchNfce` GET e POST pela ponte nativa → HTML do cupom (13–19 KB) e **4 itens / R$ 71,06**.
+- Cadeia do app (`fetchNfceDetailsOnline`) simulando CORS do navegador: **4/4 sucessos**,
+  1 deles precisou de 1 retry; `source: apps-script`, 4 itens, R$ 71,06, data 07/11/2026.
+- Matrix: `processMaracajuData` no payload real → VA 1.350,65 / VR 343,26 / disponível 1.693,91.
+
+### 🐞 Dois problemas encontrados no teste (e corrigidos)
+1. **`|` do QR derrubava a ponte.** O parâmetro `p` da NFC-e é `chave|versao|...`; o
+   `UrlFetchApp` recusa pipe cru (“Argumento inválido”). Agora o cliente envia `%7C`
+   (`fetchNfceHtmlViaAppsScript`) e o Apps Script normaliza (`fetchNfcePageHtml`).
+2. **A SEFAZ derruba conexões dos servidores do Google de forma intermitente**
+   (“Endereço não disponível”). Medido: ~2/3 passam. `tryAppsScriptWithRetry` faz até
+   4 tentativas com backoff (0,7s/1,4s/2,1s) e avisa no status (“Tentando novamente 2/4”).
+   Com 4 tentativas a chance de sucesso fica ~99%. O POST é o método primário; GET é fallback.
+3. **`r.jina.ai` é bloqueado pelo WAF da SEFAZ** (devolve “Request Rejected” mesmo com a
+   URL válida) — serve só para páginas comuns. AllOrigins devolve 522. Por isso a ponte
+   nativa é o caminho real; os fallbacks continuam como rede de segurança.
+
+### 🔐 Autorização
+- O escopo `script.external_request` não é concedido ao republicar; é preciso rodar uma
+  função que use `UrlFetchApp` no editor e aceitar a permissão. Foi criada a função
+  **`autorizarNfce()`** (e o alias `testarNfce()`) no `apps_script.gs` para isso.
+- Sem autorizar, `fetchNfce` responde “Você não tem permissão para chamar UrlFetchApp”.
+
+### 📦 Versão
+- **v2.7.8** (`config.js`, `sw.js`, `package.json`). O `apps_script.gs` com `autorizarNfce`
+  e a normalização de `|` precisa ser republicado quando possível; o app já funciona com o
+  deploy atual porque envia `%7C`.
+
+### 🧠 Regras aprendidas
+- URL de QR de NFC-e **sempre** com `|` → `%7C` antes de `UrlFetchApp`/fetch.
+- SEFAZ SP é instável para IPs do Google: **sempre** retry (3–4 tentativas) antes de desistir.
+- Não confiar em leitor externo (Jina) para a SEFAZ; ele é barrado pelo WAF.
+
+---
+
 ## [2026-11-10 21:30] - Exclusões definitivas, fim do reload que "piscava", valores da planilha e NFC-e automática (v2.7.5)
 
 ### 🔍 Problemas relatados

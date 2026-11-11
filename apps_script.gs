@@ -60,6 +60,9 @@ function createJsonResponse(data) {
 function fetchNfcePageHtml(targetUrl) {
   var normalized = String(targetUrl || '').trim();
   if (!normalized) throw new Error("URL da NFC-e não fornecida.");
+  // O QR Code da NFC-e traz "|" no parâmetro p. O UrlFetchApp recusa pipe
+  // cru ("Argumento inválido"), então percent-encodamos antes de buscar.
+  normalized = normalized.replace(/\|/g, '%7C').replace(/ /g, '%20');
   if (/^http:\/\//i.test(normalized)) normalized = normalized.replace(/^http:\/\//i, 'https://');
 
   var resp = UrlFetchApp.fetch(normalized, {

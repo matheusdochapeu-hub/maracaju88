@@ -772,19 +772,24 @@ export async function fetchNfceHtmlViaAppsScript(url, token, nfceUrl, timeoutMs 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+  // O QR Code da NFC-e carrega "|" no parâmetro p (chave|versao|...). O
+  // UrlFetchApp recusa a URL com pipe cru ("Argumento inválido"), então
+  // enviamos já percent-encoded (%7C). O Apps Script também normaliza.
+  const safeNfceUrl = String(nfceUrl).replace(/\|/g, '%7C').replace(/ /g, '%20');
+
   try {
     let res;
     if (String(method).toUpperCase() === 'POST') {
       res = await fetch(url.trim(), {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8", "Accept": "application/json" },
-        body: JSON.stringify({ action: "fetchNfce", url: nfceUrl, token: token ? token.trim() : "" }),
+        body: JSON.stringify({ action: "fetchNfce", url: safeNfceUrl, token: token ? token.trim() : "" }),
         signal: controller.signal
       });
     } else {
       const endpoint = new URL(url.trim());
       endpoint.searchParams.set("action", "fetchNfce");
-      endpoint.searchParams.set("url", nfceUrl);
+      endpoint.searchParams.set("url", safeNfceUrl);
       if (token) endpoint.searchParams.set("token", token.trim());
       res = await fetch(endpoint.toString(), {
         method: "GET",

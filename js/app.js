@@ -4426,7 +4426,8 @@ function initQrCodeScanner() {
       fetchNfceDetailsOnline(pendingPurchase.rawUrl, {
         sheetsUrl,
         sheetsToken,
-        baseInfo: pendingPurchase
+        baseInfo: pendingPurchase,
+        onProgress: (msg) => { if (statusMsg) statusMsg.textContent = msg; }
       }).then(enhanced => {
         if (!enhanced || !enhanced.success) return;
 

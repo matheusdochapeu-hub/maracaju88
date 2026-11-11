@@ -65,6 +65,9 @@ node --test test/**/*.test.js   # 163 testes
 8. **NFC-e é automática.** `fetchNfceDetailsOnline` tenta Apps Script → `r.jina.ai` → conexão
    direta → proxy. Não volte a exigir que o usuário abra a SEFAZ e cole o HTML. A ponte nativa
    exige republicar `apps_script.gs` (o endpoint publicado pode estar sem `fetchNfce`).
+   A URL do QR tem `|` no parâmetro `p`: envie sempre `%7C` (UrlFetchApp recusa pipe cru) e
+   **repita a tentativa** (até 4x) — a SEFAZ derruba conexões do Google de forma intermitente.
+   `r.jina.ai` é bloqueado pelo WAF da SEFAZ; não conte com ele para notas reais.
 
 ## Vizinhança (ecossistema)
 

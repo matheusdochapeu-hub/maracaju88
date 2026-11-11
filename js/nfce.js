@@ -635,8 +635,37 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
     return result;
   }
 
+  // A SEFAZ às vezes derruba a conexão vinda dos servidores do Google
+  // ("Endereço não disponível"), mas a tentativa seguinte costuma passar.
+  // Medido ao vivo: ~2 de 3 tentativas passam; com 4 tentativas a chance
+  // de sucesso fica em ~99%. O leitor externo (r.jina.ai) é bloqueado pelo
+  // WAF da SEFAZ, então a ponte nativa é o caminho que realmente funciona.
+  async function tryAppsScriptWithRetry(method, maxAttempts = 4) {
+    let lastError = null;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        return await tryAppsScript(method);
+      } catch (err) {
+        lastError = err;
+        if (err && err.code === 'BRIDGE_OUTDATED') throw err;
+        const isLast = attempt === maxAttempts - 1;
+        if (!isLast) {
+          if (typeof options.onProgress === 'function') {
+            try {
+              options.onProgress(`A SEFAZ recusou a conexão automática. Tentando novamente (${attempt + 2}/${maxAttempts})...`);
+            } catch (e) {}
+          }
+          await new Promise(resolve => setTimeout(resolve, 700 * (attempt + 1)));
+        }
+      }
+    }
+    throw lastError;
+  }
+
   async function tryJinaReader() {
-    const readerUrl = `https://r.jina.ai/${url}`;
+    // Pipes crus do parâmetro p quebram alguns leitores; envia percent-encoded.
+    const safeUrl = String(url).replace(/\|/g, '%7C').replace(/ /g, '%20');
+    const readerUrl = `https://r.jina.ai/${safeUrl}`;
     const res = await fetch(readerUrl, {
       method: 'GET',
       headers: {
@@ -688,7 +717,10 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
   const attempts = [];
   let bridgeOutdated = false;
   if (options.sheetsUrl) {
-    attempts.push(tryAppsScript('GET').catch(err => {
+    // POST é mais robusto que GET para a URL do QR (o parâmetro p tem "|" e
+    // a URL é longa). Foi validado ao vivo contra a SEFAZ SP; o GET fica
+    // como fallback mais abaixo.
+    attempts.push(tryAppsScriptWithRetry('POST').catch(err => {
       if (err && err.code === 'BRIDGE_OUTDATED') bridgeOutdated = true;
       throw err;
     }));
@@ -709,8 +741,8 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
 
   if (options.sheetsUrl && !bridgeOutdated) {
     try {
-      const viaPost = await withTimeout(tryAppsScript('POST'), 14000, 'Apps Script (POST)');
-      return viaPost;
+      const viaGet = await withTimeout(tryAppsScriptWithRetry('GET', 3), 25000, 'Apps Script (GET)');
+      return viaGet;
     } catch (err) {
       fetchErrors.push(err && err.message ? err.message : String(err));
     }
