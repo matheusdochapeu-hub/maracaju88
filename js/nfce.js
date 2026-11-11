@@ -686,7 +686,13 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
   }
 
   const attempts = [];
-  if (options.sheetsUrl) attempts.push(tryAppsScript('GET'));
+  let bridgeOutdated = false;
+  if (options.sheetsUrl) {
+    attempts.push(tryAppsScript('GET').catch(err => {
+      if (err && err.code === 'BRIDGE_OUTDATED') bridgeOutdated = true;
+      throw err;
+    }));
+  }
   attempts.push(tryJinaReader());
   attempts.push(tryDirect());
 
@@ -701,7 +707,7 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
     // Promise.any só rejeita quando todas falham.
   }
 
-  if (options.sheetsUrl) {
+  if (options.sheetsUrl && !bridgeOutdated) {
     try {
       const viaPost = await withTimeout(tryAppsScript('POST'), 14000, 'Apps Script (POST)');
       return viaPost;

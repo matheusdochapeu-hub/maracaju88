@@ -82,7 +82,8 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
   permanece após reaplicar o mesmo backup antigo.
 
 ### 📦 Versão
-- **v2.7.5** em `config.js`, `sw.js` (`CACHE_NAME`) e `package.json`.
+- **v2.7.6** em `config.js`, `sw.js` (`CACHE_NAME`) e `package.json` (a v2.7.5 foi publicada
+  antes do ajuste que evita repetir o POST quando a ponte do Apps Script está desatualizada).
 - ⚠️ O `apps_script.gs` deste repositório **precisa ser republicado** no Apps Script do casal
   para a ponte nativa ficar mais rápida; sem republicar, o QR continua automático pelo leitor
   externo (r.jina.ai). O token do backup não mudou.
