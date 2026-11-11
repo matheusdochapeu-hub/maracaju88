@@ -51,10 +51,11 @@ export function parseQuantity(raw) {
 
 export function getItemTotalPrice(item) {
   if (!item) return 0;
-  if (typeof item.totalPrice === 'number' && item.totalPrice > 0) {
-    return Math.round(item.totalPrice * 100) / 100;
+  if (item.totalPrice !== undefined && item.totalPrice !== null && item.totalPrice !== '') {
+    const total = parseCurrency(item.totalPrice);
+    if (total > 0) return total;
   }
-  const unitPrice = item.unitPrice !== undefined ? item.unitPrice : (item.price || 0);
+  const unitPrice = parseCurrency(item.unitPrice !== undefined ? item.unitPrice : (item.price || 0));
   const { count } = parseQuantity(item.quantity || item.qty);
   return Math.round(unitPrice * count * 100) / 100;
 }
@@ -334,7 +335,7 @@ export function getMarketPurchasesByMonth(state) {
 
   sortedMonthKeys.forEach(mKey => {
     const items = groups[mKey].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-    const monthTotal = Math.round(items.reduce((sum, item) => sum + (item.total || 0), 0) * 100) / 100;
+    const monthTotal = Math.round(items.reduce((sum, item) => sum + parseCurrency(item.total), 0) * 100) / 100;
     result.push({
       monthKey: mKey,
       monthLabel: getMonthLabel(mKey),
@@ -391,7 +392,7 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
     purchases = allPurchases;
   }
 
-  const total = Math.round(purchases.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
+  const total = Math.round(purchases.reduce((sum, p) => sum + parseCurrency(p.total), 0) * 100) / 100;
   const count = purchases.length;
   const avgTicket = count > 0 ? Math.round((total / count) * 100) / 100 : 0;
 
@@ -403,7 +404,7 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
     if (!marketMap[name]) {
       marketMap[name] = { marketName: name, total: 0, count: 0, lastDate: p.date };
     }
-    marketMap[name].total = Math.round((marketMap[name].total + (Number(p.total) || 0)) * 100) / 100;
+    marketMap[name].total = Math.round((marketMap[name].total + parseCurrency(p.total)) * 100) / 100;
     marketMap[name].count += 1;
     if (p.date && (!marketMap[name].lastDate || p.date > marketMap[name].lastDate)) {
       marketMap[name].lastDate = p.date;
@@ -436,7 +437,7 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
   };
   purchases.forEach(p => {
     const m = (p.paymentMethod || 'va').toLowerCase();
-    const val = Number(p.total) || 0;
+    const val = parseCurrency(p.total);
     if (paymentBreakdown[m] !== undefined) {
       paymentBreakdown[m] += val;
     } else {
@@ -449,17 +450,17 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
 
   // Separação específica VA e VR com cálculo de ticket médio
   const vaPurchases = purchases.filter(p => (p.paymentMethod || 'va').toLowerCase() === 'va');
-  const vaTotal = Math.round(vaPurchases.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
+  const vaTotal = Math.round(vaPurchases.reduce((sum, p) => sum + parseCurrency(p.total), 0) * 100) / 100;
   const vaCount = vaPurchases.length;
   const vaAvgTicket = vaCount > 0 ? Math.round((vaTotal / vaCount) * 100) / 100 : 0;
 
   const vrPurchases = purchases.filter(p => (p.paymentMethod || '').toLowerCase() === 'vr');
-  const vrTotal = Math.round(vrPurchases.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
+  const vrTotal = Math.round(vrPurchases.reduce((sum, p) => sum + parseCurrency(p.total), 0) * 100) / 100;
   const vrCount = vrPurchases.length;
   const vrAvgTicket = vrCount > 0 ? Math.round((vrTotal / vrCount) * 100) / 100 : 0;
 
   const otherPurchases = purchases.filter(p => !['va', 'vr'].includes((p.paymentMethod || '').toLowerCase()));
-  const otherTotal = Math.round(otherPurchases.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
+  const otherTotal = Math.round(otherPurchases.reduce((sum, p) => sum + parseCurrency(p.total), 0) * 100) / 100;
   const otherCount = otherPurchases.length;
   const otherAvgTicket = otherCount > 0 ? Math.round((otherTotal / otherCount) * 100) / 100 : 0;
 
@@ -469,7 +470,7 @@ export function getMarketAnalytics(state, periodOrCycle = null, targetCycleKey =
   const paymentMethodStats = {};
   Object.keys(paymentBreakdown).forEach(mId => {
     const pList = purchases.filter(p => (p.paymentMethod || 'va').toLowerCase() === mId);
-    const mTotal = Math.round(pList.reduce((sum, p) => sum + (Number(p.total) || 0), 0) * 100) / 100;
+    const mTotal = Math.round(pList.reduce((sum, p) => sum + parseCurrency(p.total), 0) * 100) / 100;
     const mCount = pList.length;
     const mAvg = mCount > 0 ? Math.round((mTotal / mCount) * 100) / 100 : 0;
     paymentMethodStats[mId] = {

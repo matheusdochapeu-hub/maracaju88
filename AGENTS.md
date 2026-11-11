@@ -24,7 +24,7 @@ python -m http.server 8000   # abrir http://localhost:8000
 ## Testes
 
 ```powershell
-node --test test/**/*.test.js   # 151 testes
+node --test test/**/*.test.js   # 163 testes
 ```
 
 ## Deploy
@@ -54,8 +54,17 @@ node --test test/**/*.test.js   # 151 testes
 3. **O app é a autoridade sobre VA/VR.** O Matrix consome esses saldos
    (`state.satellites.maracaju`) — não recalcule VR por dias úteis em outro lugar.
 4. **Nada de exclusão destrutiva** de compras/itens: use os fluxos de desfazer/limpar
-   já existentes.
+   já existentes. Exclusão individual passa por `confirm()` + túmulo (regra 6).
 5. Fotos anexadas devem continuar sendo comprimidas no cliente (~40–70 KB) antes de subir.
+6. **Exclusão é definitiva (`state.deletedIds`).** Todo merge (`applyCloudBackup`) precisa
+   filtrar os túmulos com `filterDeletedFromState`; handlers de exclusão chamam
+   `markDeleted` (ou `markPurchaseDeleted`, que também marca a nota recuperável equivalente).
+   Sem isso o item volta no próximo pull — foi o bug de "não consigo excluir" (v2.7.5).
+7. **Valores da planilha podem vir como texto** (`"264,33"`): use `parseCurrency`, nunca
+   `Number()`. Totais em texto viravam NaN, somavam R$ 0 no VA/VR e criavam duplicatas.
+8. **NFC-e é automática.** `fetchNfceDetailsOnline` tenta Apps Script → `r.jina.ai` → conexão
+   direta → proxy. Não volte a exigir que o usuário abra a SEFAZ e cole o HTML. A ponte nativa
+   exige republicar `apps_script.gs` (o endpoint publicado pode estar sem `fetchNfce`).
 
 ## Vizinhança (ecossistema)
 

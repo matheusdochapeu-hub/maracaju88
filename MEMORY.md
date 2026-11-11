@@ -4,6 +4,97 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-10 21:30] - Exclusões definitivas, fim do reload que "piscava", valores da planilha e NFC-e automática (v2.7.5)
+
+### 🔍 Problemas relatados
+1. Não conseguia excluir tarefas, itens da lista de compras e compras.
+2. O app "piscava" e voltava para a lista de tarefas mesmo com o usuário em outra aba.
+3. Faltava o saldo atual de VA/VR do mês no app Matrix.
+4. Compra do Carrefour lançada hoje caía no mês/ciclo passado e não deixava excluir.
+5. O QR Code da NFC-e era lido, mas não puxava sozinho os itens do site da SEFAZ.
+
+### 🐞 Causas-raiz
+1. **Exclusão ressuscitava na sincronização.** `applyCloudBackup` mescla as listas por união
+   (local ∪ nuvem) e não existia registro de "isto foi apagado". O pull roda no boot, no
+   `focus`, no `visibilitychange` e a cada 30s — então o item excluído voltava. Pior: a cada
+   save o auto-sync reenviava o estado, e o pull seguinte trazia de volta o que a nuvem ainda
+   tinha.
+2. **Reload automático do Service Worker.** `index.html` escutava `controllerchange` e chamava
+   `window.location.reload()`. Com `skipWaiting()` + `clients.claim()` no `sw.js`, um deploy
+   novo assumia a página aberta e recarregava no meio de outra aba → voltava para `tarefas`
+   (a aba ativa não era persistida). O pull também chamava `saveState()` → auto-sync → novo
+   pull, repintando a tela sem necessidade.
+3. **Matrix comparava ciclo errado.** O conector usava o mês do calendário e uma data de
+   crédito fixa (`2026-11-06`) em vez do `cycleKey` publicado pelo Maracaju. Entre o dia 1º e
+   o 4º dia útil o saldo do ciclo vigente era ignorado.
+4. **Totais em texto + recuperação automática.** A planilha devolvia `total` como `"280,66"`;
+   `Number("280,66")` = NaN, então (a) a compra era somada como R$ 0 no VA/VR, (b) a comparação
+   da rotina `ensureRecoveredPurchases` não reconhecia a nota já existente e criava uma **cópia
+   recuperável** do Carrefour de 03/11 (que pertence ao ciclo de outubro, pois é antes do
+   crédito de 06/11). Ao excluir, a rotina recriava a nota no próximo load.
+5. **A ponte `fetchNfce` nunca existiu no Apps Script publicado.** O endpoint em produção
+   respondia o backup (ação desconhecida) e o app caía no modo "copie e cole". Testado ao vivo:
+   `action=fetchNfce` devolvia `{data: backup}`.
+
+### 🛠️ Correções
+1. **Túmulos de exclusão (`state.deletedIds`)** em `js/storage.js`: `markDeleted`,
+   `markPurchaseDeleted`, `mergeDeletedIds`, `filterDeletedFromState`. O backup leva
+   `deletedIds`; `applyCloudBackup` une os túmulos e filtra **todas** as coleções
+   (tarefas, compras, comprasRegistros, carro, reformas, sonhos, wishlist, catálogo, categorias).
+   TTL de 180 dias e limite de 1.000 por coleção. Exclusão agora é definitiva nos dois sentidos.
+2. **Recuperação não destrutiva:** `ensureRecoveredPurchases` respeita o túmulo e
+   `markPurchaseDeleted` marca também o id fixo da nota recuperável equivalente. O botão
+   "🧾 Recuperar Notas Fiscais" é a única ação que limpa o túmulo (`restoreDeleted: true`).
+3. **Valores normalizados:** `normalizePurchaseRecord`/`normalizePurchasesInState` convertem
+   `"264,33"` → `264.33` (total e itens) no load e no merge; `benefits.js`, `shopping.js` e
+   `getItemTotalPrice` passaram a usar `parseCurrency` em vez de `Number()`. Somas de VA/VR e
+   analytics nunca mais viram NaN.
+4. **Duplicata histórica limpa:** quando já existe a compra real (mesmo mercado/data/total), a
+   cópia com id fixo de `RECOVERABLE_PURCHASES` é removida. Validado com o backup real do casal:
+   16 registros → 14 (duas cópias do Carrefour/Padaria), e o ciclo de novembro fechou em
+   VA 709,19 / saldo 1.350,65 e VR 761,90 / saldo 343,26 (igual ao `benefitsSummary`).
+5. **Fim do "pisca e volta":** removido o `location.reload()` do `controllerchange`; a aba ativa
+   é salva em `MARACAJU_ACTIVE_TAB_v1` e restaurada no boot (`applyTabVisibility`); o pull
+   ignora modal aberto/campo em foco/aba oculta, só re-renderiza se o `lastUpdated` da nuvem
+   mudou e usa `isApplyingCloudState` para não disparar backup em cascata. `autoSyncTimeout`
+   agora é zerado (o `setInterval` de 30s ficava bloqueado para sempre depois do 1º sync).
+6. **Matrix:** `processMaracajuData` passa a usar `settings.matrixBenefits`/`benefitsSummary`
+   como autoridade (ciclo e saldos), calcula a data de crédito por ciclo e não usa mais
+   `2026-11-06` fixo. `mergeMaracajuPayloads` respeita `deletedIds` e
+   `compactMaracajuStateForCloud` envia totais numéricos + túmulos. Versão Matrix v122.
+7. **NFC-e automática:** `fetchNfceDetailsOnline` agora tenta em paralelo Apps Script (GET),
+   leitor `r.jina.ai` (HTML) e conexão direta; depois Apps Script (POST) e allorigins. O app não
+   exige mais abrir a SEFAZ e copiar. `apps_script.gs` ganhou `fetchNfcePageHtml` (normaliza
+   https, UA mobile, checa HTTP/WAF) e o endpoint `benefits` devolve o retrato do ciclo.
+   `parseNfceHtml` remove bloco de itens duplicado (Jina renderiza o cupom 2×) e lê
+   `Vl. Unit.` com `&#160;`.
+8. **Cartão de compra** mostra o ciclo do benefício (ex.: "🗓️ Ciclo Outubro/2026 (Encerrado)")
+   para deixar claro por que uma compra de 03/11 pertence ao ciclo anterior.
+
+### 🧪 Validação
+- `test/delete-persistence.test.js` (12 testes novos): tombstone em task/mercado/compra,
+  recuperação explícita, normalização de `"264,33"`, dedupe do Carrefour, analytics sem NaN,
+  fetch automático via leitor externo, cupom duplicado, reload removido e aba persistida.
+- Suíte completa: **163 testes, 0 falhas**.
+- Teste ao vivo: QR de exemplo → 4 itens/R$ 71,06 via conexão direta (2,1s) e via `r.jina.ai`
+  (1,1s, após dedupe). Endpoint publicado confirmado sem `fetchNfce` (backend antigo).
+- Backup real do casal reprocessado: exclusão de `nfe_teste` e das cópias do Carrefour
+  permanece após reaplicar o mesmo backup antigo.
+
+### 📦 Versão
+- **v2.7.5** em `config.js`, `sw.js` (`CACHE_NAME`) e `package.json`.
+- ⚠️ O `apps_script.gs` deste repositório **precisa ser republicado** no Apps Script do casal
+  para a ponte nativa ficar mais rápida; sem republicar, o QR continua automático pelo leitor
+  externo (r.jina.ai). O token do backup não mudou.
+
+### 🧠 Regras aprendidas
+- Exclusão no Maracaju é intencional: qualquer merge futuro **precisa** filtrar `deletedIds`.
+- Nunca usar `Number()` em valor que vem da planilha; sempre `parseCurrency`.
+- Não recarregar a página em `controllerchange`; persistir a aba e aplicar a versão no próximo boot.
+- O QR não pode depender de o usuário copiar a página da SEFAZ.
+
+---
+
 ## [2026-11-10 17:05] - Auditoria de Bugs: Conciliação NFC-e, Datas Locais e Robustez de Render (v2.7.4)
 
 ### 🔍 Como a auditoria foi feita

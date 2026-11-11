@@ -18,12 +18,17 @@
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png?v=2.4.0" />
   <link rel="shortcut icon" href="./favicon.ico?v=2.4.0" />
 
-  <!-- Auto-update PWA e escape de cache -->
+  <!-- Atualização do PWA sem reload no meio do uso -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('controllerchange', function() {
-        console.log('[Maracaju] Nova versão detectada. Atualizando tela...');
-        window.location.reload();
+        // O service worker usa skipWaiting + clients.claim, então um novo
+        // deploy assumia a página aberta. O reload automático jogava o
+        // usuário de volta para a aba de Tarefas no meio de outra tarefa
+        // ("o app pisca e volta para a lista inicial"). Marcamos a versão
+        // nova e ela entra na próxima abertura — sem interromper o uso.
+        console.log('[Maracaju] Nova versão baixada. Será aplicada na próxima abertura do app.');
+        try { document.documentElement.setAttribute('data-maracaju-new-version', '1'); } catch (e) {}
       });
     }
   </script>

@@ -1708,6 +1708,12 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
         const dateFormatted = p.date ? p.date.split('-').reverse().join('/') : 'Data não informada';
         const itemsCount = Array.isArray(p.items) ? p.items.length : 0;
         const pm = getPaymentMethodInfo(p.paymentMethod || 'va');
+        // Deixa explícito a qual ciclo de VA/VR a compra pertence. Compras antes
+        // do 4º dia útil contam no ciclo anterior — sem esse rótulo parecia que
+        // o lançamento de hoje tinha "ido para o mês passado".
+        const purchaseCycleKey = getBenefitCycleKey(p.date || p.createdAt, state);
+        const purchaseCycleLabel = purchaseCycleKey ? getBenefitCycleRange(purchaseCycleKey, state).label : '';
+        const isCurrentPurchaseCycle = purchaseCycleKey === getActiveBenefitsCycle();
 
         return `
           <div class="market-receipt-card" data-purchase-id="${p.id}">
@@ -1724,6 +1730,7 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
                 </div>
                 <div class="market-meta" style="margin-top: 0.25rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-muted);">
                   <span>📅 <strong>${dateFormatted}</strong></span>
+                  ${purchaseCycleLabel ? `<span title="Ciclo do benefício (VA/VR): compras feitas antes do 4º dia útil contam no ciclo anterior">• 🗓️ <strong>${purchaseCycleLabel}</strong>${isCurrentPurchaseCycle ? ' (atual)' : ''}</span>` : ''}
                   ${itemsCount > 0 ? `<span>• 📦 <strong>${itemsCount} ${itemsCount === 1 ? 'item' : 'itens'}</strong></span>` : ''}
                   ${(p.nfeKey || p.accessKey) ? `<span style="font-size: 0.7rem; color: var(--text-muted);" title="${p.nfeKey || p.accessKey}">Chave: ${(p.nfeKey || p.accessKey).slice(0, 10)}...</span>` : ''}
                 </div>

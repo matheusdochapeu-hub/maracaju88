@@ -53,6 +53,40 @@ function createJsonResponse(data) {
 }
 
 // -------------------------------------------------------------
+// Busca a página HTML de uma NFC-e (contorna o CORS do navegador).
+// A SEFAZ exige a URL completa do QR Code (chave + hash); repassamos
+// exatamente o que veio do leitor, só normalizando http -> https.
+// -------------------------------------------------------------
+function fetchNfcePageHtml(targetUrl) {
+  var normalized = String(targetUrl || '').trim();
+  if (!normalized) throw new Error("URL da NFC-e não fornecida.");
+  if (/^http:\/\//i.test(normalized)) normalized = normalized.replace(/^http:\/\//i, 'https://');
+
+  var resp = UrlFetchApp.fetch(normalized, {
+    muteHttpExceptions: true,
+    followRedirects: true,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"
+    }
+  });
+
+  var code = resp.getResponseCode();
+  var text = resp.getContentText('UTF-8');
+  if (code >= 400) {
+    throw new Error("A SEFAZ respondeu HTTP " + code + " para esta nota.");
+  }
+  if (!text || text.length < 200) {
+    throw new Error("A SEFAZ devolveu uma página vazia para esta nota.");
+  }
+  if (/Request Rejected|Access Denied/i.test(text) && !/txtTopo|txtTit|totalNumb/i.test(text)) {
+    throw new Error("A SEFAZ bloqueou a consulta automática (WAF). Abra a nota no navegador e use Colar Automático.");
+  }
+  return text;
+}
+
+// -------------------------------------------------------------
 // GET: Teste de conexão ou busca do último backup
 // -------------------------------------------------------------
 function doGet(e) {
@@ -67,20 +101,10 @@ function doGet(e) {
         // Ação "fetchNfce": busca o HTML da SEFAZ para contornar bloqueios de CORS do PWA
     if (action === "fetchNfce") {
       var targetUrl = (e && e.parameter && e.parameter.url) || "";
-      if (!targetUrl) {
-        return createJsonResponse({ status: "error", message: "URL da NFC-e não fornecida." });
-      }
       try {
-        var resp = UrlFetchApp.fetch(targetUrl, {
-          muteHttpExceptions: true,
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-          }
-        });
         return createJsonResponse({
           status: "success",
-          html: resp.getContentText()
+          html: fetchNfcePageHtml(targetUrl)
         });
       } catch (errFetch) {
         return createJsonResponse({
@@ -99,15 +123,19 @@ function doGet(e) {
       });
     }
 
-    // Ação 'matrix' ou 'beneficios': endpoint dedicado de integração com o Matrix Finance
+    // Ação 'matrix' ou 'beneficios': endpoint dedicado de integração com o Matrix Finance.
+    // Devolve primeiro o retrato do ciclo vigente de VA/VR (fonte da verdade: Casa Maracaju).
     if (action === "matrix" || action === "beneficios") {
       var sheetRawM = ss.getSheetByName("Backup_JSON");
       var jsonStrM = readChunkedJsonRow(sheetRawM);
       var parsedM = jsonStrM ? JSON.parse(jsonStrM) : {};
+      var benefitsM = (parsedM.settings && (parsedM.settings.matrixBenefits || parsedM.settings.benefitsSummary)) || null;
       return createJsonResponse({
         status: "success",
-        action: "matrix",
+        action: "beneficios",
         serverTime: new Date().toISOString(),
+        cycleKey: benefitsM ? benefitsM.cycleKey : null,
+        benefits: benefitsM,
         data: parsedM,
         message: "Dados de compras, VA e VR fornecidos para o Matrix com sucesso."
       });
@@ -170,20 +198,10 @@ function doPost(e) {
     var payload = JSON.parse(e.postData.contents);
         if (payload.action === "fetchNfce") {
       var targetUrl = payload.url || "";
-      if (!targetUrl) {
-        return createJsonResponse({ status: "error", message: "URL da NFC-e não fornecida." });
-      }
       try {
-        var respPost = UrlFetchApp.fetch(targetUrl, {
-          muteHttpExceptions: true,
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-          }
-        });
         return createJsonResponse({
           status: "success",
-          html: respPost.getContentText()
+          html: fetchNfcePageHtml(targetUrl)
         });
       } catch (errFetchPost) {
         return createJsonResponse({

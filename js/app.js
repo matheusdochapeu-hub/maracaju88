@@ -20,7 +20,7 @@ import {
 //  MARACAJU - APP CONTROLLER PRINCIPAL (v1.3.3)
 // ============================================================
 
-import { loadState, saveState, exportBackupJson, importBackupJson, getInitialState, ensureRecoveredPurchases, setOnStateSavedListener, setOnStateSaveErrorListener } from './storage.js';
+import { loadState, saveState, exportBackupJson, importBackupJson, getInitialState, ensureRecoveredPurchases, setOnStateSavedListener, setOnStateSaveErrorListener, markDeleted, markPurchaseDeleted } from './storage.js';
 import {
   getAuthSession,
   loginWithEmail,
@@ -176,6 +176,23 @@ import {
 // Estado global em memória
 let state = null;
 let currentTab = 'tarefas';
+
+// Aba ativa persistida: o app não pode "voltar para Tarefas" quando a tela
+// recarrega (atualização do Service Worker, retorno do segundo plano etc.).
+const ACTIVE_TAB_STORAGE_KEY = 'MARACAJU_ACTIVE_TAB_v1';
+function getSavedActiveTab() {
+  try {
+    const saved = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+    return saved || null;
+  } catch (e) {
+    return null;
+  }
+}
+function saveActiveTab(tab) {
+  try {
+    if (tab) localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab);
+  } catch (e) {}
+}
 let currentShoppingCategory = 'todos';
 let currentShoppingStatus = 'todos';
 let currentShoppingForWhom = 'todos';
@@ -267,6 +284,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Sincronização automática em nuvem: qualquer alteração salva localmente dispara auto-sync
   setOnStateSavedListener(() => {
+    // Durante o pull, o saveState é só persistência local do que veio da nuvem;
+    // disparar outro backup aqui criava um ciclo de sincronização (tela piscando).
+    if (isApplyingCloudState) return;
     triggerAutoSyncIfEnabled();
   });
 
@@ -279,6 +299,15 @@ document.addEventListener('DOMContentLoaded', () => {
     lastSaveErrorToast = now;
     showToast('⚠️ Não foi possível salvar no aparelho (armazenamento cheio). Libere espaço ou remova fotos antigas para não perder alterações.', 'error', 8000);
   });
+
+  // Restaura a aba em que o usuário estava antes de uma recarga/atualização.
+  // Antes, qualquer reload voltava para "Tarefas" no meio do uso.
+  try {
+    const savedTab = getSavedActiveTab();
+    if (savedTab && (TAB_ORDER.includes(savedTab) || savedTab === 'historico') && savedTab !== currentTab) {
+      applyTabVisibility(savedTab, null, false);
+    }
+  } catch (e) {}
 
   // Render inicial ultra-rápido (< 20ms) a partir do cache local
   refreshAllUI();
@@ -616,19 +645,7 @@ function handleActiveCalendarDayChange(detail) {
 // ============================================================
 const TAB_ORDER = ['tarefas', 'pets', 'compras', 'shopping', 'carro', 'reformas', 'sonhos', 'ajustes'];
 
-function switchTab(targetTab, forceDirection = null) {
-  if (!targetTab) return;
-
-  const oldIndex = TAB_ORDER.indexOf(currentTab);
-  const newIndex = TAB_ORDER.indexOf(targetTab);
-
-  let dir = forceDirection;
-  if (!dir && oldIndex !== -1 && newIndex !== -1) {
-    dir = newIndex >= oldIndex ? 'right' : 'left';
-  } else if (!dir) {
-    dir = 'right';
-  }
-
+function applyTabVisibility(targetTab, dir = null, animate = true) {
   // Atualiza pílulas da barra de navegação
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(n => {
@@ -645,14 +662,33 @@ function switchTab(targetTab, forceDirection = null) {
 
   if (activeContent) {
     activeContent.classList.add('active');
-    const animClass = dir === 'right' ? 'carousel-slide-right' : 'carousel-slide-left';
-    activeContent.classList.add(animClass);
-    setTimeout(() => {
-      activeContent.classList.remove(animClass);
-    }, 280);
+    if (animate && dir) {
+      const animClass = dir === 'right' ? 'carousel-slide-right' : 'carousel-slide-left';
+      activeContent.classList.add(animClass);
+      setTimeout(() => {
+        activeContent.classList.remove(animClass);
+      }, 280);
+    }
   }
 
   currentTab = targetTab;
+  saveActiveTab(targetTab);
+}
+
+function switchTab(targetTab, forceDirection = null) {
+  if (!targetTab) return;
+
+  const oldIndex = TAB_ORDER.indexOf(currentTab);
+  const newIndex = TAB_ORDER.indexOf(targetTab);
+
+  let dir = forceDirection;
+  if (!dir && oldIndex !== -1 && newIndex !== -1) {
+    dir = newIndex >= oldIndex ? 'right' : 'left';
+  } else if (!dir) {
+    dir = 'right';
+  }
+
+  applyTabVisibility(targetTab, dir, true);
   refreshAllUI();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1265,8 +1301,10 @@ function initTasksModule() {
       if (deleteBtn) {
         const taskId = deleteBtn.getAttribute('data-delete-task');
         if (confirm('Deseja excluir esta tarefa permanentemente?')) {
+          markDeleted(state, 'tasks', taskId);
           deleteTask(state, taskId);
           saveState(state);
+          triggerAutoSyncIfEnabled();
           showToast('Tarefa excluída', 'info');
           refreshAllUI();
         }
@@ -1570,6 +1608,7 @@ function initCarroModule() {
       if (delBtn) {
         const carId = delBtn.getAttribute('data-delete-carro');
         if (confirm('Deseja excluir esta manutenção do carro?')) {
+          markDeleted(state, 'carro', carId);
           deleteCarroItem(state, carId);
           saveState(state);
           showToast('Manutenção removida', 'info');
@@ -1812,6 +1851,7 @@ function initReformasModule() {
       if (delBtn) {
         const refId = delBtn.getAttribute('data-delete-reforma');
         if (confirm('Deseja excluir esta ideia de reforma?')) {
+          markDeleted(state, 'reformas', refId);
           deleteReforma(state, refId);
           saveState(state);
           showToast('Reforma excluída', 'info');
@@ -2047,6 +2087,7 @@ function initSonhosModule() {
       if (delBtn) {
         const id = delBtn.getAttribute('data-delete-sonho');
         if (confirm('Deseja excluir este sonho?')) {
+          markDeleted(state, 'sonhos', id);
           deleteSonho(state, id);
           saveState(state);
           showToast('Sonho removido', 'info');
@@ -2370,7 +2411,8 @@ function initSettingsModule() {
   const btnRestoreInvoices = document.getElementById('btn-restore-invoices');
   if (btnRestoreInvoices) {
     btnRestoreInvoices.addEventListener('click', () => {
-      ensureRecoveredPurchases(state);
+      // Ação explícita do usuário: limpa os túmulos dessas notas e as traz de volta.
+      ensureRecoveredPurchases(state, { restoreDeleted: true });
       syncPurchasesIntoCatalog(state);
       saveState(state);
       refreshAllUI();
@@ -2422,6 +2464,7 @@ function triggerAutoSyncIfEnabled(immediate = false) {
   }
 
   const runSync = async () => {
+    autoSyncTimeout = null;
     try {
       await backupToSheets(state);
       if (syncDot) {
@@ -2439,6 +2482,7 @@ function triggerAutoSyncIfEnabled(immediate = false) {
 
   if (immediate) {
     if (autoSyncTimeout) clearTimeout(autoSyncTimeout);
+    autoSyncTimeout = null;
     runSync();
   } else {
     if (autoSyncTimeout) clearTimeout(autoSyncTimeout);
@@ -2448,10 +2492,25 @@ function triggerAutoSyncIfEnabled(immediate = false) {
 
 let lastSyncPullTime = 0;
 let isSyncPulling = false;
+// Enquanto aplicamos o pull, o saveState NÃO deve disparar um novo backup:
+// era esse ciclo (pull → save → backup → re-render) que fazia a tela piscar.
+let isApplyingCloudState = false;
+
+function isUserBusyInUI() {
+  if (typeof document === 'undefined') return false;
+  if (document.visibilityState && document.visibilityState !== 'visible') return true;
+  if (typeof activeModalStack !== 'undefined' && activeModalStack.length > 0) return true;
+  const el = document.activeElement;
+  if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName || '')) return true;
+  return false;
+}
 
 async function syncPullFromSheets(silent = false) {
-  if (!state.settings.sheetsUrl) return;
+  if (!state || !state.settings || !state.settings.sheetsUrl) return;
   if (isSyncPulling) return;
+  // Não recarrega/repinta a tela enquanto o usuário está em outra aba com um
+  // modal aberto, digitando ou com o app em segundo plano (causava o "pisca").
+  if (isUserBusyInUI()) return;
 
   const now = Date.now();
   if (silent && (now - lastSyncPullTime < 10000)) {
@@ -2470,11 +2529,30 @@ async function syncPullFromSheets(silent = false) {
   try {
     const cloudData = await restoreFromSheets(state);
     if (cloudData) {
+      const cloudStamp = String(cloudData.lastUpdated || cloudData.updatedAt || '');
+      const knownStamp = state.settings && state.settings.lastCloudUpdatedAt;
+      // Nada mudou na planilha: não re-renderiza nada (evita flicker a cada 30s).
+      if (silent && cloudStamp && knownStamp && cloudStamp === knownStamp) {
+        if (syncDot) {
+          syncDot.className = 'sync-status-indicator synced';
+          syncDot.title = `Planilha sincronizada às ${new Date().toLocaleTimeString('pt-BR')}`;
+        }
+        isSyncPulling = false;
+        return;
+      }
+
       const cloudRegCount = Array.isArray(cloudData.comprasRegistros) ? cloudData.comprasRegistros.length : 0;
-      state = applyCloudBackup(state, cloudData);
-      ensureRecoveredPurchases(state);
-      syncPurchasesIntoCatalog(state);
-      saveState(state);
+      isApplyingCloudState = true;
+      try {
+        state = applyCloudBackup(state, cloudData);
+        ensureRecoveredPurchases(state);
+        syncPurchasesIntoCatalog(state);
+        if (!state.settings) state.settings = {};
+        state.settings.lastCloudUpdatedAt = cloudStamp || new Date().toISOString();
+        saveState(state);
+      } finally {
+        isApplyingCloudState = false;
+      }
       populateCategorySelects(state);
       refreshAllUI();
 
@@ -2640,8 +2718,10 @@ function initComprasModule() {
       if (delBtn) {
         const itemId = delBtn.getAttribute('data-delete-shopping');
         if (confirm('Deseja remover este item da lista de compras?')) {
+          markDeleted(state, 'compras', itemId);
           deleteShoppingItem(state, itemId);
           saveState(state);
+          triggerAutoSyncIfEnabled();
           showToast('Item removido da lista', 'info');
           renderComprasTab(state, currentComprasCategory, currentComprasView);
         }
@@ -2795,6 +2875,7 @@ function initComprasModule() {
       if (delBtn) {
         const purchaseId = delBtn.getAttribute('data-delete-purchase');
         if (confirm('Deseja excluir este registro de nota fiscal de compra?')) {
+          markPurchaseDeleted(state, purchaseId);
           deleteMarketPurchase(state, purchaseId);
           saveState(state);
           triggerAutoSyncIfEnabled();
@@ -4301,24 +4382,9 @@ function initQrCodeScanner() {
     if (!rawText) return;
     const parsed = parseNfceQrCodeText(rawText);
 
-    // Amostra conhecida (Padaria e Mercearia Irmãos Araújo) para preenchimento imediato quando testado
-    const isSampleKey = parsed.accessKey === '35261150489095000127650010000505041101032350' ||
-                        (rawText && rawText.includes('35261150489095000127650010000505041101032350'));
-
-    let initialItems = Array.isArray(parsed.items) ? [...parsed.items] : [];
-    let initialTotal = parsed.total || parsed.totalAmount || 0;
-    let initialPayment = parsed.paymentMethod || 'va';
-
-    if (isSampleKey && initialItems.length === 0) {
-      initialTotal = 71.06;
-      initialPayment = 'credito';
-      initialItems = [
-        { code: '3000', name: 'CAFE DA MANHA', quantity: 0.442, unit: 'KG', unitPrice: 59.90, price: 26.48, category: 'bebidas' },
-        { code: '3076', name: 'SUCO MIX JARRA', quantity: 1, unit: 'UN', unitPrice: 17.90, price: 17.90, category: 'bebidas' },
-        { code: '7079', name: 'CAPPUCCINO GELADO COM CHANTILY', quantity: 1, unit: 'UN', unitPrice: 13.50, price: 13.50, category: 'mercearia' },
-        { code: '3000', name: 'CAFE DA MANHA', quantity: 0.22, unit: 'KG', unitPrice: 59.90, price: 13.18, category: 'bebidas' }
-      ];
-    }
+    const initialItems = Array.isArray(parsed.items) ? [...parsed.items] : [];
+    const initialTotal = parsed.total || parsed.totalAmount || 0;
+    const initialPayment = parsed.paymentMethod || 'va';
 
     pendingPurchase = {
       marketName: parsed.marketName || 'Supermercado',
@@ -4336,18 +4402,19 @@ function initQrCodeScanner() {
     };
 
     renderPreviewUI();
-
-    if (statusMsg) {
-      if (pendingPurchase.items.length > 0) {
-        statusMsg.textContent = `✅ Nota lida com sucesso! ${pendingPurchase.items.length} itens extraídos.`;
-      } else {
-        statusMsg.textContent = 'QR Code lido! Buscando detalhes e itens da nota...';
-      }
-    }
     playTaskCompleteSound(state.settings.soundEnabled);
 
-    // Se temos a URL online e os itens ainda não vieram, busca online via Google Apps Script ou direto
-    if (pendingPurchase.rawUrl && pendingPurchase.rawUrl.startsWith('http') && pendingPurchase.items.length === 0) {
+    const hasDetailedItems = pendingPurchase.items.some(it => it && it.code && it.code !== 'COMPRA');
+
+    if (statusMsg) {
+      statusMsg.textContent = hasDetailedItems
+        ? `✅ Nota lida com sucesso! ${pendingPurchase.items.length} itens extraídos.`
+        : 'QR Code lido! Buscando automaticamente os itens no site da SEFAZ...';
+    }
+
+    // Sempre que houver URL e faltarem os itens detalhados, busca sozinho.
+    // O usuário não deve precisar abrir o site da Fazenda e copiar nada.
+    if (pendingPurchase.rawUrl && pendingPurchase.rawUrl.startsWith('http') && !hasDetailedItems) {
       const sheetsUrl = state.settings && state.settings.sheetsUrl;
       const sheetsToken = state.settings && state.settings.sheetsToken;
 
@@ -4356,29 +4423,33 @@ function initQrCodeScanner() {
         sheetsToken,
         baseInfo: pendingPurchase
       }).then(enhanced => {
-        if (enhanced && enhanced.success) {
-          if (enhanced.marketName) pendingPurchase.marketName = enhanced.marketName;
-          if (enhanced.total || enhanced.totalAmount) {
-            pendingPurchase.total = enhanced.total || enhanced.totalAmount;
-            pendingPurchase.totalAmount = pendingPurchase.total;
-          }
-          if (enhanced.items && enhanced.items.length > 0) {
-            pendingPurchase.items = enhanced.items;
-          }
-          if (enhanced.cnpj) pendingPurchase.cnpj = enhanced.cnpj;
-          if (enhanced.paymentMethod) pendingPurchase.paymentMethod = enhanced.paymentMethod;
+        if (!enhanced || !enhanced.success) return;
 
-          renderPreviewUI();
+        if (enhanced.marketName) pendingPurchase.marketName = enhanced.marketName;
+        if (enhanced.total || enhanced.totalAmount) {
+          pendingPurchase.total = enhanced.total || enhanced.totalAmount;
+          pendingPurchase.totalAmount = pendingPurchase.total;
+        }
+        if (enhanced.items && enhanced.items.length > 0) {
+          pendingPurchase.items = enhanced.items;
+        }
+        if (enhanced.cnpj) pendingPurchase.cnpj = enhanced.cnpj;
+        if (enhanced.paymentMethod) pendingPurchase.paymentMethod = enhanced.paymentMethod;
+        if (enhanced.date) pendingPurchase.date = enhanced.date;
 
-          if (enhanced.items && enhanced.items.length > 0) {
-            if (statusMsg) statusMsg.textContent = `🎉 ${enhanced.items.length} produtos carregados com sucesso da SEFAZ!`;
-            showToast(`🎉 ${enhanced.items.length} itens extraídos da nota fiscal!`, 'success', 3500);
-          } else if (statusMsg) {
-            statusMsg.textContent = 'Chave e mercado identificados! Toque em "Abrir na Fazenda" e use "Colar Automático" para importar todos os produtos.';
-          }
+        renderPreviewUI();
+
+        const gotItems = enhanced.items && enhanced.items.length > 0;
+        if (gotItems) {
+          if (statusMsg) statusMsg.textContent = `🎉 ${enhanced.items.length} produtos carregados automaticamente da SEFAZ!`;
+          showToast(`🎉 ${enhanced.items.length} itens extraídos da nota fiscal!`, 'success', 3500);
+        } else if (statusMsg) {
+          const reason = (enhanced.fetchErrors && enhanced.fetchErrors[0]) ? ` (${enhanced.fetchErrors[0]})` : '';
+          statusMsg.textContent = `Não foi possível baixar os itens automaticamente${reason}. Toque em "Abrir na Fazenda" e depois em "Colar Automático".`;
         }
       }).catch(err => {
         console.warn('Erro ao enriquecer dados da NFC-e:', err);
+        if (statusMsg) statusMsg.textContent = 'Não foi possível consultar a SEFAZ automaticamente. Use "Abrir na Fazenda" e "Colar Automático".';
       });
     }
   }
@@ -4858,6 +4929,7 @@ function initCategoryManagement() {
         const catId = delBtn.getAttribute('data-action-delete-cat');
         const mod = delBtn.getAttribute('data-cat-module') || currentCategoryManageModule;
         if (confirm('Deseja excluir esta categoria? Os itens que a utilizam manterão o registro.')) {
+          markDeleted(state, 'categories', mod + ':' + catId);
           deleteCategory(state, mod, catId);
           saveState(state);
           triggerAutoSyncIfEnabled();
@@ -7181,6 +7253,7 @@ function initShoppingModule() {
         if (!item) return;
 
         if (confirm(`Deseja realmente remover "${item.title}" da lista de shopping?`)) {
+          markDeleted(state, 'shoppingWishlist', id);
           deleteShoppingWishlistItem(state, id);
           saveState(state);
           triggerAutoSyncIfEnabled();

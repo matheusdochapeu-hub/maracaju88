@@ -60,6 +60,22 @@ export function mapPaymentMethodToApp(rawMethod) {
 }
 
 /**
+ * Alguns leitores automáticos (ex.: r.jina.ai) devolvem o cupom renderizado
+ * duas vezes no mesmo HTML (dois blocos #tabResult). Sem isso, os itens eram
+ * contados em dobro e a soma passava do total da nota.
+ */
+export function dedupeRepeatedItemBlocks(items) {
+  if (!Array.isArray(items)) return [];
+  if (items.length < 4 || items.length % 2 !== 0) return items;
+  const half = items.length / 2;
+  const first = items.slice(0, half);
+  const second = items.slice(half);
+  const keyOf = (it) => [it.code || '', it.name || it.rawName || '', it.quantity, it.unitPrice, it.totalPrice || it.price].join('|');
+  const repeated = first.every((it, idx) => keyOf(it) === keyOf(second[idx]));
+  return repeated ? first : items;
+}
+
+/**
  * Realiza o parse completo de uma página HTML de consulta pública de NFC-e (SEFAZ SP e demais estados)
  * Extrai Razão Social, CNPJ, Endereço, Data, Hora, Número, Série, Chave de Acesso, Valor Total,
  * Forma de Pagamento e Todos os Itens Detalhados (Nome, Código, Qtd, Unidade, Valor Unitário e Total).
@@ -282,7 +298,7 @@ export function parseNfceHtml(htmlString) {
       const unMatch = rowHtml.match(/<span[^>]*class=["']RUN["'][^>]*>[\s\S]*?UN:\s*<\/strong>\s*([A-Za-z]+)/i);
       const unit = unMatch ? unMatch[1].trim().toUpperCase() : 'UN';
 
-      const vlUnitMatch = rowHtml.match(/<span[^>]*class=["']RvlUnit["'][^>]*>[\s\S]*?Vl\.\s*Unit\.:\s*<\/strong>\s*([\d,\.]+)/i);
+      const vlUnitMatch = rowHtml.match(/<span[^>]*class=["']RvlUnit["'][^>]*>[\s\S]*?Vl\.\s*Unit\.:\s*<\/strong>(?:&nbsp;|&#160;|\s)*([\d,\.]+)/i);
       const unitPrice = vlUnitMatch ? parseCurrency(vlUnitMatch[1]) : 0;
 
       const valMatch = rowHtml.match(/<span[^>]*class=["']valor["'][^>]*>([\d,\.]+)<\/span>/i);
@@ -302,6 +318,14 @@ export function parseNfceHtml(htmlString) {
         });
       }
     }
+  }
+
+  // Remove bloco de itens repetido (leitor automático pode duplicar o cupom
+  // inteiro). Feito antes do total por soma, senão o total também dobrava.
+  const uniqueItems = dedupeRepeatedItemBlocks(items);
+  if (uniqueItems.length !== items.length) {
+    items.length = 0;
+    items.push(...uniqueItems);
   }
 
   if (totalAmount <= 0) {
@@ -558,72 +582,145 @@ export function parseNfceQrCodeText(rawText) {
 
 /**
  * Tenta buscar online a página da SEFAZ para extrair itens detalhados, Razão Social e valores.
- * Suporta integração via backend do Google Apps Script (sem bloqueio de CORS)
- * e fallback gracioso com os dados locais já extraídos da chave.
+ * Cadeia automática (sem o usuário precisar copiar nada):
+ *   1. Backend do Google Apps Script (sem CORS) — GET e POST em paralelo;
+ *   2. Leitor público r.jina.ai (renderiza a página e devolve o HTML);
+ *   3. Busca direta do navegador (funciona quando a SEFAZ libera CORS);
+ *   4. Proxy allorigins como último recurso.
+ * Retorna `needsManualPaste: true` apenas quando TODAS as tentativas falham.
  */
 export async function fetchNfceDetailsOnline(url, options = {}) {
-  const baseInfo = options.baseInfo || (url.startsWith('http') ? parseNfceQrCodeText(url) : {});
+  const baseInfo = options.baseInfo || (url && url.startsWith('http') ? parseNfceQrCodeText(url) : {});
 
   if (!url || !url.startsWith('http')) {
     return { success: false, ...baseInfo };
   }
 
-  // 1. Tenta buscar via Google Apps Script se configurado (zero problemas de CORS!)
-  if (options.sheetsUrl) {
-    try {
-      const { fetchNfceHtmlViaAppsScript } = await import('./sheets.js');
-      const htmlText = await fetchNfceHtmlViaAppsScript(options.sheetsUrl, options.sheetsToken, url);
-      if (htmlText) {
-        const parsed = parseNfceHtml(htmlText);
-        if (parsed && (parsed.items.length > 0 || parsed.totalAmount > 0)) {
-          return {
-            ...baseInfo,
-            ...parsed,
-            success: true,
-            rawUrl: url
-          };
-        }
-      }
-    } catch (errAppsScript) {
-      console.warn('Busca de NFC-e via Apps Script falhou ou não configurada:', errAppsScript);
-    }
+  const fetchErrors = [];
+
+  function withTimeout(promise, ms, label) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`${label}: tempo esgotado (${Math.round(ms / 1000)}s)`)), ms);
+      promise.then(
+        value => { clearTimeout(timer); resolve(value); },
+        err => { clearTimeout(timer); reject(err); }
+      );
+    });
   }
 
-  // 2. Tentativa direta pelo navegador (caso a SEFAZ ou proxy permita)
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
+  function parseIfReceipt(html, source) {
+    if (!html || typeof html !== 'string') return null;
+    // Página de erro/bloqueio da SEFAZ não tem os marcadores do cupom.
+    if (!/txtTopo|txtTit|Item\s*\+\s*\d+|totalNumb|NFC-e|Nota Fiscal/i.test(html)) return null;
+    const parsed = parseNfceHtml(html);
+    const items = Array.isArray(parsed && parsed.items) ? parsed.items : [];
+    const total = Number(parsed && (parsed.totalAmount || parsed.total)) || 0;
+    if (items.length === 0 && total <= 0) return null;
+    return {
+      ...baseInfo,
+      ...parsed,
+      success: true,
+      rawUrl: url,
+      source,
+      fetchedAutomatically: true
+    };
+  }
 
-    const response = await fetch(url, {
-      signal: controller.signal,
+  async function tryAppsScript(method) {
+    if (!options.sheetsUrl) throw new Error('Apps Script não configurado.');
+    const { fetchNfceHtmlViaAppsScript } = await import('./sheets.js');
+    const html = await fetchNfceHtmlViaAppsScript(options.sheetsUrl, options.sheetsToken, url, 14000, method);
+    const result = parseIfReceipt(html, 'apps-script');
+    if (!result) throw new Error('Apps Script respondeu, mas sem os dados do cupom.');
+    return result;
+  }
+
+  async function tryJinaReader() {
+    const readerUrl = `https://r.jina.ai/${url}`;
+    const res = await fetch(readerUrl, {
+      method: 'GET',
       headers: {
-        'Accept': 'text/html,application/xhtml+xml,application/xml'
+        'Accept': 'text/plain',
+        'X-Return-Format': 'html'
       }
     });
-    clearTimeout(timeout);
-
-    if (response.ok) {
-      const htmlText = await response.text();
-      const parsed = parseNfceHtml(htmlText);
-      if (parsed && (parsed.items.length > 0 || parsed.totalAmount > 0)) {
-        return {
-          ...baseInfo,
-          ...parsed,
-          success: true,
-          rawUrl: url
-        };
-      }
-    }
-  } catch (errDirect) {
-    // CORS ou restrição de rede no browser
-    console.info('Tentativa de conexão direta com a SEFAZ bloqueada por CORS no navegador.');
+    if (!res.ok) throw new Error(`Leitor automático: HTTP ${res.status}.`);
+    const html = await res.text();
+    const result = parseIfReceipt(html, 'leitor-automatico');
+    if (!result) throw new Error('O leitor automático não reconheceu o cupom.');
+    return result;
   }
 
-  // Retorna os dados fundamentais extraídos da chave e indica que pode colar o HTML se desejar
+  async function tryDirect() {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'Accept': 'text/html,application/xhtml+xml,application/xml' }
+      });
+      if (!response.ok) throw new Error(`Conexão direta: HTTP ${response.status}.`);
+      const html = await response.text();
+      const result = parseIfReceipt(html, 'conexao-direta');
+      if (!result) throw new Error('A página veio sem os dados do cupom.');
+      return result;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function tryAllOrigins() {
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    try {
+      const response = await fetch(proxyUrl, { signal: controller.signal });
+      if (!response.ok) throw new Error(`Proxy alternativo: HTTP ${response.status}.`);
+      const html = await response.text();
+      const result = parseIfReceipt(html, 'proxy-alternativo');
+      if (!result) throw new Error('O proxy alternativo não trouxe o cupom.');
+      return result;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  const attempts = [];
+  if (options.sheetsUrl) attempts.push(tryAppsScript('GET'));
+  attempts.push(tryJinaReader());
+  attempts.push(tryDirect());
+
+  try {
+    // Primeira tentativa bem-sucedida vence; o usuário não espera as outras.
+    const winner = await Promise.any(attempts.map(p => p.catch(err => {
+      fetchErrors.push(err && err.message ? err.message : String(err));
+      throw err;
+    })));
+    if (winner) return winner;
+  } catch (e) {
+    // Promise.any só rejeita quando todas falham.
+  }
+
+  if (options.sheetsUrl) {
+    try {
+      const viaPost = await withTimeout(tryAppsScript('POST'), 14000, 'Apps Script (POST)');
+      return viaPost;
+    } catch (err) {
+      fetchErrors.push(err && err.message ? err.message : String(err));
+    }
+  }
+
+  try {
+    return await tryAllOrigins();
+  } catch (err) {
+    fetchErrors.push(err && err.message ? err.message : String(err));
+  }
+
   return {
     ...baseInfo,
     success: true,
-    needsManualPaste: true
+    needsManualPaste: true,
+    fetchErrors
   };
 }
 

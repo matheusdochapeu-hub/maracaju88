@@ -3,6 +3,7 @@
 // ============================================================
 
 import { getLocalDateString } from './dates.js';
+import { parseCurrency } from './currency.js';
 
 export const DEFAULT_BENEFITS_CONFIG = {
   vaFixedAmount: 2050.00,
@@ -471,7 +472,9 @@ export function getMonthlyBenefitDetails(state, targetMonthKey = null) {
 
   purchases.forEach(p => {
     const method = (p.paymentMethod || 'va').toLowerCase();
-    const val = Number(p.total) || 0;
+    // A planilha pode devolver o total como "264,33"; Number() virava NaN e a
+    // compra era descontada como R$ 0 do saldo de VA/VR.
+    const val = parseCurrency(p.total);
     if (paymentBreakdown[method] !== undefined) {
       paymentBreakdown[method] += val;
     } else {

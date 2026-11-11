@@ -14,6 +14,167 @@ import {
 import { DEFAULT_CATEGORIES } from './categories.js';
 import { deduplicatePets } from './pets.js';
 import { getMonthlyBenefitDetails, getCurrentBenefitCycleKey } from './benefits.js';
+import { parseCurrency } from './currency.js';
+import { formatMonthKey } from './shopping.js';
+
+// ============================================================
+//  TÚMULOS DE EXCLUSÃO (tombstones)
+// ------------------------------------------------------------
+// A sincronização mescla listas por união (local ∪ nuvem). Sem um registro
+// de "isto foi apagado", o item excluído no celular voltava na próxima
+// leitura da planilha (a cada 30s / ao voltar o foco) — era o bug de não
+// conseguir excluir tarefas, itens do mercado e compras. Guardamos o id
+// apagado com data; o merge descarta esse id dos dois lados.
+// ============================================================
+
+export const TOMBSTONE_COLLECTIONS = [
+  'tasks',
+  'compras',
+  'comprasRegistros',
+  'carro',
+  'reformas',
+  'sonhos',
+  'shoppingWishlist',
+  'catalog',
+  'categories'
+];
+
+const TOMBSTONE_TTL_MS = 180 * 24 * 60 * 60 * 1000; // 180 dias
+const TOMBSTONE_MAX_PER_COLLECTION = 1000;
+
+export function ensureDeletedIds(state) {
+  if (!state) return {};
+  if (!state.deletedIds || typeof state.deletedIds !== 'object' || Array.isArray(state.deletedIds)) {
+    state.deletedIds = {};
+  }
+  TOMBSTONE_COLLECTIONS.forEach(col => {
+    const value = state.deletedIds[col];
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      state.deletedIds[col] = {};
+    }
+  });
+  return state.deletedIds;
+}
+
+function pruneDeletedIds(state) {
+  const map = ensureDeletedIds(state);
+  const now = Date.now();
+  Object.keys(map).forEach(col => {
+    const entries = map[col] || {};
+    const kept = Object.entries(entries)
+      .filter(([, ts]) => Number.isFinite(Number(ts)) && (now - Number(ts)) < TOMBSTONE_TTL_MS)
+      .sort((a, b) => Number(b[1]) - Number(a[1]))
+      .slice(0, TOMBSTONE_MAX_PER_COLLECTION);
+    map[col] = Object.fromEntries(kept);
+  });
+}
+
+export function markDeleted(state, collection, id) {
+  if (!state || !collection || id === undefined || id === null || id === '') return;
+  const map = ensureDeletedIds(state);
+  if (!map[collection]) map[collection] = {};
+  map[collection][String(id)] = Date.now();
+  pruneDeletedIds(state);
+}
+
+export function clearDeleted(state, collection, id) {
+  if (!state || !collection || id === undefined || id === null) return;
+  const map = ensureDeletedIds(state);
+  if (map[collection]) delete map[collection][String(id)];
+}
+
+export function isDeleted(state, collection, id) {
+  if (!state || !collection || id === undefined || id === null) return false;
+  const col = state.deletedIds && state.deletedIds[collection];
+  return !!(col && Object.prototype.hasOwnProperty.call(col, String(id)));
+}
+
+export function mergeDeletedIds(target, source) {
+  const merged = {};
+  TOMBSTONE_COLLECTIONS.forEach(col => { merged[col] = {}; });
+  const absorb = (obj) => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+    Object.keys(obj).forEach(col => {
+      const entries = obj[col];
+      if (!entries || typeof entries !== 'object' || Array.isArray(entries)) return;
+      if (!merged[col]) merged[col] = {};
+      Object.entries(entries).forEach(([id, ts]) => {
+        const prev = merged[col][id];
+        const value = Number(ts) || Date.now();
+        merged[col][id] = prev ? Math.max(Number(prev) || 0, value) : value;
+      });
+    });
+  };
+  absorb(target);
+  absorb(source);
+  return merged;
+}
+
+export function filterDeletedFromState(state) {
+  if (!state) return state;
+  ensureDeletedIds(state);
+  const keep = (col, id) => !isDeleted(state, col, id);
+  if (Array.isArray(state.tasks)) state.tasks = state.tasks.filter(i => keep('tasks', i && i.id));
+  if (Array.isArray(state.compras)) state.compras = state.compras.filter(i => keep('compras', i && i.id));
+  if (Array.isArray(state.comprasRegistros)) state.comprasRegistros = state.comprasRegistros.filter(i => keep('comprasRegistros', i && i.id));
+  if (Array.isArray(state.carro)) state.carro = state.carro.filter(i => keep('carro', i && i.id));
+  if (Array.isArray(state.reformas)) state.reformas = state.reformas.filter(i => keep('reformas', i && i.id));
+  if (Array.isArray(state.sonhos)) state.sonhos = state.sonhos.filter(i => keep('sonhos', i && i.id));
+  if (Array.isArray(state.shoppingWishlist)) state.shoppingWishlist = state.shoppingWishlist.filter(i => keep('shoppingWishlist', i && i.id));
+  if (Array.isArray(state.catalog)) state.catalog = state.catalog.filter(i => keep('catalog', i && (i.id || i.code || i.rawName)));
+
+  if (state.categories && typeof state.categories === 'object') {
+    Object.keys(state.categories).forEach(mod => {
+      const list = state.categories[mod];
+      if (Array.isArray(list)) {
+        state.categories[mod] = list.filter(c => keep('categories', c && `${mod}:${c.id}`));
+      }
+    });
+  }
+  return state;
+}
+
+/**
+ * Converte valores monetários que vieram da planilha como texto ("264,33")
+ * para número. Sem isso `Number("264,33")` virava NaN e a compra era somada
+ * como R$ 0 no saldo de VA/VR.
+ */
+export function normalizePurchaseRecord(purchase) {
+  if (!purchase || typeof purchase !== 'object') return purchase;
+  const date = String(purchase.date || purchase.createdAt || '').slice(0, 10);
+  purchase.total = parseCurrency(purchase.total !== undefined ? purchase.total : purchase.valor);
+  if (date) purchase.date = date;
+  purchase.monthKey = formatMonthKey(date || purchase.monthKey);
+  if (Array.isArray(purchase.items)) {
+    purchase.items = purchase.items.map(item => {
+      if (!item || typeof item !== 'object') return item;
+      if (item.unitPrice !== undefined) item.unitPrice = parseCurrency(item.unitPrice);
+      if (item.price !== undefined) item.price = parseCurrency(item.price);
+      if (item.totalPrice !== undefined) item.totalPrice = parseCurrency(item.totalPrice);
+      return item;
+    });
+  }
+  return purchase;
+}
+
+export function normalizePurchasesInState(state) {
+  if (!state) return state;
+  if (Array.isArray(state.comprasRegistros)) {
+    state.comprasRegistros = state.comprasRegistros
+      .filter(p => p && typeof p === 'object')
+      .map(normalizePurchaseRecord);
+  }
+  if (Array.isArray(state.compras)) {
+    state.compras = state.compras.map(item => {
+      if (!item || typeof item !== 'object') return item;
+      if (item.unitPrice !== undefined) item.unitPrice = parseCurrency(item.unitPrice);
+      if (item.price !== undefined) item.price = parseCurrency(item.price);
+      if (item.totalPrice !== undefined) item.totalPrice = parseCurrency(item.totalPrice);
+      return item;
+    });
+  }
+  return state;
+}
 
 /**
  * Notas Fiscais Históricas Oficiais e Recuperáveis do Casal
@@ -123,32 +284,86 @@ export const RECOVERABLE_PURCHASES = [
 
 /**
  * Garante que notas fiscais históricas reais nunca sumam do estado.
+ * Não ressuscita o que o usuário excluiu: ids com túmulo em `deletedIds`
+ * são respeitados. `restoreDeleted: true` (botão "Recuperar Notas Fiscais")
+ * limpa os túmulos desses ids e força a volta.
  */
-export function ensureRecoveredPurchases(state) {
+export function ensureRecoveredPurchases(state, { restoreDeleted = false } = {}) {
   if (!state) return state;
   if (!Array.isArray(state.comprasRegistros)) {
     state.comprasRegistros = [];
   }
+  ensureDeletedIds(state);
 
   let added = false;
   for (const rec of RECOVERABLE_PURCHASES) {
+    if (restoreDeleted) {
+      clearDeleted(state, 'comprasRegistros', rec.id);
+    }
+    if (isDeleted(state, 'comprasRegistros', rec.id)) continue;
+
+    const recTotal = parseCurrency(rec.total);
     const exists = state.comprasRegistros.some(p => {
+      if (!p) return false;
       if (rec.nfeKey && p.nfeKey && p.nfeKey === rec.nfeKey) return true;
       if (p.id && p.id === rec.id) return true;
-      if (p.marketName && rec.marketName && p.marketName.trim().toLowerCase() === rec.marketName.trim().toLowerCase() && p.date === rec.date && Math.abs((Number(p.total) || 0) - rec.total) < 0.05) return true;
+      // Totais podem chegar da planilha como "280,66"; comparar com número.
+      if (p.marketName && rec.marketName && p.marketName.trim().toLowerCase() === rec.marketName.trim().toLowerCase() && p.date === rec.date && Math.abs(parseCurrency(p.total) - recTotal) < 0.05) return true;
       return false;
     });
 
     if (!exists) {
-      state.comprasRegistros.push(JSON.parse(JSON.stringify(rec)));
+      state.comprasRegistros.push(normalizePurchaseRecord(JSON.parse(JSON.stringify(rec))));
       added = true;
     }
   }
+
+  // Limpa duplicatas antigas: a cópia "recuperável" (id fixo) que já existe
+  // também como lançamento/importação real (mesmo mercado, data e total).
+  const beforeDedupe = state.comprasRegistros.length;
+  state.comprasRegistros = state.comprasRegistros.filter(p => {
+    if (!p || !p.id) return !!p;
+    const rec = RECOVERABLE_PURCHASES.find(r => r.id === p.id);
+    if (!rec) return true;
+    const recTotal = parseCurrency(rec.total);
+    const hasEquivalent = state.comprasRegistros.some(other => {
+      if (!other || other === p || !other.id || other.id === p.id) return false;
+      if (other.nfeKey && rec.nfeKey && other.nfeKey === rec.nfeKey) return true;
+      return other.marketName && rec.marketName &&
+        other.marketName.trim().toLowerCase() === rec.marketName.trim().toLowerCase() &&
+        other.date === rec.date &&
+        Math.abs(parseCurrency(other.total) - recTotal) < 0.05;
+    });
+    return !hasEquivalent;
+  });
+  if (state.comprasRegistros.length !== beforeDedupe) added = true;
 
   if (added) {
     state.comprasRegistros.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   }
   return state;
+}
+
+/**
+ * Exclui uma compra registrando o túmulo. Se ela for equivalente a uma nota
+ * "recuperável" (mesmo mercado/data/total), marca também o id fixo dessa nota
+ * — senão a rotina de recuperação traria a cópia de volta no próximo load.
+ */
+export function markPurchaseDeleted(state, purchaseId) {
+  if (!state || !purchaseId) return;
+  const purchase = (state.comprasRegistros || []).find(p => p && p.id === purchaseId);
+  markDeleted(state, 'comprasRegistros', purchaseId);
+  if (!purchase) return;
+  const total = parseCurrency(purchase.total);
+  RECOVERABLE_PURCHASES.forEach(rec => {
+    if (!rec.marketName || !purchase.marketName) return;
+    const sameMarket = purchase.marketName.trim().toLowerCase() === rec.marketName.trim().toLowerCase();
+    const sameDate = purchase.date === rec.date;
+    const sameTotal = Math.abs(total - parseCurrency(rec.total)) < 0.05;
+    if (sameMarket && sameDate && sameTotal) {
+      markDeleted(state, 'comprasRegistros', rec.id);
+    }
+  });
 }
 
 export function getInitialState() {
@@ -171,6 +386,7 @@ export function getInitialState() {
     sonhos: [...INITIAL_SONHOS],
     compras: [],
     comprasRegistros: [],
+    deletedIds: {},
     pets: JSON.parse(JSON.stringify(INITIAL_PETS)),
     deletedPetIds: [],
     catalog: [],
@@ -253,6 +469,10 @@ export function loadState() {
     };
 
     // Garante recuperação automática e permanente das notas fiscais do casal
+    // (respeitando o que foi excluído) e normaliza valores vindos da planilha.
+    ensureDeletedIds(merged);
+    normalizePurchasesInState(merged);
+    filterDeletedFromState(merged);
     ensureRecoveredPurchases(merged);
 
     deduplicatePets(merged);

@@ -1,6 +1,12 @@
 import { deduplicatePets, getPetAvatarUrl } from './pets.js';
 import { DEFAULT_ROOM_CATEGORIES } from './categories.js';
 import { getMonthlyBenefitDetails, getCurrentBenefitCycleKey } from './benefits.js';
+import {
+  ensureDeletedIds,
+  mergeDeletedIds,
+  filterDeletedFromState,
+  normalizePurchasesInState
+} from './storage.js';
 // ============================================================
 //  MARACAJU - GOOGLE SHEETS SYNC & BACKUP CLIENT
 // ============================================================
@@ -58,6 +64,7 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
   const stripPhotosArr = (arr) => Array.isArray(arr) ? arr.filter(p => typeof p === 'string' && !p.startsWith('data:image/')) : undefined;
 
   let benefitsSummary = undefined;
+  let matrixBenefits = undefined;
   try {
     const curCycleKey = getCurrentBenefitCycleKey(state);
     const curDetails = getMonthlyBenefitDetails(state, curCycleKey);
@@ -71,12 +78,32 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
       vrBalance: curDetails.vrBalance,
       updatedAt: new Date().toISOString()
     };
+    // Contrato explícito para o Matrix: ele NÃO recalcula VA/VR por dias úteis;
+    // consome exatamente este retrato do ciclo vigente (regra de ouro do ecossistema).
+    matrixBenefits = {
+      origem: 'Maracaju 88',
+      cycleKey: curDetails.cycleKey,
+      cycleLabel: curDetails.cycleLabel,
+      cycleRange: curDetails.cycleRange,
+      creditDate: curDetails.creditDateFormatted,
+      vaTotal: curDetails.vaTotal,
+      vaSpent: curDetails.vaSpent,
+      vaBalance: curDetails.vaBalance,
+      vrTotal: curDetails.vrTotal,
+      vrSpent: curDetails.vrSpent,
+      vrBalance: curDetails.vrBalance,
+      totalBenefit: curDetails.totalBenefit,
+      totalFoodSpent: curDetails.totalFoodSpent,
+      totalFoodBalance: curDetails.totalFoodBalance,
+      updatedAt: new Date().toISOString()
+    };
   } catch (e) {}
 
   const compactData = {
     version: state.version,
     lastUpdated: new Date().toISOString(),
     activeUserId: state.activeUserId,
+    deletedIds: ensureDeletedIds(state),
     users: state.users,
     gamification: state.gamification,
     tasks: state.tasks || [],
@@ -137,7 +164,8 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
     userPasswords: state.userPasswords || {},
     settings: {
       benefits: (state.settings && state.settings.benefits) ? state.settings.benefits : undefined,
-      benefitsSummary
+      benefitsSummary,
+      matrixBenefits
     }
   };
 
@@ -286,9 +314,14 @@ export function applyCloudBackup(currentState, cloudData) {
   const preservedSheetsUrl = safeCurrentSettings.sheetsUrl || safeCloudSettings.sheetsUrl || "";
   const preservedSheetsToken = safeCurrentSettings.sheetsToken || safeCloudSettings.sheetsToken || "Maracaju88CasalSegredo2026!";
 
+  // Exclusões são definitivas: a união das listas não pode ressuscitar
+  // item/tarefa/compra apagada no outro aparelho.
+  const mergedDeletedIds = mergeDeletedIds(safeCurrent.deletedIds, cloudData.deletedIds);
+
   const merged = {
     ...safeCurrent,
     ...cloudData,
+    deletedIds: mergedDeletedIds,
     version: cloudData.version || safeCurrent.version,
     lastUpdated: cloudData.lastUpdated || new Date().toISOString(),
     activeUserId: safeCurrent.activeUserId || cloudData.activeUserId || "matheus",
@@ -717,48 +750,78 @@ export function applyCloudBackup(currentState, cloudData) {
     }
   };
 
+  // Normaliza valores (a planilha costuma devolver "264,33" como texto) e
+  // aplica os túmulos por último, para nada apagado voltar no merge.
+  normalizePurchasesInState(merged);
+  filterDeletedFromState(merged);
+
   return merged;
 }
 
 
 /**
- * Busca o HTML de uma NFC-e via backend do Google Apps Script (contorna restrições de CORS)
+ * Busca o HTML de uma NFC-e via backend do Google Apps Script (contorna restrições de CORS).
+ * Metodo POST evita o limite de tamanho da query string (a URL do QR Code carrega
+ * a chave + hash e pode ser longa). Retorna o HTML ou lança erro explicativo.
  */
-export async function fetchNfceHtmlViaAppsScript(url, token, nfceUrl, timeoutMs = 15000) {
+export async function fetchNfceHtmlViaAppsScript(url, token, nfceUrl, timeoutMs = 15000, method = 'GET') {
   if (!url || !url.trim() || !nfceUrl) {
     throw new Error("URL do Google Apps Script ou link da NFC-e não fornecido.");
-  }
-
-  const endpoint = new URL(url.trim());
-  endpoint.searchParams.set("action", "fetchNfce");
-  endpoint.searchParams.set("url", nfceUrl);
-  if (token) {
-    endpoint.searchParams.set("token", token.trim());
   }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await fetch(endpoint.toString(), {
-      method: "GET",
-      headers: { "Accept": "application/json" },
-      signal: controller.signal
-    });
+    let res;
+    if (String(method).toUpperCase() === 'POST') {
+      res = await fetch(url.trim(), {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8", "Accept": "application/json" },
+        body: JSON.stringify({ action: "fetchNfce", url: nfceUrl, token: token ? token.trim() : "" }),
+        signal: controller.signal
+      });
+    } else {
+      const endpoint = new URL(url.trim());
+      endpoint.searchParams.set("action", "fetchNfce");
+      endpoint.searchParams.set("url", nfceUrl);
+      if (token) endpoint.searchParams.set("token", token.trim());
+      res = await fetch(endpoint.toString(), {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+        signal: controller.signal
+      });
+    }
     clearTimeout(timer);
 
     if (!res.ok) {
       throw new Error(`Erro na conexão HTTP: ${res.status} ${res.statusText}`);
     }
 
-    const json = await res.json();
-    if (json.status !== "success" || !json.html) {
-      throw new Error(json.message || "Falha ao obter HTML da NFC-e via Apps Script.");
+    let json = null;
+    try {
+      json = await res.json();
+    } catch (parseErr) {
+      throw new Error("O backend respondeu algo que não é JSON. Atualize o Apps Script.");
     }
 
-    return json.html;
+    if (json && json.status === "success" && typeof json.html === "string" && json.html.trim()) {
+      return json.html;
+    }
+    if (json && json.data) {
+      // Backend antigo (sem a ação fetchNfce): devolveu o backup no lugar do HTML.
+      const err = new Error("O Apps Script publicado ainda não tem a ação fetchNfce. Republique o apps_script.gs.");
+      err.code = 'BRIDGE_OUTDATED';
+      throw err;
+    }
+    const errMsg = (json && json.message) || "Falha ao obter HTML da NFC-e via Apps Script.";
+    const err = new Error(errMsg);
+    throw err;
   } catch (err) {
     clearTimeout(timer);
+    if (err.name === 'AbortError') {
+      throw new Error("Tempo limite excedido ao consultar a SEFAZ pelo Apps Script.");
+    }
     throw err;
   }
 }
