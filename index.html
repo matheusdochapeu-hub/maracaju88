@@ -29,6 +29,7 @@
         // nova e ela entra na próxima abertura — sem interromper o uso.
         console.log('[Maracaju] Nova versão baixada. Será aplicada na próxima abertura do app.');
         try { document.documentElement.setAttribute('data-maracaju-new-version', '1'); } catch (e) {}
+        try { window.dispatchEvent(new CustomEvent('maracaju:new-version')); } catch (e) {}
       });
     }
   </script>
@@ -61,6 +62,12 @@
 
   <!-- Canvas para Chuva de Confetti em Celebrações -->
   <canvas id="confetti-canvas"></canvas>
+
+  <!-- Aviso de nova versão pronta (o usuário decide quando recarregar) -->
+  <div id="app-update-banner" style="display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 6000; align-items: center; justify-content: space-between; gap: 0.75rem; background: linear-gradient(135deg, #15803d, #166534); color: #fff; padding: 0.65rem 0.9rem; box-shadow: 0 4px 16px rgba(0,0,0,0.28); font-size: 0.85rem; font-weight: 600;">
+    <span>🔄 Nova versão do app pronta.</span>
+    <button type="button" id="btn-apply-update" style="background: #fff; color: #166534; border: 0; border-radius: var(--radius-sm); padding: 0.4rem 0.8rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; white-space: nowrap;">Atualizar agora</button>
+  </div>
 
   <!-- ========================================== -->
   <!-- TELA DE ACESSO / LOGIN EXCLUSIVO (AUTH GATE) -->
@@ -631,7 +638,7 @@
         <div class="dash-card">
           <h3 class="dash-title" style="margin-bottom: 0.75rem;">📲 Atualização do Aplicativo</h3>
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-            Versão instalada: <strong>Maracaju v2.5.7</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
+            Versão instalada: <strong id="app-version-label">Maracaju</strong>. Se notar telas antigas ou travamentos no celular, force a atualização imediata abaixo.
           </p>
           <button type="button" id="btn-force-update-settings" class="btn btn-secondary btn-sm" onclick="window.forceUpdateApp && window.forceUpdateApp()">
             🔄 Limpar Cache e Forçar Atualização

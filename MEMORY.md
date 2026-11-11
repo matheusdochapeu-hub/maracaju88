@@ -4,6 +4,41 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-10 22:25] - App do celular não atualizava depois do deploy (v2.7.9)
+
+### 🔍 Sintoma
+O app instalado no celular continuava com a versão antiga mesmo após publicar a v2.7.8 no desktop.
+
+### 🐞 Causas
+1. O texto **“Versão instalada: Maracaju v2.5.7”** era hardcoded no `index.html` — mesmo atualizado,
+   o app *parecia* travado na 2.5.7.
+2. `sw.js` é servido pelo GitHub Pages com cache HTTP (~10 min) e a registration era
+   `./sw.js` sem `?v=`; o navegador podia reaproveitar o script antigo.
+3. Depois do fix do “pisca”, o `controllerchange` não recarrega mais — a página aberta continua
+   rodando o JS antigo até fechar/abrir o app.
+4. PWA em segundo plano não faz navegação; sem `update()` explícito, não descobre a versão nova.
+
+### 🛠️ Correção
+- **Versão dinâmica**: `#app-version-label` recebe `APP_CONFIG.version` (`updateVersionLabel`).
+- **Banner** “🔄 Nova versão do app pronta / Atualizar agora” no `controllerchange`
+  (recarrega só no toque; a aba ativa é preservada). Evento `maracaju:new-version`.
+- **Registration com `./sw.js?v=<versão>`** para furar o cache HTTP do Pages.
+- Checagem de atualização em `visibilitychange` (throttle 2 min) e a cada 10 min.
+- O botão “🔄 Limpar Cache e Forçar Atualização” (Ajustes) continua como saída de emergência.
+
+### 🧪 Validação
+- `test/pwa-update.test.js` (4 testes): versão dinâmica, banner, `?v=`, `CACHE_NAME`.
+- Suíte total: **167 testes, 0 falhas**.
+
+### ⚠️ Para o aparelho que já estava desatualizado
+É preciso forçar **uma vez**: **Ajustes → “Limpar Cache e Forçar Atualização”** (ou fechar o app
+completamente e abrir duas vezes). Depois disso, as próximas atualizações aparecem no banner.
+
+### 📦 Versão
+- **v2.7.9** em `config.js`, `sw.js` e `package.json`.
+
+---
+
 ## [2026-11-10 22:10] - NFC-e: ponte nativa autorizada e validada contra a SEFAZ real (v2.7.8)
 
 ### ✅ O que foi testado ao vivo (nota real da Padaria Irmãos Araújo, 07/11/2026)

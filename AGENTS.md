@@ -24,7 +24,7 @@ python -m http.server 8000   # abrir http://localhost:8000
 ## Testes
 
 ```powershell
-node --test test/**/*.test.js   # 163 testes
+node --test test/**/*.test.js   # 167 testes
 ```
 
 ## Deploy
@@ -68,6 +68,11 @@ node --test test/**/*.test.js   # 163 testes
    A URL do QR tem `|` no parâmetro `p`: envie sempre `%7C` (UrlFetchApp recusa pipe cru) e
    **repita a tentativa** (até 4x) — a SEFAZ derruba conexões do Google de forma intermitente.
    `r.jina.ai` é bloqueado pelo WAF da SEFAZ; não conte com ele para notas reais.
+9. **Atualização do PWA:** não recarregue a página no `controllerchange`; mostre o banner
+   `#app-update-banner` e deixe o usuário tocar em "Atualizar agora". Registre o SW com
+   `./sw.js?v=<versão>` (fura o cache HTTP do GitHub Pages) e mantenha
+   `#app-version-label` dinâmico — o texto fixo "v2.5.7" fazia parecer que o app não
+   atualizava (v2.7.9). O botão "Limpar Cache e Forçar Atualização" é a saída de emergência.
 
 ## Vizinhança (ecossistema)
 

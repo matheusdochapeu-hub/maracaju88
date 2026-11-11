@@ -61,6 +61,7 @@ import {
 } from './shopping.js';
 import { parseNfceQrCodeText, fetchNfceDetailsOnline, parseNfceHtml, mergeNfceComplementary } from './nfce.js';
 import { parseCurrency, formatCurrency, formatCurrencyWithSymbol } from './currency.js';
+import { APP_CONFIG } from './config.js';
 import {
   addCarroItem,
   updateCarroItem,
@@ -257,6 +258,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   safeInit(initAuthModule, 'initAuthModule');
   safeInit(initServiceWorker, 'initServiceWorker');
+  safeInit(initUpdateBanner, 'initUpdateBanner');
+  safeInit(updateVersionLabel, 'updateVersionLabel');
   safeInit(initPwaInstallPrompt, 'initPwaInstallPrompt');
   safeInit(initNavigation, 'initNavigation');
   safeInit(initHeaderControls, 'initHeaderControls');
@@ -576,7 +579,9 @@ function initServiceWorker() {
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
+      // ?v= força o navegador a buscar o sw.js novo em vez de usar o cache
+      // HTTP de 10 min do GitHub Pages (era o que travava a atualização no celular).
+      navigator.serviceWorker.register(`./sw.js?v=${encodeURIComponent(APP_CONFIG.version)}`)
         .then(reg => {
           console.log('[Maracaju] Service Worker ativo:', reg.scope);
           if (reg && typeof reg.update === 'function') {
@@ -587,7 +592,48 @@ function initServiceWorker() {
           console.warn('[Maracaju] Falha no Service Worker:', err);
         });
     });
+
+    // Procura versão nova ao voltar para o app e de tempos em tempos. Se achar,
+    // o controllerchange mostra o banner "Atualizar agora" (sem recarregar no
+    // meio do uso).
+    let lastUpdateCheck = 0;
+    const checkForUpdate = () => {
+      const now = Date.now();
+      if (now - lastUpdateCheck < 120000) return;
+      lastUpdateCheck = now;
+      if (!navigator.serviceWorker.getRegistration) return;
+      navigator.serviceWorker.getRegistration()
+        .then(reg => { if (reg && reg.update) reg.update().catch(() => {}); })
+        .catch(() => {});
+    };
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkForUpdate();
+    });
+    setInterval(() => {
+      if (document.visibilityState === 'visible') checkForUpdate();
+    }, 10 * 60 * 1000);
   }
+}
+
+function showUpdateBanner() {
+  const banner = document.getElementById('app-update-banner');
+  if (banner) banner.style.display = 'flex';
+}
+
+function initUpdateBanner() {
+  const btn = document.getElementById('btn-apply-update');
+  if (btn) {
+    btn.addEventListener('click', () => window.location.reload());
+  }
+  window.addEventListener('maracaju:new-version', showUpdateBanner);
+  if (document.documentElement.getAttribute('data-maracaju-new-version') === '1') {
+    showUpdateBanner();
+  }
+}
+
+function updateVersionLabel() {
+  const el = document.getElementById('app-version-label');
+  if (el) el.textContent = `Maracaju v${APP_CONFIG.version}`;
 }
 
 function initPwaInstallPrompt() {
