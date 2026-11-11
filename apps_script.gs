@@ -87,6 +87,20 @@ function fetchNfcePageHtml(targetUrl) {
 }
 
 // -------------------------------------------------------------
+// TESTE DE PERMISSÃO (rode esta função UMA vez no editor)
+// -------------------------------------------------------------
+// O QR Code usa UrlFetchApp para baixar a página da SEFAZ. Ao adicionar
+// essa chamada, o Google exige autorizar o escopo
+// "script.external_request". Se o deploy for feito sem rodar esta função,
+// o fetchNfce responde "Você não tem permissão para chamar UrlFetchApp".
+// Passos: selecione "testarNfce" na barra de funções > Executar > permitir.
+function testarNfce() {
+  var html = fetchNfcePageHtml('https://example.com');
+  Logger.log('OK: ' + html.length + ' caracteres baixados da internet.');
+  return 'OK: ' + html.length;
+}
+
+// -------------------------------------------------------------
 // GET: Teste de conexão ou busca do último backup
 // -------------------------------------------------------------
 function doGet(e) {
