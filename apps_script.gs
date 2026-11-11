@@ -93,11 +93,18 @@ function fetchNfcePageHtml(targetUrl) {
 // essa chamada, o Google exige autorizar o escopo
 // "script.external_request". Se o deploy for feito sem rodar esta função,
 // o fetchNfce responde "Você não tem permissão para chamar UrlFetchApp".
-// Passos: selecione "testarNfce" na barra de funções > Executar > permitir.
-function testarNfce() {
+// Passos: selecione "autorizarNfce" na barra de funções > Executar > permitir.
+// (Não rode "fetchNfcePageHtml" sozinha: ela exige uma URL e falha antes
+//  de pedir a permissão.)
+function autorizarNfce() {
   var html = fetchNfcePageHtml('https://example.com');
   Logger.log('OK: ' + html.length + ' caracteres baixados da internet.');
   return 'OK: ' + html.length;
+}
+
+// Mantido por compatibilidade com quem já colou a versão anterior.
+function testarNfce() {
+  return autorizarNfce();
 }
 
 // -------------------------------------------------------------
