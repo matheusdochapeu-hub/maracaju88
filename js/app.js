@@ -2393,7 +2393,7 @@ function initSettingsModule() {
         Math.abs((Number(localSummary.vaBalance) || 0) - (Number(cloudSummary.vaBalance) || 0)) > 0.01 ||
         Math.abs((Number(localSummary.vrBalance) || 0) - (Number(cloudSummary.vrBalance) || 0)) > 0.01
       ));
-      if (mergedRegCount > cloudRegCount || summaryDiffers) {
+      if (mergedRegCount !== cloudRegCount || summaryDiffers) {
         backupToSheets(state).catch(e => console.warn('[Maracaju] Push pós-merge para Sheets falhou:', e.message));
       }
         } else {
@@ -2557,8 +2557,13 @@ async function syncPullFromSheets(silent = false) {
       refreshAllUI();
 
       const mergedRegCount = Array.isArray(state.comprasRegistros) ? state.comprasRegistros.length : 0;
-      if (mergedRegCount > cloudRegCount) {
-        console.log(`[Maracaju] Sincronizando notas fiscais recuperadas para a planilha (${mergedRegCount} vs ${cloudRegCount})...`);
+      const cloudDeletedCount = Object.keys((cloudData.deletedIds && cloudData.deletedIds.comprasRegistros) || {}).length;
+      const localDeletedCount = Object.keys((state.deletedIds && state.deletedIds.comprasRegistros) || {}).length;
+      // Também empurra quando o merge REMOVEU algo (túmulo de exclusão ou
+      // duplicata histórica): sem isso a planilha continuaria com o registro
+      // apagado e os outros aparelhos/Matrix o leriam de novo.
+      if (mergedRegCount !== cloudRegCount || localDeletedCount > cloudDeletedCount) {
+        console.log(`[Maracaju] Sincronizando estado conciliado para a planilha (${mergedRegCount} vs ${cloudRegCount} registros, ${localDeletedCount} exclusões)...`);
         backupToSheets(state).catch(e => console.warn('[Maracaju] Push pós-pull falhou:', e.message));
       }
 
