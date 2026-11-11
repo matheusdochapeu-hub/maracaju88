@@ -3676,6 +3676,8 @@ function initQrCodeScanner() {
   const btnEditTotal = document.getElementById('btn-qr-edit-total');
   const sefazBridgeBox = document.getElementById('qr-sefaz-bridge-box');
   const btnPasteFromSefaz = document.getElementById('btn-qr-paste-from-sefaz');
+  const btnRetryFetch = document.getElementById('btn-qr-retry-fetch');
+  const diagnosticsEl = document.getElementById('qr-fetch-diagnostics');
 
   // Sub-abas do leitor
   const tabCam = document.getElementById('tab-btn-qr-cam');
@@ -3792,6 +3794,27 @@ function initQrCodeScanner() {
     }
   }
 
+  // Um QR Code qualquer (Wi-Fi, produto, PIX) não deve encerrar a leitura:
+  // antes, qualquer QR detectado parava a câmera e abria um preview vazio.
+  function looksLikeNfceCode(text) {
+    if (!text || typeof text !== 'string') return false;
+    const t = text.trim();
+    if (/[?&]p=\d{44}/i.test(t)) return true;
+    if (/\d{44}/.test(t.replace(/[\s.\-]/g, ''))) return true;
+    if (/^https?:\/\//i.test(t) && /(nfce|fazenda|sefaz|consulta|qrcode|nfce)/i.test(t)) return true;
+    return false;
+  }
+
+  function acceptCameraCode(value) {
+    if (!looksLikeNfceCode(value)) {
+      if (statusMsg) statusMsg.textContent = 'QR Code lido, mas não é de NFC-e. Aponte para o QR Code do cupom fiscal (geralmente no rodapé).';
+      return false;
+    }
+    stopCamera();
+    handleDetectedCode(value);
+    return true;
+  }
+
   function startScanningLoop() {
     let detector = null;
     if (window.BarcodeDetector) {
@@ -3799,18 +3822,23 @@ function initQrCodeScanner() {
         detector = new window.BarcodeDetector({ formats: ['qr_code'] });
       } catch (e) {}
     }
-
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     let frameCount = 0;
 
+    let scanningFrame = false;
     scanInterval = setInterval(async () => {
-      if (!videoEl || videoEl.readyState < 2) return;
-      frameCount++;
+      // Evita ticks sobrepostos em celulares lentos (jsQR + detector nativo);
+      // antes duas detecções simultâneas podiam chamar o fluxo duas vezes.
+      if (scanningFrame) return;
+      scanningFrame = true;
+      try {
+        if (!videoEl || videoEl.readyState < 2) return;
+        frameCount++;
 
-      const vw = videoEl.videoWidth;
-      const vh = videoEl.videoHeight;
-      if (!vw || !vh) return;
+        const vw = videoEl.videoWidth;
+        const vh = videoEl.videoHeight;
+        if (!vw || !vh) return;
 
       // PASSO 1: Foco no Viewfinder Central em Alta Resolução (sem blur de redução!)
       // O usuário posiciona o QR code exatamente no quadrado guia central da tela.
@@ -3836,9 +3864,7 @@ function initQrCodeScanner() {
         try {
           const barcodes = await detector.detect(canvas);
           if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-            stopCamera();
-            handleDetectedCode(barcodes[0].rawValue);
-            return;
+            if (acceptCameraCode(barcodes[0].rawValue)) return;
           }
         } catch (e) {}
       }
@@ -3849,9 +3875,7 @@ function initQrCodeScanner() {
           const imgData = ctx.getImageData(0, 0, cw, ch);
           let qr = window.jsQR(imgData.data, cw, ch, { inversionAttempts: 'attemptBoth' });
           if (qr && qr.data) {
-            stopCamera();
-            handleDetectedCode(qr.data);
-            return;
+            if (acceptCameraCode(qr.data)) return;
           }
 
           // A cada 2 quadros, tenta binarização no crop central (papel térmico cinza/iluminação fraca)
@@ -3872,10 +3896,27 @@ function initQrCodeScanner() {
             ctx.putImageData(imgData, 0, 0);
             qr = window.jsQR(imgData.data, cw, ch, { inversionAttempts: 'attemptBoth' });
             if (qr && qr.data) {
-              stopCamera();
-              handleDetectedCode(qr.data);
-              return;
+              if (acceptCameraCode(qr.data)) return;
             }
+          }
+        } catch (e) {}
+      }
+
+      // 3. Recorte central fechado com upscale: QR pequeno porque o celular
+      // está um pouco mais longe do cupom (caso muito comum na prática).
+      if (frameCount % 2 === 1 && typeof window.jsQR === 'function') {
+        try {
+          const tightSize = Math.round(Math.min(vw, vh) * 0.42);
+          const tSx = Math.round((vw - tightSize) / 2);
+          const tSy = Math.round((vh - tightSize) / 2);
+          const target = 720;
+          canvas.width = target;
+          canvas.height = target;
+          ctx.drawImage(videoEl, tSx, tSy, tightSize, tightSize, 0, 0, target, target);
+          const tightData = ctx.getImageData(0, 0, target, target);
+          const tightQr = window.jsQR(tightData.data, target, target, { inversionAttempts: 'attemptBoth' });
+          if (tightQr && tightQr.data) {
+            if (acceptCameraCode(tightQr.data)) return;
           }
         } catch (e) {}
       }
@@ -3898,9 +3939,7 @@ function initQrCodeScanner() {
           try {
             const barcodes = await detector.detect(canvas);
             if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-              stopCamera();
-              handleDetectedCode(barcodes[0].rawValue);
-              return;
+              if (acceptCameraCode(barcodes[0].rawValue)) return;
             }
           } catch (e) {}
         }
@@ -3909,18 +3948,43 @@ function initQrCodeScanner() {
           const fullData = ctx.getImageData(0, 0, fw, fh);
           const fullQr = window.jsQR(fullData.data, fw, fh, { inversionAttempts: 'attemptBoth' });
           if (fullQr && fullQr.data) {
-            stopCamera();
-            handleDetectedCode(fullQr.data);
-            return;
+            if (acceptCameraCode(fullQr.data)) return;
           }
         }
-      } catch (e) {}
+        } catch (e) {}
+      } finally {
+        scanningFrame = false;
+      }
     }, 240);
   }
 
+  // Abre um Blob/File de imagem de forma segura: handlers definidos ANTES do src
+  // (evita a corrida do onload), com erro tratado e timeout para nunca travar o modal.
+  function loadImageFromBlob(blobOrFile) {
+    return new Promise((resolve, reject) => {
+      if (!blobOrFile) {
+        reject(new Error('Imagem não fornecida.'));
+        return;
+      }
+      const objectUrl = URL.createObjectURL(blobOrFile);
+      const img = new Image();
+      let settled = false;
+      const finish = (fn, arg) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        try { URL.revokeObjectURL(objectUrl); } catch (e) {}
+        fn(arg);
+      };
+      const timer = setTimeout(() => finish(reject, new Error('Tempo esgotado ao abrir a imagem.')), 12000);
+      img.onload = () => finish(resolve, img);
+      img.onerror = () => finish(reject, new Error('Não foi possível abrir a imagem.'));
+      img.src = objectUrl;
+    });
+  }
+
   // Decodifica QR Code de fotos com busca multi-escala, recorte inferior e aumento de contraste
-  async function decodeQrCodeFromImageBlob(blobOrFile) {
-    if (!blobOrFile) return null;
+  async function decodeQrCodeFromImageBlob(blobOrFile) {    if (!blobOrFile) return null;
 
     // 1. BarcodeDetector nativo (se suportado pelo navegador)
     if (window.BarcodeDetector) {
@@ -3937,15 +4001,7 @@ function initQrCodeScanner() {
     // 2. jsQR com Canvas multi-região e multi-escala
     if (typeof window.jsQR === 'function') {
       try {
-        const img = new Image();
-        const dataUrl = await new Promise((res, rej) => {
-          const reader = new FileReader();
-          reader.onload = () => res(reader.result);
-          reader.onerror = rej;
-          reader.readAsDataURL(blobOrFile);
-        });
-        img.src = dataUrl;
-        await new Promise((res) => { img.onload = res; });
+        const img = await loadImageFromBlob(blobOrFile);
 
         const origW = img.naturalWidth || img.width;
         const origH = img.naturalHeight || img.height;
@@ -4018,15 +4074,7 @@ function initQrCodeScanner() {
   async function preprocessImageForOcr(blobOrFile) {
     if (!blobOrFile) return blobOrFile;
     try {
-      const img = new Image();
-      const dataUrl = await new Promise((res, rej) => {
-        const reader = new FileReader();
-        reader.onload = () => res(reader.result);
-        reader.onerror = rej;
-        reader.readAsDataURL(blobOrFile);
-      });
-      img.src = dataUrl;
-      await new Promise((res) => { img.onload = res; });
+      const img = await loadImageFromBlob(blobOrFile);
 
       const origW = img.naturalWidth || img.width;
       const origH = img.naturalHeight || img.height;
@@ -4466,43 +4514,78 @@ function initQrCodeScanner() {
     // Sempre que houver URL e faltarem os itens detalhados, busca sozinho.
     // O usuário não deve precisar abrir o site da Fazenda e copiar nada.
     if (pendingPurchase.rawUrl && pendingPurchase.rawUrl.startsWith('http') && !hasDetailedItems) {
-      const sheetsUrl = state.settings && state.settings.sheetsUrl;
-      const sheetsToken = state.settings && state.settings.sheetsToken;
+      fetchNfceDetailsForPending();
+    }
+  }
 
-      fetchNfceDetailsOnline(pendingPurchase.rawUrl, {
+  // Busca (ou busca de novo) os itens completos da nota pela URL do QR.
+  // Separado para o botão "Buscar itens novamente" poder repetir sem reescanear.
+  async function fetchNfceDetailsForPending() {
+    if (!pendingPurchase || !pendingPurchase.rawUrl || !pendingPurchase.rawUrl.startsWith('http')) return;
+
+    const sheetsUrl = state.settings && state.settings.sheetsUrl;
+    const sheetsToken = state.settings && state.settings.sheetsToken;
+
+    if (diagnosticsEl) {
+      diagnosticsEl.style.display = 'none';
+      diagnosticsEl.textContent = '';
+    }
+    if (btnRetryFetch) {
+      btnRetryFetch.disabled = true;
+      btnRetryFetch.textContent = '⏳ Buscando na SEFAZ...';
+    }
+
+    try {
+      const enhanced = await fetchNfceDetailsOnline(pendingPurchase.rawUrl, {
         sheetsUrl,
         sheetsToken,
         baseInfo: pendingPurchase,
         onProgress: (msg) => { if (statusMsg) statusMsg.textContent = msg; }
-      }).then(enhanced => {
-        if (!enhanced || !enhanced.success) return;
-
-        if (enhanced.marketName) pendingPurchase.marketName = enhanced.marketName;
-        if (enhanced.total || enhanced.totalAmount) {
-          pendingPurchase.total = enhanced.total || enhanced.totalAmount;
-          pendingPurchase.totalAmount = pendingPurchase.total;
-        }
-        if (enhanced.items && enhanced.items.length > 0) {
-          pendingPurchase.items = enhanced.items;
-        }
-        if (enhanced.cnpj) pendingPurchase.cnpj = enhanced.cnpj;
-        if (enhanced.paymentMethod) pendingPurchase.paymentMethod = enhanced.paymentMethod;
-        if (enhanced.date) pendingPurchase.date = enhanced.date;
-
-        renderPreviewUI();
-
-        const gotItems = enhanced.items && enhanced.items.length > 0;
-        if (gotItems) {
-          if (statusMsg) statusMsg.textContent = `🎉 ${enhanced.items.length} produtos carregados automaticamente da SEFAZ!`;
-          showToast(`🎉 ${enhanced.items.length} itens extraídos da nota fiscal!`, 'success', 3500);
-        } else if (statusMsg) {
-          const reason = (enhanced.fetchErrors && enhanced.fetchErrors[0]) ? ` (${enhanced.fetchErrors[0]})` : '';
-          statusMsg.textContent = `Não foi possível baixar os itens automaticamente${reason}. Toque em "Abrir na Fazenda" e depois em "Colar Automático".`;
-        }
-      }).catch(err => {
-        console.warn('Erro ao enriquecer dados da NFC-e:', err);
-        if (statusMsg) statusMsg.textContent = 'Não foi possível consultar a SEFAZ automaticamente. Use "Abrir na Fazenda" e "Colar Automático".';
       });
+
+      if (!enhanced || !enhanced.success) return;
+
+      if (enhanced.marketName) pendingPurchase.marketName = enhanced.marketName;
+      if (enhanced.total || enhanced.totalAmount) {
+        pendingPurchase.total = enhanced.total || enhanced.totalAmount;
+        pendingPurchase.totalAmount = pendingPurchase.total;
+      }
+      if (enhanced.items && enhanced.items.length > 0) {
+        pendingPurchase.items = enhanced.items;
+      }
+      if (enhanced.cnpj) pendingPurchase.cnpj = enhanced.cnpj;
+      if (enhanced.paymentMethod) pendingPurchase.paymentMethod = enhanced.paymentMethod;
+      if (enhanced.date) pendingPurchase.date = enhanced.date;
+
+      renderPreviewUI();
+
+      const gotItems = Array.isArray(enhanced.items) && enhanced.items.length > 0;
+      if (gotItems) {
+        if (statusMsg) statusMsg.textContent = `🎉 ${enhanced.items.length} produtos carregados automaticamente da SEFAZ!`;
+        showToast(`🎉 ${enhanced.items.length} itens extraídos da nota fiscal!`, 'success', 3500);
+        triggerConfetti();
+      } else {
+        const errors = Array.isArray(enhanced.fetchErrors) ? enhanced.fetchErrors : [];
+        if (statusMsg) {
+          statusMsg.textContent = 'Não foi possível baixar os itens automaticamente. Toque em "Buscar itens novamente" ou use "Abrir na Fazenda" + "Colar Dados".';
+        }
+        if (diagnosticsEl && errors.length > 0) {
+          diagnosticsEl.style.display = 'block';
+          diagnosticsEl.textContent = 'Últimas tentativas: ' + errors.slice(0, 3).join(' • ');
+        }
+      }
+    } catch (err) {
+      console.warn('Erro ao enriquecer dados da NFC-e:', err);
+      if (statusMsg) statusMsg.textContent = 'Não foi possível consultar a SEFAZ automaticamente. Use "Buscar itens novamente" ou "Abrir na Fazenda" + "Colar Dados".';
+      if (diagnosticsEl) {
+        diagnosticsEl.style.display = 'block';
+        diagnosticsEl.textContent = 'Falha: ' + (err && err.message ? err.message : String(err));
+      }
+    } finally {
+      if (btnRetryFetch) {
+        btnRetryFetch.disabled = false;
+        btnRetryFetch.textContent = '🔄 Buscar itens novamente';
+      }
     }
   }
 
@@ -4771,6 +4854,17 @@ function initQrCodeScanner() {
         showToast('Permissão de colar negada. Cole na aba "Colar / Arquivo".', 'info', 3000);
         switchScannerTab('paste');
       }
+    });
+  }
+
+  // 8.2b Repetir a busca automática na SEFAZ sem precisar reescanear o QR
+  if (btnRetryFetch) {
+    btnRetryFetch.addEventListener('click', () => {
+      if (!pendingPurchase || !pendingPurchase.rawUrl) {
+        showToast('Leia o QR Code primeiro para poder buscar os itens.', 'info');
+        return;
+      }
+      fetchNfceDetailsForPending();
     });
   }
 

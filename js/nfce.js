@@ -629,7 +629,7 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
   async function tryAppsScript(method) {
     if (!options.sheetsUrl) throw new Error('Apps Script não configurado.');
     const { fetchNfceHtmlViaAppsScript } = await import('./sheets.js');
-    const html = await fetchNfceHtmlViaAppsScript(options.sheetsUrl, options.sheetsToken, url, 14000, method);
+    const html = await fetchNfceHtmlViaAppsScript(options.sheetsUrl, options.sheetsToken, url, 10000, method);
     const result = parseIfReceipt(html, 'apps-script');
     if (!result) throw new Error('Apps Script respondeu, mas sem os dados do cupom.');
     return result;
@@ -637,10 +637,9 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
 
   // A SEFAZ às vezes derruba a conexão vinda dos servidores do Google
   // ("Endereço não disponível"), mas a tentativa seguinte costuma passar.
-  // Medido ao vivo: ~2 de 3 tentativas passam; com 4 tentativas a chance
-  // de sucesso fica em ~99%. O leitor externo (r.jina.ai) é bloqueado pelo
-  // WAF da SEFAZ, então a ponte nativa é o caminho que realmente funciona.
-  async function tryAppsScriptWithRetry(method, maxAttempts = 4) {
+  // Medido ao vivo: a primeira tentativa falha e a segunda costuma trazer a
+  // página. As correntes POST e GET rodam em paralelo com 3 tentativas cada.
+  async function tryAppsScriptWithRetry(method, maxAttempts = 3) {
     let lastError = null;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
@@ -655,7 +654,7 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
               options.onProgress(`A SEFAZ recusou a conexão automática. Tentando novamente (${attempt + 2}/${maxAttempts})...`);
             } catch (e) {}
           }
-          await new Promise(resolve => setTimeout(resolve, 700 * (attempt + 1)));
+          await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
         }
       }
     }
@@ -666,18 +665,32 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
     // Pipes crus do parâmetro p quebram alguns leitores; envia percent-encoded.
     const safeUrl = String(url).replace(/\|/g, '%7C').replace(/ /g, '%20');
     const readerUrl = `https://r.jina.ai/${safeUrl}`;
-    const res = await fetch(readerUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'text/plain',
-        'X-Return-Format': 'html'
+    // Timeout próprio: sem ele um leitor travado podia segurar o Promise.any
+    // para sempre, deixando o modal em "Buscando..." indefinidamente.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch(readerUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/plain',
+          'X-Return-Format': 'html'
+        },
+        signal: controller.signal
+      });
+      if (!res.ok) throw new Error(`Leitor automático: HTTP ${res.status}.`);
+      const html = await res.text();
+      const result = parseIfReceipt(html, 'leitor-automatico');
+      if (!result) throw new Error('O leitor automático não reconheceu o cupom.');
+      return result;
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        throw new Error('Leitor automático: tempo esgotado.');
       }
-    });
-    if (!res.ok) throw new Error(`Leitor automático: HTTP ${res.status}.`);
-    const html = await res.text();
-    const result = parseIfReceipt(html, 'leitor-automatico');
-    if (!result) throw new Error('O leitor automático não reconheceu o cupom.');
-    return result;
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async function tryDirect() {
@@ -715,37 +728,31 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
   }
 
   const attempts = [];
-  let bridgeOutdated = false;
   if (options.sheetsUrl) {
-    // POST é mais robusto que GET para a URL do QR (o parâmetro p tem "|" e
-    // a URL é longa). Foi validado ao vivo contra a SEFAZ SP; o GET fica
-    // como fallback mais abaixo.
-    attempts.push(tryAppsScriptWithRetry('POST').catch(err => {
-      if (err && err.code === 'BRIDGE_OUTDATED') bridgeOutdated = true;
-      throw err;
-    }));
+    // POST e GET em PARALELO: o endpoint publicado pode ter só uma das ações,
+    // e a SEFAZ derruba conexões do Google de forma intermitente. Duas
+    // "correntes" independentes com retry aumentam muito a chance de sucesso.
+    attempts.push(tryAppsScriptWithRetry('POST', 3));
+    attempts.push(tryAppsScriptWithRetry('GET', 3));
   }
   attempts.push(tryJinaReader());
   attempts.push(tryDirect());
 
   try {
     // Primeira tentativa bem-sucedida vence; o usuário não espera as outras.
-    const winner = await Promise.any(attempts.map(p => p.catch(err => {
-      fetchErrors.push(err && err.message ? err.message : String(err));
-      throw err;
-    })));
+    // withTimeout garante que nada fique pendurado para sempre.
+    const winner = await withTimeout(
+      Promise.any(attempts.map(p => p.catch(err => {
+        fetchErrors.push(err && err.message ? err.message : String(err));
+        throw err;
+      }))),
+      30000,
+      'Consulta automática'
+    );
     if (winner) return winner;
   } catch (e) {
     // Promise.any só rejeita quando todas falham.
-  }
-
-  if (options.sheetsUrl && !bridgeOutdated) {
-    try {
-      const viaGet = await withTimeout(tryAppsScriptWithRetry('GET', 3), 25000, 'Apps Script (GET)');
-      return viaGet;
-    } catch (err) {
-      fetchErrors.push(err && err.message ? err.message : String(err));
-    }
+    if (e && e.message) fetchErrors.push(e.message);
   }
 
   try {

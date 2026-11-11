@@ -24,7 +24,7 @@ python -m http.server 8000   # abrir http://localhost:8000
 ## Testes
 
 ```powershell
-node --test test/**/*.test.js   # 167 testes
+node --test test/**/*.test.js   # 171 testes
 ```
 
 ## Deploy

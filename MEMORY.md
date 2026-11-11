@@ -4,6 +4,37 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-11 17:10] - Leitura de QR Code NFC-e: diagnóstico ao vivo e correções (v2.7.11)
+
+### 🔬 Diagnóstico com a SEFAZ real (não só testes sintéticos)
+- A ponte publicada (`apps_script.gs`) foi sondada ao vivo com uma URL real de QR:
+  - URL com pipe cru → `Argumento inválido` (UrlFetchApp);
+  - URL com `%7C` → `Endereço não disponível` na 1ª tentativa e **sucesso na 2ª** (13 KB de HTML);
+  - `doPost` com `{action:"fetchNfce"}` **funciona** no deploy atual (retorna `html`).
+- `parseNfceHtml` sobre a página real devolveu mercado, CNPJ, data/hora, total **71,06**, pagamento e **4 itens**.
+- O QR de teste foi gerado em imagem (600×600), decodificado pelo `jsqr.min.js` do próprio app e enviado ao parser: chave e URL íntegras.
+- Conclusão: **o pipeline (QR → chave/URL → ponte → parser) funciona**; o que faltava era resiliência e feedback quando a SEFAZ recusa a conexão.
+
+### 🐛 Correções
+1. **`Promise.any` podia travar para sempre:** `tryJinaReader` não tinha timeout. Agora tem `AbortController` de 10s e o conjunto inteiro é limitado por `withTimeout(…, 30s)`.
+2. **GET era pulado quando o POST dizia "ponte desatualizada":** um deploy com só `doGet` falhava de vez. Agora POST e GET rodam **em paralelo** (3 tentativas cada), cada um com 10s; a primeira corrente que der certo vence.
+3. **Qualquer QR Code encerrava a leitura:** ler um QR de Wi‑Fi/produto parava a câmera e abria preview vazio. `looksLikeNfceCode()` valida a URL/chave antes de aceitar; QR estranho mantém a câmera e mostra dica.
+4. **Ticks de varredura sobrepostos:** em celular lento, dois frames podiam detectar e chamar o fluxo duas vezes. Guarda `scanningFrame` normaliza.
+5. **QR pequeno/longe não era lido:** novo passe de recorte central fechado (42% do menor lado) com upscale para 720px, alternado a cada 2 frames.
+6. **`img.onload` definido depois de `img.src`** em `decodeQrCodeFromImageBlob` e `preprocessImageForOcr`: corrida que podia deixar a promise pendurada. Novo `loadImageFromBlob()` (object URL, `onerror`, timeout de 12s, revoke).
+7. **Sem saída quando a busca automática falha:** botão **"🔄 Buscar itens novamente"** no card da SEFAZ + linha de diagnóstico com os últimos erros (aparece só quando falha).
+8. Removido `js/app.js?v=2.5.3` fixo do `index.html` (versão falsa no cache; o SW já registra com `?v=<versão atual>`).
+
+### 🧪 Testes
+- Novo `test/nfce-online-strategy.test.js` (4 testes): POST desatualizado + GET funcionando, `%7C` no corpo, falha total → `needsManualPaste` com erros, parser com pipe cru e `%7C`.
+- Suíte: **171 testes, 0 falhas**.
+- Validação ao vivo do fluxo completo 3×: sucesso em 1,9 s / 3,8 s / 4,3 s, 4 itens e total 71,06.
+
+### 📦 Versão
+- Bump para **v2.7.11** (`config.js`, `sw.js`, `package.json`).
+
+---
+
 ## [2026-11-10 22:25] - App do celular não atualizava depois do deploy (v2.7.9)
 
 ### 🔍 Sintoma
