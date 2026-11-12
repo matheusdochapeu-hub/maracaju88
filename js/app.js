@@ -465,7 +465,7 @@ function initAuthModule() {
         selectProfile('matheus');
       } else {
         // Se ainda não configurou senha, entra imediatamente com 1 toque!
-        handleLogin('matheusdochapeu@gmail.com');
+        handleLogin('matheus');
       }
     });
   }
@@ -476,7 +476,7 @@ function initAuthModule() {
         selectProfile('scarlet');
       } else {
         // Se ainda não configurou senha, entra imediatamente com 1 toque!
-        handleLogin('scarletsantos7@gmail.com');
+        handleLogin('scarlet');
       }
     });
   }
@@ -486,8 +486,8 @@ function initAuthModule() {
     authForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const uId = selectedUserInput ? selectedUserInput.value : 'matheus';
-      const email = (uId === 'scarlet') ? 'scarletsantos7@gmail.com' : 'matheusdochapeu@gmail.com';
-      handleLogin(email);
+      // v2.7.12: login pelo id do perfil (o e-mail deixou de ficar exposto no HTML).
+      handleLogin(uId);
     });
   }
 

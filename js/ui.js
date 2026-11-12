@@ -1843,7 +1843,6 @@ export function renderSettingsTab(state, activeCategoryModule = 'tarefas') {
         sessionUserEl.innerHTML = `
           <span>${session.avatarEmoji || '👤'}</span>
           <span>${session.name}</span>
-          <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">(${session.email})</span>
         `;
       } catch (e) {
         sessionUserEl.textContent = 'Sessão ativa';

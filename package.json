@@ -1,6 +1,6 @@
 {
   "name": "maracaju",
-  "version": "2.7.11",
+  "version": "2.7.12",
   "private": true,
   "type": "module",
   "description": "Maracaju - Aplicativo PWA para gestão do lar do casal Matheus e Scarlet: tarefas da casa, mercado com leitor de nota fiscal NFC-e, cuidados do carro, reformas e mural dos sonhos, com backup no Google Sheets.",

@@ -53,7 +53,7 @@
 - **Mini Calendário de Consistência:** Visualize o percentual de tarefas concluídas nos últimos 7 dias.
 
 ### 9. 🔐 Senhas Individuais & Desbloqueio por Biometria do Celular
-- **Acesso Restrito Exclusivo:** Matheus (`matheusdochapeu@gmail.com`) e Scarlet (`scarletsantos7@gmail.com`).
+- **Acesso Restrito Exclusivo:** apenas Matheus e Scarlet (os identificadores dos perfis ficam em `js/config.js`).
 - **Senhas Pessoais / PINs:** Cada morador pode configurar sua própria senha ou PIN na aba Ajustes.
 - **Biometria do Celular (WebAuthn):** Desbloqueio rápido utilizando Face ID, Touch ID / Impressão Digital ou bloqueio de tela do smartphone.
 

@@ -261,8 +261,8 @@
 ### Versão 1.2.0 (`02/11/2026`) — Controle de Acesso Restrito (Matheus & Scarlet)
 1. **Portão de Entrada com Validação de E-mail (`js/auth.js`, `#auth-gate`):**
    - **Acesso Estritamente Restrito:** Aplicativo configurado com lista de moradores autorizados:
-     - 👨‍💻 **Matheus:** `matheusdochapeu@gmail.com` (com suporte a alias tolerante a digitação `matheusdochpaeu@gmail.com`).
-     - 👩‍💼 **Scarlet:** `scarletsantos7@gmail.com` (validação case-insensitive).
+     - 👨‍💻 **Matheus:** perfil `matheus` (com suporte a alias tolerante a digitação).
+     - 👩‍💼 **Scarlet:** perfil `scarlet` (validação case-insensitive).
    - **Bloqueio de E-mails Não Cadastrados:** Qualquer outro endereço é rejeitado com mensagem explicativa em português e animação de alerta visual.
    - **Atalho Rápido de 1 Toque (Otimizado para Celular):** Botões estilizados para Matheus e Scarlet entrarem diretamente em seus respectivos perfis no celular sem atrito de digitação no teclado touch.
    - **Validação Manual por Input:** Campo de digitação de e-mail com verificação em tempo real e botão "🔑 Entrar no Maracaju 88".
