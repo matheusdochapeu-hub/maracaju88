@@ -1,7 +1,7 @@
 {
   "name": "Maracaju - Gestão do Lar",
   "short_name": "Maracaju",
-  "id": "/maracaju/",
+  "id": "/maracaju88/",
   "description": "App do casal Matheus e Scarlet: tarefas da casa, mercado com leitor de nota fiscal NFC-e, cuidados com o carro, reformas e sonhos",
   "start_url": "./index.html",
   "scope": "./",
@@ -10,7 +10,10 @@
   "background_color": "#f4f7f4",
   "theme_color": "#1b3820",
   "lang": "pt-BR",
-  "categories": ["lifestyle", "productivity"],
+  "categories": [
+    "lifestyle",
+    "productivity"
+  ],
   "prefer_related_applications": false,
   "icons": [
     {
