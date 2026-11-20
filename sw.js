@@ -2,7 +2,7 @@
 //  MARACAJU - SERVICE WORKER (PWA Offline Cache)
 // ============================================================
 
-const CACHE_NAME = 'maracaju-v2.9.9';
+const CACHE_NAME = 'maracaju-v2.9.10';
 
 // Página de contingência quando o app abre offline e o index.html não está no cache
 const OFFLINE_HTML = `<!doctype html>

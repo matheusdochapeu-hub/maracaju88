@@ -7830,6 +7830,23 @@ function initShoppingListExport() {
     }
   };
 
+  // Navegação externa por âncora: mais confiável que window.open em PWA
+  // instalada no celular (o window.open era bloqueado e nada abria).
+  const openExternalLink = (url) => {
+    try {
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => link.remove(), 800);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const renderExportPreview = () => {
     const text = buildShoppingListExportText(state, exportFormat, {
       includePrices: pricesCheckbox ? pricesCheckbox.checked : true
@@ -7891,14 +7908,30 @@ function initShoppingListExport() {
       if (exportFormat === 'poll') {
         const pollOptions = text.split('\n').filter(line => /^\d+\.\s/.test(line)).join('\n');
         if (pollOptions) {
-          // wa.me sem texto responde 400 e não abre o app. O endpoint oficial
-          // api.whatsapp.com/send aceita texto vazio e abre o WhatsApp.
-          const win = window.open('https://api.whatsapp.com/send?text=', '_blank');
-          if (!win) {
-            showToast('Não foi possível abrir o WhatsApp. Use “Copiar” e abra o app manualmente.', 'warning', 6000);
-            return;
+          const pollQuestion = '📊 Enquete da lista — o que já compramos?';
+          // Dispara a cópia e chama o share no MESMO tick do clique: se der
+          // await antes, o navegador perde a ativação do usuário e o
+          // navigator.share rejeita ("must be handling a user gesture").
+          const copyPromise = copyExportText(pollOptions);
+
+          if (isMobile && navigator.share) {
+            try {
+              await navigator.share({ title: 'Enquete da lista — Casa Maracaju', text: pollQuestion });
+              const copied = await copyPromise;
+              showToast(copied
+                ? '📋 Opções copiadas! No WhatsApp: Anexo → Enquete → cole e ative “Permitir várias respostas”.'
+                : 'No WhatsApp: Anexo → Enquete e cole as opções da enquete.', 'info', 6500);
+              return;
+            } catch (err) {
+              if (err && err.name === 'AbortError') {
+                await copyPromise;
+                return;
+              }
+            }
           }
-          const copied = await copyExportText(pollOptions);
+
+          openExternalLink('https://api.whatsapp.com/send?text=' + encodeURIComponent(pollQuestion));
+          const copied = await copyPromise;
           showToast(copied
             ? '📋 Opções copiadas! No WhatsApp: Anexo → Enquete → cole e ative “Permitir várias respostas”.'
             : 'No WhatsApp: Anexo → Enquete e cole as opções da enquete.', 'info', 6500);
@@ -7918,11 +7951,7 @@ function initShoppingListExport() {
       const encoded = encodeURIComponent(text);
       if (encoded.length > 1800) {
         // URL longa demais para o wa.me: abre o WhatsApp e copia para colar.
-        const win = window.open('https://api.whatsapp.com/send?text=', '_blank');
-        if (!win) {
-          showToast('Não foi possível abrir o WhatsApp. Use “Copiar” e abra o app manualmente.', 'warning', 6000);
-          return;
-        }
+        openExternalLink('https://api.whatsapp.com/send?text=' + encodeURIComponent('🛒 Lista de mercado — texto copiado, cole aqui.'));
         const copied = await copyExportText(text);
         showToast(copied ? '📋 Lista copiada! Cole no WhatsApp.' : 'Lista longa: abra o WhatsApp e cole o texto manualmente.', 'info', 5000);
         return;

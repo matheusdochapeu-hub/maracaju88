@@ -4,6 +4,37 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-20 14:45] - Enquete ainda não abria: share sheet no lugar de window.open (v2.9.10)
+
+### 🔍 Contexto
+A v2.9.9 corrigiu o `wa.me/` sem texto (HTTP 400), mas o usuário testou e o modo Enquete
+**continuou não abrindo nada**. O Checklist funcionava porque no celular ele usa
+`navigator.share` (folha de compartilhamento). O Enquete usava `window.open(...)`, que é
+**bloqueado na PWA instalada** — retorna uma janela mas não abre o WhatsApp.
+
+### 🛠️ Correção
+- No celular, o modo Enquete agora usa **`navigator.share`** (mesmo caminho do Checklist que
+  funciona): abre a folha de compartilhamento, o usuário escolhe WhatsApp e o app abre.
+- As opções numeradas são copiadas antes; no WhatsApp é **Anexo → Enquete → colar** e ativar
+  “Permitir várias respostas”.
+- Fallback desktop/outros: âncora real (`openExternalLink`) para
+  `https://api.whatsapp.com/send?text=<mensagem>` em vez de `window.open`.
+- Fallback de lista longa também passou a usar âncora.
+
+### ⚠️ Cache do GitHub Pages
+Entre o push e o CDN atualizar, o Pages pode servir a versão anterior por alguns minutos
+(observado: `config.js` ainda em 2.9.8 após o push da 2.9.9). Sintoma: o usuário testa a
+correção e nada muda. Conferir **Ajustes → “Versão instalada”** e forçar atualização.
+
+### 🧪 Validação
+- **204 testes, 0 falhas**.
+- Verificação HTTP: `wa.me/` e `wa.me/?text=` vazio = 400; `api.whatsapp.com/send?text=` = 200.
+
+### 📦 Versão
+- **v2.9.10** em `config.js`, `sw.js` (`maracaju-v2.9.10`), `package.json` e `?v=` do HTML.
+
+---
+
 ## [2026-11-20 14:35] - Correção: modo Enquete do WhatsApp não abria (v2.9.9)
 
 ### 🔍 Sintoma

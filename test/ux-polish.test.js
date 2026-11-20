@@ -79,6 +79,10 @@ test('Exportar lista: botão na Lista de Mercado, modal e envio pelo WhatsApp', 
   // wa.me sem texto devolve 400 e não abre o app; o chat vazio usa api.whatsapp.
   assert.match(appJs, /api\.whatsapp\.com\/send\?text=/);
   assert.equal(/window\.open\('https:\/\/wa\.me\/'/.test(appJs), false);
+  // Modo Enquete no celular usa share sheet (window.open é bloqueado na PWA).
+  assert.match(appJs, /Enquete da lista — o que já compramos/);
+  assert.match(appJs, /function openExternalLink|const openExternalLink/);
+  assert.equal(/window\.open\('https:\/\/api\.whatsapp/.test(appJs), false);
   assert.match(appJs, /navigator\.share/);
   assert.match(read('js/shopping.js'), /export function buildShoppingListExportText/);
 });
