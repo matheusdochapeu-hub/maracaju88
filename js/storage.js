@@ -386,6 +386,7 @@ export function getInitialState() {
     sonhos: [...INITIAL_SONHOS],
     compras: [],
     comprasRegistros: [],
+    nutrition: {},
     deletedIds: {},
     pets: JSON.parse(JSON.stringify(INITIAL_PETS)),
     deletedPetIds: [],
@@ -446,6 +447,9 @@ export function loadState() {
       sonhos: Array.isArray(parsed.sonhos) ? parsed.sonhos : initial.sonhos,
       compras: Array.isArray(parsed.compras) ? parsed.compras : initial.compras,
       comprasRegistros: Array.isArray(parsed.comprasRegistros) ? parsed.comprasRegistros : initial.comprasRegistros,
+      nutrition: (parsed.nutrition && typeof parsed.nutrition === 'object' && !Array.isArray(parsed.nutrition))
+        ? parsed.nutrition
+        : initial.nutrition,
       pets: Array.isArray(parsed.pets) ? parsed.pets : JSON.parse(JSON.stringify(INITIAL_PETS)),
       deletedPetIds: Array.isArray(parsed.deletedPetIds) ? parsed.deletedPetIds : [],
       catalog: Array.isArray(parsed.catalog) ? parsed.catalog : [],

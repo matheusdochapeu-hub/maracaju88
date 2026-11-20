@@ -2617,3 +2617,228 @@ body.modal-open {
 #market-purchases-container {
   padding-bottom: 2.5rem;
 }
+
+/* Alternância visual de label Recolher / Mostrar itens nas notas fiscais */
+.market-receipt-items-details > summary .chevron-closed {
+  display: inline;
+}
+.market-receipt-items-details > summary .chevron-open {
+  display: none;
+}
+.market-receipt-items-details[open] > summary .chevron-closed {
+  display: none;
+}
+.market-receipt-items-details[open] > summary .chevron-open {
+  display: inline;
+}
+
+/* ============================================================
+   ABA MARMITAS: CALCULADORA & CARDS IN NATURA (UX POLIDO)
+   ============================================================ */
+.marmitas-calc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.marmitas-calc-title {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.marmitas-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  background: var(--bg-surface);
+  padding: 0.35rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 0.85rem;
+}
+
+.marmitas-period-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.marmitas-period-presets {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.marmitas-custom-days {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.25rem 0.45rem;
+}
+
+.marmitas-custom-days .marmitas-days-input {
+  width: 58px;
+  text-align: center;
+  padding: 0.28rem 0.35rem;
+  font-weight: 800;
+  min-height: 32px;
+}
+
+.marmitas-filter-pills {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.marmitas-cards-grid-core {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.marmitas-cards-grid-extras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.marmitas-nutri-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--card-accent-border, var(--border-subtle));
+  border-radius: var(--radius-md);
+  padding: 0.9rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, opacity 0.14s ease, border-color 0.14s ease;
+}
+
+.marmitas-nutri-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(25, 51, 29, 0.08);
+}
+
+.marmitas-nutri-card.is-muted {
+  opacity: 0.46;
+  filter: grayscale(0.25);
+  border-style: dashed;
+}
+
+.marmitas-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.marmitas-card-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.25;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  color: var(--card-accent-color, var(--text-primary));
+}
+
+.marmitas-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.marmitas-card-badge {
+  font-size: 0.67rem;
+  font-weight: 700;
+  padding: 0.15rem 0.48rem;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.marmitas-card-check {
+  font-size: 0.67rem;
+  font-weight: 800;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-full);
+  background: rgba(22, 163, 74, 0.14);
+  color: #15803d;
+  white-space: nowrap;
+}
+
+.marmitas-nutri-card.is-muted .marmitas-card-check {
+  background: var(--bg-surface);
+  color: var(--text-muted);
+}
+
+.marmitas-card-value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  color: var(--card-accent-color, var(--brand-forest));
+}
+
+.marmitas-card-unit {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.marmitas-card-meta {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.marmitas-specific-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.marmitas-specific-result {
+  background: var(--bg-card);
+  border: 1.5px solid rgba(22, 163, 74, 0.35);
+  border-radius: var(--radius-md);
+  padding: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  align-items: center;
+}

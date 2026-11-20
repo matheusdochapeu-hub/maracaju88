@@ -160,6 +160,21 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
       ...it,
       photos: stripPhotosArr(it.photos)
     })),
+    nutrition: (() => {
+      const n = (state.nutrition && typeof state.nutrition === 'object') ? state.nutrition : {};
+      const compactPerson = (p) => {
+        if (!p || typeof p !== 'object') return undefined;
+        return {
+          ...p,
+          photo: stripBase64(p.photo),
+          rawText: typeof p.rawText === 'string' ? p.rawText.slice(0, 3500) : ''
+        };
+      };
+      return {
+        matheus: compactPerson(n.matheus),
+        scarlet: compactPerson(n.scarlet)
+      };
+    })(),
     categories: state.categories || {},
     userPasswords: state.userPasswords || {},
     settings: {
@@ -170,38 +185,64 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
   };
 
   // Se o JSON ainda ultrapassar 44.000 caracteres (limite de 50.000 por célula do Google Sheets),
-  // enxuga o catálogo de produtos mantendo 100% dos registros de compras (VA/VR) intactos.
-  let payload = {
+  // compacta progressivamente campos secundários mantendo nfeKey e itens das compras preservados.
+  const buildPayload = (data) => ({
     action: "backup",
     token: token ? token.trim() : "",
-    data: compactData
-  };
+    data
+  });
+  let payload = buildPayload(compactData);
+
+  // Passo 1: enxuga catálogo transitório e texto bruto da nutrição
   if (JSON.stringify(payload).length > 44000) {
     compactData.catalog = [];
-    payload = {
-      action: "backup",
-      token: token ? token.trim() : "",
-      data: compactData
-    };
+    if (compactData.nutrition) {
+      if (compactData.nutrition.matheus) compactData.nutrition.matheus.rawText = '';
+      if (compactData.nutrition.scarlet) compactData.nutrition.scarlet.rawText = '';
+    }
+    payload = buildPayload(compactData);
   }
+
+  // Passo 2: compacta campos redundantes em comprasRegistros mantendo nfeKey e lista de itens
   if (JSON.stringify(payload).length > 44000) {
     compactData.comprasRegistros = (compactData.comprasRegistros || []).map(r => ({
       id: r.id,
       marketName: r.marketName || r.establishment || r.estabelecimento || '',
-      establishment: r.establishment || r.marketName || r.estabelecimento || '',
       date: r.date,
+      time: r.time || undefined,
       monthKey: r.monthKey,
       total: r.total,
       paymentMethod: r.paymentMethod || 'va',
+      nfeKey: r.nfeKey || r.accessKey || undefined,
       notes: r.notes || '',
+      items: Array.isArray(r.items) ? r.items.map(it => ({
+        alias: it.alias || it.rawName || it.name || 'Produto',
+        qty: it.qty !== undefined ? it.qty : (it.quantity !== undefined ? it.quantity : 1),
+        unit: it.unit || 'un',
+        unitPrice: it.unitPrice !== undefined ? it.unitPrice : (it.price || 0),
+        totalPrice: it.totalPrice !== undefined ? it.totalPrice : (it.price || it.unitPrice || 0)
+      })) : [],
       createdAt: r.createdAt,
       updatedAt: r.updatedAt
     }));
-    payload = {
-      action: "backup",
-      token: token ? token.trim() : "",
-      data: compactData
-    };
+    payload = buildPayload(compactData);
+  }
+
+  // Passo 3: limita histórico antigo de tarefas (> 45 dias) para priorizar itens de notas fiscais
+  if (JSON.stringify(payload).length > 44000 && compactData.history && typeof compactData.history === 'object') {
+    const recentDates = Object.keys(compactData.history).sort().slice(-45);
+    const trimmedHistory = {};
+    recentDates.forEach(d => { trimmedHistory[d] = compactData.history[d]; });
+    compactData.history = trimmedHistory;
+    payload = buildPayload(compactData);
+  }
+
+  // Passo 4 (último recurso): mantém itens nas 30 compras mais recentes e enxuga apenas as mais antigas
+  if (JSON.stringify(payload).length > 44000) {
+    compactData.comprasRegistros = (compactData.comprasRegistros || []).map((r, idx) => (
+      idx < 30 ? r : { ...r, items: [] }
+    ));
+    payload = buildPayload(compactData);
   }
 
   const controller = new AbortController();
@@ -716,6 +757,28 @@ export function applyCloudBackup(currentState, cloudData) {
       ...(safeCurrent.userPasswords || {}),
       ...(cloudData.userPasswords || {})
     },
+    nutrition: (() => {
+      const localN = (safeCurrent.nutrition && typeof safeCurrent.nutrition === 'object') ? safeCurrent.nutrition : {};
+      const cloudN = (cloudData.nutrition && typeof cloudData.nutrition === 'object') ? cloudData.nutrition : {};
+      const pickPerson = (key) => {
+        const l = localN[key];
+        const c = cloudN[key];
+        if (!l && !c) return undefined;
+        if (!l) return c;
+        if (!c) return l;
+        const lTs = l.updatedAt ? Date.parse(l.updatedAt) : 0;
+        const cTs = c.updatedAt ? Date.parse(c.updatedAt) : 0;
+        const winner = cTs > lTs ? { ...c } : { ...l };
+        if (!winner.reset && !winner.photo && l.photo) {
+          winner.photo = l.photo;
+        }
+        return winner;
+      };
+      return {
+        matheus: pickPerson('matheus'),
+        scarlet: pickPerson('scarlet')
+      };
+    })(),
     settings: {
       ...safeCurrentSettings,
       ...safeCloudSettings,

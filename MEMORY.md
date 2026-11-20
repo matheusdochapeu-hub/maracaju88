@@ -4,6 +4,88 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-20 12:37] - Itens Sempre Expostos nas Compras + Preservação de Itens no Sync da Nuvem (v2.9.5)
+
+### 🎯 Problema Relatado
+- Lançamentos recentes sincronizados entre aparelhos perdiam a lista de produtos (mostrando apenas `"4 itens (importados via NFC-e)"` sem a lista aberta e marcados erroneamente como *"Lançamento Manual"*).
+- Pedido para manter todos os lançamentos de compras com os itens expostos por padrão, com botão para recolher/expandir de forma persistente.
+
+### 🔍 Causa Raiz
+1. Em `js/sheets.js`, quando o JSON de backup passava de 44.000 caracteres, o segundo fallback apagava **todos** os `items` e `nfeKey` de `comprasRegistros` antes de enviar ao Google Sheets.
+2. O estado de recolher/expandir (`<details open>`) não era memorizado entre re-renders do auto-sync de 30 segundos.
+
+### 🛠️ Solução Aplicada
+1. **Preservação Progressiva no Sync (`js/sheets.js`)**:
+   - `backupToSheets` agora compacta campos redundantes mantendo `nfeKey` e `items` de todas as compras (sacrificando primeiro catálogo transitório, texto bruto da nutrição e histórico > 45 dias).
+2. **Itens Expostos por Padrão & Recolher Persistente (`js/ui.js`, `js/app.js`, `css/components.css`)**:
+   - Todas as compras com produtos iniciam **expostas** (`open`), com botões `📂 Expandir tudo` / `📁 Recolher tudo` e toggle individual por compra memorizados via `collapsedPurchaseIds`.
+   - Labels `Recolher ▴` / `Mostrar itens ▾` reagem dinamicamente via CSS `[open]`.
+   - Compras sem itens detalhados exibem atalho discreto `📝 Detalhar / Editar itens`, e notas com `"importados via NFC-e"` voltam a aparecer com selo `📄 Nota Fiscal`.
+   - Versão atualizada para **v2.9.5** e suíte validada com **183/183** testes passando.
+
+---
+
+## [2026-11-20 12:32] - Calculadora Flexível (Itens Isolados, Dias Personalizados, Quantidade Específica) & UX dos Cards (v2.9.4)
+
+### 🎯 Demanda do Usuário
+- Calcular itens específicos isoladamente (ex: só carne, só feijão, só arroz) em vez de apenas o pacote completo.
+- Aceitar dias personalizados e conversões de quantidades específicas avulsas.
+- Corrigir o UX apertado/desalinhado dos cartões da calculadora (textos colidindo no cabeçalho e 5º card órfão no desktop).
+
+### 🛠️ O que foi implementado
+1. **Motor Nutricional (`js/nutrition.js`)**:
+   - `calculateMarmitasPlan(..., selectedItems)` aceita qualquer `dias` personalizado (1–365) e filtra `shoppingItems` por grupos (`carne`, `arroz`, `feijao`, `paes_frutas`, `laticinios`).
+   - `calculateCustomQuantityConversion(...)` converte quantidades avulsas Pronto ↔ *In Natura* para Carne, Arroz e Feijão, mostrando quantos almoços rende e gerando item pronto para enviar à Lista de Mercado.
+2. **UX Polido dos Cartões (`css/components.css`, `js/ui.js`, `index.html`, `js/app.js`)**:
+   - Grade em duas faixas simétricas (`.marmitas-cards-grid-core` com 3 cards base + `.marmitas-cards-grid-extras` com 2 cards pareados), eliminando o card órfão e a colisão de badges (`gap` explícito e `white-space: nowrap`).
+   - Cada card virou selecionável com feedback visual (`✓ Incluído` / atenuado quando fora) + atalhos `✨ Todos`, `🍱 Carne+Arroz+Feijão`, `🥩 Só Carne`, `🍚 Só Arroz`, `🫘 Só Feijão`.
+   - Adicionado stepper `− / +` com campo numérico para dias personalizados (`#input-marmitas-custom-days`) e modo `🔢 Quantidade Específica` (`#input-marmitas-specific-grams`).
+3. **Versionamento e Testes**:
+   - Versão **v2.9.4** (`js/config.js`, `sw.js`, `package.json`, `index.html`).
+
+---
+
+## [2026-11-20 12:24] - Envio do Diário Alimentar por Foto + OCR Automático (v2.9.3)
+
+### 🎯 Demanda do Usuário
+- Permitir o envio do diário alimentar da nutricionista também por **foto** (Câmera ou Galeria), separado por Matheus e Scarlet.
+
+### 🛠️ O que foi implementado
+1. **Botões Câmera & Galeria por Pessoa (`index.html`, `js/ui.js`)**:
+   - Cartões de **Matheus** e **Scarlet** ganharam botões dedicados `📸 Câmera` e `🖼️ Foto` (com inputs separados pareados para câmera/galeria e validados em `test/camera-gallery-controls.test.js`).
+   - O modal `#modal-nutrition-diary` também ganhou `📸 Câmera`, `🖼️ Galeria`, pré-visualização da foto anexada e botão de remover.
+   - Cartões com foto anexada exibem miniatura clicável (`data-marmitas-view-photo`) e botão **📷 Ver Foto** abrindo o visualizador em tela cheia.
+2. **OCR Compartilhado + Compressão Local (`js/app.js`, `js/nutrition.js`, `js/sheets.js`)**:
+   - `loadImageFromBlob`, `preprocessImageForOcr`, `loadTesseractOcr` e `recognizeWithTesseract` foram promovidos para o escopo do módulo em `js/app.js` (reuso único entre leitor de NFC-e e Diário Alimentar, sem duplicação).
+   - Ao subir uma foto, ela é comprimida (`compressImageFile`) e anexada ao diário; o OCR tenta extrair e preencher o cardápio automaticamente, mantendo a foto visível mesmo em fotos manuscritas/estilizadas.
+   - `backupToSheets` remove base64 para respeitar o limite da planilha e `applyCloudBackup` preserva a foto local em sincronizações. Reset agora grava `{ reset: true, updatedAt }` para não ressuscitar no pull da nuvem.
+3. **Versionamento e Testes**:
+   - Versão **v2.9.3** (`js/config.js`, `sw.js`, `package.json`, `index.html`).
+
+---
+
+## [2026-11-20 12:18] - Importação de Diários Alimentares em PDF ou Texto por Pessoa (v2.9.2)
+
+### 🎯 Demanda do Usuário
+- Permitir subir o arquivo PDF (ou colar o texto) dos diários alimentares enviados pela nutricionista, separados individualmente para **Matheus** e **Scarlet**.
+
+### 🛠️ O que foi implementado
+1. **Parser de Diários Alimentares (`js/nutrition.js`)**:
+   - `parseNutritionDiaryText(rawText, person)` separa refeições (*Manhã*, *Almoço*, *Tarde*, *Noite*), trata alternativas `"ou"` sem dobrar porções e extrai automaticamente gramas e unidades (arroz, feijão, carne, pães, frutas, ovos, queijo, requeijão, YoPRO, whey, leite em pó). Suporta também arquivo único com seções separadas por nome (*Matheus* e *Scarlet*).
+   - `getNutritionState(state)` e `getEffectiveNutritionMeals(state)` mesclam diários personalizados com o padrão inicial.
+   - `calculateMarmitasPlan(..., person)` e `getDailyNutritionSummary(..., person)` passam a suportar cálculo individual (`matheus` / `scarlet`) além do `casal` consolidado.
+2. **UI Separada por Pessoa + Modal de Revisão (`index.html`, `js/ui.js`, `js/app.js`)**:
+   - Cada card (*Diário Matheus* e *Diário Scarlet*) possui botões próprios: **📄 Subir PDF**, **📝 Colar Texto / Editar**, **👁️ Ver PDF/Texto** (colapsável com o texto completo da nutri) e **↩️ Padrão**.
+   - Inputs dedicados `#input-nutrition-pdf-matheus` e `#input-nutrition-pdf-scarlet` fora do container re-renderizável, usando `extractTextFromPdfFile` (PDF.js local).
+   - Novo modal `#modal-nutrition-diary` permite subir PDF, colar texto, clicar em **🔍 Interpretar Texto** e revisar/ajustar qualquer gramatura antes de salvar.
+3. **Persistência Local e Nuvem (`js/storage.js`, `js/sheets.js`)**:
+   - `state.nutrition` persistido no `localStorage` e sincronizado no Google Sheets (merge por `updatedAt` individual de Matheus e Scarlet).
+4. **Testes & Versionamento**:
+   - Novos testes em `test/nutrition.test.js` (180/180 testes passando no total).
+   - Versão atualizada para **v2.9.2** (`js/config.js`, `sw.js`, `package.json` e querystrings em `index.html`).
+
+---
+
 ## [2026-11-20 11:55] - Correção de Pré-renderização e Cache da Aba Marmitas (v2.9.1)
 
 ### 🎯 Problema Relatado

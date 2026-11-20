@@ -21,6 +21,9 @@ test('Câmera vs Galeria: Todos os botões e inputs estão corretamente pareados
     { name: 'Exame Pet', camId: 'pet-exame-camera', galId: 'pet-exame-gallery' },
     { name: 'Item Pet', camId: 'pet-item-camera', galId: 'pet-item-gallery' },
     { name: 'Shopping Item', camId: 'shopping-input-camera', galId: 'shopping-input-gallery' },
+    { name: 'Diário Nutri Matheus', camId: 'input-nutrition-photo-camera-matheus', galId: 'input-nutrition-photo-gallery-matheus' },
+    { name: 'Diário Nutri Scarlet', camId: 'input-nutrition-photo-camera-scarlet', galId: 'input-nutrition-photo-gallery-scarlet' },
+    { name: 'Diário Nutri Modal', camId: 'input-nutrition-photo-camera-modal', galId: 'input-nutrition-photo-gallery-modal' }
   ];
 
   for (const pair of pairs) {

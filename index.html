@@ -52,12 +52,12 @@
   <!-- Tesseract.js local para OCR de Cupons Fiscais -->
   <script src="./js/vendor/tesseract.min.js"></script>
 
-  <!-- Stylesheets (v2.9.1) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.9.1" />
-  <link rel="stylesheet" href="./css/base.css?v=2.9.1" />
-  <link rel="stylesheet" href="./css/components.css?v=2.9.1" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.9.1" />
-<link rel="stylesheet" href="./nexo-theme.css?v=2.9.1" />
+  <!-- Stylesheets (v2.9.5) -->
+  <link rel="stylesheet" href="./css/variables.css?v=2.9.5" />
+  <link rel="stylesheet" href="./css/base.css?v=2.9.5" />
+  <link rel="stylesheet" href="./css/components.css?v=2.9.5" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.9.5" />
+<link rel="stylesheet" href="./nexo-theme.css?v=2.9.5" />
 </head>
 <body>
 
@@ -357,6 +357,12 @@
     <!-- ABA: MARMITAS & CARDÁPIO DA NUTRI          -->
     <!-- ========================================== -->
     <section id="tab-marmitas" class="tab-content">
+      <input type="file" id="input-nutrition-pdf-matheus" accept=".pdf,application/pdf,.txt,text/plain" style="display: none;" />
+      <input type="file" id="input-nutrition-photo-camera-matheus" accept="image/*" capture="environment" style="display: none;" />
+      <input type="file" id="input-nutrition-photo-gallery-matheus" accept="image/*" style="display: none;" />
+      <input type="file" id="input-nutrition-pdf-scarlet" accept=".pdf,application/pdf,.txt,text/plain" style="display: none;" />
+      <input type="file" id="input-nutrition-photo-camera-scarlet" accept="image/*" capture="environment" style="display: none;" />
+      <input type="file" id="input-nutrition-photo-gallery-scarlet" accept="image/*" style="display: none;" />
       <div id="marmitas-main-view">
         <!-- Card Principal: Cabeçalho da Nutrição -->
         <div class="dash-card" style="background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(13, 148, 136, 0.08)); border: 1px solid rgba(22, 163, 74, 0.25); margin-bottom: 1rem; padding: 1rem;">
@@ -366,7 +372,7 @@
               <div>
                 <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--brand-forest); margin: 0;">Cardápio & Marmitas da Nutri</h2>
                 <p style="font-size: 0.76rem; color: var(--text-muted); margin: 0;">
-                  Planejamento de marmitas com conversão automática de alimentos prontos para <strong>in natura</strong>.
+                  Suba PDF, foto ou texto dos diários alimentares de <strong>Matheus</strong> e <strong>Scarlet</strong> e calcule os ingredientes <strong>in natura</strong>.
                 </p>
               </div>
             </div>
@@ -383,50 +389,88 @@
               👥 Casal Consolidado
             </button>
             <button type="button" class="btn btn-xs btn-secondary" data-marmitas-person="matheus" style="border-radius: var(--radius-full); font-weight: 700; padding: 0.25rem 0.65rem;">
-              👨‍💻 Cardápio do Matheus
+              👨‍💻 Diário do Matheus
             </button>
             <button type="button" class="btn btn-xs btn-secondary" data-marmitas-person="scarlet" style="border-radius: var(--radius-full); font-weight: 700; padding: 0.25rem 0.65rem;">
-              👩‍💼 Cardápio da Scarlet
+              👩‍💼 Diário da Scarlet
             </button>
           </div>
         </div>
 
-        <!-- Seção 1: Visualização do Cardápio Prescrito -->
+        <!-- Seção 1: Diários Alimentares da Nutri (Separados por Matheus e Scarlet) -->
         <div style="margin-bottom: 1.25rem;">
           <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
-            <span>📋</span> Refeições Diárias Prescritas
+            <span>📋</span> Diários Alimentares da Nutri (PDF, Foto ou Texto)
           </h3>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem;">
             <!-- Card Matheus -->
-            <div style="background: var(--bg-card); border: 1px solid rgba(22, 163, 74, 0.25); border-radius: var(--radius-md); padding: 0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-              <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.6rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.4rem;">
-                <span style="font-size: 1.2rem;">👨‍💻</span>
-                <strong style="color: var(--brand-forest); font-size: 0.95rem;">Cardápio Matheus</strong>
+            <div style="background: var(--bg-card); border: 1px solid rgba(22, 163, 74, 0.25); border-radius: var(--radius-md); padding: 0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 0.65rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.45rem;">
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <span style="font-size: 1.25rem;">👨‍💻</span>
+                  <strong style="color: var(--brand-forest); font-size: 0.95rem;">Diário Matheus</strong>
+                </div>
+                <span style="font-size: 0.68rem; font-weight: 700; color: var(--brand-forest); background: rgba(22, 163, 74, 0.06); padding: 0.18rem 0.5rem; border-radius: var(--radius-full);">
+                  📋 Cardápio padrão
+                </span>
+              </div>
+              <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-xs btn-secondary" data-pick-file="input-nutrition-pdf-matheus" style="font-weight: 700; border-radius: var(--radius-sm); padding: 0.28rem 0.55rem;">
+                  📄 Subir PDF
+                </button>
+                <button type="button" class="btn btn-xs btn-secondary" data-pick-file="input-nutrition-photo-camera-matheus" style="font-weight: 700; border-radius: var(--radius-sm); padding: 0.28rem 0.55rem;">
+                  📸 Câmera
+                </button>
+                <button type="button" class="btn btn-xs btn-secondary" data-pick-file="input-nutrition-photo-gallery-matheus" style="font-weight: 700; border-radius: var(--radius-sm); padding: 0.28rem 0.55rem;">
+                  🖼️ Foto
+                </button>
+                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-edit-diary="matheus" style="font-weight: 700; border-radius: var(--radius-sm); padding: 0.28rem 0.55rem;">
+                  📝 Colar Texto / Editar
+                </button>
               </div>
               <div style="display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.78rem;">
-                <div><strong>🌅 Manhã:</strong> <span style="color: var(--text-secondary);">01 fruta + 01 pão com 2 fatias de queijo e requeijão (ou 2 ovos)</span></div>
+                <div><strong>🌅 Manhã:</strong> <span style="color: var(--text-secondary);">01 fruta + 01 pão com queijo e requeijão (ou 2 ovos)</span></div>
                 <div style="background: rgba(22, 163, 74, 0.06); padding: 0.35rem 0.5rem; border-radius: var(--radius-sm); border-left: 2px solid #16a34a;">
-                  <strong>🍽️ Almoço (Marmita):</strong> <span style="color: var(--brand-forest); font-weight: 600;">100g arroz + 90g feijão + 130g carne</span>
+                  <strong>🍽️ Almoço (Marmita):</strong> <span style="color: var(--brand-forest); font-weight: 600;">100g arroz cozido + 90g feijão cozido + 130g carne cozida + legumes/salada</span>
                 </div>
-                <div><strong>☕ Tarde:</strong> <span style="color: var(--text-secondary);">01 fruta + 01 YoPRO (Piracanjuba líquido)</span></div>
-                <div><strong>🌙 Noite:</strong> <span style="color: var(--text-secondary);">01 pão com 160g de carne</span></div>
+                <div><strong>☕ Tarde:</strong> <span style="color: var(--text-secondary);">01 fruta + 01 YoPRO líquido (Piracanjuba 15-22g proteína)</span></div>
+                <div><strong>🌙 Noite:</strong> <span style="color: var(--text-secondary);">01 pão com 160g de carne cozida</span></div>
               </div>
             </div>
 
             <!-- Card Scarlet -->
-            <div style="background: var(--bg-card); border: 1px solid rgba(13, 148, 136, 0.25); border-radius: var(--radius-md); padding: 0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-              <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.6rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.4rem;">
-                <span style="font-size: 1.2rem;">👩‍💼</span>
-                <strong style="color: #0f766e; font-size: 0.95rem;">Cardápio Scarlet</strong>
+            <div style="background: var(--bg-card); border: 1px solid rgba(13, 148, 136, 0.25); border-radius: var(--radius-md); padding: 0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 0.65rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.45rem;">
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <span style="font-size: 1.25rem;">👩‍💼</span>
+                  <strong style="color: #0f766e; font-size: 0.95rem;">Diário Scarlet</strong>
+                </div>
+                <span style="font-size: 0.68rem; font-weight: 700; color: #0f766e; background: rgba(13, 148, 136, 0.06); padding: 0.18rem 0.5rem; border-radius: var(--radius-full);">
+                  📋 Cardápio padrão
+                </span>
+              </div>
+              <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-xs btn-secondary" data-pick-file="input-nutrition-pdf-scarlet" style="font-weight: 700; border-radius: var(--radius-sm); padding: 0.28rem 0.55rem;">
+                  📄 Subir PDF
+                </button>
+                <button type="button" class="btn btn-xs btn-secondary" data-pick-file="input-nutrition-photo-camera-scarlet" style="font-weight: 700; border-radius: var(--radius-sm); padding: 0.28rem 0.55rem;">
+                  📸 Câmera
+                </button>
+                <button type="button" class="btn btn-xs btn-secondary" data-pick-file="input-nutrition-photo-gallery-scarlet" style="font-weight: 700; border-radius: var(--radius-sm); padding: 0.28rem 0.55rem;">
+                  🖼️ Foto
+                </button>
+                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-edit-diary="scarlet" style="font-weight: 700; border-radius: var(--radius-sm); padding: 0.28rem 0.55rem;">
+                  📝 Colar Texto / Editar
+                </button>
               </div>
               <div style="display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.78rem;">
-                <div><strong>🌅 Manhã:</strong> <span style="color: var(--text-secondary);">01 fruta + 01 pão com 2 ovos e 20g requeijão (ou queijo)</span></div>
+                <div><strong>🌅 Manhã:</strong> <span style="color: var(--text-secondary);">01 fruta + 01 pão com 2 ovos e requeijão (ou queijo)</span></div>
                 <div style="background: rgba(13, 148, 136, 0.06); padding: 0.35rem 0.5rem; border-radius: var(--radius-sm); border-left: 2px solid #0d9488;">
-                  <strong>🍽️ Almoço (Marmita):</strong> <span style="color: #0f766e; font-weight: 600;">90g arroz + 80g feijão + 130g carne</span>
+                  <strong>🍽️ Almoço (Marmita):</strong> <span style="color: #0f766e; font-weight: 600;">90g arroz cozido + 80g feijão cozido + 130g carne cozida + legumes/salada</span>
                 </div>
-                <div><strong>☕ Tarde:</strong> <span style="color: var(--text-secondary);">01 fruta + 30g whey com leite em pó (liquidificador portátil)</span></div>
-                <div><strong>🌙 Noite:</strong> <span style="color: var(--text-secondary);">01 pão com 120g de carne</span></div>
+                <div><strong>☕ Tarde:</strong> <span style="color: var(--text-secondary);">01 fruta + 30g whey protein com leite em pó (liquidificador portátil)</span></div>
+                <div><strong>🌙 Noite:</strong> <span style="color: var(--text-secondary);">01 pão com 120g de carne cozida</span></div>
               </div>
             </div>
           </div>
@@ -434,114 +478,105 @@
 
         <!-- Seção 2: Calculadora de Marmitas & Compras In Natura -->
         <div class="dash-card" style="padding: 1rem; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
-            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.4rem;">
-              <span>⚖️</span> Calculadora de Quantidades In Natura
+          <div class="marmitas-calc-header">
+            <h3 class="marmitas-calc-title">
+              <span>⚖️</span> Calculadora In Natura (Casal)
             </h3>
-
-            <!-- Seletor de Período (7, 15 ou 30 dias) -->
-            <div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">
-              <button type="button" class="btn btn-xs btn-primary" data-marmitas-period="7" style="font-weight: 700; border-radius: var(--radius-sm);">
-                📅 7 Dias (Semana)
-              </button>
-              <button type="button" class="btn btn-xs btn-secondary" data-marmitas-period="15" style="font-weight: 700; border-radius: var(--radius-sm);">
-                📅 15 Dias (Quinzena)
-              </button>
-              <button type="button" class="btn btn-xs btn-secondary" data-marmitas-period="30" style="font-weight: 700; border-radius: var(--radius-sm);">
-                📅 30 Dias (Mês)
-              </button>
-            </div>
           </div>
 
-          <!-- Filtro de Escopo: Só Almoço ou Dia Completo -->
-          <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; background: var(--bg-surface); padding: 0.35rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-            <button type="button" class="btn btn-xs btn-primary" data-marmitas-scope="completo" style="flex: 1; justify-content: center; font-weight: 700;">
-              🌟 Cardápio Completo (Dia Todo)
+          <div class="marmitas-mode-switch">
+            <button type="button" class="btn btn-xs btn-primary" data-marmitas-calc-mode="periodo" style="justify-content: center; font-weight: 700;">
+              📅 Por Período (Dias)
             </button>
-            <button type="button" class="btn btn-xs btn-secondary" data-marmitas-scope="almoco" style="flex: 1; justify-content: center; font-weight: 700;">
-              🍱 Apenas Marmitas de Almoço
+            <button type="button" class="btn btn-xs btn-secondary" data-marmitas-calc-mode="especifico" style="justify-content: center; font-weight: 700;">
+              🔢 Quantidade Específica
             </button>
           </div>
 
-          <!-- Tabela / Cards de Resultados In Natura -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.65rem; margin-bottom: 1rem;">
-            <!-- Card Carne -->
-            <div style="background: var(--bg-card); border: 1px solid rgba(220, 38, 38, 0.25); border-radius: var(--radius-md); padding: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-                <span style="font-size: 0.75rem; font-weight: 700; color: #b91c1c;">🥩 Carnes (Bovina / Frango)</span>
-                <span style="font-size: 0.65rem; color: var(--text-muted);">Fator x1.67</span>
-              </div>
-              <div style="font-size: 1.35rem; font-weight: 800; color: #b91c1c;">
-                6.30 kg <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">crua</span>
-              </div>
-              <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                Rende ~<strong>3.78 kg</strong> cozida para 7 dias.
-              </div>
+          <div class="marmitas-period-bar">
+            <div class="marmitas-period-presets">
+              <button type="button" class="btn btn-xs btn-primary" data-marmitas-period="7" style="font-weight: 700; border-radius: var(--radius-sm);">7 dias</button>
+              <button type="button" class="btn btn-xs btn-secondary" data-marmitas-period="15" style="font-weight: 700; border-radius: var(--radius-sm);">15 dias</button>
+              <button type="button" class="btn btn-xs btn-secondary" data-marmitas-period="30" style="font-weight: 700; border-radius: var(--radius-sm);">30 dias</button>
             </div>
-
-            <!-- Card Arroz -->
-            <div style="background: var(--bg-card); border: 1px solid rgba(234, 179, 8, 0.35); border-radius: var(--radius-md); padding: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-                <span style="font-size: 0.75rem; font-weight: 700; color: #a16207;">🍚 Arroz Cru</span>
-                <span style="font-size: 0.65rem; color: var(--text-muted);">Fator /2.2</span>
-              </div>
-              <div style="font-size: 1.35rem; font-weight: 800; color: #a16207;">
-                602g <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">(~1 pct 1kg)</span>
-              </div>
-              <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                Rende ~<strong>1330g</strong> cozido para 7 almoços.
-              </div>
-            </div>
-
-            <!-- Card Feijão -->
-            <div style="background: var(--bg-card); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: var(--radius-md); padding: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-                <span style="font-size: 0.75rem; font-weight: 700; color: #6d28d9;">🫘 Feijão Cru</span>
-                <span style="font-size: 0.65rem; color: var(--text-muted);">Fator /2.6</span>
-              </div>
-              <div style="font-size: 1.35rem; font-weight: 800; color: #6d28d9;">
-                455g <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">(~1 pct 1kg)</span>
-              </div>
-              <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                Rende ~<strong>1190g</strong> cozido para 7 almoços.
-              </div>
-            </div>
-
-            <!-- Card Pães & Frutas -->
-            <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-                <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-primary);">🥖 Pães & 🍌 Frutas</span>
-                <span style="font-size: 0.65rem; color: var(--text-muted);">4 de cada/dia</span>
-              </div>
-              <div style="font-size: 1.15rem; font-weight: 800; color: var(--brand-forest);">
-                28 pães • 28 frutas
-              </div>
-              <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                Café da manhã e lanches da tarde / jantar.
-              </div>
-            </div>
-
-            <!-- Card Proteínas & Laticínios -->
-            <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-                <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-primary);">🥛 YoPRO & 🥤 Whey</span>
-                <span style="font-size: 0.65rem; color: var(--text-muted);">Lanches tarde</span>
-              </div>
-              <div style="font-size: 1.15rem; font-weight: 800; color: var(--brand-forest);">
-                7 YoPROs • 210g Whey
-              </div>
-              <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                Matheus (Piracanjuba líquido) e Scarlet (+70g leite em pó).
-              </div>
+            <div class="marmitas-custom-days" aria-label="Dias personalizados">
+              <button type="button" class="btn btn-xs btn-secondary" data-marmitas-days-step="-1" style="padding: 0.2rem 0.5rem; font-weight: 800;">−</button>
+              <input type="number" id="input-marmitas-custom-days" class="form-control marmitas-days-input" min="1" max="365" value="7" aria-label="Quantidade de dias personalizada" />
+              <span style="font-size: 0.74rem; font-weight: 700; color: var(--text-muted);">dias</span>
+              <button type="button" class="btn btn-xs btn-secondary" data-marmitas-days-step="1" style="padding: 0.2rem 0.5rem; font-weight: 800;">+</button>
             </div>
           </div>
 
-          <!-- Botão de Ação: Enviar In Natura para a Lista de Mercado -->
-          <button type="button" class="btn btn-primary" id="btn-send-marmitas-to-market" style="width: 100%; justify-content: center; font-size: 0.95rem; padding: 0.85rem 1rem; font-weight: 700; background: linear-gradient(135deg, #15803d, #166534); box-shadow: 0 4px 14px rgba(21, 128, 61, 0.35);">
-            <span>🛒</span> Adicionar 9 Itens In Natura à Lista de Mercado
-          </button>
-          <div style="text-align: center; font-size: 0.72rem; color: var(--text-muted); margin-top: 0.4rem;">
-            ✨ Converte automaticamente as porções em pacotes e quilos comerciais para o supermercado.
+          <div class="marmitas-mode-switch" style="margin-bottom: 0.75rem;">
+            <button type="button" class="btn btn-xs btn-primary" data-marmitas-scope="completo" style="justify-content: center; font-weight: 700;">🌟 Dia Todo</button>
+            <button type="button" class="btn btn-xs btn-secondary" data-marmitas-scope="almoco" style="justify-content: center; font-weight: 700;">🍱 Só Marmitas de Almoço</button>
+          </div>
+
+          <div class="marmitas-filter-pills">
+            <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-right: 0.15rem;">Incluir:</span>
+            <button type="button" class="btn btn-xs btn-primary" data-marmitas-preset="todos" style="border-radius: var(--radius-full); font-weight: 700;">✨ Todos</button>
+            <button type="button" class="btn btn-xs btn-secondary" data-marmitas-preset="marmita" style="border-radius: var(--radius-full); font-weight: 700;">🍱 Carne+Arroz+Feijão</button>
+            <button type="button" class="btn btn-xs btn-secondary" data-marmitas-preset="carne" style="border-radius: var(--radius-full); font-weight: 700;">🥩 Só Carne</button>
+            <button type="button" class="btn btn-xs btn-secondary" data-marmitas-preset="arroz" style="border-radius: var(--radius-full); font-weight: 700;">🍚 Só Arroz</button>
+            <button type="button" class="btn btn-xs btn-secondary" data-marmitas-preset="feijao" style="border-radius: var(--radius-full); font-weight: 700;">🫘 Só Feijão</button>
+          </div>
+
+          <div class="marmitas-cards-grid-core">
+            <button type="button" class="marmitas-nutri-card is-selected" data-marmitas-toggle-group="carne" style="--card-accent-color: #b91c1c; --card-accent-border: rgba(220, 38, 38, 0.35);">
+              <div class="marmitas-card-top">
+                <span class="marmitas-card-title"><span>🥩</span> Carnes / Frango</span>
+                <span class="marmitas-card-badges"><span class="marmitas-card-badge">x1.67</span><span class="marmitas-card-check">✓ Incluído</span></span>
+              </div>
+              <div class="marmitas-card-value"><span>6.30 kg</span> <span class="marmitas-card-unit">crua</span></div>
+              <div class="marmitas-card-meta">Rende ~<strong>3.78 kg</strong> cozida (7 dias).</div>
+            </button>
+
+            <button type="button" class="marmitas-nutri-card is-selected" data-marmitas-toggle-group="arroz" style="--card-accent-color: #a16207; --card-accent-border: rgba(234, 179, 8, 0.45);">
+              <div class="marmitas-card-top">
+                <span class="marmitas-card-title"><span>🍚</span> Arroz Cru</span>
+                <span class="marmitas-card-badges"><span class="marmitas-card-badge">/2.2</span><span class="marmitas-card-check">✓ Incluído</span></span>
+              </div>
+              <div class="marmitas-card-value"><span>602g</span> <span class="marmitas-card-unit">(~1 pct 1kg)</span></div>
+              <div class="marmitas-card-meta">Rende ~<strong>1330g</strong> cozido (7 almoços).</div>
+            </button>
+
+            <button type="button" class="marmitas-nutri-card is-selected" data-marmitas-toggle-group="feijao" style="--card-accent-color: #6d28d9; --card-accent-border: rgba(139, 92, 246, 0.4);">
+              <div class="marmitas-card-top">
+                <span class="marmitas-card-title"><span>🫘</span> Feijão Cru</span>
+                <span class="marmitas-card-badges"><span class="marmitas-card-badge">/2.6</span><span class="marmitas-card-check">✓ Incluído</span></span>
+              </div>
+              <div class="marmitas-card-value"><span>455g</span> <span class="marmitas-card-unit">(~1 pct 1kg)</span></div>
+              <div class="marmitas-card-meta">Rende ~<strong>1190g</strong> cozido (7 almoços).</div>
+            </button>
+          </div>
+
+          <div class="marmitas-cards-grid-extras">
+            <button type="button" class="marmitas-nutri-card is-selected" data-marmitas-toggle-group="paes_frutas" style="--card-accent-color: var(--brand-forest); --card-accent-border: rgba(22, 163, 74, 0.25);">
+              <div class="marmitas-card-top">
+                <span class="marmitas-card-title"><span>🥖</span> Pães & Frutas</span>
+                <span class="marmitas-card-badges"><span class="marmitas-card-badge">4p • 4f/dia</span><span class="marmitas-card-check">✓ Incluído</span></span>
+              </div>
+              <div class="marmitas-card-value"><span>28 pães • 28 frutas</span></div>
+              <div class="marmitas-card-meta">Inclui ovos (14 un), saladas e legumes para 7 dias.</div>
+            </button>
+
+            <button type="button" class="marmitas-nutri-card is-selected" data-marmitas-toggle-group="laticinios" style="--card-accent-color: #0f766e; --card-accent-border: rgba(13, 148, 136, 0.28);">
+              <div class="marmitas-card-top">
+                <span class="marmitas-card-title"><span>🥛</span> YoPRO & Whey</span>
+                <span class="marmitas-card-badges"><span class="marmitas-card-badge">Lanches & Frios</span><span class="marmitas-card-check">✓ Incluído</span></span>
+              </div>
+              <div class="marmitas-card-value"><span>7 YoPROs • 210g Whey</span></div>
+              <div class="marmitas-card-meta">Leite em pó (+140g), queijo (280g) e requeijão (280g).</div>
+            </button>
+          </div>
+
+          <div style="margin-top: 1rem;">
+            <button type="button" class="btn btn-primary" id="btn-send-marmitas-to-market" style="width: 100%; justify-content: center; font-size: 0.95rem; padding: 0.85rem 1rem; font-weight: 700; background: linear-gradient(135deg, #15803d, #166534); box-shadow: 0 4px 14px rgba(21, 128, 61, 0.35);">
+              <span>🛒</span> Adicionar 12 Itens Selecionados à Lista de Mercado
+            </button>
+            <div style="text-align: center; font-size: 0.72rem; color: var(--text-muted); margin-top: 0.4rem;">
+              💡 Toque em qualquer cartão acima (ou nos filtros) para calcular e enviar só o que precisar.
+            </div>
           </div>
         </div>
       </div>
@@ -3570,8 +3605,150 @@
     </div>
   </div>
 
-  <!-- Script Principal Modular (v2.9.1) -->
-  <script type="module" src="./js/app.js?v=2.9.1"></script>
+  <!-- MODAL: IMPORTAR / EDITAR DIÁRIO ALIMENTAR DA NUTRICIONISTA -->
+  <div id="modal-nutrition-diary" class="modal-overlay">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="nutrition-diary-modal-title">📋 Diário Alimentar da Nutri</h3>
+        <button type="button" class="modal-close" data-close-modal>✕</button>
+      </div>
+      <form id="form-nutrition-diary">
+        <input type="hidden" id="nutrition-diary-person" value="matheus" />
+        <input type="hidden" id="nutrition-diary-source-name" value="" />
+        <input type="file" id="input-nutrition-pdf-modal" accept=".pdf,application/pdf,.txt,text/plain" style="display: none;" />
+        <input type="file" id="input-nutrition-photo-camera-modal" accept="image/*" capture="environment" style="display: none;" />
+        <input type="file" id="input-nutrition-photo-gallery-modal" accept="image/*" style="display: none;" />
+
+        <div style="background: rgba(22, 163, 74, 0.06); border: 1px solid rgba(22, 163, 74, 0.25); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 0.85rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.82rem; font-weight: 700; color: var(--brand-forest);">📄 PDF, Foto ou Texto da Nutri</span>
+            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-primary btn-xs" data-pick-file="input-nutrition-pdf-modal" style="font-weight: 700;">
+                📄 PDF
+              </button>
+              <button type="button" class="btn btn-secondary btn-xs" data-pick-file="input-nutrition-photo-camera-modal" style="font-weight: 700;">
+                📸 Câmera
+              </button>
+              <button type="button" class="btn btn-secondary btn-xs" data-pick-file="input-nutrition-photo-gallery-modal" style="font-weight: 700;">
+                🖼️ Galeria
+              </button>
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-parse-nutrition-text" style="font-weight: 700;">
+                🔍 Interpretar Texto
+              </button>
+            </div>
+          </div>
+
+          <div id="nutrition-diary-photo-preview-container" style="display: none; margin-bottom: 0.5rem; position: relative; max-width: 220px;">
+            <img id="nutrition-diary-photo-preview-img" src="" alt="Foto do diário alimentar" style="width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); max-height: 150px; object-fit: cover;" />
+            <button type="button" id="btn-remove-nutrition-photo" class="btn btn-icon btn-sm" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.65); color: #fff; border-radius: 50%; width: 24px; height: 24px; min-width: 24px; font-size: 0.7rem;" title="Remover foto">✕</button>
+          </div>
+
+          <textarea id="nutrition-diary-raw-text" class="form-control" rows="5" placeholder="Suba o PDF, tire uma foto ou cole aqui o texto do diário alimentar enviado pela nutri (Manhã, Almoço, Tarde, Noite)..."></textarea>
+          <div id="nutrition-diary-parse-feedback" style="font-size: 0.75rem; color: #15803d; font-weight: 600; margin-top: 0.35rem;"></div>
+        </div>
+
+        <div style="font-size: 0.82rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem;">
+          🍽️ Refeições & Quantidades (usadas na calculadora in natura)
+        </div>
+
+        <!-- Manhã -->
+        <div style="border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.65rem; margin-bottom: 0.65rem;">
+          <div style="font-size: 0.78rem; font-weight: 700; margin-bottom: 0.35rem;">🌅 Café da Manhã</div>
+          <input type="text" id="nutri-manha-desc" class="form-control" placeholder="Descrição do café da manhã..." style="margin-bottom: 0.4rem;" />
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(95px, 1fr)); gap: 0.4rem;">
+            <div>
+              <label class="form-label" for="nutri-manha-paes" style="font-size: 0.7rem;">Pães (un)</label>
+              <input type="number" id="nutri-manha-paes" class="form-control" min="0" step="1" value="1" />
+            </div>
+            <div>
+              <label class="form-label" for="nutri-manha-frutas" style="font-size: 0.7rem;">Frutas (un)</label>
+              <input type="number" id="nutri-manha-frutas" class="form-control" min="0" step="1" value="1" />
+            </div>
+            <div>
+              <label class="form-label" for="nutri-manha-ovos" style="font-size: 0.7rem;">Ovos (un)</label>
+              <input type="number" id="nutri-manha-ovos" class="form-control" min="0" step="1" value="0" />
+            </div>
+            <div>
+              <label class="form-label" for="nutri-manha-queijo" style="font-size: 0.7rem;">Queijo (g)</label>
+              <input type="number" id="nutri-manha-queijo" class="form-control" min="0" step="5" value="0" />
+            </div>
+            <div>
+              <label class="form-label" for="nutri-manha-requeijao" style="font-size: 0.7rem;">Requeijão (g)</label>
+              <input type="number" id="nutri-manha-requeijao" class="form-control" min="0" step="5" value="20" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Almoço -->
+        <div style="border: 1px solid rgba(22, 163, 74, 0.3); background: rgba(22, 163, 74, 0.03); border-radius: var(--radius-sm); padding: 0.65rem; margin-bottom: 0.65rem;">
+          <div style="font-size: 0.78rem; font-weight: 700; color: var(--brand-forest); margin-bottom: 0.35rem;">🍽️ Almoço (Marmita)</div>
+          <input type="text" id="nutri-almoco-desc" class="form-control" placeholder="Descrição do almoço..." style="margin-bottom: 0.4rem;" />
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem;">
+            <div>
+              <label class="form-label" for="nutri-almoco-arroz" style="font-size: 0.7rem;">Arroz pronto (g)</label>
+              <input type="number" id="nutri-almoco-arroz" class="form-control" min="0" step="5" value="100" />
+            </div>
+            <div>
+              <label class="form-label" for="nutri-almoco-feijao" style="font-size: 0.7rem;">Feijão pronto (g)</label>
+              <input type="number" id="nutri-almoco-feijao" class="form-control" min="0" step="5" value="90" />
+            </div>
+            <div>
+              <label class="form-label" for="nutri-almoco-carne" style="font-size: 0.7rem;">Carne pronta (g)</label>
+              <input type="number" id="nutri-almoco-carne" class="form-control" min="0" step="5" value="130" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Tarde -->
+        <div style="border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.65rem; margin-bottom: 0.65rem;">
+          <div style="font-size: 0.78rem; font-weight: 700; margin-bottom: 0.35rem;">☕ Lanche da Tarde</div>
+          <input type="text" id="nutri-tarde-desc" class="form-control" placeholder="Descrição do lanche da tarde..." style="margin-bottom: 0.4rem;" />
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0.4rem;">
+            <div>
+              <label class="form-label" for="nutri-tarde-frutas" style="font-size: 0.7rem;">Frutas (un)</label>
+              <input type="number" id="nutri-tarde-frutas" class="form-control" min="0" step="1" value="1" />
+            </div>
+            <div>
+              <label class="form-label" for="nutri-tarde-yopro" style="font-size: 0.7rem;">YoPRO (un)</label>
+              <input type="number" id="nutri-tarde-yopro" class="form-control" min="0" step="1" value="0" />
+            </div>
+            <div>
+              <label class="form-label" for="nutri-tarde-whey" style="font-size: 0.7rem;">Whey (g)</label>
+              <input type="number" id="nutri-tarde-whey" class="form-control" min="0" step="5" value="0" />
+            </div>
+            <div>
+              <label class="form-label" for="nutri-tarde-leite" style="font-size: 0.7rem;">Leite em pó (g)</label>
+              <input type="number" id="nutri-tarde-leite" class="form-control" min="0" step="5" value="0" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Noite -->
+        <div style="border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.65rem; margin-bottom: 0.85rem;">
+          <div style="font-size: 0.78rem; font-weight: 700; margin-bottom: 0.35rem;">🌙 Noite / Jantar</div>
+          <input type="text" id="nutri-noite-desc" class="form-control" placeholder="Descrição do jantar..." style="margin-bottom: 0.4rem;" />
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
+            <div>
+              <label class="form-label" for="nutri-noite-paes" style="font-size: 0.7rem;">Pães (un)</label>
+              <input type="number" id="nutri-noite-paes" class="form-control" min="0" step="1" value="1" />
+            </div>
+            <div>
+              <label class="form-label" for="nutri-noite-carne" style="font-size: 0.7rem;">Carne pronta (g)</label>
+              <input type="number" id="nutri-noite-carne" class="form-control" min="0" step="5" value="160" />
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">💾 Salvar Diário</button>
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Script Principal Modular (v2.9.5) -->
+  <script type="module" src="./js/app.js?v=2.9.5"></script>
 
 <script>
 /* Volta ao Nexo — aparece só quando a página foi aberta pelo shell (?de=nexo). */

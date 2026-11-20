@@ -1,11 +1,22 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_NUTRITION_MEALS,
   COOKING_FACTORS,
   getDailyNutritionSummary,
-  calculateMarmitasPlan
+  calculateMarmitasPlan,
+  parseNutritionDiaryText,
+  getEffectiveNutritionMeals,
+  calculateCustomQuantityConversion
 } from '../js/nutrition.js';
+import { applyCloudBackup } from '../js/sheets.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '..');
 
 test('Nutrição & Marmitas: Totais diários prontos conferem com a prescrição da nutri', () => {
   const daily = getDailyNutritionSummary();
@@ -115,5 +126,203 @@ test('Nutrição & Marmitas: renderMarmitasTab renderiza cardápio, calculadora 
   assert.ok(mockHtml.includes('btn-send-marmitas-to-market'));
   assert.ok(mockHtml.includes('YoPRO'));
   assert.ok(mockHtml.includes('Whey'));
+  assert.ok(mockHtml.includes('input-nutrition-pdf-matheus'));
+  assert.ok(mockHtml.includes('input-nutrition-pdf-scarlet'));
+  assert.ok(mockHtml.includes('data-marmitas-edit-diary="matheus"'));
+  assert.ok(mockHtml.includes('data-marmitas-edit-diary="scarlet"'));
+});
+
+test('Diário Alimentar: parseNutritionDiaryText extrai refeições e quantidades de PDF/texto sem duplicar opções "ou"', () => {
+  const textoMatheus = `
+    Café da Manhã - 07:30
+    01 fruta e 01 pão com 2 ovos e 20g de requeijão
+    ou
+    01 fruta e 01 pão com 2 fatias de queijo e requeijão
+
+    Almoço:
+    150g de arroz cozido
+    100g de feijão
+    180g de frango grelhado
+
+    Lanche da Tarde:
+    01 fruta
+    01 YoPRO líquido
+
+    Jantar:
+    01 pão com 140g de carne moída
+  `;
+
+  const parsed = parseNutritionDiaryText(textoMatheus, 'matheus');
+  assert.equal(parsed.detectedMealsCount, 4);
+  assert.equal(parsed.meals.manha.paes, 1, 'Não deve dobrar pães por causa da opção "ou"');
+  assert.equal(parsed.meals.manha.frutas, 1, 'Não deve dobrar frutas por causa da opção "ou"');
+  assert.equal(parsed.meals.manha.ovos, 2);
+  assert.equal(parsed.meals.manha.requeijaoG, 20);
+  assert.equal(parsed.meals.almoco.arrozProntoG, 150);
+  assert.equal(parsed.meals.almoco.feijaoProntoG, 100);
+  assert.equal(parsed.meals.almoco.carneProntaG, 180);
+  assert.equal(parsed.meals.tarde.yopro, 1);
+  assert.equal(parsed.meals.noite.carneProntaG, 140);
+});
+
+test('Diário Alimentar: separa automaticamente texto único contendo Matheus e Scarlet', () => {
+  const textoCasal = `
+    Matheus
+    Café da manhã: 01 pão e 01 banana
+    Almoço: 120g de arroz, 90g de feijão, 150g de carne
+    Tarde: 01 maçã e 01 YoPRO
+    Noite: 01 pão com 160g de carne
+
+    Scarlet
+    Café da manhã: 01 pão e 01 maçã
+    Almoço: 80g de arroz, 70g de feijão, 110g de frango
+    Tarde: 01 banana e 35g de whey protein com leite em pó
+    Noite: 01 pão com 100g de carne
+  `;
+
+  const m = parseNutritionDiaryText(textoCasal, 'matheus');
+  const s = parseNutritionDiaryText(textoCasal, 'scarlet');
+
+  assert.equal(m.meals.almoco.arrozProntoG, 120);
+  assert.equal(m.meals.almoco.carneProntaG, 150);
+  assert.equal(s.meals.almoco.arrozProntoG, 80);
+  assert.equal(s.meals.almoco.carneProntaG, 110);
+  assert.equal(s.meals.tarde.wheyG, 35);
+});
+
+test('Diário Alimentar: getEffectiveNutritionMeals e calculadora respeitam diário personalizado por pessoa e consolidação', () => {
+  const customState = {
+    nutrition: {
+      matheus: {
+        sourceName: 'Dieta_Matheus_Nov.pdf',
+        rawText: 'Almoço: 200g arroz',
+        updatedAt: '2026-11-20T12:00:00.000Z',
+        meals: {
+          almoco: { descricao: '200g arroz + 100g feijão + 150g carne', arrozProntoG: 200, feijaoProntoG: 100, carneProntaG: 150 },
+          noite: { descricao: '150g carne', paes: 1, carneProntaG: 150 }
+        }
+      }
+    }
+  };
+
+  const meals = getEffectiveNutritionMeals(customState);
+  assert.equal(meals.matheus.almoco.arrozProntoG, 200);
+  assert.equal(meals.scarlet.almoco.arrozProntoG, 90);
+
+  const planMatheus = calculateMarmitasPlan(7, 'almoco', meals, COOKING_FACTORS, 'matheus');
+  assert.equal(planMatheus.totaisProntos.arrozProntoG, 1400); // 200g * 7
+
+  const planCasal = calculateMarmitasPlan(7, 'almoco', meals, COOKING_FACTORS, 'casal');
+  assert.equal(planCasal.totaisProntos.arrozProntoG, 2030); // (200 + 90) * 7
+});
+
+test('Diário Alimentar: HTML possui inputs separados de PDF e modal #modal-nutrition-diary + sync nuvem preserva por updatedAt', () => {
+  const html = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
+  assert.ok(html.includes('id="input-nutrition-pdf-matheus"'));
+  assert.ok(html.includes('id="input-nutrition-pdf-scarlet"'));
+  assert.ok(html.includes('id="input-nutrition-pdf-modal"'));
+  assert.ok(html.includes('id="modal-nutrition-diary"'));
+  assert.ok(html.includes('id="form-nutrition-diary"'));
+  assert.ok(html.includes('id="nutrition-diary-raw-text"'));
+
+  const local = {
+    tasks: [],
+    nutrition: {
+      matheus: { sourceName: 'Local.pdf', updatedAt: '2026-11-20T12:00:00.000Z', meals: { almoco: { arrozProntoG: 140 } } }
+    }
+  };
+  const cloud = {
+    tasks: [],
+    nutrition: {
+      matheus: { sourceName: 'Antigo.pdf', updatedAt: '2026-11-19T10:00:00.000Z', meals: { almoco: { arrozProntoG: 100 } } },
+      scarlet: { sourceName: 'Scarlet.pdf', updatedAt: '2026-11-20T11:00:00.000Z', meals: { almoco: { arrozProntoG: 95 } } }
+    }
+  };
+
+  const merged = applyCloudBackup(local, cloud);
+  assert.equal(merged.nutrition.matheus.sourceName, 'Local.pdf');
+  assert.equal(merged.nutrition.scarlet.sourceName, 'Scarlet.pdf');
+});
+
+test('Diário Alimentar: suporte a foto (anexo, renderização e preservação na nuvem)', async () => {
+  const ui = await import('../js/ui.js');
+  let mockHtml = '';
+  globalThis.document = {
+    getElementById: (id) => {
+      if (id === 'marmitas-main-view') {
+        return {
+          set innerHTML(val) { mockHtml = val; },
+          get innerHTML() { return mockHtml; }
+        };
+      }
+      return null;
+    }
+  };
+
+  const stateWithPhoto = {
+    nutrition: {
+      scarlet: {
+        sourceName: 'foto_dieta.jpg',
+        photo: 'data:image/jpeg;base64,/9j/4AAQSkZJRg==',
+        updatedAt: '2026-11-20T12:20:00.000Z',
+        meals: {}
+      }
+    }
+  };
+
+  ui.renderMarmitasTab(stateWithPhoto, 'casal', 7, 'completo');
+  assert.ok(mockHtml.includes('data-pick-file="input-nutrition-photo-camera-matheus"'));
+  assert.ok(mockHtml.includes('data-pick-file="input-nutrition-photo-gallery-scarlet"'));
+  assert.ok(mockHtml.includes('data-marmitas-view-photo="scarlet"'));
+  assert.ok(mockHtml.includes('Foto do diário anexada'));
+
+  // Preserva foto local quando a nuvem retorna mais recente sem base64
+  const merged = applyCloudBackup(
+    { tasks: [], nutrition: stateWithPhoto.nutrition },
+    { tasks: [], nutrition: { scarlet: { sourceName: 'foto_dieta.jpg', photo: '', updatedAt: '2026-11-20T12:25:00.000Z' } } }
+  );
+  assert.equal(merged.nutrition.scarlet.photo, 'data:image/jpeg;base64,/9j/4AAQSkZJRg==');
+});
+
+test('Calculadora Marmitas: dias personalizados, filtro só feijão/só carne e conversor de quantidade específica', async () => {
+  // 10 dias personalizados só feijão
+  const onlyBeans10 = calculateMarmitasPlan(10, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['feijao']);
+  assert.equal(onlyBeans10.dias, 10);
+  assert.equal(onlyBeans10.shoppingItems.length, 1);
+  assert.equal(onlyBeans10.shoppingItems[0].groupKey, 'feijao');
+  assert.equal(onlyBeans10.totaisInNatura.feijaoCruG, 650); // 65g * 10
+
+  // Só carne para 5 dias
+  const onlyMeat5 = calculateMarmitasPlan(5, 'almoco', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['carne']);
+  assert.equal(onlyMeat5.shoppingItems.length, 1);
+  assert.equal(onlyMeat5.shoppingItems[0].groupKey, 'carne');
+
+  // Conversor específico: 540g carne pronta -> 900g crua
+  const convCarne = calculateCustomQuantityConversion({ item: 'carne', mode: 'pronto_para_cru', grams: 540 });
+  assert.equal(convCarne.cruG, 900);
+  assert.equal(convCarne.prontoG, 540);
+  assert.equal(convCarne.shoppingItem.groupKey, 'carne');
+
+  // Conversor específico: 500g feijão cru -> 1300g pronto
+  const convFeijao = calculateCustomQuantityConversion({ item: 'feijao', mode: 'cru_para_pronto', grams: 500 });
+  assert.equal(convFeijao.cruG, 500);
+  assert.equal(convFeijao.prontoG, 1300);
+
+  // Render em modo período (10 dias, só feijão) e em modo específico
+  const ui = await import('../js/ui.js');
+  let mockHtml = '';
+  globalThis.document = {
+    getElementById: (id) => (id === 'marmitas-main-view'
+      ? { set innerHTML(v) { mockHtml = v; }, get innerHTML() { return mockHtml; } }
+      : null)
+  };
+
+  ui.renderMarmitasTab({}, 'casal', 10, 'completo', {}, { calcMode: 'periodo', selectedGroups: ['feijao'] });
+  assert.ok(mockHtml.includes('id="input-marmitas-custom-days"'));
+  assert.ok(mockHtml.includes('Adicionar 1 Item Selecionado à Lista de Mercado'));
+
+  ui.renderMarmitasTab({}, 'casal', 7, 'completo', {}, { calcMode: 'especifico', specificItem: 'feijao', specificDirection: 'cru_para_pronto', specificGrams: 500 });
+  assert.ok(mockHtml.includes('id="input-marmitas-specific-grams"'));
+  assert.ok(mockHtml.includes('1.30 kg'));
 });
 

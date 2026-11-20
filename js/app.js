@@ -147,7 +147,9 @@ import {
   setBenefitsCycle,
   getActiveBenefitsCycle,
   setAnalyticsMonth,
-  getAnalyticsMonth
+  getAnalyticsMonth,
+  setPurchaseCollapsed,
+  setAllPurchasesCollapsed
 } from './ui.js';
 import { testSheetsConnection, backupToSheets, restoreFromSheets, applyCloudBackup } from './sheets.js';
 import {
@@ -174,7 +176,15 @@ import {
   renderCategoriesManager,
   renderQuickEmojis
 } from './ui.js';
-import { calculateMarmitasPlan } from './nutrition.js';
+import {
+  MARMITAS_ITEM_GROUPS,
+  calculateMarmitasPlan,
+  calculateCustomQuantityConversion,
+  COOKING_FACTORS,
+  getNutritionState,
+  getEffectiveNutritionMeals,
+  parseNutritionDiaryText
+} from './nutrition.js';
 
 // Estado global em memória
 let state = null;
@@ -234,6 +244,14 @@ let tempEditPetPhotoDataUrl = null;
 let currentMarmitasPerson = 'casal';
 let currentMarmitasPeriod = 7;
 let currentMarmitasScope = 'completo';
+let currentMarmitasExpandedRaw = { matheus: false, scarlet: false };
+let currentMarmitasCalcOpts = {
+  calcMode: 'periodo',
+  selectedGroups: [...MARMITAS_ITEM_GROUPS],
+  specificItem: 'carne',
+  specificDirection: 'pronto_para_cru',
+  specificGrams: 500
+};
 
 // -------------------------------------------------------------
 // INICIALIZAÇÃO DO APP
@@ -543,7 +561,7 @@ function refreshAllUI() {
     } else if (currentTab === "compras" || currentTab === "lista" || currentTab === "gamificacao" || currentTab === "mercado") {
       renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
     } else if (currentTab === "marmitas") {
-      renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
+      renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope, currentMarmitasExpandedRaw, currentMarmitasCalcOpts);
     } else if (currentTab === "ajustes") {
       renderSettingsTab(state, currentCategoryManageModule);
     }
@@ -557,7 +575,7 @@ function refreshAllUI() {
     if (typeof document !== 'undefined') {
       const marmitasView = document.getElementById('marmitas-main-view');
       if (marmitasView && !marmitasView.innerHTML.trim()) {
-        renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
+        renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope, currentMarmitasExpandedRaw, currentMarmitasCalcOpts);
       }
     }
   } catch (err) {
@@ -2860,14 +2878,24 @@ function initComprasModule() {
       }
     });
 
+    // Persiste o estado expandido/recolhido de cada compra entre re-renders do auto-sync
+    purchasesContainer.addEventListener('toggle', (e) => {
+      const det = e.target;
+      if (det && det.classList && det.classList.contains('market-receipt-items-details')) {
+        const pid = det.getAttribute('data-purchase-details');
+        if (pid) setPurchaseCollapsed(pid, !det.open);
+      }
+    }, true);
+
     purchasesContainer.addEventListener('click', (e) => {
       // Expandir todos os itens de todas as notas
       const expandAllBtn = e.target.closest('#btn-expand-all-purchases');
       if (expandAllBtn) {
         const allDetails = purchasesContainer.querySelectorAll('.market-receipt-items-details');
+        setAllPurchasesCollapsed([], false);
         allDetails.forEach(d => { d.open = true; });
-        playSubtleClick(state.settings.soundEnabled);
-        showToast('Itens expandidos', 'info', 1500);
+        playSubtleClick(state?.settings?.soundEnabled);
+        showToast('Todos os itens expostos', 'info', 1500);
         return;
       }
 
@@ -2875,9 +2903,11 @@ function initComprasModule() {
       const collapseAllBtn = e.target.closest('#btn-collapse-all-purchases');
       if (collapseAllBtn) {
         const allDetails = purchasesContainer.querySelectorAll('.market-receipt-items-details');
+        const ids = Array.from(allDetails).map(d => d.getAttribute('data-purchase-details')).filter(Boolean);
+        setAllPurchasesCollapsed(ids, true);
         allDetails.forEach(d => { d.open = false; });
-        playSubtleClick(state.settings.soundEnabled);
-        showToast('Itens recolhidos', 'info', 1500);
+        playSubtleClick(state?.settings?.soundEnabled);
+        showToast('Todos os itens recolhidos', 'info', 1500);
         return;
       }
 
@@ -3684,6 +3714,182 @@ function initComprasModule() {
     });
   }
 
+// ============================================================
+// HELPERS COMPARTILHADOS DE IMAGEM & OCR (NFC-e e Diários)
+// ============================================================
+function loadImageFromBlob(blobOrFile) {
+  return new Promise((resolve, reject) => {
+    if (!blobOrFile) {
+      reject(new Error('Imagem não fornecida.'));
+      return;
+    }
+    const objectUrl = URL.createObjectURL(blobOrFile);
+    const img = new Image();
+    let settled = false;
+    const finish = (fn, arg) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { URL.revokeObjectURL(objectUrl); } catch (e) {}
+      fn(arg);
+    };
+    const timer = setTimeout(() => finish(reject, new Error('Tempo esgotado ao abrir a imagem.')), 12000);
+    img.onload = () => finish(resolve, img);
+    img.onerror = () => finish(reject, new Error('Não foi possível abrir a imagem.'));
+    img.src = objectUrl;
+  });
+}
+
+async function preprocessImageForOcr(blobOrFile) {
+  if (!blobOrFile) return blobOrFile;
+  try {
+    const img = await loadImageFromBlob(blobOrFile);
+    const origW = img.naturalWidth || img.width;
+    const origH = img.naturalHeight || img.height;
+
+    let scale = 1.0;
+    if (origW < 900) {
+      scale = Math.min(2.5, 1200 / origW);
+    } else if (origW > 1600) {
+      scale = 1600 / origW;
+    }
+
+    const w = Math.round(origW * scale);
+    const h = Math.round(origH * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    let minLum = 255;
+    let maxLum = 0;
+    for (let i = 0; i < d.length; i += 16) {
+      const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      if (lum < minLum) minLum = lum;
+      if (lum > maxLum) maxLum = lum;
+    }
+    const range = Math.max(25, maxLum - minLum);
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      const val = Math.max(0, Math.min(255, Math.round(((lum - minLum) / range) * 255)));
+      d[i] = val;
+      d[i + 1] = val;
+      d[i + 2] = val;
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    const processedBlob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+    return processedBlob || blobOrFile;
+  } catch (e) {
+    console.warn('Falha no pré-processamento de OCR, usando imagem original:', e);
+    return blobOrFile;
+  }
+}
+
+async function loadTesseractOcr() {
+  if (window.Tesseract) return window.Tesseract;
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    const check = setInterval(() => {
+      attempts++;
+      if (window.Tesseract) {
+        clearInterval(check);
+        resolve(window.Tesseract);
+      } else if (attempts > 60) {
+        clearInterval(check);
+        const script = document.createElement('script');
+        script.src = './js/vendor/tesseract.min.js';
+        script.onload = () => {
+          if (window.Tesseract) resolve(window.Tesseract);
+          else reject(new Error('Tesseract não encontrado.'));
+        };
+        script.onerror = () => {
+          const cdnScript = document.createElement('script');
+          cdnScript.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+          cdnScript.onload = () => {
+            if (window.Tesseract) resolve(window.Tesseract);
+            else reject(new Error('Falha ao inicializar OCR.'));
+          };
+          cdnScript.onerror = () => reject(new Error('Falha ao baixar módulo OCR. Verifique sua conexão.'));
+          document.head.appendChild(cdnScript);
+        };
+        document.head.appendChild(script);
+      }
+    }, 50);
+  });
+}
+
+async function recognizeWithTesseract(imageSource, statusCallback, docLabel = 'cupom fiscal') {
+  const Tesseract = await loadTesseractOcr();
+  let worker = null;
+
+  let workerUrl = './js/vendor/tesseract-worker.min.js';
+  try {
+    workerUrl = new URL('js/vendor/tesseract-worker.min.js', window.location.href).href;
+  } catch (e) {}
+
+  const workerOptions = {
+    workerPath: workerUrl,
+    corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@v5.1.1',
+    langPath: 'https://tessdata.projectnaptha.com/4.0.0_fast',
+    logger: (m) => {
+      if (statusCallback && m && m.status) {
+        if (m.status === 'recognizing text') {
+          const p = m.progress != null ? Math.round(m.progress * 100) : 0;
+          statusCallback(`🔍 Lendo texto do ${docLabel} (${p}%)...`);
+        } else if (m.status.includes('loading') || m.status.includes('downloading')) {
+          statusCallback('⏳ Preparando motor OCR (1MB)...');
+        }
+      }
+    }
+  };
+
+  try {
+    worker = await Tesseract.createWorker('por', 1, workerOptions);
+    await worker.setParameters({ tessedit_pageseg_mode: '6' });
+  } catch (errPor) {
+    console.warn('Falha no modelo por do OCR, tentando fallback eng:', errPor);
+    try {
+      worker = await Tesseract.createWorker('eng', 1, workerOptions);
+      await worker.setParameters({ tessedit_pageseg_mode: '6' });
+    } catch (errEng) {
+      try {
+        worker = await Tesseract.createWorker('eng', 1);
+      } catch (errFinal) {
+        throw new Error('Não foi possível inicializar o motor OCR no navegador.');
+      }
+    }
+  }
+
+  try {
+    let ret = await worker.recognize(imageSource);
+    let text = (ret && ret.data && ret.data.text) ? ret.data.text : '';
+
+    if (!text || text.trim().length < 25) {
+      try {
+        await worker.reinitialize('eng');
+        await worker.setParameters({ tessedit_pageseg_mode: '6' });
+        const engRet = await worker.recognize(imageSource);
+        if (engRet && engRet.data && engRet.data.text && engRet.data.text.trim().length > text.trim().length) {
+          text = engRet.data.text;
+        }
+      } catch (e) {}
+    }
+
+    return text;
+  } finally {
+    if (worker) {
+      await worker.terminate().catch(() => {});
+    }
+  }
+}
+
 function initQrCodeScanner() {
   const btnScan = document.getElementById('btn-scan-nfce-qr');
   const btnScanFab = document.getElementById('btn-scan-nfce-qr-fab');
@@ -3991,31 +4197,6 @@ function initQrCodeScanner() {
     }, 240);
   }
 
-  // Abre um Blob/File de imagem de forma segura: handlers definidos ANTES do src
-  // (evita a corrida do onload), com erro tratado e timeout para nunca travar o modal.
-  function loadImageFromBlob(blobOrFile) {
-    return new Promise((resolve, reject) => {
-      if (!blobOrFile) {
-        reject(new Error('Imagem não fornecida.'));
-        return;
-      }
-      const objectUrl = URL.createObjectURL(blobOrFile);
-      const img = new Image();
-      let settled = false;
-      const finish = (fn, arg) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        try { URL.revokeObjectURL(objectUrl); } catch (e) {}
-        fn(arg);
-      };
-      const timer = setTimeout(() => finish(reject, new Error('Tempo esgotado ao abrir a imagem.')), 12000);
-      img.onload = () => finish(resolve, img);
-      img.onerror = () => finish(reject, new Error('Não foi possível abrir a imagem.'));
-      img.src = objectUrl;
-    });
-  }
-
   // Decodifica QR Code de fotos com busca multi-escala, recorte inferior e aumento de contraste
   async function decodeQrCodeFromImageBlob(blobOrFile) {    if (!blobOrFile) return null;
 
@@ -4100,172 +4281,6 @@ function initQrCodeScanner() {
       }
     }
     return null;
-  }
-
-  // Pré-processamento inteligente de imagem para OCR:
-  // Ajusta a escala para manter caracteres legíveis (20-30px) e aplica estiramento de contraste suave
-  async function preprocessImageForOcr(blobOrFile) {
-    if (!blobOrFile) return blobOrFile;
-    try {
-      const img = await loadImageFromBlob(blobOrFile);
-
-      const origW = img.naturalWidth || img.width;
-      const origH = img.naturalHeight || img.height;
-
-      // Garante que o texto tenha resolução ideal para OCR:
-      // Se a foto tiver largura menor que 900px, amplia (upscale) para caracteres ficarem com 20-30px
-      // Se for excessivamente grande (> 1600px), redimensiona proporcionalmente
-      let scale = 1.0;
-      if (origW < 900) {
-        scale = Math.min(2.5, 1200 / origW);
-      } else if (origW > 1600) {
-        scale = 1600 / origW;
-      }
-
-      const w = Math.round(origW * scale);
-      const h = Math.round(origH * scale);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, w, h);
-
-      // Normalização de contraste em escala de cinza suave (sem limiar binário destrutivo)
-      const imgData = ctx.getImageData(0, 0, w, h);
-      const d = imgData.data;
-      let minLum = 255;
-      let maxLum = 0;
-      for (let i = 0; i < d.length; i += 16) {
-        const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-        if (lum < minLum) minLum = lum;
-        if (lum > maxLum) maxLum = lum;
-      }
-      const range = Math.max(25, maxLum - minLum);
-      for (let i = 0; i < d.length; i += 4) {
-        const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-        const val = Math.max(0, Math.min(255, Math.round(((lum - minLum) / range) * 255)));
-        d[i] = val;
-        d[i + 1] = val;
-        d[i + 2] = val;
-      }
-      ctx.putImageData(imgData, 0, 0);
-
-      // Retorna Blob PNG sem perdas (lossless) para evitar artefatos de compressão JPEG
-      const processedBlob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
-      return processedBlob || blobOrFile;
-    } catch (e) {
-      console.warn('Falha no pré-processamento de OCR, usando imagem original:', e);
-      return blobOrFile;
-    }
-  }
-
-  // Carregador do Tesseract.js para OCR (Verifica escopo global ou carrega sob demanda)
-  async function loadTesseractOcr() {
-    if (window.Tesseract) return window.Tesseract;
-    return new Promise((resolve, reject) => {
-      let attempts = 0;
-      const check = setInterval(() => {
-        attempts++;
-        if (window.Tesseract) {
-          clearInterval(check);
-          resolve(window.Tesseract);
-        } else if (attempts > 60) {
-          clearInterval(check);
-          const script = document.createElement('script');
-          script.src = './js/vendor/tesseract.min.js';
-          script.onload = () => {
-            if (window.Tesseract) resolve(window.Tesseract);
-            else reject(new Error('Tesseract não encontrado.'));
-          };
-          script.onerror = () => {
-            // Fallback para CDN jsDelivr caso o arquivo local não carregue
-            const cdnScript = document.createElement('script');
-            cdnScript.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-            cdnScript.onload = () => {
-              if (window.Tesseract) resolve(window.Tesseract);
-              else reject(new Error('Falha ao inicializar OCR.'));
-            };
-            cdnScript.onerror = () => reject(new Error('Falha ao baixar módulo OCR. Verifique sua conexão.'));
-            document.head.appendChild(cdnScript);
-          };
-          document.head.appendChild(script);
-        }
-      }, 50);
-    });
-  }
-
-  // Motor OCR com Tesseract.js ultra-otimizado (1MB fast model, worker local, PSM 6 e fallback resiliente)
-  async function recognizeWithTesseract(imageSource, statusCallback) {
-    const Tesseract = await loadTesseractOcr();
-    let worker = null;
-
-    let workerUrl = './js/vendor/tesseract-worker.min.js';
-    try {
-      workerUrl = new URL('js/vendor/tesseract-worker.min.js', window.location.href).href;
-    } catch (e) {}
-
-    const workerOptions = {
-      workerPath: workerUrl,
-      corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@v5.1.1',
-      langPath: 'https://tessdata.projectnaptha.com/4.0.0_fast',
-      logger: (m) => {
-        if (statusCallback && m && m.status) {
-          if (m.status === 'recognizing text') {
-            const p = m.progress != null ? Math.round(m.progress * 100) : 0;
-            statusCallback(`🔍 Lendo texto do cupom fiscal (${p}%)...`);
-          } else if (m.status.includes('loading') || m.status.includes('downloading')) {
-            statusCallback('⏳ Preparando motor OCR (1MB)...');
-          }
-        }
-      }
-    };
-
-    try {
-      worker = await Tesseract.createWorker('por', 1, workerOptions);
-      await worker.setParameters({
-        tessedit_pageseg_mode: '6' // PSM 6: Uniform single column text block
-      });
-    } catch (errPor) {
-      console.warn('Falha no modelo por do OCR, tentando fallback eng:', errPor);
-      try {
-        worker = await Tesseract.createWorker('eng', 1, workerOptions);
-        await worker.setParameters({
-          tessedit_pageseg_mode: '6'
-        });
-      } catch (errEng) {
-        try {
-          worker = await Tesseract.createWorker('eng', 1);
-        } catch (errFinal) {
-          throw new Error('Não foi possível inicializar o motor OCR no navegador.');
-        }
-      }
-    }
-
-    try {
-      let ret = await worker.recognize(imageSource);
-      let text = (ret && ret.data && ret.data.text) ? ret.data.text : '';
-
-      // Se o modelo 'por' gerou pouquíssimo texto legível (< 25 caracteres), tenta passagem rápida com 'eng'
-      if (!text || text.trim().length < 25) {
-        try {
-          await worker.reinitialize('eng');
-          await worker.setParameters({ tessedit_pageseg_mode: '6' });
-          const engRet = await worker.recognize(imageSource);
-          if (engRet && engRet.data && engRet.data.text && engRet.data.text.trim().length > text.trim().length) {
-            text = engRet.data.text;
-          }
-        } catch (e) {}
-      }
-
-      return text;
-    } finally {
-      if (worker) {
-        await worker.terminate().catch(() => {});
-      }
-    }
   }
 
   // Processamento Híbrido: QR Code + OCR Complementar
@@ -7107,11 +7122,323 @@ function initMarmitasModule() {
   const marmitasTab = document.getElementById('tab-marmitas');
   if (!marmitasTab) return;
 
+  let pendingNutritionPhotoDataUrl = '';
+
+  const rerenderMarmitas = () => {
+    renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope, currentMarmitasExpandedRaw, currentMarmitasCalcOpts);
+  };
+
   // Garante pré-renderização imediata na inicialização
   try {
-    renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
+    rerenderMarmitas();
   } catch (err) {
     console.warn('[Maracaju] Erro ao renderizar marmitas na inicialização:', err);
+  }
+
+  const setDiaryModalPhotoPreview = (photoUrl = '') => {
+    pendingNutritionPhotoDataUrl = photoUrl || '';
+    const box = document.getElementById('nutrition-diary-photo-preview-container');
+    const img = document.getElementById('nutrition-diary-photo-preview-img');
+    if (box && img) {
+      if (pendingNutritionPhotoDataUrl) {
+        img.src = pendingNutritionPhotoDataUrl;
+        box.style.display = 'block';
+      } else {
+        img.src = '';
+        box.style.display = 'none';
+      }
+    }
+  };
+
+  const fillDiaryModalFields = (meals, rawText = '', sourceName = '', feedbackMsg = '', photoUrl = undefined) => {
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val !== undefined && val !== null ? String(val) : '';
+    };
+
+    setVal('nutrition-diary-source-name', sourceName || '');
+    setVal('nutrition-diary-raw-text', rawText || '');
+    if (photoUrl !== undefined) {
+      setDiaryModalPhotoPreview(photoUrl);
+    }
+
+    setVal('nutri-manha-desc', meals?.manha?.descricao || '');
+    setVal('nutri-manha-paes', meals?.manha?.paes ?? 0);
+    setVal('nutri-manha-frutas', meals?.manha?.frutas ?? 0);
+    setVal('nutri-manha-ovos', meals?.manha?.ovos ?? 0);
+    setVal('nutri-manha-queijo', meals?.manha?.queijoG ?? 0);
+    setVal('nutri-manha-requeijao', meals?.manha?.requeijaoG ?? 0);
+
+    setVal('nutri-almoco-desc', meals?.almoco?.descricao || '');
+    setVal('nutri-almoco-arroz', meals?.almoco?.arrozProntoG ?? 0);
+    setVal('nutri-almoco-feijao', meals?.almoco?.feijaoProntoG ?? 0);
+    setVal('nutri-almoco-carne', meals?.almoco?.carneProntaG ?? 0);
+
+    setVal('nutri-tarde-desc', meals?.tarde?.descricao || '');
+    setVal('nutri-tarde-frutas', meals?.tarde?.frutas ?? 0);
+    setVal('nutri-tarde-yopro', meals?.tarde?.yopro ?? 0);
+    setVal('nutri-tarde-whey', meals?.tarde?.wheyG ?? 0);
+    setVal('nutri-tarde-leite', meals?.tarde?.leiteEmPoG ?? 0);
+
+    setVal('nutri-noite-desc', meals?.noite?.descricao || '');
+    setVal('nutri-noite-paes', meals?.noite?.paes ?? 0);
+    setVal('nutri-noite-carne', meals?.noite?.carneProntaG ?? 0);
+
+    const fb = document.getElementById('nutrition-diary-parse-feedback');
+    if (fb) fb.textContent = feedbackMsg || '';
+  };
+
+  const openNutritionDiaryModal = (person, parsedOverride = null, sourceOverride = null, feedbackMsg = '', photoOverride = undefined) => {
+    const personKey = person === 'scarlet' ? 'scarlet' : 'matheus';
+    const label = personKey === 'scarlet' ? 'Scarlet' : 'Matheus';
+    const avatar = personKey === 'scarlet' ? '👩‍💼' : '👨‍💻';
+
+    const titleEl = document.getElementById('nutrition-diary-modal-title');
+    if (titleEl) titleEl.textContent = `${avatar} Diário Alimentar — ${label}`;
+
+    const personInput = document.getElementById('nutrition-diary-person');
+    if (personInput) personInput.value = personKey;
+
+    const current = getNutritionState(state)[personKey];
+    const resolvedPhoto = photoOverride !== undefined ? photoOverride : (current.photo || '');
+
+    if (parsedOverride) {
+      fillDiaryModalFields(
+        parsedOverride.meals,
+        parsedOverride.rawText,
+        sourceOverride || '',
+        feedbackMsg,
+        resolvedPhoto
+      );
+    } else {
+      fillDiaryModalFields(
+        current.meals,
+        current.rawText || '',
+        current.sourceName || '',
+        feedbackMsg,
+        resolvedPhoto
+      );
+    }
+
+    openModal('modal-nutrition-diary');
+  };
+
+  const handleNutritionFileUpload = async (file, personKey) => {
+    if (!file) return;
+    const label = personKey === 'scarlet' ? 'Scarlet' : 'Matheus';
+    showToast(`⏳ Lendo arquivo do diário de ${label}...`, 'info', 2500);
+
+    try {
+      let extractedText = '';
+      if (file.type === 'text/plain' || /\.txt$/i.test(file.name || '')) {
+        extractedText = await file.text();
+      } else {
+        const result = await extractTextFromPdfFile(file);
+        extractedText = String(result || '');
+      }
+
+      const parsed = parseNutritionDiaryText(extractedText, personKey);
+      const feedback = parsed.detectedMealsCount > 0
+        ? `✅ PDF lido (${file.name}): ${parsed.detectedMealsCount} refeições identificadas automaticamente. Confira abaixo e clique em Salvar!`
+        : `📄 PDF lido (${file.name}). Confira o texto extraído e ajuste as quantidades antes de salvar.`;
+
+      openNutritionDiaryModal(personKey, parsed, file.name || 'PDF importado', feedback);
+    } catch (err) {
+      console.error('[Maracaju] Erro ao ler PDF do diário alimentar:', err);
+      showToast(err.message || 'Não foi possível ler o PDF. Você pode colar o texto manualmente.', 'error', 5000);
+      openNutritionDiaryModal(personKey, null, '', '⚠️ Não foi possível extrair texto automático deste PDF. Cole o texto abaixo se preferir.');
+    }
+  };
+
+  const handleNutritionPhotoUpload = async (file, personKey) => {
+    if (!file) return;
+    const label = personKey === 'scarlet' ? 'Scarlet' : 'Matheus';
+    showToast(`📸 Processando foto do diário de ${label}...`, 'info', 2500);
+
+    let compressedPhoto = '';
+    try {
+      compressedPhoto = await compressImageFile(file, 1024, 0.8);
+    } catch (imgErr) {
+      console.warn('[Maracaju] Falha ao comprimir foto do diário:', imgErr);
+    }
+
+    const modalEl = document.getElementById('modal-nutrition-diary');
+    const modalAlreadyOpen = modalEl && modalEl.classList.contains('active');
+    if (modalAlreadyOpen) {
+      setDiaryModalPhotoPreview(compressedPhoto);
+      const sourceInput = document.getElementById('nutrition-diary-source-name');
+      if (sourceInput && !sourceInput.value) sourceInput.value = file.name || 'Foto da Nutri';
+      const fb = document.getElementById('nutrition-diary-parse-feedback');
+      if (fb) fb.textContent = '🔍 Lendo texto da foto (OCR)...';
+    } else {
+      openNutritionDiaryModal(
+        personKey,
+        null,
+        file.name || 'Foto da Nutri',
+        '🔍 Lendo texto da foto (OCR)...',
+        compressedPhoto
+      );
+    }
+
+    try {
+      const preprocessed = await preprocessImageForOcr(file);
+      const ocrText = await recognizeWithTesseract(
+        preprocessed,
+        (msg) => {
+          const fb = document.getElementById('nutrition-diary-parse-feedback');
+          if (fb) fb.textContent = msg;
+        },
+        'diário alimentar'
+      );
+
+      if (ocrText && ocrText.trim().length >= 12) {
+        const parsed = parseNutritionDiaryText(ocrText, personKey);
+        const feedback = parsed.detectedMealsCount > 0
+          ? `✅ Foto lida! ${parsed.detectedMealsCount} refeições identificadas automaticamente. Confira abaixo e salve!`
+          : '📷 Foto anexada e texto extraído! Revise o texto/quantidades abaixo e clique em Salvar.';
+        fillDiaryModalFields(
+          parsed.meals,
+          ocrText.trim(),
+          file.name || 'Foto da Nutri',
+          feedback,
+          compressedPhoto
+        );
+      } else {
+        const fb = document.getElementById('nutrition-diary-parse-feedback');
+        if (fb) fb.textContent = '📷 Foto anexada! Se a imagem tiver letra manuscrita ou tabela, ajuste os valores abaixo e clique em Salvar.';
+      }
+    } catch (errOcr) {
+      console.warn('[Maracaju] OCR da foto do diário falhou (foto mantida):', errOcr);
+      const fb = document.getElementById('nutrition-diary-parse-feedback');
+      if (fb) fb.textContent = '📷 Foto anexada! Não foi possível ler o texto automaticamente; preencha ou ajuste os campos abaixo e salve.';
+    }
+  };
+
+  // Listeners nos inputs de PDF e Foto separados (Matheus, Scarlet e dentro do modal)
+  const bindFileInput = (id, fn) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) fn(file);
+    });
+  };
+
+  const getModalPersonKey = () => {
+    const personInput = document.getElementById('nutrition-diary-person');
+    return (personInput && personInput.value === 'scarlet') ? 'scarlet' : 'matheus';
+  };
+
+  bindFileInput('input-nutrition-pdf-matheus', (file) => handleNutritionFileUpload(file, 'matheus'));
+  bindFileInput('input-nutrition-pdf-scarlet', (file) => handleNutritionFileUpload(file, 'scarlet'));
+  bindFileInput('input-nutrition-pdf-modal', (file) => handleNutritionFileUpload(file, getModalPersonKey()));
+
+  bindFileInput('input-nutrition-photo-camera-matheus', (file) => handleNutritionPhotoUpload(file, 'matheus'));
+  bindFileInput('input-nutrition-photo-gallery-matheus', (file) => handleNutritionPhotoUpload(file, 'matheus'));
+  bindFileInput('input-nutrition-photo-camera-scarlet', (file) => handleNutritionPhotoUpload(file, 'scarlet'));
+  bindFileInput('input-nutrition-photo-gallery-scarlet', (file) => handleNutritionPhotoUpload(file, 'scarlet'));
+  bindFileInput('input-nutrition-photo-camera-modal', (file) => handleNutritionPhotoUpload(file, getModalPersonKey()));
+  bindFileInput('input-nutrition-photo-gallery-modal', (file) => handleNutritionPhotoUpload(file, getModalPersonKey()));
+
+  const btnRemovePhoto = document.getElementById('btn-remove-nutrition-photo');
+  if (btnRemovePhoto) {
+    btnRemovePhoto.addEventListener('click', () => {
+      setDiaryModalPhotoPreview('');
+    });
+  }
+
+  const parseTextBtn = document.getElementById('btn-parse-nutrition-text');
+  if (parseTextBtn) {
+    parseTextBtn.addEventListener('click', () => {
+      playSubtleClick(state?.settings?.soundEnabled);
+      const rawInput = document.getElementById('nutrition-diary-raw-text');
+      const sourceInput = document.getElementById('nutrition-diary-source-name');
+      const personKey = getModalPersonKey();
+      const text = rawInput ? rawInput.value : '';
+
+      if (!text.trim()) {
+        showToast('Cole o texto ou suba um PDF/foto antes de interpretar.', 'warning', 3000);
+        return;
+      }
+
+      const parsed = parseNutritionDiaryText(text, personKey);
+      const feedback = parsed.detectedMealsCount > 0
+        ? `✅ ${parsed.detectedMealsCount} refeições extraídas do texto! Confira os campos e salve.`
+        : 'ℹ️ Não encontramos títulos como Manhã/Almoço/Tarde/Noite no texto; preencha ou ajuste os campos abaixo.';
+
+      fillDiaryModalFields(
+        parsed.meals,
+        text,
+        (sourceInput && sourceInput.value) ? sourceInput.value : 'Texto colado',
+        feedback
+      );
+    });
+  }
+
+  const diaryForm = document.getElementById('form-nutrition-diary');
+  if (diaryForm) {
+    diaryForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const num = (id) => {
+        const el = document.getElementById(id);
+        const val = parseFloat(el ? el.value : 0);
+        return Number.isFinite(val) && val >= 0 ? val : 0;
+      };
+      const str = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+      };
+
+      const personKey = str('nutrition-diary-person') === 'scarlet' ? 'scarlet' : 'matheus';
+      const label = personKey === 'scarlet' ? 'Scarlet' : 'Matheus';
+      const rawText = str('nutrition-diary-raw-text');
+      const sourceName = str('nutrition-diary-source-name') || (pendingNutritionPhotoDataUrl ? 'Foto da Nutri' : (rawText ? 'Texto da Nutri' : 'Editado manualmente'));
+
+      if (!state.nutrition || typeof state.nutrition !== 'object') {
+        state.nutrition = {};
+      }
+
+      state.nutrition[personKey] = {
+        sourceName,
+        rawText: rawText.slice(0, 6000),
+        photo: pendingNutritionPhotoDataUrl || '',
+        updatedAt: new Date().toISOString(),
+        meals: {
+          manha: {
+            descricao: str('nutri-manha-desc'),
+            paes: num('nutri-manha-paes'),
+            frutas: num('nutri-manha-frutas'),
+            ovos: num('nutri-manha-ovos'),
+            queijoG: num('nutri-manha-queijo'),
+            requeijaoG: num('nutri-manha-requeijao')
+          },
+          almoco: {
+            descricao: str('nutri-almoco-desc'),
+            arrozProntoG: num('nutri-almoco-arroz'),
+            feijaoProntoG: num('nutri-almoco-feijao'),
+            carneProntaG: num('nutri-almoco-carne')
+          },
+          tarde: {
+            descricao: str('nutri-tarde-desc'),
+            frutas: num('nutri-tarde-frutas'),
+            yopro: num('nutri-tarde-yopro'),
+            wheyG: num('nutri-tarde-whey'),
+            leiteEmPoG: num('nutri-tarde-leite')
+          },
+          noite: {
+            descricao: str('nutri-noite-desc'),
+            paes: num('nutri-noite-paes'),
+            carneProntaG: num('nutri-noite-carne')
+          }
+        }
+      };
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      closeModal('modal-nutrition-diary');
+      rerenderMarmitas();
+      showToast(`✅ Diário alimentar de ${label} salvo e calculadora atualizada!`, 'success', 3500);
+    });
   }
 
   marmitasTab.addEventListener('click', (e) => {
@@ -7119,15 +7446,83 @@ function initMarmitasModule() {
     if (personBtn) {
       currentMarmitasPerson = personBtn.getAttribute('data-marmitas-person') || 'casal';
       playSubtleClick(state?.settings?.soundEnabled);
-      renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
+      rerenderMarmitas();
+      return;
+    }
+
+    const editBtn = e.target.closest('[data-marmitas-edit-diary]');
+    if (editBtn) {
+      const personKey = editBtn.getAttribute('data-marmitas-edit-diary') === 'scarlet' ? 'scarlet' : 'matheus';
+      playSubtleClick(state?.settings?.soundEnabled);
+      openNutritionDiaryModal(personKey);
+      return;
+    }
+
+    const viewPhotoBtn = e.target.closest('[data-marmitas-view-photo]');
+    if (viewPhotoBtn) {
+      const personKey = viewPhotoBtn.getAttribute('data-marmitas-view-photo') === 'scarlet' ? 'scarlet' : 'matheus';
+      const personData = getNutritionState(state)[personKey];
+      if (personData && personData.photo) {
+        const titleEl = document.getElementById('shopping-photo-viewer-title');
+        const imgEl = document.getElementById('shopping-photo-viewer-img');
+        if (titleEl) titleEl.textContent = `Diário Alimentar — ${personData.nome}`;
+        if (imgEl) imgEl.src = personData.photo;
+        openModal('modal-shopping-photo-viewer');
+      }
+      return;
+    }
+
+    const toggleRawBtn = e.target.closest('[data-marmitas-toggle-raw]');
+    if (toggleRawBtn) {
+      const personKey = toggleRawBtn.getAttribute('data-marmitas-toggle-raw') === 'scarlet' ? 'scarlet' : 'matheus';
+      playSubtleClick(state?.settings?.soundEnabled);
+      currentMarmitasExpandedRaw[personKey] = !currentMarmitasExpandedRaw[personKey];
+      rerenderMarmitas();
+      return;
+    }
+
+    const resetBtn = e.target.closest('[data-marmitas-reset]');
+    if (resetBtn) {
+      const personKey = resetBtn.getAttribute('data-marmitas-reset') === 'scarlet' ? 'scarlet' : 'matheus';
+      const label = personKey === 'scarlet' ? 'Scarlet' : 'Matheus';
+      playSubtleClick(state?.settings?.soundEnabled);
+      if (!state.nutrition || typeof state.nutrition !== 'object') {
+        state.nutrition = {};
+      }
+      state.nutrition[personKey] = {
+        reset: true,
+        updatedAt: new Date().toISOString()
+      };
+      currentMarmitasExpandedRaw[personKey] = false;
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      rerenderMarmitas();
+      showToast(`↩️ Diário de ${label} restaurado para o padrão.`, 'info', 3000);
+      return;
+    }
+
+    const calcModeBtn = e.target.closest('[data-marmitas-calc-mode]');
+    if (calcModeBtn) {
+      currentMarmitasCalcOpts.calcMode = calcModeBtn.getAttribute('data-marmitas-calc-mode') === 'especifico' ? 'especifico' : 'periodo';
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
       return;
     }
 
     const periodBtn = e.target.closest('[data-marmitas-period]');
     if (periodBtn) {
-      currentMarmitasPeriod = parseInt(periodBtn.getAttribute('data-marmitas-period'), 10) || 7;
+      currentMarmitasPeriod = Math.max(1, Math.min(365, parseInt(periodBtn.getAttribute('data-marmitas-period'), 10) || 7));
       playSubtleClick(state?.settings?.soundEnabled);
-      renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
+      rerenderMarmitas();
+      return;
+    }
+
+    const stepBtn = e.target.closest('[data-marmitas-days-step]');
+    if (stepBtn) {
+      const delta = parseInt(stepBtn.getAttribute('data-marmitas-days-step'), 10) || 0;
+      currentMarmitasPeriod = Math.max(1, Math.min(365, (parseInt(currentMarmitasPeriod, 10) || 7) + delta));
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
       return;
     }
 
@@ -7135,20 +7530,62 @@ function initMarmitasModule() {
     if (scopeBtn) {
       currentMarmitasScope = scopeBtn.getAttribute('data-marmitas-scope') || 'completo';
       playSubtleClick(state?.settings?.soundEnabled);
-      renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
+      rerenderMarmitas();
       return;
     }
 
-    const sendBtn = e.target.closest('#btn-send-marmitas-to-market');
-    if (sendBtn) {
+    const presetBtn = e.target.closest('[data-marmitas-preset]');
+    if (presetBtn) {
+      const preset = presetBtn.getAttribute('data-marmitas-preset');
+      if (preset === 'todos') currentMarmitasCalcOpts.selectedGroups = [...MARMITAS_ITEM_GROUPS];
+      else if (preset === 'marmita') currentMarmitasCalcOpts.selectedGroups = ['carne', 'arroz', 'feijao'];
+      else if (preset === 'carne' || preset === 'arroz' || preset === 'feijao') currentMarmitasCalcOpts.selectedGroups = [preset];
       playSubtleClick(state?.settings?.soundEnabled);
-      const plan = calculateMarmitasPlan(currentMarmitasPeriod, currentMarmitasScope);
-      if (!plan || !plan.shoppingItems || plan.shoppingItems.length === 0) return;
+      rerenderMarmitas();
+      return;
+    }
 
+    const toggleGroupCard = e.target.closest('[data-marmitas-toggle-group]');
+    if (toggleGroupCard) {
+      const grp = toggleGroupCard.getAttribute('data-marmitas-toggle-group');
+      const cur = new Set(currentMarmitasCalcOpts.selectedGroups || MARMITAS_ITEM_GROUPS);
+      if (cur.has(grp)) cur.delete(grp);
+      else cur.add(grp);
+      currentMarmitasCalcOpts.selectedGroups = Array.from(cur);
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const specItemBtn = e.target.closest('[data-marmitas-spec-item]');
+    if (specItemBtn) {
+      currentMarmitasCalcOpts.specificItem = specItemBtn.getAttribute('data-marmitas-spec-item') || 'carne';
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const specDirBtn = e.target.closest('[data-marmitas-spec-dir]');
+    if (specDirBtn) {
+      currentMarmitasCalcOpts.specificDirection = specDirBtn.getAttribute('data-marmitas-spec-dir') || 'pronto_para_cru';
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const specPresetBtn = e.target.closest('[data-marmitas-spec-preset]');
+    if (specPresetBtn) {
+      currentMarmitasCalcOpts.specificGrams = Math.max(1, parseInt(specPresetBtn.getAttribute('data-marmitas-spec-preset'), 10) || 500);
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const upsertMarmitasShoppingItems = (itemsToSend, toastMsg) => {
+      if (!Array.isArray(itemsToSend) || itemsToSend.length === 0) return;
       if (!Array.isArray(state.compras)) state.compras = [];
 
-      let addedCount = 0;
-      for (const item of plan.shoppingItems) {
+      for (const item of itemsToSend) {
         const existingIdx = state.compras.findIndex(i => (i.name || i.title || '').toLowerCase() === item.name.toLowerCase() && !i.bought);
         if (existingIdx !== -1) {
           state.compras[existingIdx].quantity = item.quantity;
@@ -7164,22 +7601,115 @@ function initMarmitasModule() {
             price: item.estimatedUnitPrice || 0,
             unitPrice: item.estimatedUnitPrice || 0,
             notes: item.notes,
-            suggestedBy: 'casal',
+            suggestedBy: currentMarmitasPerson === 'casal' ? 'casal' : currentMarmitasPerson,
             bought: false,
             createdAt: new Date().toISOString()
           });
-          addedCount++;
         }
       }
 
       saveState(state);
       triggerAutoSyncIfEnabled();
-      showToast(`🛒 ${plan.shoppingItems.length} itens in natura (${currentMarmitasPeriod} dias) enviados para a Lista de Mercado!`, 'success', 4000);
+      showToast(toastMsg, 'success', 4000);
 
       if (typeof renderComprasTab === 'function') {
         renderComprasTab(state, currentComprasCategory, currentComprasView);
       }
+    };
+
+    const sendBtn = e.target.closest('#btn-send-marmitas-to-market');
+    if (sendBtn) {
+      playSubtleClick(state?.settings?.soundEnabled);
+      const effectiveMeals = getEffectiveNutritionMeals(state);
+      const plan = calculateMarmitasPlan(currentMarmitasPeriod, currentMarmitasScope, effectiveMeals, COOKING_FACTORS, currentMarmitasPerson, currentMarmitasCalcOpts.selectedGroups);
+      if (!plan || !plan.shoppingItems || plan.shoppingItems.length === 0) {
+        showToast('Selecione ao menos 1 alimento nos cartões para enviar.', 'warning', 3000);
+        return;
+      }
+      upsertMarmitasShoppingItems(
+        plan.shoppingItems,
+        `🛒 ${plan.shoppingItems.length} ${plan.shoppingItems.length === 1 ? 'item' : 'itens'} (${currentMarmitasPeriod} ${currentMarmitasPeriod === 1 ? 'dia' : 'dias'}) enviado(s) para a Lista de Mercado!`
+      );
       return;
+    }
+
+    const sendSpecBtn = e.target.closest('#btn-send-specific-to-market');
+    if (sendSpecBtn) {
+      playSubtleClick(state?.settings?.soundEnabled);
+      const effectiveMeals = getEffectiveNutritionMeals(state);
+      const res = calculateCustomQuantityConversion({
+        item: currentMarmitasCalcOpts.specificItem,
+        mode: currentMarmitasCalcOpts.specificDirection,
+        grams: currentMarmitasCalcOpts.specificGrams,
+        meals: effectiveMeals,
+        factors: COOKING_FACTORS,
+        person: currentMarmitasPerson
+      });
+      upsertMarmitasShoppingItems(
+        [res.shoppingItem],
+        `🛒 ${res.label} (${res.cruG >= 1000 ? `${res.cruKgStr} kg` : `${res.cruG}g`} in natura) enviado para a Lista de Mercado!`
+      );
+      return;
+    }
+  });
+
+  // Inputs numéricos personalizados (dias e gramas específicas): preserva o foco ao digitar
+  marmitasTab.addEventListener('change', (e) => {
+    if (e.target && e.target.id === 'input-marmitas-custom-days') {
+      const val = parseInt(e.target.value, 10);
+      if (Number.isFinite(val) && val >= 1) {
+        currentMarmitasPeriod = Math.min(365, val);
+        rerenderMarmitas();
+      }
+    }
+    if (e.target && e.target.id === 'input-marmitas-specific-grams') {
+      const val = parseInt(e.target.value, 10);
+      if (Number.isFinite(val) && val >= 1) {
+        currentMarmitasCalcOpts.specificGrams = Math.min(50000, val);
+        rerenderMarmitas();
+      }
+    }
+  });
+
+  marmitasTab.addEventListener('input', (e) => {
+    if (e.target && e.target.id === 'input-marmitas-specific-grams') {
+      const val = parseInt(e.target.value, 10);
+      if (Number.isFinite(val) && val >= 1) {
+        currentMarmitasCalcOpts.specificGrams = Math.min(50000, val);
+        const effectiveMeals = getEffectiveNutritionMeals(state);
+        const res = calculateCustomQuantityConversion({
+          item: currentMarmitasCalcOpts.specificItem,
+          mode: currentMarmitasCalcOpts.specificDirection,
+          grams: currentMarmitasCalcOpts.specificGrams,
+          meals: effectiveMeals,
+          factors: COOKING_FACTORS,
+          person: currentMarmitasPerson
+        });
+        const resultBox = marmitasTab.querySelector('.marmitas-specific-result');
+        const sendSpecBtn = marmitasTab.querySelector('#btn-send-specific-to-market');
+        const personScopeLabel = currentMarmitasPerson === 'matheus' ? 'Matheus' : (currentMarmitasPerson === 'scarlet' ? 'Scarlet' : 'Casal');
+        if (resultBox) {
+          resultBox.innerHTML = `
+            <div>
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">🌾 Peso In Natura (Cru)</div>
+              <div style="font-size: 1.35rem; font-weight: 800; color: var(--brand-forest);">
+                ${res.cruG >= 1000 ? `${res.cruKgStr} kg` : `${res.cruG}g`}
+              </div>
+              <div style="font-size: 0.7rem; color: var(--text-secondary);">${res.cruG}g • ${res.factorLabel}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">🍽️ Rendimento Pronto (Cozido)</div>
+              <div style="font-size: 1.35rem; font-weight: 800; color: #0f766e;">
+                ${res.prontoG >= 1000 ? `${res.prontoKgStr} kg` : `${res.prontoG}g`}
+              </div>
+              <div style="font-size: 0.7rem; color: var(--text-secondary);">~<strong>${res.almocosEquivalentes}</strong> almoços de ${personScopeLabel}</div>
+            </div>
+          `;
+        }
+        if (sendSpecBtn) {
+          sendSpecBtn.innerHTML = `<span>🛒</span> Enviar ${res.icon} ${res.label} (${res.cruG >= 1000 ? `${res.cruKgStr} kg` : `${res.cruG}g`}) para a Lista`;
+        }
+      }
     }
   });
 }
