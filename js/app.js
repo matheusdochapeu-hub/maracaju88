@@ -552,6 +552,14 @@ function refreshAllUI() {
     if (typeof document !== 'undefined' && document.getElementById('frequency-segmented-bar')) {
       renderTasksTab(state, currentFrequencyFilter, currentRoomFilter);
     }
+
+    // Garante que o conteúdo de marmitas seja pré-renderizado se estiver vazio
+    if (typeof document !== 'undefined') {
+      const marmitasView = document.getElementById('marmitas-main-view');
+      if (marmitasView && !marmitasView.innerHTML.trim()) {
+        renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
+      }
+    }
   } catch (err) {
     console.error("[Maracaju] Erro ao renderizar aba ativa:", currentTab, err);
   }
@@ -7099,11 +7107,18 @@ function initMarmitasModule() {
   const marmitasTab = document.getElementById('tab-marmitas');
   if (!marmitasTab) return;
 
+  // Garante pré-renderização imediata na inicialização
+  try {
+    renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
+  } catch (err) {
+    console.warn('[Maracaju] Erro ao renderizar marmitas na inicialização:', err);
+  }
+
   marmitasTab.addEventListener('click', (e) => {
     const personBtn = e.target.closest('[data-marmitas-person]');
     if (personBtn) {
       currentMarmitasPerson = personBtn.getAttribute('data-marmitas-person') || 'casal';
-      playSubtleClick(state.settings.soundEnabled);
+      playSubtleClick(state?.settings?.soundEnabled);
       renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
       return;
     }
@@ -7111,7 +7126,7 @@ function initMarmitasModule() {
     const periodBtn = e.target.closest('[data-marmitas-period]');
     if (periodBtn) {
       currentMarmitasPeriod = parseInt(periodBtn.getAttribute('data-marmitas-period'), 10) || 7;
-      playSubtleClick(state.settings.soundEnabled);
+      playSubtleClick(state?.settings?.soundEnabled);
       renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
       return;
     }
@@ -7119,14 +7134,14 @@ function initMarmitasModule() {
     const scopeBtn = e.target.closest('[data-marmitas-scope]');
     if (scopeBtn) {
       currentMarmitasScope = scopeBtn.getAttribute('data-marmitas-scope') || 'completo';
-      playSubtleClick(state.settings.soundEnabled);
+      playSubtleClick(state?.settings?.soundEnabled);
       renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
       return;
     }
 
     const sendBtn = e.target.closest('#btn-send-marmitas-to-market');
     if (sendBtn) {
-      playSubtleClick(state.settings.soundEnabled);
+      playSubtleClick(state?.settings?.soundEnabled);
       const plan = calculateMarmitasPlan(currentMarmitasPeriod, currentMarmitasScope);
       if (!plan || !plan.shoppingItems || plan.shoppingItems.length === 0) return;
 

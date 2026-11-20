@@ -4,6 +4,34 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-20 11:55] - Correção de Pré-renderização e Cache da Aba Marmitas (v2.9.1)
+
+### 🎯 Problema Relatado
+- Ao abrir o app e clicar na nova aba **🍱 Marmitas**, o conteúdo aparecia completamente em branco/vazio (`#marmitas-main-view` sem nada dentro).
+
+### 🔍 Causa Raiz
+1. **Cache HTTP do Navegador / Service Worker**:
+   - `index.html` referenciaba `<script type="module" src="./js/app.js"></script>` sem parâmetro de versão. Em navegadores onde o `index.html` atualizou primeiro via rede, o bundle `app.js` continuava sendo servido do cache HTTP de 10 min do GitHub Pages da versão anterior. O `app.js` antigo recebia o evento de navegação para `marmitas`, ativava a visibilidade da section `#tab-marmitas`, mas o `refreshAllUI` anterior não possuía o handler da aba marmitas.
+2. **Ausência de Pré-renderização no HTML estático**:
+   - `<section id="tab-marmitas">` continha apenas um elemento vazio `<div id="marmitas-main-view"></div>`. Diferente de todas as outras abas que contam com esqueleto de layout no próprio `index.html`, marmitas dependia 100% de uma chamada tardia a `renderMarmitasTab` dentro de `refreshAllUI` somente quando `currentTab === 'marmitas'`.
+3. **Ausência de Chamada na Inicialização**:
+   - O `initMarmitasModule` adicionava o `addEventListener('click')`, mas não realizava a renderização inicial no DOM.
+
+### 🛠️ Solução Aplicada
+1. **Estrutura Estática Pré-renderizada no `index.html`**:
+   - Inserida toda a estrutura inicial do cardápio consolidado do casal (7 dias, completo) diretamente dentro de `<div id="marmitas-main-view">`, garantindo que a aba nunca apareça vazia, mesmo antes do JS terminar de inicializar.
+2. **Pré-renderização Ativa em Segundo Plano (`js/app.js`)**:
+   - `initMarmitasModule()` agora chama `renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope)` imediatamente na montagem.
+   - `refreshAllUI()` valida se `#marmitas-main-view` está preenchido e garante que a aba seja preenchida mesmo se o usuário ainda não tiver clicado nela.
+   - Uso de encadeamento opcional `state?.settings?.soundEnabled` para prevenir exceções em dados legados.
+3. **Busting de Cache e Atualização Tripla de Versão (v2.9.1)**:
+   - `<script type="module" src="./js/app.js?v=2.9.1"></script>` e links de CSS com `?v=2.9.1` no `index.html`.
+   - `CACHE_NAME = 'maracaju-v2.9.1'` no `sw.js`.
+   - `version: '2.9.1'` em `js/config.js` e `package.json`.
+   - 176/176 testes passando com sucesso.
+
+---
+
 ## [2026-11-20 11:20] - Nova Aba: Marmitas & Cardápio da Nutricionista com Conversão In Natura (v2.9.0)
 
 ### 🎯 Objetivos & Demandas do Usuário
