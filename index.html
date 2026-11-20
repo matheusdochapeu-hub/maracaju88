@@ -190,17 +190,21 @@
 
   <!-- Barra de Navegação Desktop / Topo Alternativo / Mobile Bottom Nav -->
   <nav class="bottom-nav" id="main-navigation">
-    <button type="button" class="nav-item active" data-tab="tarefas">
-      <span class="nav-icon">🧹</span>
-      <span>Tarefas</span>
+    <button type="button" class="nav-item active" data-tab="compras">
+      <span class="nav-icon">🥗</span>
+      <span>Gastos & Notas</span>
+    </button>
+    <button type="button" class="nav-item" data-tab="lista">
+      <span class="nav-icon">🛒</span>
+      <span>Lista Mercado</span>
+    </button>
+    <button type="button" class="nav-item" data-tab="marmitas">
+      <span class="nav-icon">🍱</span>
+      <span>Marmitas</span>
     </button>
     <button type="button" class="nav-item" data-tab="pets">
       <span class="nav-icon">🐾</span>
       <span>Pets</span>
-    </button>
-    <button type="button" class="nav-item" data-tab="compras">
-      <span class="nav-icon">🛒</span>
-      <span>Mercado</span>
     </button>
     <button type="button" class="nav-item" data-tab="shopping">
       <span class="nav-icon">🛍️</span>
@@ -222,15 +226,20 @@
       <span class="nav-icon">⚙️</span>
       <span>Ajustes</span>
     </button>
+    <!-- Aba Tarefas Arquivada (mantida no DOM para compatibilidade de testes e restauração futura) -->
+    <button type="button" class="nav-item" data-tab="tarefas" style="display: none;" aria-hidden="true">
+      <span class="nav-icon">🧹</span>
+      <span>Tarefas</span>
+    </button>
   </nav>
 
   <!-- Conteúdo Principal das Abas -->
   <main class="app-main">
 
     <!-- ========================================== -->
-    <!-- ABA 1: TAREFAS (DIÁRIAS, SEMANAIS, MENSAIS, ANUAIS) -->
+    <!-- ABA TAREFAS (ARQUIVADA TEMPORARIAMENTE)    -->
     <!-- ========================================== -->
-    <section id="tab-tarefas" class="tab-content active">
+    <section id="tab-tarefas" class="tab-content" style="display: none;" aria-hidden="true">
       <!-- Card de Progresso da Frequência Selecionada -->
       <div id="daily-progress-card" class="dash-card"></div>
 
@@ -256,8 +265,101 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- ABA 2: MERCADO & LISTA DE COMPRAS          -->
+    <!-- ABA 1 (INICIAL): GASTOS & NOTAS (VA & VR)  -->
     <!-- ========================================== -->
+    <section id="tab-compras" class="tab-content active">
+      <!-- Painel de Benefícios Alimentação (VA & VR) -->
+      <div id="compras-benefits-banner"></div>
+
+      <!-- Barra de Ações Rápidas de Gastos & Notas -->
+      <div class="notas-hero-actions">
+        <button type="button" class="btn btn-hero-action btn-hero-primary" id="btn-scan-nfce-qr">
+          <span class="hero-icon">📷</span>
+          <div class="hero-text">
+            <strong>Ler QR Code</strong>
+            <small>Escanear nota NFC-e</small>
+          </div>
+        </button>
+        <button type="button" class="btn btn-hero-action btn-hero-success" id="btn-open-manual-purchase" data-open-modal="modal-add-manual-purchase">
+          <span class="hero-icon">📝</span>
+          <div class="hero-text">
+            <strong>Lançar Compra</strong>
+            <small>Entrada manual</small>
+          </div>
+        </button>
+        <label class="btn btn-hero-action btn-hero-secondary" style="cursor: pointer; margin: 0;">
+          <span class="hero-icon">📄</span>
+          <div class="hero-text">
+            <strong>Subir PDF</strong>
+            <small>DANFE / Comprovante</small>
+          </div>
+          <input type="file" id="input-upload-pdf-nfce" accept="application/pdf,.pdf" style="display: none;" />
+        </label>
+      </div>
+
+      <!-- Visão Notas Fiscais, Gastos & Benefícios Separados por Mês -->
+      <div id="compras-view-notas-container">
+        <!-- Painel de Análise de Gastos & Mercados Recorrentes -->
+        <div id="market-analytics-container" style="margin-bottom: 1rem;"></div>
+        <div id="market-purchases-container"></div>
+      </div>
+
+      <!-- Botões Flutuantes (FABs) no Canto Inferior Direito -->
+      <div class="fab-stack">
+        <button type="button" class="fab-btn fab-btn-qr" id="btn-scan-nfce-qr-fab" data-open-modal="modal-qr-scanner" aria-label="Ler QR Code da Nota Fiscal">
+          <span class="fab-icon">📷</span>
+          <span class="fab-label">Ler QR Code</span>
+        </button>
+        <button type="button" class="fab-btn fab-btn-purchase" data-open-modal="modal-add-manual-purchase" aria-label="Lançar Compra">
+          <span class="fab-icon">＋</span>
+          <span class="fab-label">Lançar Compra</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- ABA 2: LISTA DE MERCADO (O QUE COMPRAR)   -->
+    <!-- ========================================== -->
+    <section id="tab-lista" class="tab-content">
+      <!-- Banner de Resumo da Lista & Estimativa -->
+      <div id="compras-summary-banner" class="dash-card"></div>
+
+      <!-- Barra de Ferramentas da Lista de Mercado -->
+      <div class="lista-actions-bar">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-open-price-comparator" title="Comparador de preços entre mercados e produtos já comprados">
+          <span>📊</span> Comparar Preços
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-open-catalog" title="Produtos já comprados e catálogo">
+          <span>✨</span> Já Comprados
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-bought-items" title="Limpar itens marcados como comprados">
+          <span>🧹</span> Limpar Comprados
+        </button>
+      </div>
+
+      <!-- Visão Lista de Compras -->
+      <div id="compras-view-lista-container">
+        <!-- Filtros por Categoria de Compras -->
+        <div id="compras-category-chips" class="chips-scroll"></div>
+
+        <!-- Lista de Itens a Comprar / Comprados -->
+        <div id="shopping-items-list" class="shopping-list-container"></div>
+      </div>
+
+      <!-- Botão Flutuante (FAB) da Lista de Mercado -->
+      <button type="button" class="fab-btn" data-open-modal="modal-add-shopping-item" aria-label="Novo Item na Lista de Mercado">
+        <span class="fab-icon">＋</span>
+        <span class="fab-label">Novo Item na Lista de Mercado</span>
+      </button>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- ABA: MARMITAS & CARDÁPIO DA NUTRI          -->
+    <!-- ========================================== -->
+    <section id="tab-marmitas" class="tab-content">
+      <div id="marmitas-main-view"></div>
+    </section>
+
     <!-- ========================================== -->
     <!-- ABA: PETS (MANDIOCA & BICHINHOS DA FAMÍLIA) -->
     <!-- ========================================== -->
@@ -276,73 +378,6 @@
       <!-- Container Dinâmico do Conteúdo da Sub-aba Ativa -->
       <div id="pets-content-view">
         <div id="pets-list-container"></div>
-      </div>
-    </section>
-
-    <section id="tab-compras" class="tab-content">
-      <!-- Banner de Resumo da Lista & Mês -->
-      <div id="compras-benefits-banner"></div>
-      <div id="compras-summary-banner" class="dash-card"></div>
-
-      <!-- Alternador de Visão: Lista de Compras vs Notas Fiscais Registradas -->
-      <div class="compras-view-pills" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-        <button type="button" class="chip active" data-compras-view="lista">🛒 Lista do Mês</button>
-        <button type="button" class="chip" data-compras-view="notas">🧾 Notas & Compras Mensais</button>
-      </div>
-
-      <!-- Barra de Ações: QR Code, Subir PDF da Nota, Catálogo/Já Comprados e Limpar -->
-      <div class="compras-actions-row" style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
-        <button type="button" class="btn btn-primary" id="btn-open-manual-purchase" data-open-modal="modal-add-manual-purchase" style="flex: 1; min-width: 140px; justify-content: center; background: linear-gradient(135deg, #15803d, #166534);">
-          <span>📝</span> Lançar Compra
-        </button>
-        <button type="button" class="btn btn-primary" id="btn-scan-nfce-qr" style="flex: 1; min-width: 130px; justify-content: center; background: linear-gradient(135deg, var(--brand-moss), #1e3a24);">
-          <span>📷</span> QR Code
-        </button>
-        <label class="btn btn-primary" style="flex: 1; min-width: 130px; justify-content: center; background: linear-gradient(135deg, #0d9488, #115e59); cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 0.4rem;">
-          <span>📄</span> Subir PDF
-          <input type="file" id="input-upload-pdf-nfce" accept="application/pdf,.pdf" style="display: none;" />
-        </label>
-        <button type="button" class="btn btn-secondary" id="btn-open-price-comparator" title="Comparador de preços entre mercados e produtos já comprados" style="flex: 1; min-width: 150px; justify-content: center;">
-          <span>📊</span> Comparar Preços
-        </button>
-        <button type="button" class="btn btn-secondary" id="btn-open-catalog" title="Produtos já comprados e catálogo" style="flex: 1; min-width: 130px; justify-content: center;">
-          <span>✨</span> Já Comprados
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-bought-items" title="Limpar itens marcados como comprados">
-          <span>🧹</span> Limpar
-        </button>
-      </div>
-
-      <!-- Subseção: Visão Lista de Compras -->
-      <div id="compras-view-lista-container">
-        <!-- Filtros por Categoria de Compras -->
-        <div id="compras-category-chips" class="chips-scroll"></div>
-
-        <!-- Lista de Itens a Comprar / Comprados -->
-        <div id="shopping-items-list" class="shopping-list-container"></div>
-      </div>
-
-      <!-- Subseção: Visão Notas Fiscais & Gastos Separados por Mês -->
-      <div id="compras-view-notas-container" style="display: none;">
-        <!-- Painel de Análise de Gastos & Mercados Recorrentes -->
-        <div id="market-analytics-container" style="margin-bottom: 1rem;"></div>
-        <div id="market-purchases-container"></div>
-      </div>
-
-            <!-- Botões Flutuantes (FABs) no Canto Inferior Direito: Lista de Mercado, QR Code & Lançar Compra -->
-      <div class="fab-stack">
-        <button type="button" class="fab-btn" data-open-modal="modal-add-shopping-item" aria-label="Novo Item na Lista de Mercado">
-          <span class="fab-icon">＋</span>
-          <span class="fab-label">Novo Item na Lista de Mercado</span>
-        </button>
-        <button type="button" class="fab-btn fab-btn-qr" id="btn-scan-nfce-qr-fab" data-open-modal="modal-qr-scanner" aria-label="Ler QR Code da Nota Fiscal">
-          <span class="fab-icon">📷</span>
-          <span class="fab-label">Ler QR Code</span>
-        </button>
-        <button type="button" class="fab-btn fab-btn-purchase" data-open-modal="modal-add-manual-purchase" aria-label="Lançar Compra">
-          <span class="fab-icon">＋</span>
-          <span class="fab-label">Lançar Compra</span>
-        </button>
       </div>
     </section>
 

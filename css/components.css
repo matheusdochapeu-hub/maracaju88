@@ -2509,3 +2509,111 @@ body.modal-open {
   .install-app-btn { padding: 0.45rem 0.55rem; }
   .brand-text h1 { font-size: 0.95rem; }
 }
+
+/* ============================================================
+   UX REDESIGN: GASTOS & NOTAS (HOME) + LISTA DE MERCADO SEPARADA
+   ============================================================ */
+
+/* Hero Actions na aba Gastos & Notas */
+.notas-hero-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.btn-hero-action {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 52px;
+}
+
+.btn-hero-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.btn-hero-action .hero-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.btn-hero-action .hero-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.btn-hero-action .hero-text strong {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.btn-hero-action .hero-text small {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.1;
+  margin-top: 1px;
+}
+
+.btn-hero-primary {
+  background: linear-gradient(135deg, rgba(22, 163, 74, 0.12), rgba(13, 148, 136, 0.12));
+  border-color: rgba(22, 163, 74, 0.35);
+}
+
+.btn-hero-primary .hero-text strong {
+  color: #15803d;
+}
+
+.btn-hero-success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.08));
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.btn-hero-success .hero-text strong {
+  color: #059669;
+}
+
+.btn-hero-secondary {
+  background: var(--bg-tertiary);
+  border-color: var(--border-subtle);
+}
+
+/* Barra de Ações da Lista de Mercado */
+.lista-actions-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.lista-actions-bar .btn {
+  font-size: 0.78rem;
+  padding: 0.4rem 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+
+/* Prevenção de sobreposição de botões flutuantes sobre cards e listas no celular */
+#tab-compras,
+#tab-lista,
+#tab-marmitas {
+  padding-bottom: 6.5rem;
+}
+
+.shopping-list-container,
+#market-purchases-container {
+  padding-bottom: 2.5rem;
+}

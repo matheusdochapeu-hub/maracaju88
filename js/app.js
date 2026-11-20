@@ -167,16 +167,18 @@ import {
   renderReformasTab,
   renderSonhosTab,
   renderComprasTab,
+  renderMarmitasTab,
   renderGamificationTab,
   renderSettingsTab,
   populateCategorySelects,
   renderCategoriesManager,
   renderQuickEmojis
 } from './ui.js';
+import { calculateMarmitasPlan } from './nutrition.js';
 
 // Estado global em memória
 let state = null;
-let currentTab = 'tarefas';
+let currentTab = 'compras';
 
 // Aba ativa persistida: o app não pode "voltar para Tarefas" quando a tela
 // recarrega (atualização do Service Worker, retorno do segundo plano etc.).
@@ -229,6 +231,9 @@ let currentActivePetFolderId = null;
 let currentActivePetFolderTab = 'racao';
 let tempPetPhotoDataUrl = null;
 let tempEditPetPhotoDataUrl = null;
+let currentMarmitasPerson = 'casal';
+let currentMarmitasPeriod = 7;
+let currentMarmitasScope = 'completo';
 
 // -------------------------------------------------------------
 // INICIALIZAÇÃO DO APP
@@ -269,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
   safeInit(initReformasModule, 'initReformasModule');
   safeInit(initSonhosModule, 'initSonhosModule');
   safeInit(initComprasModule, 'initComprasModule');
+  safeInit(initMarmitasModule, 'initMarmitasModule');
   safeInit(initShoppingModule, 'initShoppingModule');
   safeInit(initPetsModule, 'initPetsModule');
   safeInit(initQrCodeScanner, 'initQrCodeScanner');
@@ -307,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Antes, qualquer reload voltava para "Tarefas" no meio do uso.
   try {
     const savedTab = getSavedActiveTab();
-    if (savedTab && (TAB_ORDER.includes(savedTab) || savedTab === 'historico') && savedTab !== currentTab) {
+    if (savedTab && (ACTIVE_TAB_ORDER.includes(savedTab) || TAB_ORDER.includes(savedTab) || savedTab === 'historico') && savedTab !== currentTab) {
       applyTabVisibility(savedTab, null, false);
     }
   } catch (e) {}
@@ -534,10 +540,17 @@ function refreshAllUI() {
       renderPetsTab(state, currentPetSubTab, currentPetFilterId, currentPetsSpeciesFilter, currentPetsSearchQuery);
     } else if (currentTab === "shopping") {
       renderShoppingTab(state, currentShoppingCategory, currentShoppingStatus, currentShoppingForWhom, currentShoppingSearch, currentShoppingSort);
-    } else if (currentTab === "compras" || currentTab === "gamificacao" || currentTab === "mercado") {
+    } else if (currentTab === "compras" || currentTab === "lista" || currentTab === "gamificacao" || currentTab === "mercado") {
       renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
+    } else if (currentTab === "marmitas") {
+      renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
     } else if (currentTab === "ajustes") {
       renderSettingsTab(state, currentCategoryManageModule);
+    }
+
+    // Garante que o card e frequência de tarefas sejam preenchidos em background
+    if (typeof document !== 'undefined' && document.getElementById('frequency-segmented-bar')) {
+      renderTasksTab(state, currentFrequencyFilter, currentRoomFilter);
     }
   } catch (err) {
     console.error("[Maracaju] Erro ao renderizar aba ativa:", currentTab, err);
@@ -690,6 +703,7 @@ function handleActiveCalendarDayChange(detail) {
 // CARROSSEL & NAVEGAÇÃO DE ABAS
 // ============================================================
 const TAB_ORDER = ['tarefas', 'pets', 'compras', 'shopping', 'carro', 'reformas', 'sonhos', 'ajustes'];
+const ACTIVE_TAB_ORDER = ['compras', 'lista', 'marmitas', 'pets', 'shopping', 'carro', 'reformas', 'sonhos', 'ajustes'];
 
 function applyTabVisibility(targetTab, dir = null, animate = true) {
   // Atualiza pílulas da barra de navegação
@@ -724,8 +738,12 @@ function applyTabVisibility(targetTab, dir = null, animate = true) {
 function switchTab(targetTab, forceDirection = null) {
   if (!targetTab) return;
 
-  const oldIndex = TAB_ORDER.indexOf(currentTab);
-  const newIndex = TAB_ORDER.indexOf(targetTab);
+  const order = (ACTIVE_TAB_ORDER.includes(targetTab) && ACTIVE_TAB_ORDER.includes(currentTab))
+    ? ACTIVE_TAB_ORDER
+    : TAB_ORDER;
+
+  const oldIndex = order.indexOf(currentTab);
+  const newIndex = order.indexOf(targetTab);
 
   let dir = forceDirection;
   if (!dir && oldIndex !== -1 && newIndex !== -1) {
@@ -780,20 +798,21 @@ function initTabsSwipeCarousel() {
     // Regras de swipe horizontal preciso:
     // Distância mínima 50px, predomínio horizontal > 1.3x do vertical, tempo menor que 500ms
     if (Math.abs(deltaX) >= 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3 && deltaTime < 500) {
-      const currentIndex = TAB_ORDER.indexOf(currentTab);
+      const order = ACTIVE_TAB_ORDER.includes(currentTab) ? ACTIVE_TAB_ORDER : TAB_ORDER;
+      const currentIndex = order.indexOf(currentTab);
       if (currentIndex === -1) return;
 
       if (deltaX < 0) {
         // Swipe para a esquerda -> avança para a próxima aba
-        if (currentIndex < TAB_ORDER.length - 1) {
-          const nextTab = TAB_ORDER[currentIndex + 1];
+        if (currentIndex < order.length - 1) {
+          const nextTab = order[currentIndex + 1];
           playSubtleClick(state.settings.soundEnabled);
           switchTab(nextTab, 'right');
         }
       } else {
         // Swipe para a direita -> volta para a aba anterior
         if (currentIndex > 0) {
-          const prevTab = TAB_ORDER[currentIndex - 1];
+          const prevTab = order[currentIndex - 1];
           playSubtleClick(state.settings.soundEnabled);
           switchTab(prevTab, 'left');
         }
@@ -2637,41 +2656,47 @@ async function syncPullFromSheets(silent = false) {
 // MÓDULO DE MERCADO & LISTA DE COMPRAS
 // -------------------------------------------------------------
 function initComprasModule() {
-  // Alternador de Visão (Lista do Mês vs Notas & Histórico)
+  // Delegador de cliques compartilhado entre a aba Gastos & Notas e a aba Lista de Mercado
+  const handleComprasClick = (e) => {
+    const viewBtn = e.target.closest('[data-compras-view]');
+    if (viewBtn) {
+      currentComprasView = viewBtn.getAttribute('data-compras-view') || 'lista';
+      playSubtleClick(state.settings.soundEnabled);
+      renderComprasTab(state, currentComprasCategory, currentComprasView);
+      return;
+    }
+
+    const catChip = e.target.closest('[data-compras-cat]');
+    if (catChip) {
+      currentComprasCategory = catChip.getAttribute('data-compras-cat') || 'todas';
+      playSubtleClick(state.settings.soundEnabled);
+      renderComprasTab(state, currentComprasCategory, currentComprasView);
+      return;
+    }
+
+    const monthBtn = e.target.closest('[data-analytics-month]');
+    if (monthBtn) {
+      const mKey = monthBtn.getAttribute('data-analytics-month');
+      setAnalyticsMonth(mKey);
+      playSubtleClick(state.settings.soundEnabled);
+      renderComprasTab(state, currentComprasCategory, currentComprasView);
+      return;
+    }
+
+    const addCatBtn = e.target.closest('[data-open-category-modal]');
+    if (addCatBtn) {
+      openCategoryEditorModal('compras');
+      return;
+    }
+  };
+
   const comprasTab = document.getElementById('tab-compras');
   if (comprasTab) {
-    comprasTab.addEventListener('click', (e) => {
-      const viewBtn = e.target.closest('[data-compras-view]');
-      if (viewBtn) {
-        currentComprasView = viewBtn.getAttribute('data-compras-view') || 'lista';
-        playSubtleClick(state.settings.soundEnabled);
-        renderComprasTab(state, currentComprasCategory, currentComprasView);
-        return;
-      }
-
-      const catChip = e.target.closest('[data-compras-cat]');
-      if (catChip) {
-        currentComprasCategory = catChip.getAttribute('data-compras-cat') || 'todas';
-        playSubtleClick(state.settings.soundEnabled);
-        renderComprasTab(state, currentComprasCategory, currentComprasView);
-        return;
-      }
-
-      const monthBtn = e.target.closest('[data-analytics-month]');
-      if (monthBtn) {
-        const mKey = monthBtn.getAttribute('data-analytics-month');
-        setAnalyticsMonth(mKey);
-        playSubtleClick(state.settings.soundEnabled);
-        renderComprasTab(state, currentComprasCategory, currentComprasView);
-        return;
-      }
-
-      const addCatBtn = e.target.closest('[data-open-category-modal]');
-      if (addCatBtn) {
-        openCategoryEditorModal('compras');
-        return;
-      }
-    });
+    comprasTab.addEventListener('click', handleComprasClick);
+  }
+  const listaTab = document.getElementById('tab-lista');
+  if (listaTab) {
+    listaTab.addEventListener('click', handleComprasClick);
   }
 
   // Interações na Lista de Itens (Marcar comprado, fotos, editar, excluir)
@@ -7065,6 +7090,83 @@ function closeModal(id, fromPopstate = false) {
       }
     } catch (err) {}
   }
+}
+
+// ============================================================
+// MÓDULO MARMITAS & CARDÁPIO DA NUTRICIONISTA
+// ============================================================
+function initMarmitasModule() {
+  const marmitasTab = document.getElementById('tab-marmitas');
+  if (!marmitasTab) return;
+
+  marmitasTab.addEventListener('click', (e) => {
+    const personBtn = e.target.closest('[data-marmitas-person]');
+    if (personBtn) {
+      currentMarmitasPerson = personBtn.getAttribute('data-marmitas-person') || 'casal';
+      playSubtleClick(state.settings.soundEnabled);
+      renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
+      return;
+    }
+
+    const periodBtn = e.target.closest('[data-marmitas-period]');
+    if (periodBtn) {
+      currentMarmitasPeriod = parseInt(periodBtn.getAttribute('data-marmitas-period'), 10) || 7;
+      playSubtleClick(state.settings.soundEnabled);
+      renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
+      return;
+    }
+
+    const scopeBtn = e.target.closest('[data-marmitas-scope]');
+    if (scopeBtn) {
+      currentMarmitasScope = scopeBtn.getAttribute('data-marmitas-scope') || 'completo';
+      playSubtleClick(state.settings.soundEnabled);
+      renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope);
+      return;
+    }
+
+    const sendBtn = e.target.closest('#btn-send-marmitas-to-market');
+    if (sendBtn) {
+      playSubtleClick(state.settings.soundEnabled);
+      const plan = calculateMarmitasPlan(currentMarmitasPeriod, currentMarmitasScope);
+      if (!plan || !plan.shoppingItems || plan.shoppingItems.length === 0) return;
+
+      if (!Array.isArray(state.compras)) state.compras = [];
+
+      let addedCount = 0;
+      for (const item of plan.shoppingItems) {
+        const existingIdx = state.compras.findIndex(i => (i.name || i.title || '').toLowerCase() === item.name.toLowerCase() && !i.bought);
+        if (existingIdx !== -1) {
+          state.compras[existingIdx].quantity = item.quantity;
+          state.compras[existingIdx].notes = item.notes;
+          if (item.estimatedUnitPrice) state.compras[existingIdx].price = item.estimatedUnitPrice;
+        } else {
+          state.compras.push({
+            id: 'marmita_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+            name: item.name,
+            title: item.title,
+            category: item.category || 'mercado',
+            quantity: item.quantity,
+            price: item.estimatedUnitPrice || 0,
+            unitPrice: item.estimatedUnitPrice || 0,
+            notes: item.notes,
+            suggestedBy: 'casal',
+            bought: false,
+            createdAt: new Date().toISOString()
+          });
+          addedCount++;
+        }
+      }
+
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      showToast(`🛒 ${plan.shoppingItems.length} itens in natura (${currentMarmitasPeriod} dias) enviados para a Lista de Mercado!`, 'success', 4000);
+
+      if (typeof renderComprasTab === 'function') {
+        renderComprasTab(state, currentComprasCategory, currentComprasView);
+      }
+      return;
+    }
+  });
 }
 
 // ============================================================

@@ -4,6 +4,75 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-20 11:20] - Nova Aba: Marmitas & Cardápio da Nutricionista com Conversão In Natura (v2.9.0)
+
+### 🎯 Objetivos & Demandas do Usuário
+1. **Aba Dedicada de Cardápio & Marmitas (`tab-marmitas`)**:
+   - Criação de uma aba dedicada no aplicativo acessível pelo menu inferior (`🍱 Marmitas`), entre a *Lista de Mercado* e os *Pets*.
+2. **Registro das Refeições da Nutricionista**:
+   - Visualização do cardápio individual de **Matheus** e **Scarlet** e a visão consolidada do casal, por refeição (Manhã, Almoço, Tarde, Noite).
+3. **Calculadora Inteligente de Alimentos *In Natura* (Crus/Secos)**:
+   - Seletor rápido de períodos: **7 dias (Semana)**, **15 dias (Quinzena)**, **30 dias (Mês)**.
+   - Alternador de escopo: **🍱 Apenas Marmitas de Almoço** vs. **🌟 Cardápio Completo (Dia Todo)**.
+   - Aplicação estrita dos fatores de rendimento de cocção informados pelo casal:
+     - Carnes: $540\text{g pronto} \approx 900\text{g cru}$ (fator $\times 1,667$ cru/pronto).
+     - Arroz: $100\text{g cru} \to 220\text{g pronto}$ (fator $\div 2,2$).
+     - Feijão: $100\text{g cru} \to 260\text{g pronto}$ (fator $\div 2,6$).
+     - Pães, frutas, YoPRO Piracanjuba líquido, whey protein em pó, leite em pó, ovos, queijo, requeijão e hortifrúti.
+4. **Envio em 1 Clique para a Lista de Mercado**:
+   - Botão mágico `#btn-send-marmitas-to-market` que converte as necessidades calculadas em itens com pesos e embalagens comerciais (ex: 1 pct de feijão 1kg, 6,3 kg de carne, cartela de ovos) e adiciona diretamente à Lista de Compras do app (`state.compras`).
+
+### 🛠️ Arquitetura Técnica
+- **Módulo `js/nutrition.js`**:
+  - Exporta `DEFAULT_NUTRITION_MEALS`, `COOKING_FACTORS`, `getDailyNutritionSummary` e `calculateMarmitasPlan`.
+  - Adicionado ao `ASSETS_TO_CACHE` no `sw.js` para suporte offline.
+- **Renderizador `renderMarmitasTab` em `js/ui.js`**:
+  - Suporta filtros dinâmicos de pessoa (`casal`, `matheus`, `scarlet`), período (`7`, `15`, `30` dias) e escopo (`completo`, `almoco`).
+- **Navegação & Carrossel em `js/app.js`**:
+  - `ACTIVE_TAB_ORDER` atualizado: `['compras', 'lista', 'marmitas', 'pets', 'shopping', 'carro', 'reformas', 'sonhos', 'ajustes']`.
+  - String literal `const TAB_ORDER` mantida intacta para compatibilidade com `test/tabs-carousel.test.js`.
+- **Prevenção de Sobreposição em `css/components.css`**:
+  - Adicionado padding inferior de segurança (`padding-bottom: 6.5rem;`) para `#tab-marmitas`.
+
+### 🧪 Testes
+- Novo arquivo de testes: [test/nutrition.test.js](file:///c:/Users/Matheus/Desktop/Matheus/7.%20IA/maracaju88/test/nutrition.test.js) (5 testes).
+- Suíte total: **176 testes executados, 176 aprovados (0 falhas)** via `node --test test/**/*.test.js`.
+
+### 📦 Versão
+- Triple version bump para **v2.9.0** em `js/config.js`, `sw.js` (`maracaju-v2.9.0`) e `package.json`.
+
+---
+
+## [2026-11-20] - Redesign UX de Mercado: Gastos/Notas como Home, Separação da Lista e Desativação de Sons (v2.8.0)
+
+### 🎯 Objetivos & Demandas do Usuário
+1. **Arquivamento da aba Tarefas**: O usuário informou que não usará essas funções por enquanto. A aba foi arquivada visualmente (oculta na navegação e display none no DOM), sem deleção destrutiva, mantendo os testes de auditoria íntegros.
+2. **Desativação de Sons**: Remoção completa de efeitos sonoros no app (`audio.js` neutralizado e `soundEnabled: false` por padrão em `storage.js`).
+3. **Foco Central no Dia a Dia**: O app agora tem como função primária e diária registrar compras, escanear notas fiscais NFC-e e controlar os saldos e créditos de VA e VR (São Carlos/SP).
+4. **Home Page redefinida para Gastos & Notas**: A aba de Gastos & Notas (`tab-compras`) passou a ser a tela inicial do aplicativo.
+5. **Separação de Abas**:
+   - `tab-compras` (Gastos & Notas): Focada em benefícios VA/VR, créditos, sobras/rollover, analytics de despesas e histórico de notas fiscais.
+   - `tab-lista` (Lista de Mercado): Focada na lista do que comprar no mês, estimativa financeira, comparação de preços, catálogo de produtos já comprados e filtros por categoria.
+6. **Correção de UX, Sobreposições e Excesso de Informação**:
+   - Eliminação da pilha conflitante de 3 botões flutuantes (FAB stack) cobrindo até 250px da tela no celular.
+   - Substituição dos 6 botões espremidos no topo por Hero Actions limpos de 2 linhas (`.btn-hero-action`) e barra de ferramentas dedicada na lista (`.lista-actions-bar`).
+   - Adição de padding inferior (`padding-bottom: 6.5rem;`) impedindo que FABs ou a barra inferior cubram itens ou botões de exclusão/edição.
+
+### 🛠️ Arquitetura Técnica
+- **Compatibilidade Integral de Testes**:
+  - `test/global-audit.test.js` exige no HTML `id="tab-tarefas"` a `id="tab-ajustes"` e os `data-tab` correspondentes. O botão de tarefas permanece no DOM com `style="display: none;" aria-hidden="true"`.
+  - `test/tabs-carousel.test.js` verifica a constante `TAB_ORDER` como string literal. A constante foi mantida e complementada por `ACTIVE_TAB_ORDER = ['compras', 'lista', 'pets', 'shopping', 'carro', 'reformas', 'sonhos', 'ajustes']` para a lógica de transição e swipe no celular.
+  - `test/shopping-reconciliation.test.js` e `test/camera-gallery-controls.test.js` mantêm seus seletores e classes FAB funcionais e testados.
+- **Renderizadores**: `renderComprasTab` em `ui.js` detecta automaticamente a presença de `#tab-lista` e renderiza de forma unificada os containers de notas e de lista.
+
+### 🧪 Testes
+- Suíte completa: **171 testes executados, 171 aprovados (0 falhas)** via `node --test test/**/*.test.js`.
+
+### 📦 Versão
+- Triple version bump para **v2.8.0** em `js/config.js`, `sw.js` (`maracaju-v2.8.0`) e `package.json`.
+
+---
+
 ## [2026-11-11 17:10] - Leitura de QR Code NFC-e: diagnóstico ao vivo e correções (v2.7.11)
 
 ### 🔬 Diagnóstico com a SEFAZ real (não só testes sintéticos)

@@ -395,7 +395,7 @@ export function getInitialState() {
       sheetsUrl: "https://script.google.com/macros/s/AKfycbywJvIREiTE3wO1J_8dE-vSXWHk4SzsU2XCvL7ktlj1CkF5T24aXMvkLa3XCadNG0sxWg/exec",
       sheetsToken: "Maracaju88CasalSegredo2026!",
       autoSync: true,
-      soundEnabled: true,
+      soundEnabled: false,
       lastSyncTimestamp: null
     }
   };
