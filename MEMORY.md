@@ -4,6 +4,22 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-20 12:48] - Macarrão, Batata-Doce e Carnes Separadas (Vermelha, Suína, Frango) na Calculadora (v2.9.6)
+
+### 🎯 Demanda do Usuário
+- Adicionar **Macarrão** e **Batata-Doce**, separar as carnes em **Carne Vermelha**, **Carne Suína** e **Frango**, pesquisar os rendimentos médios (Técnica Dietética / Ornellas) e aplicar na calculadora.
+
+### 🛠️ Fatores Aplicados (`js/nutrition.js`, `js/ui.js`, `css/components.css`, `js/app.js`)
+- **🥩 Carne Vermelha (Bovina)**: rendimento térmico ~**60%** (540g pronta ≈ 900g crua → fator **x1.67**).
+- **🐷 Carne Suína (Lombo / Bisteca)**: rendimento térmico médio ~**68%** (Ornellas/UAN → fator **x1.47**).
+- **🍗 Frango (Peito grelhado/cozido)**: rendimento térmico médio ~**72%** (Ornellas/UAN → fator **x1.39**).
+- **🍝 Macarrão**: fator médio **2.5x** cozido (Ornellas/prática al dente 2.4–3.0 → 100g cru ≈ 250g cozido).
+- **🍠 Batata-Doce**: rendimento líquido compra com casca **0.90x** (considerando ~15% perda de descasque + ~5% hidratação no cozimento → 100g com casca ≈ 90g cozida).
+- Grade responsiva `.marmitas-spec-items-grid` adicionada em `Quantidade Específica` e comparativo rápido Bovina/Suína/Frango no cartão de carnes em `Por Período`.
+- Versão atualizada para **v2.9.6** e suíte validada com **183/183** testes passando.
+
+---
+
 ## [2026-11-20 12:37] - Itens Sempre Expostos nas Compras + Preservação de Itens no Sync da Nuvem (v2.9.5)
 
 ### 🎯 Problema Relatado

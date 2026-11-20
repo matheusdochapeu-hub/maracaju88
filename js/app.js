@@ -248,7 +248,7 @@ let currentMarmitasExpandedRaw = { matheus: false, scarlet: false };
 let currentMarmitasCalcOpts = {
   calcMode: 'periodo',
   selectedGroups: [...MARMITAS_ITEM_GROUPS],
-  specificItem: 'carne',
+  specificItem: 'carne_vermelha',
   specificDirection: 'pronto_para_cru',
   specificGrams: 500
 };
@@ -7559,7 +7559,7 @@ function initMarmitasModule() {
 
     const specItemBtn = e.target.closest('[data-marmitas-spec-item]');
     if (specItemBtn) {
-      currentMarmitasCalcOpts.specificItem = specItemBtn.getAttribute('data-marmitas-spec-item') || 'carne';
+      currentMarmitasCalcOpts.specificItem = specItemBtn.getAttribute('data-marmitas-spec-item') || 'carne_vermelha';
       playSubtleClick(state?.settings?.soundEnabled);
       rerenderMarmitas();
       return;

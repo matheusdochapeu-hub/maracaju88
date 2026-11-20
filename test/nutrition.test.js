@@ -297,11 +297,27 @@ test('Calculadora Marmitas: dias personalizados, filtro só feijão/só carne e 
   assert.equal(onlyMeat5.shoppingItems.length, 1);
   assert.equal(onlyMeat5.shoppingItems[0].groupKey, 'carne');
 
-  // Conversor específico: 540g carne pronta -> 900g crua
+  // Conversor específico: 540g carne vermelha pronta -> 900g crua
   const convCarne = calculateCustomQuantityConversion({ item: 'carne', mode: 'pronto_para_cru', grams: 540 });
   assert.equal(convCarne.cruG, 900);
   assert.equal(convCarne.prontoG, 540);
-  assert.equal(convCarne.shoppingItem.groupKey, 'carne');
+  assert.equal(convCarne.shoppingItem.groupKey, 'carne_vermelha');
+
+  // Frango (rend. 72% -> 720g pronto = 1000g cru)
+  const convFrango = calculateCustomQuantityConversion({ item: 'frango', mode: 'cru_para_pronto', grams: 1000 });
+  assert.equal(convFrango.prontoG, 720);
+
+  // Carne suína (rend. 68% -> 1000g cru = 680g pronto)
+  const convSuina = calculateCustomQuantityConversion({ item: 'suina', mode: 'cru_para_pronto', grams: 1000 });
+  assert.equal(convSuina.prontoG, 680);
+
+  // Macarrão (2.5x -> 200g cru = 500g pronto)
+  const convMac = calculateCustomQuantityConversion({ item: 'macarrao', mode: 'cru_para_pronto', grams: 200 });
+  assert.equal(convMac.prontoG, 500);
+
+  // Batata-doce (compra com casca rend. 0.90x -> 1000g com casca = 900g cozida)
+  const convBatata = calculateCustomQuantityConversion({ item: 'batata_doce', mode: 'cru_para_pronto', grams: 1000 });
+  assert.equal(convBatata.prontoG, 900);
 
   // Conversor específico: 500g feijão cru -> 1300g pronto
   const convFeijao = calculateCustomQuantityConversion({ item: 'feijao', mode: 'cru_para_pronto', grams: 500 });
@@ -321,8 +337,13 @@ test('Calculadora Marmitas: dias personalizados, filtro só feijão/só carne e 
   assert.ok(mockHtml.includes('id="input-marmitas-custom-days"'));
   assert.ok(mockHtml.includes('Adicionar 1 Item Selecionado à Lista de Mercado'));
 
-  ui.renderMarmitasTab({}, 'casal', 7, 'completo', {}, { calcMode: 'especifico', specificItem: 'feijao', specificDirection: 'cru_para_pronto', specificGrams: 500 });
+  ui.renderMarmitasTab({}, 'casal', 7, 'completo', {}, { calcMode: 'especifico', specificItem: 'macarrao', specificDirection: 'cru_para_pronto', specificGrams: 200 });
   assert.ok(mockHtml.includes('id="input-marmitas-specific-grams"'));
-  assert.ok(mockHtml.includes('1.30 kg'));
+  assert.ok(mockHtml.includes('data-marmitas-spec-item="carne_vermelha"'));
+  assert.ok(mockHtml.includes('data-marmitas-spec-item="suina"'));
+  assert.ok(mockHtml.includes('data-marmitas-spec-item="frango"'));
+  assert.ok(mockHtml.includes('data-marmitas-spec-item="macarrao"'));
+  assert.ok(mockHtml.includes('data-marmitas-spec-item="batata_doce"'));
+  assert.ok(mockHtml.includes('500g'));
 });
 

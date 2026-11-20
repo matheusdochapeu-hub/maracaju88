@@ -2,6 +2,7 @@ import {
   DEFAULT_NUTRITION_MEALS,
   COOKING_FACTORS,
   MARMITAS_ITEM_GROUPS,
+  SPECIFIC_QUANTITY_ITEMS,
   getDailyNutritionSummary,
   calculateMarmitasPlan,
   calculateCustomQuantityConversion,
@@ -4044,7 +4045,8 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
     : MARMITAS_ITEM_GROUPS;
   const selectedSet = new Set(selectedGroups);
 
-  const specificItem = ['carne', 'arroz', 'feijao'].includes(calcOpts.specificItem) ? calcOpts.specificItem : 'carne';
+  const rawSpecItem = calcOpts.specificItem === 'carne' ? 'carne_vermelha' : calcOpts.specificItem;
+  const specificItem = SPECIFIC_QUANTITY_ITEMS.includes(rawSpecItem) ? rawSpecItem : 'carne_vermelha';
   const specificDirection = calcOpts.specificDirection === 'cru_para_pronto' ? 'cru_para_pronto' : 'pronto_para_cru';
   const specificGrams = Math.max(1, Math.round(Number(calcOpts.specificGrams) || 500));
 
@@ -4219,6 +4221,9 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
             </div>
             <div class="marmitas-card-meta">
               Rende ~<strong>${(plan.totaisProntos.carneProntaG / 1000).toFixed(2)} kg</strong> cozida (${safePeriod} ${safePeriod === 1 ? 'dia' : 'dias'}).
+              <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 0.2rem;">
+                🥩 Bovina ${((plan.totaisProntos.carneProntaG * (COOKING_FACTORS.carneVermelhaCruaMult || 1.6667)) / 1000).toFixed(2)}kg • 🐷 Suína ${((plan.totaisProntos.carneProntaG * (COOKING_FACTORS.carneSuinaCruaMult || 1.4706)) / 1000).toFixed(2)}kg • 🍗 Frango ${((plan.totaisProntos.carneProntaG * (COOKING_FACTORS.frangoCruaMult || 1.3889)) / 1000).toFixed(2)}kg
+              </div>
             </div>
           </button>
 
@@ -4307,15 +4312,27 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
       ` : `
         <!-- Modo Quantidade Específica Avulsa -->
         <div class="marmitas-specific-box">
-          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-            <button type="button" class="btn btn-xs ${specificItem === 'carne' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-spec-item="carne" style="font-weight: 700; flex: 1; justify-content: center;">
-              🥩 Carne / Frango
+          <div class="marmitas-spec-items-grid">
+            <button type="button" class="btn btn-xs ${specificItem === 'carne_vermelha' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-spec-item="carne_vermelha" style="font-weight: 700; justify-content: center;">
+              🥩 Carne Vermelha
             </button>
-            <button type="button" class="btn btn-xs ${specificItem === 'arroz' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-spec-item="arroz" style="font-weight: 700; flex: 1; justify-content: center;">
+            <button type="button" class="btn btn-xs ${specificItem === 'suina' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-spec-item="suina" style="font-weight: 700; justify-content: center;">
+              🐷 Carne Suína
+            </button>
+            <button type="button" class="btn btn-xs ${specificItem === 'frango' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-spec-item="frango" style="font-weight: 700; justify-content: center;">
+              🍗 Frango
+            </button>
+            <button type="button" class="btn btn-xs ${specificItem === 'arroz' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-spec-item="arroz" style="font-weight: 700; justify-content: center;">
               🍚 Arroz
             </button>
-            <button type="button" class="btn btn-xs ${specificItem === 'feijao' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-spec-item="feijao" style="font-weight: 700; flex: 1; justify-content: center;">
+            <button type="button" class="btn btn-xs ${specificItem === 'feijao' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-spec-item="feijao" style="font-weight: 700; justify-content: center;">
               🫘 Feijão
+            </button>
+            <button type="button" class="btn btn-xs ${specificItem === 'macarrao' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-spec-item="macarrao" style="font-weight: 700; justify-content: center;">
+              🍝 Macarrão
+            </button>
+            <button type="button" class="btn btn-xs ${specificItem === 'batata_doce' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-spec-item="batata_doce" style="font-weight: 700; justify-content: center;">
+              🍠 Batata-Doce
             </button>
           </div>
 

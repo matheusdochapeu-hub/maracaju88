@@ -66,15 +66,24 @@ export const DEFAULT_NUTRITION_MEALS = {
 };
 
 /**
- * Fatores de Cocção & Rendimento estabelecidos pelo casal:
- * - Carne: 540g pronta ≈ 900g crua (fator 1.6667x)
- * - Arroz: 100g cru rende 220g pronto (fator 2.2x -> cru = pronto / 2.2)
- * - Feijão: 100g cru rende 260g pronto (fator 2.6x -> cru = pronto / 2.6)
+ * Fatores de Cocção & Rendimento (Tabela Ornellas / UAN & medidas práticas do casal):
+ * - Carne vermelha (bovina): ~60% rendimento térmico -> 540g pronta ≈ 900g crua (x1.67)
+ * - Carne suína (lombo/bisteca): ~68% rendimento térmico -> 100g crua ≈ 68g pronta (x1.47)
+ * - Frango (peito grelhado/cozido): ~72% rendimento térmico -> 100g cru ≈ 72g pronto (x1.39)
+ * - Arroz: 100g cru rende 220g cozido (x2.2)
+ * - Feijão: 100g cru rende 260g cozido (x2.6)
+ * - Macarrão: 100g cru rende ~250g cozido (x2.5 média al dente/macia; Ornellas 2.4–3.0)
+ * - Batata-doce: compra bruta com casca (~15% perda descasque, +5% cocção) -> 100g com casca ≈ 90g cozida (0.90x)
  */
 export const COOKING_FACTORS = {
-  carneCruaMult: 900 / 540, // ~1.66667
+  carneCruaMult: 900 / 540, // ~1.66667 (Carne vermelha / padrão)
+  carneVermelhaCruaMult: 900 / 540, // ~1.66667 (rend. 60%)
+  carneSuinaCruaMult: 1 / 0.68, // ~1.47059 (rend. 68%)
+  frangoCruaMult: 1 / 0.72, // ~1.38889 (rend. 72%)
   arrozCruDiv: 2.2,
-  feijaoCruDiv: 2.6
+  feijaoCruDiv: 2.6,
+  macarraoCruDiv: 2.5,
+  batataDoceBrutaRend: 0.90
 };
 
 /**
@@ -609,12 +618,22 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
   };
 }
 
+export const SPECIFIC_QUANTITY_ITEMS = [
+  'carne_vermelha',
+  'suina',
+  'frango',
+  'arroz',
+  'feijao',
+  'macarrao',
+  'batata_doce'
+];
+
 /**
  * Converte uma quantidade específica avulsa entre alimento pronto (cozido) e in natura (cru/seco),
  * calculando também quantas marmitas do almoço essa quantidade rende segundo o cardápio atual.
  */
 export function calculateCustomQuantityConversion({
-  item = 'carne',
+  item = 'carne_vermelha',
   mode = 'pronto_para_cru',
   grams = 500,
   meals = DEFAULT_NUTRITION_MEALS,
@@ -623,23 +642,54 @@ export function calculateCustomQuantityConversion({
 } = {}) {
   const safeGrams = Math.max(1, Math.round(Number(grams) || 0));
   const daily = getDailyNutritionSummary(meals, factors, person);
+  const normalizedItem = item === 'carne' ? 'carne_vermelha' : item;
+
+  const bovMult = factors.carneVermelhaCruaMult || factors.carneCruaMult || (900 / 540);
+  const suinaMult = factors.carneSuinaCruaMult || (1 / 0.68);
+  const frangoMult = factors.frangoCruaMult || (1 / 0.72);
+  const macDiv = factors.macarraoCruDiv || 2.5;
+  const batRend = factors.batataDoceBrutaRend || 0.90;
 
   const metaMap = {
-    carne: {
-      label: 'Carne / Frango',
+    carne_vermelha: {
+      label: 'Carne Vermelha',
       icon: '🥩',
       category: 'carnes',
-      unitPrice: 38.00,
-      factorLabel: 'x1.67 cru/pronto',
+      unitPrice: 42.00,
+      qtyStyle: 'weight',
+      factorLabel: 'rend. ~60% (x1.67 cru/pronto)',
       dailyLunchG: daily.prontoDiario.carneAlmocoProntaG || 260,
-      toCru: (p) => Math.round(p * factors.carneCruaMult),
-      toPronto: (c) => Math.round(c / factors.carneCruaMult)
+      toCru: (p) => Math.round(p * bovMult),
+      toPronto: (c) => Math.round(c / bovMult)
+    },
+    suina: {
+      label: 'Carne Suína',
+      icon: '🐷',
+      category: 'carnes',
+      unitPrice: 24.00,
+      qtyStyle: 'weight',
+      factorLabel: 'rend. ~68% (x1.47 cru/pronto)',
+      dailyLunchG: daily.prontoDiario.carneAlmocoProntaG || 260,
+      toCru: (p) => Math.round(p * suinaMult),
+      toPronto: (c) => Math.round(c / suinaMult)
+    },
+    frango: {
+      label: 'Frango',
+      icon: '🍗',
+      category: 'carnes',
+      unitPrice: 22.00,
+      qtyStyle: 'weight',
+      factorLabel: 'rend. ~72% (x1.39 cru/pronto)',
+      dailyLunchG: daily.prontoDiario.carneAlmocoProntaG || 260,
+      toCru: (p) => Math.round(p * frangoMult),
+      toPronto: (c) => Math.round(c / frangoMult)
     },
     arroz: {
       label: 'Arroz',
       icon: '🍚',
       category: 'mercado',
       unitPrice: 6.50,
+      qtyStyle: 'pack1kg',
       factorLabel: 'rende 2.2x cozido',
       dailyLunchG: daily.prontoDiario.arrozAlmocoProntoG || 190,
       toCru: (p) => Math.round(p / factors.arrozCruDiv),
@@ -650,14 +700,37 @@ export function calculateCustomQuantityConversion({
       icon: '🫘',
       category: 'mercado',
       unitPrice: 8.90,
+      qtyStyle: 'pack1kg',
       factorLabel: 'rende 2.6x cozido',
       dailyLunchG: daily.prontoDiario.feijaoAlmocoProntoG || 170,
       toCru: (p) => Math.round(p / factors.feijaoCruDiv),
       toPronto: (c) => Math.round(c * factors.feijaoCruDiv)
+    },
+    macarrao: {
+      label: 'Macarrão',
+      icon: '🍝',
+      category: 'mercado',
+      unitPrice: 5.50,
+      qtyStyle: 'pack500g',
+      factorLabel: 'rende ~2.5x cozido',
+      dailyLunchG: daily.prontoDiario.arrozAlmocoProntoG || 190,
+      toCru: (p) => Math.round(p / macDiv),
+      toPronto: (c) => Math.round(c * macDiv)
+    },
+    batata_doce: {
+      label: 'Batata-Doce',
+      icon: '🍠',
+      category: 'hortifruti',
+      unitPrice: 6.00,
+      qtyStyle: 'weight',
+      factorLabel: 'c/ casca rende ~0.90x cozida',
+      dailyLunchG: daily.prontoDiario.arrozAlmocoProntoG || 190,
+      toCru: (p) => Math.round(p / batRend),
+      toPronto: (c) => Math.round(c * batRend)
     }
   };
 
-  const info = metaMap[item] || metaMap.carne;
+  const info = metaMap[normalizedItem] || metaMap.carne_vermelha;
   const isCruInput = mode === 'cru_para_pronto';
   const cruG = isCruInput ? safeGrams : info.toCru(safeGrams);
   const prontoG = isCruInput ? info.toPronto(safeGrams) : safeGrams;
@@ -665,14 +738,18 @@ export function calculateCustomQuantityConversion({
   const cruKgStr = (cruG / 1000).toFixed(2);
   const prontoKgStr = (prontoG / 1000).toFixed(2);
   const pac1Kg = Math.ceil(cruG / 1000);
-  const almoçosEquivalentes = info.dailyLunchG > 0 ? +(prontoG / info.dailyLunchG).toFixed(1) : 0;
+  const pac500g = Math.ceil(cruG / 500);
+  const almocosEquivalentes = info.dailyLunchG > 0 ? +(prontoG / info.dailyLunchG).toFixed(1) : 0;
 
-  const shoppingQty = item === 'carne'
-    ? (cruG >= 1000 ? `${cruKgStr} kg` : `${cruG}g`)
-    : `${cruG}g (~${pac1Kg} pct 1kg)`;
+  let shoppingQty = `${cruG}g (~${pac1Kg} pct 1kg)`;
+  if (info.qtyStyle === 'weight') {
+    shoppingQty = cruG >= 1000 ? `${cruKgStr} kg` : `${cruG}g`;
+  } else if (info.qtyStyle === 'pack500g') {
+    shoppingQty = `${cruG}g (~${pac500g} pct 500g)`;
+  }
 
   return {
-    item,
+    item: normalizedItem,
     mode,
     inputGrams: safeGrams,
     cruG,
@@ -681,17 +758,18 @@ export function calculateCustomQuantityConversion({
     prontoG,
     prontoKgStr,
     pacotes1Kg: pac1Kg,
-    almocosEquivalentes: almoçosEquivalentes,
+    pacotes500g: pac500g,
+    almocosEquivalentes,
     label: info.label,
     icon: info.icon,
     factorLabel: info.factorLabel,
     shoppingItem: {
-      groupKey: item,
+      groupKey: normalizedItem,
       title: `${info.label} in natura (${cruG >= 1000 ? `${cruKgStr} kg` : `${cruG}g`})`,
       name: `${info.label} in natura`,
       category: info.category,
       quantity: shoppingQty,
-      notes: `Cálculo específico: ${cruG}g in natura rendem ~${prontoG}g pronto (~${almoçosEquivalentes} almoços).`,
+      notes: `Cálculo específico (${info.factorLabel}): ${cruG}g in natura rendem ~${prontoG}g pronto (~${almocosEquivalentes} almoços).`,
       estimatedUnitPrice: info.unitPrice
     }
   };

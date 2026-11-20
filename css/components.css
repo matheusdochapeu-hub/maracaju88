@@ -2832,6 +2832,12 @@ body.modal-open {
   gap: 0.75rem;
 }
 
+.marmitas-spec-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));
+  gap: 0.4rem;
+}
+
 .marmitas-specific-result {
   background: var(--bg-card);
   border: 1.5px solid rgba(22, 163, 74, 0.35);
