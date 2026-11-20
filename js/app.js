@@ -7891,9 +7891,13 @@ function initShoppingListExport() {
       if (exportFormat === 'poll') {
         const pollOptions = text.split('\n').filter(line => /^\d+\.\s/.test(line)).join('\n');
         if (pollOptions) {
-          // Abre o WhatsApp dentro do gesto do clique (evita bloqueio de pop-up)
-          // e copia as opções em seguida para colar em Anexo → Enquete.
-          window.open('https://wa.me/', '_blank');
+          // wa.me sem texto responde 400 e não abre o app. O endpoint oficial
+          // api.whatsapp.com/send aceita texto vazio e abre o WhatsApp.
+          const win = window.open('https://api.whatsapp.com/send?text=', '_blank');
+          if (!win) {
+            showToast('Não foi possível abrir o WhatsApp. Use “Copiar” e abra o app manualmente.', 'warning', 6000);
+            return;
+          }
           const copied = await copyExportText(pollOptions);
           showToast(copied
             ? '📋 Opções copiadas! No WhatsApp: Anexo → Enquete → cole e ative “Permitir várias respostas”.'
@@ -7914,7 +7918,11 @@ function initShoppingListExport() {
       const encoded = encodeURIComponent(text);
       if (encoded.length > 1800) {
         // URL longa demais para o wa.me: abre o WhatsApp e copia para colar.
-        window.open('https://wa.me/', '_blank');
+        const win = window.open('https://api.whatsapp.com/send?text=', '_blank');
+        if (!win) {
+          showToast('Não foi possível abrir o WhatsApp. Use “Copiar” e abra o app manualmente.', 'warning', 6000);
+          return;
+        }
         const copied = await copyExportText(text);
         showToast(copied ? '📋 Lista copiada! Cole no WhatsApp.' : 'Lista longa: abra o WhatsApp e cole o texto manualmente.', 'info', 5000);
         return;

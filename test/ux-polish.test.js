@@ -76,6 +76,9 @@ test('Exportar lista: botão na Lista de Mercado, modal e envio pelo WhatsApp', 
   assert.match(appJs, /function initShoppingListExport/);
   assert.match(appJs, /buildShoppingListExportText/);
   assert.match(appJs, /wa\.me\/\?text=/);
+  // wa.me sem texto devolve 400 e não abre o app; o chat vazio usa api.whatsapp.
+  assert.match(appJs, /api\.whatsapp\.com\/send\?text=/);
+  assert.equal(/window\.open\('https:\/\/wa\.me\/'/.test(appJs), false);
   assert.match(appJs, /navigator\.share/);
   assert.match(read('js/shopping.js'), /export function buildShoppingListExportText/);
 });

@@ -86,8 +86,10 @@ node --test test/**/*.test.js   # 204 testes
     `applyTabVisibility` centraliza a aba ativa. Não volte para `flex: 1` (truncava "Marmitas").
 13. **Exportar lista (WhatsApp):** o WhatsApp **não** cria enquete por link. O botão
     `#btn-export-shopping-list` usa `buildShoppingListExportText` e oferece Checklist
-    (⬜/✅, funciona direto no `wa.me`) e Enquete (opções numeradas até 12; copia as opções e
-    abre o WhatsApp para Anexo → Enquete). Não prometa enquete nativa automática.
+    (⬜/✅, funciona direto no `wa.me/?text=`) e Enquete (opções numeradas até 12; copia as
+    opções e abre o WhatsApp para Anexo → Enquete). **Chat vazio:** `https://wa.me/` e
+    `wa.me/?text=` vazio respondem **HTTP 400** e não abrem o app; use
+    `https://api.whatsapp.com/send?text=` (200). Não prometa enquete nativa automática.
 
 ## Vizinhança (ecossistema)
 

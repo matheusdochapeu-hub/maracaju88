@@ -4,6 +4,33 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-20 14:35] - Correção: modo Enquete do WhatsApp não abria (v2.9.9)
+
+### 🔍 Sintoma
+O **Checklist** exportado funcionou no WhatsApp, mas o modo **Enquete** “não rolou nem abriu”.
+
+### 🐞 Causa raiz
+O modo Enquete abria `window.open('https://wa.me/')` (sem texto) para depois copiar as opções.
+**`https://wa.me/` responde HTTP 400** — e `https://wa.me/?text=` vazio também. O navegador caía
+numa página de erro e o app do WhatsApp nunca abria. O checklist funcionava porque usava
+`https://wa.me/?text=<texto não vazio>`.
+
+### 🛠️ Correção
+- Chat vazio agora usa **`https://api.whatsapp.com/send?text=`** (HTTP 200, abre o WhatsApp).
+  Aplicado no modo Enquete e no fallback de listas longas (>1.800 caracteres no `wa.me`).
+- Se `window.open` for bloqueado, mostra toast orientando a usar “Copiar”.
+- Teste estático garante que não volte `window.open('https://wa.me/')` sem texto.
+
+### 🧪 Validação
+- `node --test test/` → **204 testes, 0 falhas**.
+- Verificação HTTP real: `wa.me/` = 400; `wa.me/?text=` vazio = 400;
+  `api.whatsapp.com/send?text=` = 200.
+
+### 📦 Versão
+- **v2.9.9** em `config.js`, `sw.js` (`maracaju-v2.9.9`), `package.json` e `?v=` do HTML.
+
+---
+
 ## [2026-11-20 14:10] - Exportar Lista de Mercado para WhatsApp (Checklist / Enquete) (v2.9.8)
 
 ### 🎯 Demanda
