@@ -278,6 +278,35 @@ body {
   filter: drop-shadow(0 2px 4px rgba(46, 89, 51, 0.25));
 }
 
+/* Celular: 9 abas não cabem com rótulo inteiro em 360/390px. A barra rola na
+   horizontal e cada alvo mantém ~56px (antes "Marmitas" virava "Marmi…"). */
+@media (max-width: 767px) {
+  .bottom-nav {
+    justify-content: flex-start;
+    gap: 2px;
+  }
+
+  .nav-item {
+    flex: 0 0 auto;
+    min-width: 56px;
+    padding: 3px 6px;
+  }
+
+  .nav-item span:last-child {
+    font-size: 0.62rem;
+    max-width: 64px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  .nav-item .nav-icon {
+    font-size: 1.15rem;
+  }
+}
+
 /* Responsive Desktop Improvements */
 @media (min-width: 768px) {
   body {

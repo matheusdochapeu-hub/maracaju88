@@ -2698,6 +2698,17 @@ body.modal-open {
   min-height: 32px;
 }
 
+/* Botões − / + alinhados ao input (antes ficavam ~30px contra 44px). */
+.marmitas-custom-days .btn {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 .marmitas-filter-pills {
   display: flex;
   gap: 0.35rem;
@@ -2741,9 +2752,18 @@ body.modal-open {
 }
 
 .marmitas-nutri-card.is-muted {
-  opacity: 0.46;
-  filter: grayscale(0.25);
+  /* Antes era opacity: .46 no card inteiro — os números ficavam com ~2:1 de
+     contraste e não dava para ler "Rende ~3.78 kg" antes de incluir. O estado
+     agora é indicado pelo fundo, borda tracejada e selo "+ Incluir". */
+  background: var(--bg-surface);
   border-style: dashed;
+  box-shadow: none;
+}
+
+.marmitas-nutri-card.is-muted .marmitas-card-value,
+.marmitas-nutri-card.is-muted .marmitas-card-meta,
+.marmitas-nutri-card.is-muted .marmitas-card-title {
+  color: var(--text-secondary);
 }
 
 .marmitas-card-top {
@@ -2847,4 +2867,69 @@ body.modal-open {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 0.75rem;
   align-items: center;
+}
+
+/* ============================================================
+   MODAL DO DIÁRIO ALIMENTAR: RODAPÉ VISÍVEL & FEEDBACK COM ESTADO
+   ============================================================ */
+.nutrition-diary-modal-content {
+  max-height: 88dvh;
+}
+
+/* Header fica no topo ao rolar (o formulário é alto no celular). */
+.nutrition-diary-modal-content .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #ffffff;
+  padding: 0.35rem 0 0.6rem;
+  margin-top: -0.35rem;
+}
+
+/* Salvar/Cancelar sempre acessíveis, sem rolar duas telas. */
+.nutrition-diary-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background: #ffffff;
+  padding: 0.65rem 0 0.35rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+#nutrition-diary-parse-feedback.is-error {
+  color: var(--danger) !important;
+}
+
+#nutrition-diary-parse-feedback.is-success {
+  color: #15803d !important;
+}
+
+#nutrition-diary-parse-feedback.is-info {
+  color: var(--text-secondary) !important;
+}
+
+/* Fechar padronizado (antes o ✕ de vários modais era o botão cinza nativo). */
+.modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  background: var(--bg-surface, #f4f6f1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal-close:hover,
+.modal-close:focus-visible {
+  background: var(--bg-tertiary, #e9eee6);
+  color: var(--text-primary);
 }

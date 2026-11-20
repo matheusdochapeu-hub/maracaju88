@@ -98,7 +98,11 @@ export function getNutritionState(state) {
     const custom = (saved[key] && typeof saved[key] === 'object') ? saved[key] : {};
     const isReset = custom.reset === true;
     const customMeals = (!isReset && custom.meals && typeof custom.meals === 'object') ? custom.meals : {};
-    const photo = (!isReset && typeof custom.photo === 'string') ? custom.photo : '';
+    // A foto vem de localStorage/backup importado: só aceita data URL de imagem
+    // (evita injeção de atributo no `src` do card, ex.: `x" onerror="...`).
+    const isSafePhoto = (value) => typeof value === 'string' &&
+      /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=\s]+$/i.test(value);
+    const photo = (!isReset && isSafePhoto(custom.photo)) ? custom.photo : '';
     const sourceName = (!isReset && typeof custom.sourceName === 'string') ? custom.sourceName : '';
     const rawText = (!isReset && typeof custom.rawText === 'string') ? custom.rawText : '';
 
@@ -109,7 +113,7 @@ export function getNutritionState(state) {
       rawText,
       photo,
       updatedAt: custom.updatedAt || null,
-      isCustom: !isReset && !!(custom.updatedAt || sourceName || rawText || photo),
+      isCustom: !isReset && !!(custom.updatedAt || sourceName || rawText || photo || Object.keys(customMeals).length),
       meals: {
         nome: base.nome,
         avatar: base.avatar,
@@ -136,46 +140,71 @@ export function getEffectiveNutritionMeals(state) {
 }
 
 function ptNumberToFloat(token) {
-  if (!token) return 0;
+  if (token === null || token === undefined) return 0;
   const low = String(token).toLowerCase().trim();
-  const map = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, 'três': 3, quatro: 4, cinco: 5 };
+  const map = {
+    um: 1, uma: 1, dois: 2, duas: 2, tres: 3, 'três': 3, quatro: 4,
+    cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10
+  };
   if (map[low] !== undefined) return map[low];
-  const parsed = parseFloat(low.replace(',', '.'));
+
+  let normalized = low.replace(/\s/g, '');
+  // Milhar com ponto: "1.500" / "1.500,5" (antes o parseFloat lia 1,5 e 2)
+  if (/^\d{1,3}(?:\.\d{3})+(?:,\d+)?$/.test(normalized)) {
+    normalized = normalized.replace(/\./g, '').replace(',', '.');
+  } else {
+    normalized = normalized.replace(',', '.');
+  }
+  const parsed = parseFloat(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+// Aceita "120", "0,5", "1.500" e nunca começa no meio de um decimal.
+const NUMBER_TOKEN = '(?<![\\d.,])(\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?|\\d+(?:[.,]\\d+)?)';
+// Para unidades caseiras/contagens também aceita numerais por extenso.
+const COUNT_TOKEN = '(?<![\\d.,])(\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?|\\d+(?:[.,]\\d+)?|um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez)';
+
 function extractGramsFor(text, ingredientRegex, unitFallback = null) {
-  if (!text) return 0;
+  if (!text) return null;
   // Padrão 1: "100g de arroz" / "100 g arroz" / "100gr de arroz"
-  const beforeRe = new RegExp(`(\\d+(?:[.,]\\d+)?)\\s*(?:g|gr|gramas?)\\s*(?:de\\s+)?(?:${ingredientRegex})`, 'i');
+  const beforeRe = new RegExp(`${NUMBER_TOKEN}\\s*(?:g|gr|gramas?)\\s*(?:de\\s+)?(?:${ingredientRegex})`, 'i');
   const m1 = text.match(beforeRe);
   if (m1) return Math.round(ptNumberToFloat(m1[1]));
 
-  // Padrão 2: "arroz cozido: 100g" / "arroz (100g)"
-  const afterRe = new RegExp(`(?:${ingredientRegex})[^\\n;,.]{0,35}?(\\d+(?:[.,]\\d+)?)\\s*(?:g|gr|gramas?)`, 'i');
+  // Padrão 2a: "arroz cozido: 100g" / "arroz (100g)"
+  const afterColonRe = new RegExp(`(?:${ingredientRegex})[^\\n:;]{0,30}?[:;(]\\s*${NUMBER_TOKEN}\\s*(?:g|gr|gramas?)`, 'i');
+  const m2a = text.match(afterColonRe);
+  if (m2a) return Math.round(ptNumberToFloat(m2a[1]));
+
+  // Padrão 2b: "arroz 100g" (só quando o número vem logo depois do alimento).
+  // A janela antiga de 35 caracteres atravessava " e " e roubava as gramas do
+  // ingrediente seguinte ("pão com queijo e 20g de requeijão" → queijo 20g).
+  const afterRe = new RegExp(`(?:${ingredientRegex})\\s+${NUMBER_TOKEN}\\s*(?:g|gr|gramas?)`, 'i');
   const m2 = text.match(afterRe);
   if (m2) return Math.round(ptNumberToFloat(m2[1]));
 
   // Padrão 3: fallback por medida caseira (ex: fatia, colher, concha, scoop)
   if (unitFallback) {
-    const unitRe = new RegExp(`(\\d+|um|uma|dois|duas|tr[eê]s|quatro)\\s*(?:${unitFallback.unitPattern})\\s*(?:de\\s+)?(?:${ingredientRegex})`, 'i');
+    const unitRe = new RegExp(`${COUNT_TOKEN}\\s*(?:${unitFallback.unitPattern})\\s*(?:de\\s+)?(?:${ingredientRegex})`, 'i');
     const m3 = text.match(unitRe);
     if (m3) return Math.round(ptNumberToFloat(m3[1]) * unitFallback.gramsPerUnit);
   }
 
-  return 0;
+  // Null = quantidade não encontrada (diferente de 0g explícito). O chamador
+  // decide entre o valor do cardápio padrão e 0 quando o item nem é citado.
+  return null;
 }
 
 function extractCountFor(text, ingredientRegex) {
-  if (!text) return 0;
-  const countRe = new RegExp(`(\\d+|um|uma|dois|duas|tr[eê]s|quatro|cinco)\\s*(?:un(?:idades?)?\\s*(?:de\\s*)?|caixinha[s]?\\s*(?:de\\s*)?|por[cç][aãõ]e?s?\\s*(?:de\\s*)?)?(?:${ingredientRegex})`, 'i');
+  if (!text) return null;
+  const countRe = new RegExp(`${COUNT_TOKEN}\\s*(?:un(?:idades?)?\\s*(?:de\\s*)?|caixinha[s]?\\s*(?:de\\s*)?|por[cç][aãõ]e?s?\\s*(?:de\\s*)?)?(?:${ingredientRegex})`, 'i');
   const m = text.match(countRe);
   if (m) return Math.round(ptNumberToFloat(m[1]));
 
   // Se o alimento foi citado sem quantidade numérica explícita, assume 1 unidade
   const bareRe = new RegExp(`(?:^|[\\s,(;])(?:${ingredientRegex})(?=$|[\\s,.;:)])`, 'i');
   if (bareRe.test(text)) return 1;
-  return 0;
+  return null;
 }
 
 function stripAltOptionsForQuantities(blockText) {
@@ -190,35 +219,41 @@ function stripAltOptionsForQuantities(blockText) {
 
 function extractPersonSectionFromText(rawText, person) {
   if (!rawText) return '';
-  const hasMatheus = /(?:^|\n)\s*(?:card[aá]pio\s*(?:do\s*)?|di[aá]rio(?:\s*alimentar)?\s*(?:do\s*)?|paciente\s*:?\s*)?matheus\b/i.test(rawText);
-  const hasScarlet = /(?:^|\n)\s*(?:card[aá]pio\s*(?:da\s*)?|di[aá]rio(?:\s*alimentar)?\s*(?:da\s*)?|paciente\s*:?\s*)?scarlet\b/i.test(rawText);
-
-  if (!(hasMatheus && hasScarlet)) {
-    return rawText;
-  }
 
   const lines = rawText.split(/\r?\n/);
-  const matheusLines = [];
-  const scarletLines = [];
+  const buckets = { matheus: [], scarlet: [] };
+  // Aceita "Matheus", "Paciente: Matheus Silva" e "Matheus - Almoço: ...".
+  const headerRe = /^\s*(?:(?:card[aá]pio|di[aá]rio(?:\s+alimentar)?|paciente|cliente)\s*(?:do|da)?\s*:?\s*)?(matheus|scarlet)\b\s*(.*)$/i;
+  const mealHintRe = /(?:caf[eé]|almo[cç]o|lanche|jantar|noite|tarde|manh[aã]|refei[cç][aã]o|desjejum|ceia)/i;
   let current = null;
+  let foundHeader = false;
 
   for (const line of lines) {
-    const trimmed = line.trim();
-    if (/^(?:card[aá]pio\s*(?:do\s*)?|di[aá]rio(?:\s*alimentar)?\s*(?:do\s*)?|paciente\s*:?\s*)?matheus\b[:\-]?$/i.test(trimmed) || /^matheus\s*[-:]/i.test(trimmed)) {
-      current = 'matheus';
+    const m = line.match(headerRe);
+    if (m) {
+      foundHeader = true;
+      current = m[1].toLowerCase();
+      let rest = (m[2] || '').replace(/^[\s\-–:]+/, '').trim();
+      // "Matheus Silva" / "Scarlet Souza": sobrenome não é conteúdo da dieta.
+      if (rest && !mealHintRe.test(rest) && !/\d/.test(rest) && rest.split(/\s+/).length <= 2) {
+        rest = '';
+      }
+      if (rest) buckets[current].push(rest);
       continue;
     }
-    if (/^(?:card[aá]pio\s*(?:da\s*)?|di[aá]rio(?:\s*alimentar)?\s*(?:da\s*)?|paciente\s*:?\s*)?scarlet\b[:\-]?$/i.test(trimmed) || /^scarlet\s*[-:]/i.test(trimmed)) {
-      current = 'scarlet';
-      continue;
-    }
-    if (current === 'matheus') matheusLines.push(line);
-    else if (current === 'scarlet') scarletLines.push(line);
+    if (current) buckets[current].push(line);
   }
 
-  if (person === 'matheus' && matheusLines.length >= 2) return matheusLines.join('\n');
-  if (person === 'scarlet' && scarletLines.length >= 2) return scarletLines.join('\n');
-  return rawText;
+  if (!foundHeader) return rawText;
+
+  const own = buckets[person] || [];
+  if (own.length > 0) return own.join('\n');
+
+  // Se o documento foi separado por pessoa mas a seção pedida ficou vazia,
+  // NÃO devolve o texto inteiro: antes o diário do Matheus era aplicado na
+  // Scarlet silenciosamente. Vazio = usa o cardápio padrão dela.
+  const other = person === 'matheus' ? buckets.scarlet : buckets.matheus;
+  return other.length > 0 ? '' : rawText;
 }
 
 /**
@@ -255,7 +290,7 @@ export function parseNutritionDiaryText(rawText, person = 'matheus') {
     if (/^(?:almo[cç]o)(?=$|[\s:,\-–.)])/i.test(headPart)) {
       return 'almoco';
     }
-    if (/^(?:lanche(?:\s*da)?\s*tarde|caf[eé]\s*(?:da\s*)?tarde|tarde|pr[eé][\s-]?treino|p[oó]s[\s-]?treino)(?=$|[\s:,\-–.)])/i.test(headPart)) {
+    if (/^(?:lanche(?:\s*da)?\s*tarde|lanche|col[aá][cç][aã]o|caf[eé]\s*(?:da\s*)?tarde|tarde|pr[eé][\s-]?treino|p[oó]s[\s-]?treino)(?=$|[\s:,\-–.)])/i.test(headPart)) {
       return 'tarde';
     }
     if (/^(?:jantar|janta|noite|ceia|lanche(?:\s*da)?\s*noite)(?=$|[\s:,\-–.)])/i.test(headPart)) {
@@ -302,34 +337,55 @@ export function parseNutritionDiaryText(rawText, person = 'matheus') {
 
   const meatWords = 'carnes?(?:\\s+(?:bovina|su[ií]na|magra|mo[ií]da))?|frango|peito\\s+de\\s+frango|patinho|alcatra|bife[s]?|peixe|til[aá]pia|salm[aã]o|fil[eé](?:\\s+de\\s+(?:frango|peixe|til[aá]pia))?|prote[ií]na';
 
+  const mentioned = (text, pattern) => !!text && new RegExp(`(?:${pattern})`, 'i').test(text);
+
+  // Regra: refeição descrita mas item não citado => 0 (a nutri tirou do plano).
+  // Item citado sem quantidade => mantém a quantidade prescrita do cardápio.
+  const gramsField = (text, pattern, baseValue, unitFallback = null) => {
+    if (!text) return baseValue;
+    if (!mentioned(text, pattern)) return 0;
+    const value = extractGramsFor(text, pattern, unitFallback);
+    return value === null ? baseValue : value;
+  };
+
+  const countField = (text, pattern, baseValue) => {
+    if (!text) return baseValue;
+    if (!mentioned(text, pattern)) return 0;
+    const value = extractCountFor(text, pattern);
+    return value === null ? baseValue : value;
+  };
+
+  const paesPattern = 'p[aã](?:o|es)(?:\\s+(?:franc[eê]s|de\\s+forma|integral))?';
+  const frutasPattern = 'frutas?|banana[s]?|ma[cç][aã]s?|mam[aã]o|laranja[s]?|pera[s]?|mel[aã]o';
+
   const parsedMeals = {
     nome: base.nome,
     avatar: base.avatar,
     manha: {
       descricao: formatDesc(buckets.manha, base.manha.descricao),
-      paes: manhaText ? extractCountFor(manhaPrimary, 'p[aã](?:o|es)(?:\\s+(?:franc[eê]s|de\\s+forma|integral))?') : base.manha.paes,
-      frutas: manhaText ? extractCountFor(manhaPrimary, 'frutas?|banana[s]?|ma[cç][aã]s?|mam[aã]o|laranja[s]?|pera[s]?|mel[aã]o') : base.manha.frutas,
-      ovos: manhaText ? extractCountFor(manhaPrimary, 'ovos?') : base.manha.ovos,
-      queijoG: manhaText ? extractGramsFor(manhaPrimary, 'queijo(?:\\s+(?:mussarela|minas|prato|cottage|ricota|fatiado))?', { unitPattern: 'fatia[s]?', gramsPerUnit: 20 }) : base.manha.queijoG,
-      requeijaoG: manhaText ? extractGramsFor(manhaPrimary, 'requeij[aã]o|cream\\s*cheese', { unitPattern: 'colher(?:es)?(?:\\s+de\\s+(?:sopa|sobremesa))?', gramsPerUnit: 20 }) : base.manha.requeijaoG
+      paes: countField(manhaPrimary, paesPattern, base.manha.paes),
+      frutas: countField(manhaPrimary, frutasPattern, base.manha.frutas),
+      ovos: countField(manhaPrimary, 'ovos?', base.manha.ovos),
+      queijoG: gramsField(manhaPrimary, 'queijo(?:\\s+(?:mussarela|minas|prato|cottage|ricota|fatiado))?', base.manha.queijoG, { unitPattern: 'fatia[s]?', gramsPerUnit: 20 }),
+      requeijaoG: gramsField(manhaPrimary, 'requeij[aã]o|cream\\s*cheese', base.manha.requeijaoG, { unitPattern: 'colher(?:es)?(?:\\s+de\\s+(?:sopa|sobremesa))?', gramsPerUnit: 20 })
     },
     almoco: {
       descricao: formatDesc(buckets.almoco, base.almoco.descricao),
-      arrozProntoG: almocoText ? (extractGramsFor(almocoPrimary, 'arroz(?:\\s+(?:branco|integral|cozido|parboilizado))?', { unitPattern: 'colher(?:es)?(?:\\s+de\\s+sopa)?', gramsPerUnit: 25 }) || base.almoco.arrozProntoG) : base.almoco.arrozProntoG,
-      feijaoProntoG: almocoText ? (extractGramsFor(almocoPrimary, 'feij[aã]o(?:\\s+(?:carioca|preto|cozido))?', { unitPattern: 'concha[s]?', gramsPerUnit: 80 }) || base.almoco.feijaoProntoG) : base.almoco.feijaoProntoG,
-      carneProntaG: almocoText ? (extractGramsFor(almocoPrimary, meatWords) || base.almoco.carneProntaG) : base.almoco.carneProntaG
+      arrozProntoG: gramsField(almocoPrimary, 'arroz(?:\\s+(?:branco|integral|cozido|parboilizado))?', base.almoco.arrozProntoG, { unitPattern: 'colher(?:es)?(?:\\s+de\\s+sopa)?', gramsPerUnit: 25 }),
+      feijaoProntoG: gramsField(almocoPrimary, 'feij[aã]o(?:\\s+(?:carioca|preto|cozido))?', base.almoco.feijaoProntoG, { unitPattern: 'concha[s]?', gramsPerUnit: 80 }),
+      carneProntaG: gramsField(almocoPrimary, meatWords, base.almoco.carneProntaG)
     },
     tarde: {
       descricao: formatDesc(buckets.tarde, base.tarde.descricao),
-      frutas: tardeText ? extractCountFor(tardePrimary, 'frutas?|banana[s]?|ma[cç][aã]s?|mam[aã]o|laranja[s]?|pera[s]?') : base.tarde.frutas,
-      yopro: tardeText ? extractCountFor(tardePrimary, 'yo\\s*-?\\s*pro') : (base.tarde.yopro || 0),
-      wheyG: tardeText ? extractGramsFor(tardePrimary, 'whey(?:\\s+protein)?', { unitPattern: 'scoop[s]?|medidor(?:es)?|dosador(?:es)?', gramsPerUnit: 30 }) : (base.tarde.wheyG || 0),
-      leiteEmPoG: tardeText ? (extractGramsFor(tardePrimary, 'leite\\s*(?:em\\s*)?p[oó]', { unitPattern: 'colher(?:es)?(?:\\s+de\\s+sopa)?', gramsPerUnit: 10 }) || (/leite\s*(?:em\s*)?p[oó]/i.test(tardePrimary) ? 20 : 0)) : (base.tarde.leiteEmPoG || 0)
+      frutas: countField(tardePrimary, frutasPattern, base.tarde.frutas),
+      yopro: countField(tardePrimary, 'yo\\s*-?\\s*pro', base.tarde.yopro || 0),
+      wheyG: gramsField(tardePrimary, 'whey(?:\\s+protein)?', base.tarde.wheyG || 0, { unitPattern: 'scoop[s]?|medidor(?:es)?|dosador(?:es)?', gramsPerUnit: 30 }),
+      leiteEmPoG: gramsField(tardePrimary, 'leite\\s*(?:em\\s*)?p[oó]', base.tarde.leiteEmPoG || 0, { unitPattern: 'colher(?:es)?(?:\\s+de\\s+sopa)?', gramsPerUnit: 10 })
     },
     noite: {
       descricao: formatDesc(buckets.noite, base.noite.descricao),
-      paes: noiteText ? extractCountFor(noitePrimary, 'p[aã](?:o|es)(?:\\s+(?:franc[eê]s|de\\s+forma|integral))?') : base.noite.paes,
-      carneProntaG: noiteText ? (extractGramsFor(noitePrimary, meatWords) || 0) : base.noite.carneProntaG
+      paes: countField(noitePrimary, paesPattern, base.noite.paes),
+      carneProntaG: gramsField(noitePrimary, meatWords, base.noite.carneProntaG)
     }
   };
 
@@ -368,13 +424,17 @@ export function getDailyNutritionSummary(meals = DEFAULT_NUTRITION_MEALS, factor
   const queijoTotalG = pick(m.manha.queijoG, s.manha.queijoG); // ~40
   const requeijaoTotalG = pick(m.manha.requeijaoG, s.manha.requeijaoG); // ~40
 
-  // Conversão In Natura (Cru / Seco)
-  const carneAlmocoCruaG = Math.round(carneAlmocoProntaG * factors.carneCruaMult); // ~433g
-  const carneNoiteCruaG = Math.round(carneNoiteProntaG * factors.carneCruaMult); // ~467g
-  const carneTotalCruaG = Math.round(carneTotalProntaG * factors.carneCruaMult); // ~900g
+  // Conversão In Natura (Cru / Seco). Fallbacks evitam NaN quando um chamador
+  // passa um objeto parcial de fatores (a UI sempre passa COOKING_FACTORS).
+  const carneMult = factors.carneCruaMult || (900 / 540);
+  const arrozDiv = factors.arrozCruDiv || 2.2;
+  const feijaoDiv = factors.feijaoCruDiv || 2.6;
+  const carneAlmocoCruaG = Math.round(carneAlmocoProntaG * carneMult); // ~433g
+  const carneNoiteCruaG = Math.round(carneNoiteProntaG * carneMult); // ~467g
+  const carneTotalCruaG = Math.round(carneTotalProntaG * carneMult); // ~900g
 
-  const arrozCruG = Math.round(arrozAlmocoProntoG / factors.arrozCruDiv); // ~86g
-  const feijaoCruG = Math.round(feijaoAlmocoProntoG / factors.feijaoCruDiv); // ~65g
+  const arrozCruG = Math.round(arrozAlmocoProntoG / arrozDiv); // ~86g
+  const feijaoCruG = Math.round(feijaoAlmocoProntoG / feijaoDiv); // ~65g
 
   return {
     prontoDiario: {
@@ -439,9 +499,12 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
   const queijoG = isAlmocoOnly ? 0 : daily.prontoDiario.queijoTotalG * safeDias;
   const requeijaoG = isAlmocoOnly ? 0 : daily.prontoDiario.requeijaoTotalG * safeDias;
 
-  // Itens sugeridos para a Lista de Mercado
-  const allShoppingItems = [
-    {
+  // Itens sugeridos para a Lista de Mercado (só entram os que têm consumo > 0;
+  // antes um dia sem carne gerava "Carne 0.00 kg" por R$ 38 no mercado).
+  const allShoppingItems = [];
+
+  if (carneCruaG > 0) {
+    allShoppingItems.push({
       groupKey: 'carne',
       title: `Carne / Frango in natura (${carneCruaKg} kg)`,
       name: `Carne / Frango in natura`,
@@ -449,8 +512,11 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
       quantity: `${carneCruaKg} kg`,
       notes: `Para ${safeDias} ${safeDias === 1 ? 'dia' : 'dias'} (${isAlmocoOnly ? 'apenas marmitas de almoço' : 'almoço + pão da noite'}). Rende ~${(carneProntaG / 1000).toFixed(2)} kg pronto.`,
       estimatedUnitPrice: 38.00
-    },
-    {
+    });
+  }
+
+  if (arrozCruG > 0) {
+    allShoppingItems.push({
       groupKey: 'arroz',
       title: `Arroz in natura (${arrozPacotes1Kg} pct de 1kg)`,
       name: `Arroz in natura`,
@@ -458,8 +524,11 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
       quantity: `${arrozPacotes1Kg} kg`,
       notes: `Consumo exato: ${arrozCruG}g cru para ${safeDias} ${safeDias === 1 ? 'dia' : 'dias'} de marmita (${arrozProntoG}g pronto).`,
       estimatedUnitPrice: 6.50
-    },
-    {
+    });
+  }
+
+  if (feijaoCruG > 0) {
+    allShoppingItems.push({
       groupKey: 'feijao',
       title: `Feijão in natura (${feijaoPacotes1Kg} pct de 1kg)`,
       name: `Feijão in natura`,
@@ -467,8 +536,8 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
       quantity: `${feijaoPacotes1Kg} kg`,
       notes: `Consumo exato: ${feijaoCruG}g cru para ${safeDias} ${safeDias === 1 ? 'dia' : 'dias'} de marmita (${feijaoProntoG}g pronto).`,
       estimatedUnitPrice: 8.90
-    }
-  ];
+    });
+  }
 
   const targetLabel = person === 'matheus' ? 'para Matheus' : (person === 'scarlet' ? 'para Scarlet' : 'para o casal');
 
@@ -647,6 +716,8 @@ export function calculateCustomQuantityConversion({
   const bovMult = factors.carneVermelhaCruaMult || factors.carneCruaMult || (900 / 540);
   const suinaMult = factors.carneSuinaCruaMult || (1 / 0.68);
   const frangoMult = factors.frangoCruaMult || (1 / 0.72);
+  const arrozDiv = factors.arrozCruDiv || 2.2;
+  const feijaoDiv = factors.feijaoCruDiv || 2.6;
   const macDiv = factors.macarraoCruDiv || 2.5;
   const batRend = factors.batataDoceBrutaRend || 0.90;
 
@@ -658,7 +729,7 @@ export function calculateCustomQuantityConversion({
       unitPrice: 42.00,
       qtyStyle: 'weight',
       factorLabel: 'rend. ~60% (x1.67 cru/pronto)',
-      dailyLunchG: daily.prontoDiario.carneAlmocoProntaG || 260,
+      dailyLunchG: daily.prontoDiario.carneAlmocoProntaG ?? 260,
       toCru: (p) => Math.round(p * bovMult),
       toPronto: (c) => Math.round(c / bovMult)
     },
@@ -669,7 +740,7 @@ export function calculateCustomQuantityConversion({
       unitPrice: 24.00,
       qtyStyle: 'weight',
       factorLabel: 'rend. ~68% (x1.47 cru/pronto)',
-      dailyLunchG: daily.prontoDiario.carneAlmocoProntaG || 260,
+      dailyLunchG: daily.prontoDiario.carneAlmocoProntaG ?? 260,
       toCru: (p) => Math.round(p * suinaMult),
       toPronto: (c) => Math.round(c / suinaMult)
     },
@@ -680,7 +751,7 @@ export function calculateCustomQuantityConversion({
       unitPrice: 22.00,
       qtyStyle: 'weight',
       factorLabel: 'rend. ~72% (x1.39 cru/pronto)',
-      dailyLunchG: daily.prontoDiario.carneAlmocoProntaG || 260,
+      dailyLunchG: daily.prontoDiario.carneAlmocoProntaG ?? 260,
       toCru: (p) => Math.round(p * frangoMult),
       toPronto: (c) => Math.round(c / frangoMult)
     },
@@ -691,9 +762,9 @@ export function calculateCustomQuantityConversion({
       unitPrice: 6.50,
       qtyStyle: 'pack1kg',
       factorLabel: 'rende 2.2x cozido',
-      dailyLunchG: daily.prontoDiario.arrozAlmocoProntoG || 190,
-      toCru: (p) => Math.round(p / factors.arrozCruDiv),
-      toPronto: (c) => Math.round(c * factors.arrozCruDiv)
+      dailyLunchG: daily.prontoDiario.arrozAlmocoProntoG ?? 190,
+      toCru: (p) => Math.round(p / arrozDiv),
+      toPronto: (c) => Math.round(c * arrozDiv)
     },
     feijao: {
       label: 'Feijão',
@@ -702,9 +773,9 @@ export function calculateCustomQuantityConversion({
       unitPrice: 8.90,
       qtyStyle: 'pack1kg',
       factorLabel: 'rende 2.6x cozido',
-      dailyLunchG: daily.prontoDiario.feijaoAlmocoProntoG || 170,
-      toCru: (p) => Math.round(p / factors.feijaoCruDiv),
-      toPronto: (c) => Math.round(c * factors.feijaoCruDiv)
+      dailyLunchG: daily.prontoDiario.feijaoAlmocoProntoG ?? 170,
+      toCru: (p) => Math.round(p / feijaoDiv),
+      toPronto: (c) => Math.round(c * feijaoDiv)
     },
     macarrao: {
       label: 'Macarrão',
@@ -713,7 +784,7 @@ export function calculateCustomQuantityConversion({
       unitPrice: 5.50,
       qtyStyle: 'pack500g',
       factorLabel: 'rende ~2.5x cozido',
-      dailyLunchG: daily.prontoDiario.arrozAlmocoProntoG || 190,
+      dailyLunchG: daily.prontoDiario.arrozAlmocoProntoG ?? 190,
       toCru: (p) => Math.round(p / macDiv),
       toPronto: (c) => Math.round(c * macDiv)
     },
@@ -724,7 +795,7 @@ export function calculateCustomQuantityConversion({
       unitPrice: 6.00,
       qtyStyle: 'weight',
       factorLabel: 'c/ casca rende ~0.90x cozida',
-      dailyLunchG: daily.prontoDiario.arrozAlmocoProntoG || 190,
+      dailyLunchG: daily.prontoDiario.arrozAlmocoProntoG ?? 190,
       toCru: (p) => Math.round(p / batRend),
       toPronto: (c) => Math.round(c * batRend)
     }

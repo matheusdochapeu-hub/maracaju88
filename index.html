@@ -53,11 +53,11 @@
   <script src="./js/vendor/tesseract.min.js"></script>
 
   <!-- Stylesheets (v2.9.6) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.9.6" />
-  <link rel="stylesheet" href="./css/base.css?v=2.9.6" />
-  <link rel="stylesheet" href="./css/components.css?v=2.9.6" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.9.6" />
-<link rel="stylesheet" href="./nexo-theme.css?v=2.9.6" />
+  <link rel="stylesheet" href="./css/variables.css?v=2.9.7" />
+  <link rel="stylesheet" href="./css/base.css?v=2.9.7" />
+  <link rel="stylesheet" href="./css/components.css?v=2.9.7" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.9.7" />
+<link rel="stylesheet" href="./nexo-theme.css?v=2.9.7" />
 </head>
 <body>
 
@@ -3606,8 +3606,8 @@
   </div>
 
   <!-- MODAL: IMPORTAR / EDITAR DIÁRIO ALIMENTAR DA NUTRICIONISTA -->
-  <div id="modal-nutrition-diary" class="modal-overlay">
-    <div class="modal-content" style="max-width: 600px;">
+  <div id="modal-nutrition-diary" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="nutrition-diary-modal-title">
+    <div class="modal-content nutrition-diary-modal-content" style="max-width: 600px;">
       <div class="modal-header">
         <h3 class="modal-title" id="nutrition-diary-modal-title">📋 Diário Alimentar da Nutri</h3>
         <button type="button" class="modal-close" data-close-modal>✕</button>
@@ -3640,11 +3640,11 @@
 
           <div id="nutrition-diary-photo-preview-container" style="display: none; margin-bottom: 0.5rem; position: relative; max-width: 220px;">
             <img id="nutrition-diary-photo-preview-img" src="" alt="Foto do diário alimentar" style="width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); max-height: 150px; object-fit: cover;" />
-            <button type="button" id="btn-remove-nutrition-photo" class="btn btn-icon btn-sm" style="position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.65); color: #fff; border-radius: 50%; width: 24px; height: 24px; min-width: 24px; font-size: 0.7rem;" title="Remover foto">✕</button>
+            <button type="button" id="btn-remove-nutrition-photo" class="btn btn-icon btn-sm" style="position: absolute; top: -8px; right: -8px; background: rgba(0,0,0,0.72); color: #fff; border-radius: 50%; width: 40px; height: 40px; min-width: 40px; font-size: 0.9rem;" title="Remover foto" aria-label="Remover foto do diário">✕</button>
           </div>
 
           <textarea id="nutrition-diary-raw-text" class="form-control" rows="5" placeholder="Suba o PDF, tire uma foto ou cole aqui o texto do diário alimentar enviado pela nutri (Manhã, Almoço, Tarde, Noite)..."></textarea>
-          <div id="nutrition-diary-parse-feedback" style="font-size: 0.75rem; color: #15803d; font-weight: 600; margin-top: 0.35rem;"></div>
+          <div id="nutrition-diary-parse-feedback" role="status" aria-live="polite" style="font-size: 0.75rem; color: #15803d; font-weight: 600; margin-top: 0.35rem;"></div>
         </div>
 
         <div style="font-size: 0.82rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem;">
@@ -3739,7 +3739,7 @@
           </div>
         </div>
 
-        <div style="display: flex; gap: 0.5rem;">
+        <div class="nutrition-diary-actions" style="display: flex; gap: 0.5rem;">
           <button type="submit" class="btn btn-primary" style="flex: 1;">💾 Salvar Diário</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
         </div>
@@ -3748,7 +3748,7 @@
   </div>
 
   <!-- Script Principal Modular (v2.9.6) -->
-  <script type="module" src="./js/app.js?v=2.9.6"></script>
+  <script type="module" src="./js/app.js?v=2.9.7"></script>
 
 <script>
 /* Volta ao Nexo — aparece só quando a página foi aberta pelo shell (?de=nexo). */

@@ -328,10 +328,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Restaura a aba em que o usuário estava antes de uma recarga/atualização.
-  // Antes, qualquer reload voltava para "Tarefas" no meio do uso.
+  // "tarefas" foi arquivada na v2.8: quem tinha essa aba salva precisa cair em
+  // "Gastos & Notas" e não numa seção oculta (a barra não teria item ativo).
   try {
-    const savedTab = getSavedActiveTab();
-    if (savedTab && (ACTIVE_TAB_ORDER.includes(savedTab) || TAB_ORDER.includes(savedTab) || savedTab === 'historico') && savedTab !== currentTab) {
+    let savedTab = getSavedActiveTab();
+    if (savedTab === 'tarefas') savedTab = 'compras';
+    if (savedTab && (ACTIVE_TAB_ORDER.includes(savedTab) || savedTab === 'historico') && savedTab !== currentTab) {
       applyTabVisibility(savedTab, null, false);
     }
   } catch (e) {}
@@ -737,6 +739,23 @@ function applyTabVisibility(targetTab, dir = null, animate = true) {
   navItems.forEach(n => {
     n.classList.toggle('active', n.getAttribute('data-tab') === targetTab);
   });
+
+  // No celular a barra rola na horizontal; mantém a aba ativa visível.
+  try {
+    const nav = document.querySelector('.bottom-nav');
+    if (nav && nav.scrollWidth > nav.clientWidth) {
+      const activeItem = nav.querySelector('.nav-item.active');
+      if (activeItem && typeof activeItem.offsetLeft === 'number') {
+        const target = activeItem.offsetLeft - (nav.clientWidth - activeItem.offsetWidth) / 2;
+        const left = Math.max(0, target);
+        if (typeof nav.scrollTo === 'function') {
+          nav.scrollTo({ left, behavior: 'smooth' });
+        } else {
+          nav.scrollLeft = left;
+        }
+      }
+    }
+  } catch (e) {}
 
   // Atualiza visibilidade com animação direcional de carrossel
   const allTabs = document.querySelectorAll('.tab-content');
@@ -7124,8 +7143,42 @@ function initMarmitasModule() {
 
   let pendingNutritionPhotoDataUrl = '';
 
-  const rerenderMarmitas = () => {
+  const syncMarmitasAria = () => {
+    // Os alternadores usam classe (btn-primary/is-selected) como estado visual;
+    // expõe o mesmo estado para leitores de tela.
+    try {
+      marmitasTab.querySelectorAll('[data-marmitas-person],[data-marmitas-calc-mode],[data-marmitas-scope],[data-marmitas-preset],[data-marmitas-toggle-group],[data-marmitas-spec-item],[data-marmitas-spec-dir]').forEach(btn => {
+        const active = btn.classList.contains('btn-primary') || btn.classList.contains('is-selected');
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    } catch (e) {}
+  };
+
+  const rerenderMarmitas = (focusSelector = null) => {
+    // O render recria o innerHTML; sem devolver o foco, quem navega por teclado
+    // perde o botão a cada clique. Guarda o seletor do elemento focado antes.
+    let selector = focusSelector;
+    try {
+      const active = document.activeElement;
+      if (!selector && active && marmitasTab.contains(active)) {
+        const attrs = ['data-marmitas-person', 'data-marmitas-period', 'data-marmitas-scope', 'data-marmitas-toggle-group', 'data-marmitas-calc-mode', 'data-marmitas-spec-item', 'data-marmitas-spec-dir', 'data-marmitas-preset', 'data-marmitas-days-step'];
+        const attr = attrs.find(a => active.hasAttribute && active.hasAttribute(a));
+        if (attr) selector = `[${attr}="${active.getAttribute(attr)}"]`;
+        else if (active.id) selector = `#${active.id}`;
+      }
+    } catch (e) {}
+
     renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope, currentMarmitasExpandedRaw, currentMarmitasCalcOpts);
+    syncMarmitasAria();
+
+    if (selector) {
+      try {
+        const el = marmitasTab.querySelector(selector);
+        if (el && typeof el.focus === 'function') {
+          el.focus({ preventScroll: true });
+        }
+      } catch (e) {}
+    }
   };
 
   // Garante pré-renderização imediata na inicialização
@@ -7148,6 +7201,15 @@ function initMarmitasModule() {
         box.style.display = 'none';
       }
     }
+  };
+
+  const setDiaryFeedback = (message, type = 'info') => {
+    const fb = document.getElementById('nutrition-diary-parse-feedback');
+    if (!fb) return;
+    fb.textContent = message || '';
+    fb.classList.toggle('is-error', type === 'error');
+    fb.classList.toggle('is-success', type === 'success');
+    fb.classList.toggle('is-info', type !== 'error' && type !== 'success');
   };
 
   const fillDiaryModalFields = (meals, rawText = '', sourceName = '', feedbackMsg = '', photoUrl = undefined) => {
@@ -7185,7 +7247,9 @@ function initMarmitasModule() {
     setVal('nutri-noite-carne', meals?.noite?.carneProntaG ?? 0);
 
     const fb = document.getElementById('nutrition-diary-parse-feedback');
-    if (fb) fb.textContent = feedbackMsg || '';
+    if (fb) {
+      setDiaryFeedback(feedbackMsg || '', /^✅/.test(feedbackMsg || '') ? 'success' : 'info');
+    }
   };
 
   const openNutritionDiaryModal = (person, parsedOverride = null, sourceOverride = null, feedbackMsg = '', photoOverride = undefined) => {
@@ -7221,6 +7285,14 @@ function initMarmitasModule() {
     }
 
     openModal('modal-nutrition-diary');
+    // Foco inicial no diálogo (sem abrir o teclado no textarea ao revisar).
+    setTimeout(() => {
+      try {
+        const modal = document.getElementById('modal-nutrition-diary');
+        const closeBtn = modal && modal.querySelector('[data-close-modal]');
+        if (closeBtn && typeof closeBtn.focus === 'function') closeBtn.focus({ preventScroll: true });
+      } catch (e) {}
+    }, 120);
   };
 
   const handleNutritionFileUpload = async (file, personKey) => {
@@ -7247,6 +7319,7 @@ function initMarmitasModule() {
       console.error('[Maracaju] Erro ao ler PDF do diário alimentar:', err);
       showToast(err.message || 'Não foi possível ler o PDF. Você pode colar o texto manualmente.', 'error', 5000);
       openNutritionDiaryModal(personKey, null, '', '⚠️ Não foi possível extrair texto automático deste PDF. Cole o texto abaixo se preferir.');
+      setDiaryFeedback('⚠️ Não foi possível extrair texto automático deste PDF. Cole o texto abaixo se preferir.', 'error');
     }
   };
 
@@ -7268,8 +7341,7 @@ function initMarmitasModule() {
       setDiaryModalPhotoPreview(compressedPhoto);
       const sourceInput = document.getElementById('nutrition-diary-source-name');
       if (sourceInput && !sourceInput.value) sourceInput.value = file.name || 'Foto da Nutri';
-      const fb = document.getElementById('nutrition-diary-parse-feedback');
-      if (fb) fb.textContent = '🔍 Lendo texto da foto (OCR)...';
+      setDiaryFeedback('🔍 Lendo texto da foto (OCR)...', 'info');
     } else {
       openNutritionDiaryModal(
         personKey,
@@ -7288,8 +7360,7 @@ function initMarmitasModule() {
           const fb = document.getElementById('nutrition-diary-parse-feedback');
           if (fb) fb.textContent = msg;
         },
-        'diário alimentar'
-      );
+        'diário alimentar'      );
 
       if (ocrText && ocrText.trim().length >= 12) {
         const parsed = parseNutritionDiaryText(ocrText, personKey);
@@ -7304,13 +7375,11 @@ function initMarmitasModule() {
           compressedPhoto
         );
       } else {
-        const fb = document.getElementById('nutrition-diary-parse-feedback');
-        if (fb) fb.textContent = '📷 Foto anexada! Se a imagem tiver letra manuscrita ou tabela, ajuste os valores abaixo e clique em Salvar.';
+        setDiaryFeedback('📷 Foto anexada! Se a imagem tiver letra manuscrita ou tabela, ajuste os valores abaixo e clique em Salvar.', 'info');
       }
     } catch (errOcr) {
       console.warn('[Maracaju] OCR da foto do diário falhou (foto mantida):', errOcr);
-      const fb = document.getElementById('nutrition-diary-parse-feedback');
-      if (fb) fb.textContent = '📷 Foto anexada! Não foi possível ler o texto automaticamente; preencha ou ajuste os campos abaixo e salve.';
+      setDiaryFeedback('⚠️ Foto anexada, mas não foi possível ler o texto automaticamente. Preencha ou ajuste os campos abaixo e salve.', 'error');
     }
   };
 
@@ -7321,6 +7390,8 @@ function initMarmitasModule() {
     el.addEventListener('change', (e) => {
       const file = e.target.files && e.target.files[0];
       if (file) fn(file);
+      // Permite escolher o MESMO arquivo de novo (sem isso o change não dispara).
+      e.target.value = '';
     });
   };
 
@@ -7486,6 +7557,10 @@ function initMarmitasModule() {
       const personKey = resetBtn.getAttribute('data-marmitas-reset') === 'scarlet' ? 'scarlet' : 'matheus';
       const label = personKey === 'scarlet' ? 'Scarlet' : 'Matheus';
       playSubtleClick(state?.settings?.soundEnabled);
+      // Ação destrutiva: sem confirmação, um toque acidental apagava o diário.
+      if (!confirm(`Restaurar o diário de ${label} para o cardápio padrão?\n\nO texto, a foto e as quantidades personalizadas serão removidos.`)) {
+        return;
+      }
       if (!state.nutrition || typeof state.nutrition !== 'object') {
         state.nutrition = {};
       }
@@ -7588,9 +7663,17 @@ function initMarmitasModule() {
       for (const item of itemsToSend) {
         const existingIdx = state.compras.findIndex(i => (i.name || i.title || '').toLowerCase() === item.name.toLowerCase() && !i.bought);
         if (existingIdx !== -1) {
-          state.compras[existingIdx].quantity = item.quantity;
-          state.compras[existingIdx].notes = item.notes;
-          if (item.estimatedUnitPrice) state.compras[existingIdx].price = item.estimatedUnitPrice;
+          const existing = state.compras[existingIdx];
+          existing.quantity = item.quantity;
+          existing.qty = item.quantity;
+          existing.notes = item.notes;
+          if (item.title) existing.title = item.title;
+          if (item.estimatedUnitPrice) {
+            existing.price = item.estimatedUnitPrice;
+            // Mantém unitPrice e totalPrice coerentes (getItemTotalPrice lê os dois).
+            existing.unitPrice = item.estimatedUnitPrice;
+            existing.totalPrice = 0;
+          }
         } else {
           state.compras.push({
             id: 'marmita_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),

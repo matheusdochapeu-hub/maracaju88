@@ -4,6 +4,85 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-20 13:35] - Revisão de Código e UX pós-v2.9.6 (v2.9.7)
+
+### 🔍 Escopo
+Revisão dos commits **v2.9.0 → v2.9.6** (aba Marmitas, diários da nutri em PDF/foto/texto,
+calculadora in natura, itens expostos nas compras, carnes/macarrão/batata-doce) + auditoria
+de código do módulo novo e revisão de UX desktop/celular.
+
+### 🐞 Bugs corrigidos (código)
+1. **Vírgula decimal e milhar no parser** (`js/nutrition.js`): regex `(\d+)` casava a parte
+   decimal de "0,5" como 5. `0,5 concha de feijão` virava 400g, `0,5 scoop de whey` 150g e
+   `1.500g` virava 2g. Criados `NUMBER_TOKEN`/`COUNT_TOKEN` com lookbehind e
+   `ptNumberToFloat` trata milhar (1.500 → 1500) e numerais até dez.
+2. **Separação por pessoa vazava** (`extractPersonSectionFromText`): só reconhecia o nome
+   sozinho na linha; "Paciente: Matheus Silva" ou "Matheus - Almoço: ..." caíam no texto
+   inteiro e o diário do Matheus era aplicado na Scarlet. Agora o cabeçalho aceita
+   prefixo/sobrenome/conteúdo na mesma linha e, se a seção pedida está vazia, retorna `''`
+   (cardápio padrão) em vez do texto do outro.
+3. **"Lanche" isolado** não era cabeçalho e a linha grudava no almoço; incluído em Tarde
+   (`colação` também).
+4. **Quantidades ausentes/não citadas**: refeição descrita sem citar um item agora zera o
+   item (antes inventava a carne do cardápio em "Almoço: salada"); item citado sem gramas
+   usa a porção prescrita (queijo/requeijão não desaparecem mais). `extractGramsFor` passou
+   a devolver `null` para "não achei" em vez de 0.
+5. **Gramas roubadas do vizinho**: a janela de 35 caracteres do padrão "alimento ... 100g"
+   atravessava " e " e atribuía as gramas do requeijão ao queijo. Agora exige `:`/`(` ou o
+   número imediatamente após o alimento.
+6. **Item de 0 kg no mercado**: dia sem carne (ou arroz/feijão zerados) gerava
+   "Carne 0.00 kg" com preço. Os três itens base agora só entram com consumo `> 0`.
+7. **`|| 260` mascarava zero**: `calculateCustomQuantityConversion` usava fallback 260g
+   quando o almoço não tinha carne e dizia "1 almoço"; agora `??` mantém 0.
+8. **Fatores parciais geravam NaN** em arroz/feijão/carne; fallbacks assimétricos corrigidos.
+9. **`isCustom` ignorava `meals`**: diário vindo de backup só com `meals` aplicava os valores
+   mas o card dizia "Cardápio padrão" e o botão "Padrão" não aparecia.
+10. **XSS armazenado em `nutrition.photo`**: o `src` do card aceitava qualquer string de
+    localStorage/backup importado (`x" onerror="...`). `getNutritionState` só aceita
+    `data:image/(png|jpe?g|webp|gif);base64,...`.
+11. **Import morto** `DEFAULT_NUTRITION_MEALS` removido de `js/ui.js`.
+
+### 🎨 UX / acessibilidade (desktop e celular)
+1. **`--brand-forest` não existia** (usada em ~30 pontos): "Diário Matheus" ficava sem cor e
+   um bloco com `background: var(--brand-forest); color:#fff` ficava invisível. Definida em
+   `css/variables.css`.
+2. **Barra inferior com 9 abas** truncava "Marmitas"/"Gastos & Notas" em 360/390px. No
+   celular a barra agora rola na horizontal (`flex:0 0 auto; min-width:56px`), rótulo quebra
+   em 2 linhas e `applyTabVisibility` centraliza a aba ativa.
+3. **Cards "não incluídos"** usavam `opacity:.46` no card inteiro (números ilegíveis). Agora
+   fundo `--bg-surface`, borda tracejada e selo "+ Incluir", sem opacidade.
+4. **Modal do diário**: `role="dialog"`, `aria-modal`, `aria-labelledby`, `aria-live` no
+   feedback, foco inicial no ✕, header e rodapé sticky (Salvar sempre visível), botão de
+   remover foto 40×40 com `aria-label`, feedback de erro em vermelho (classe `.is-error`).
+5. **`.modal-close`** ganhou estilo próprio (40×40, fundo/borda) — antes o ✕ era o botão
+   nativo cinza em 32 modais.
+6. **Calculadora**: alternadores com `aria-pressed`, foco devolvido após o re-render
+   (teclado não perde o lugar), botões −/+ alinhados ao input (40px).
+7. **Ação "Padrão"** do diário agora pede confirmação (apagava texto/foto/quantidades com
+   um toque).
+8. **Escolher o mesmo arquivo** duas vezes voltou a disparar o `change` (`input.value=''`).
+9. **Enviar marmitas** para um item já existente atualiza `unitPrice`/`totalPrice` (antes só
+   `price`, e o total continuava com o preço antigo).
+10. **Ciclo VA/VR hardcoded** (Outubro/Novembro/2026, 9,84/0,16, "crédito hoje") ficava
+    errado a cada virada. O seletor agora vem de `getBenefitsHistory(state)` e os textos de
+    `isCurrentCycle`/`isPastCycle`/`isUpcomingCycle`.
+11. **Aba Tarefas arquivada**: quem tinha `MARACAJU_ACTIVE_TAB_v1 = 'tarefas'` restaurava uma
+    seção oculta; agora é remapeada para `compras`.
+
+### 🧪 Validação
+- **199 testes, 0 falhas** (183 antes): 7 novos de parser/cálculo + 9 estáticos de UX/A11y em
+  `test/ux-polish.test.js`.
+- `test/nutrition.test.js` cobre vírgula/milhar, split com sobrenome, nome+refeição inline,
+  seção vazia, "Lanche", zero carne, `isCustom`, foto XSS e fatores parciais.
+- Sem browser/headless no repo: medidas de layout foram revisadas por CSS/HTML (marcadas
+  como estimativa no relatório), sem regressão nos testes de integridade do HTML.
+
+### 📦 Versão
+- **v2.9.7** em `js/config.js`, `sw.js` (`maracaju-v2.9.7`), `package.json` e nos `?v=` do
+  `index.html`.
+
+---
+
 ## [2026-11-20 12:48] - Macarrão, Batata-Doce e Carnes Separadas (Vermelha, Suína, Frango) na Calculadora (v2.9.6)
 
 ### 🎯 Demanda do Usuário

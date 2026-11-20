@@ -10,6 +10,7 @@ import {
   calculateMarmitasPlan,
   parseNutritionDiaryText,
   getEffectiveNutritionMeals,
+  getNutritionState,
   calculateCustomQuantityConversion
 } from '../js/nutrition.js';
 import { applyCloudBackup } from '../js/sheets.js';
@@ -345,5 +346,93 @@ test('Calculadora Marmitas: dias personalizados, filtro só feijão/só carne e 
   assert.ok(mockHtml.includes('data-marmitas-spec-item="macarrao"'));
   assert.ok(mockHtml.includes('data-marmitas-spec-item="batata_doce"'));
   assert.ok(mockHtml.includes('500g'));
+});
+
+test('Diário Alimentar: vírgula decimal e ponto de milhar são lidos corretamente', () => {
+  const p = (texto) => parseNutritionDiaryText(texto, 'matheus');
+
+  // 0,5 concha de feijão = 40g (antes o parser lia "5" conchas = 400g)
+  assert.equal(p('Almoço: 0,5 concha de feijão').meals.almoco.feijaoProntoG, 40);
+  // 0,5 scoop de whey = 15g (antes 150g)
+  assert.equal(p('Tarde: 0,5 scoop de whey').meals.tarde.wheyG, 15);
+  // 1.500g é mil e quinhentos (antes virava 2g)
+  assert.equal(p('Almoço: 1.500g de arroz').meals.almoco.arrozProntoG, 1500);
+  // Numeral por extenso
+  assert.equal(p('Café da manhã: seis ovos e um pão').meals.manha.ovos, 6);
+});
+
+test('Diário Alimentar: cabeçalho com nome + sobrenome e nome + refeição na mesma linha', () => {
+  const duo = `Paciente: Matheus Silva
+Café da manhã: 1 pão
+Almoço: 150g de arroz, 100g de feijão, 180g de frango
+Scarlet Souza
+Café da manhã: 1 pão
+Almoço: 80g de arroz, 70g de feijão, 110g de frango`;
+
+  const m = parseNutritionDiaryText(duo, 'matheus');
+  const s = parseNutritionDiaryText(duo, 'scarlet');
+  assert.equal(m.meals.almoco.arrozProntoG, 150);
+  assert.equal(m.meals.almoco.carneProntaG, 180);
+  assert.equal(s.meals.almoco.arrozProntoG, 80);
+  assert.equal(s.meals.almoco.carneProntaG, 110);
+
+  const inline = `Matheus - Café da manhã: 1 pão com 2 ovos e 20g de requeijão
+Matheus - Almoço: 150g de arroz, 100g de feijão, 180g de frango
+Scarlet - Almoço: 80g de arroz, 70g de feijão, 110g de carne`;
+  assert.equal(parseNutritionDiaryText(inline, 'matheus').meals.manha.ovos, 2);
+  assert.equal(parseNutritionDiaryText(inline, 'matheus').meals.almoco.arrozProntoG, 150);
+  assert.equal(parseNutritionDiaryText(inline, 'scarlet').meals.almoco.carneProntaG, 110);
+});
+
+test('Diário Alimentar: seção da outra pessoa não vaza quando a pedida está vazia', () => {
+  const soMatheus = `Matheus\nAlmoço: 150g de arroz, 180g de frango`;
+  const scarlet = parseNutritionDiaryText(soMatheus, 'scarlet');
+  assert.equal(scarlet.meals.almoco.arrozProntoG, DEFAULT_NUTRITION_MEALS.scarlet.almoco.arrozProntoG);
+  assert.equal(scarlet.meals.almoco.carneProntaG, DEFAULT_NUTRITION_MEALS.scarlet.almoco.carneProntaG);
+});
+
+test('Diário Alimentar: "Lanche" isolado vira Tarde e item citado sem gramas usa o padrão', () => {
+  const parsed = parseNutritionDiaryText('Almoço: 100g arroz\nLanche: 1 fruta', 'matheus');
+  assert.equal(parsed.meals.tarde.frutas, 1);
+
+  // Queijo citado sem gramas mantém a porção prescrita; requeijão não citado = 0.
+  const cafe = parseNutritionDiaryText('Café da manhã: 1 pão com queijo', 'matheus');
+  assert.equal(cafe.meals.manha.queijoG, DEFAULT_NUTRITION_MEALS.matheus.manha.queijoG);
+  assert.equal(cafe.meals.manha.requeijaoG, 0);
+});
+
+test('Calculadora: dia sem carne não gera item de 0 kg e zero não vira 260g', () => {
+  const semCarne = JSON.parse(JSON.stringify(DEFAULT_NUTRITION_MEALS));
+  semCarne.matheus.almoco.carneProntaG = 0;
+  semCarne.scarlet.almoco.carneProntaG = 0;
+  semCarne.matheus.noite.carneProntaG = 0;
+  semCarne.scarlet.noite.carneProntaG = 0;
+
+  const plan = calculateMarmitasPlan(7, 'completo', semCarne, COOKING_FACTORS, 'casal');
+  assert.equal(plan.totaisInNatura.carneCruaKg, 0);
+  assert.equal(plan.shoppingItems.some(i => i.groupKey === 'carne'), false);
+
+  const conv = calculateCustomQuantityConversion({ item: 'carne_vermelha', grams: 260, meals: semCarne, person: 'casal' });
+  assert.equal(conv.almocosEquivalentes, 0);
+});
+
+test('Nutrição: estado com apenas meals é customizado e foto fora do padrão é descartada', () => {
+  const mealsOnly = getNutritionState({ nutrition: { scarlet: { meals: { almoco: { arrozProntoG: 55 } } } } });
+  assert.equal(mealsOnly.scarlet.isCustom, true, 'Sem o botão Padrão o usuário não conseguia desfazer');
+  assert.equal(mealsOnly.scarlet.meals.almoco.arrozProntoG, 55);
+
+  const xss = getNutritionState({ nutrition: { scarlet: { photo: 'x" onerror="alert(1)' } } });
+  assert.equal(xss.scarlet.photo, '');
+});
+
+test('Nutrição: fatores parciais não geram NaN', () => {
+  const plan = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, {});
+  assert.ok(Number.isFinite(plan.totaisInNatura.arrozCruG));
+  assert.ok(Number.isFinite(plan.totaisInNatura.feijaoCruG));
+  assert.ok(Number.isFinite(plan.totaisInNatura.carneCruaG));
+
+  const conv = calculateCustomQuantityConversion({ item: 'arroz', grams: 500, factors: {} });
+  assert.ok(Number.isFinite(conv.cruG));
+  assert.equal(conv.prontoG, 500);
 });
 

@@ -1,5 +1,4 @@
 import {
-  DEFAULT_NUTRITION_MEALS,
   COOKING_FACTORS,
   MARMITAS_ITEM_GROUPS,
   SPECIFIC_QUANTITY_ITEMS,
@@ -1123,22 +1122,26 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
   if (benefitsBannerEl) {
     const activeCycle = getActiveBenefitsCycle();
     const benefits = getMonthlyBenefitDetails(state, activeCycle);
-    const isOct = benefits.cycleKey === '2026-10';
-    const isNov = benefits.cycleKey === '2026-11';
-    const octStatus = getBenefitCycleStatus('2026-10', state);
-    const novStatus = getBenefitCycleStatus('2026-11', state);
+    const isCurrent = !!benefits.isCurrentCycle;
+    const isPast = !!benefits.isPastCycle;
+    const cycleStatus = getBenefitCycleStatus(benefits.cycleKey, state);
+
+    // Ciclos exibidos: o selecionado primeiro, depois os vizinhos (o hardcode
+    // de Outubro/Novembro/2026 deixava o seletor vazio a partir de dezembro).
+    const historyCycles = getBenefitsHistory(state);
+    const currentIdx = historyCycles.findIndex(c => c.cycleKey === benefits.cycleKey);
+    const orderedCycles = currentIdx > 0
+      ? [historyCycles[currentIdx], ...historyCycles.slice(0, currentIdx), ...historyCycles.slice(currentIdx + 1)]
+      : historyCycles;
+    const cycleOptions = orderedCycles.slice(0, 4);
 
     let cycleNotice = '';
-    if (isOct) {
-      cycleNotice = '📅 <strong>Ciclo Outubro/2026 (06/10 a 05/11):</strong> Encerrado! Os gastos com Carrefour, padaria e açougue trouxeram o VA a R$ 9,84 e o VR a R$ 0,16. Essas sobras foram acumuladas e somadas automaticamente a Novembro.';
-    } else if (isNov) {
-      if (novStatus.isActive) {
-        cycleNotice = '✨ <strong>Ciclo Novembro/2026 (06/11 a 03/12):</strong> Ciclo Ativo! Crédito disponibilizado hoje (06/11)! Inclui + R$ 9,84 de VA e + R$ 0,16 de VR acumulados de Outubro (Total R$ 3.165,00 livre).';
-      } else {
-        cycleNotice = '✨ <strong>Ciclo Novembro/2026 (06/11 a 03/12):</strong> Crédito a partir de 06/11! Inclui + R$ 9,84 de VA e + R$ 0,16 de VR acumulados de Outubro (Total R$ 3.165,00 livre).';
-      }
+    if (isCurrent) {
+      cycleNotice = `✨ <strong>${benefits.cycleLabel}</strong> (${benefits.cycleRange}): Ciclo ativo. Crédito em <strong>${benefits.creditDateFormatted}</strong>. Total do ciclo: <strong>${formatCurrencyWithSymbol(benefits.totalBenefit)}</strong>.`;
+    } else if (isPast) {
+      cycleNotice = `📅 <strong>${benefits.cycleLabel}</strong> (${benefits.cycleRange}): ciclo encerrado. O saldo final foi transferido para o ciclo seguinte.`;
     } else {
-      cycleNotice = `📍 <strong>${benefits.cycleLabel}:</strong> Período de vigência: ${benefits.cycleRange}.`;
+      cycleNotice = `⏳ <strong>${benefits.cycleLabel}</strong> (${benefits.cycleRange}): começa em <strong>${benefits.creditDateFormatted}</strong>. Total previsto: <strong>${formatCurrencyWithSymbol(benefits.totalBenefit)}</strong>.`;
     }
 
     const purchasesCount = benefits.cyclePurchases ? benefits.cyclePurchases.length : 0;
@@ -1168,14 +1171,17 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
           </div>
         </div>
 
-        <!-- Seletor Rápido de Ciclos (Abas) -->
+        <!-- Seletor Rápido de Ciclos (dinâmico: atual + vizinhos) -->
         <div style="display: flex; gap: 0.35rem; margin-bottom: 0.65rem; flex-wrap: wrap;">
-          <button type="button" class="btn btn-xs ${isOct ? 'btn-primary' : 'btn-secondary'}" data-benefits-cycle="2026-10" style="font-size: 0.7rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.2rem 0.55rem;">
-            📅 Ciclo Outubro ${octStatus.badgeFormatted}
-          </button>
-          <button type="button" class="btn btn-xs ${isNov ? 'btn-primary' : 'btn-secondary'}" data-benefits-cycle="2026-11" style="font-size: 0.7rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.2rem 0.55rem;">
-            ✨ Ciclo Novembro ${novStatus.badgeFormatted}
-          </button>
+          ${cycleOptions.map(c => {
+            const selected = c.cycleKey === benefits.cycleKey;
+            const badge = getBenefitCycleStatus(c.cycleKey, state).badgeFormatted;
+            return `
+              <button type="button" class="btn btn-xs ${selected ? 'btn-primary' : 'btn-secondary'}" data-benefits-cycle="${c.cycleKey}" style="font-size: 0.7rem; font-weight: 700; border-radius: var(--radius-full); padding: 0.2rem 0.55rem;">
+                ${c.isCurrentCycle ? '✨' : (c.isPastCycle ? '📅' : '⏳')} ${c.cycleLabel} ${badge}
+              </button>
+            `;
+          }).join('')}
         </div>
 
         <div style="background: rgba(22, 163, 74, 0.08); border-left: 3px solid #16a34a; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.72rem; color: var(--brand-forest); margin-bottom: 0.65rem;">
@@ -1188,20 +1194,20 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: 0.75rem; font-weight: 700; color: #15803d;">🥗 Vale Alimentação (VA)</span>
               <span style="font-size: 0.68rem; color: ${benefits.vaRollover > 0 ? '#15803d' : 'var(--text-muted)'}; font-weight: 700;">
-                ${benefits.vaRollover > 0 ? `+ ${formatCurrencyWithSymbol(benefits.vaRollover)} acumulado` : (isOct ? 'Encerrado' : 'Fixo')}
+                ${benefits.vaRollover > 0 ? `+ ${formatCurrencyWithSymbol(benefits.vaRollover)} acumulado` : (isPast ? 'Encerrado' : 'Fixo')}
               </span>
             </div>
             <div style="font-size: 1.25rem; font-weight: 800; color: #15803d; margin-top: 0.2rem;">
               ${formatCurrencyWithSymbol(benefits.vaBalance)}
-              <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">${isOct ? 'sobrou no ciclo' : 'saldo livre'}</span>
+              <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">${isPast ? 'sobrou no ciclo' : 'saldo livre'}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.35rem;">
               <span>Gasto: <strong>${formatCurrencyWithSymbol(benefits.vaSpent)}</strong></span>
               <span>Total: ${formatCurrencyWithSymbol(benefits.vaTotal)}</span>
             </div>
-            ${isOct ? `
+            ${isPast ? `
               <div style="font-size: 0.68rem; color: #15803d; font-weight: 700; margin-top: 0.25rem;">
-                ↳ R$ 9,84 acumulado transferido para Novembro!
+                ↳ ${formatCurrencyWithSymbol(benefits.vaBalance)} de saldo final transferido para o próximo ciclo
               </div>
             ` : `
               <div style="background: rgba(0,0,0,0.06); border-radius: var(--radius-full); height: 6px; overflow: hidden; margin-top: 0.35rem;">
@@ -1215,20 +1221,20 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-size: 0.75rem; font-weight: 700; color: #c2410c;">🍽️ Vale Refeição (VR)</span>
               <span style="font-size: 0.68rem; color: ${benefits.vrRollover > 0 ? '#c2410c' : 'var(--text-muted)'}; font-weight: 700;">
-                ${benefits.vrRollover > 0 ? `+ ${formatCurrencyWithSymbol(benefits.vrRollover)} acumulado` : (isOct ? 'Encerrado' : `${benefits.vrDays}d × R$ ${formatCurrency(benefits.vrDaily)}`)}
+                ${benefits.vrRollover > 0 ? `+ ${formatCurrencyWithSymbol(benefits.vrRollover)} acumulado` : (isPast ? 'Encerrado' : `${benefits.vrDays}d × R$ ${formatCurrency(benefits.vrDaily)}`)}
               </span>
             </div>
             <div style="font-size: 1.25rem; font-weight: 800; color: #c2410c; margin-top: 0.2rem;">
               ${formatCurrencyWithSymbol(benefits.vrBalance)}
-              <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">${isOct ? 'sobrou no ciclo' : 'saldo livre'}</span>
+              <span style="font-size: 0.72rem; font-weight: normal; color: var(--text-muted);">${isPast ? 'sobrou no ciclo' : 'saldo livre'}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.35rem;">
               <span>Gasto: <strong>${formatCurrencyWithSymbol(benefits.vrSpent)}</strong></span>
               <span>Total: ${formatCurrencyWithSymbol(benefits.vrTotal)}</span>
             </div>
-            ${isOct ? `
+            ${isPast ? `
               <div style="font-size: 0.68rem; color: #c2410c; font-weight: 700; margin-top: 0.25rem;">
-                ↳ R$ 0,16 acumulado transferido para Novembro!
+                ↳ ${formatCurrencyWithSymbol(benefits.vrBalance)} de saldo final transferido para o próximo ciclo
               </div>
             ` : `
               <div style="background: rgba(0,0,0,0.06); border-radius: var(--radius-full); height: 6px; overflow: hidden; margin-top: 0.35rem;">
@@ -2500,7 +2506,7 @@ export function renderBenefitsHistoryModal(state) {
   container.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 0.85rem;">
       <div style="background: rgba(22, 163, 74, 0.08); border-left: 3px solid #16a34a; padding: 0.55rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.75rem; color: var(--brand-forest);">
-        📍 <strong>Regra de Ciclos:</strong> Os benefícios são creditados no <strong>4º dia útil</strong>. As compras realizadas antes do crédito (ex: 03/11) abatem do ciclo de Outubro. O ciclo de Novembro entra em vigor amanhã (06/11).
+        📍 <strong>Regra de Ciclos:</strong> Os benefícios são creditados no <strong>4º dia útil</strong>. Compras realizadas antes do crédito abatem do ciclo anterior; o ciclo seguinte passa a valer na data de crédito.
       </div>
 
       ${history.map(c => {
@@ -3966,7 +3972,7 @@ function renderPersonDiaryCard(personKey, personData, theme, expandedRaw = {}) {
           <span style="font-size: 1.25rem;">${theme.avatar}</span>
           <strong style="color: ${theme.accent}; font-size: 0.95rem;">Diário ${theme.label}</strong>
         </div>
-        <span style="font-size: 0.68rem; font-weight: 700; color: ${theme.accent}; background: ${theme.softBg}; padding: 0.18rem 0.5rem; border-radius: var(--radius-full); max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeNutritionHtml(sourceBadge)}">
+        <span style="font-size: 0.68rem; font-weight: 700; color: ${theme.accent}; background: ${theme.softBg}; padding: 0.18rem 0.5rem; border-radius: var(--radius-full); max-width: 220px; white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.2;" title="${escapeNutritionHtml(sourceBadge)}">
           ${personData.isCustom ? '📄' : '📋'} ${sourceBadge}
         </span>
       </div>

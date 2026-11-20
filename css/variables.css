@@ -25,6 +25,10 @@
   --brand-moss-light: #4f8555; /* Verde folha suave */
   --brand-moss-soft: #eaf3e8;  /* Fundo de chips e tags verde clarinho */
   --brand-moss-glow: rgba(46, 89, 51, 0.22);
+  /* Alias histórico usado em ~30 pontos do app (textos, acentos e um fundo com
+     texto branco). Sem esta definição o `var()` caía para `unset`: "Diário
+     Matheus" ficava sem cor e o bloco de fundo ficava transparente. */
+  --brand-forest: #166534;     /* Verde floresta (mesmo tom dos gradientes) */
 
   /* Mapeamento de compatibilidade */
   --brand-teal: #2e5933;       /* Mapeado para o Verde Musgo principal */

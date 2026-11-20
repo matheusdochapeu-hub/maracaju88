@@ -24,7 +24,7 @@ python -m http.server 8000   # abrir http://localhost:8000
 ## Testes
 
 ```powershell
-node --test test/**/*.test.js   # 171 testes
+node --test test/**/*.test.js   # 199 testes
 ```
 
 ## Deploy
@@ -73,6 +73,17 @@ node --test test/**/*.test.js   # 171 testes
    `./sw.js?v=<versão>` (fura o cache HTTP do GitHub Pages) e mantenha
    `#app-version-label` dinâmico — o texto fixo "v2.5.7" fazia parecer que o app não
    atualizava (v2.7.9). O botão "Limpar Cache e Forçar Atualização" é a saída de emergência.
+10. **Parser do diário (nutrition.js):** use `NUMBER_TOKEN`/`COUNT_TOKEN` (nunca
+    `(\d+)` solto, que casa a parte decimal de "0,5" como 5) e trate milhar "1.500".
+    Item **não citado** na refeição = 0; item citado **sem gramas** = porção do cardápio
+    padrão (`null` do extractor). A separação por pessoa não pode cair no texto inteiro:
+    se a seção pedida está vazia, retorne `''` (senão o diário do Matheus vira o da Scarlet).
+11. **Nada de ciclo hardcoded na UI:** o seletor de VA/VR em `renderComprasTab` vem de
+    `getBenefitsHistory(state)`; textos usam `isCurrentCycle`/`isPastCycle`. O hardcode
+    Outubro/Novembro/2026 e os valores 9,84/0,16 ficavam errados a cada virada de ciclo.
+12. **Barra inferior no celular:** 9 abas não cabem com rótulo inteiro. O `@media
+    (max-width:767px)` usa `flex: 0 0 auto; min-width: 56px` + rolagem horizontal e
+    `applyTabVisibility` centraliza a aba ativa. Não volte para `flex: 1` (truncava "Marmitas").
 
 ## Vizinhança (ecossistema)
 
