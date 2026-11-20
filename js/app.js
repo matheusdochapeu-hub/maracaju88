@@ -57,7 +57,8 @@ import {
   updateMarketPurchase,
   findMatchingShoppingItems,
   markShoppingItemsAsBought,
-  removeShoppingItemsFromList
+  removeShoppingItemsFromList,
+  buildShoppingListExportText
 } from './shopping.js';
 import { parseNfceQrCodeText, fetchNfceDetailsOnline, parseNfceHtml, mergeNfceComplementary } from './nfce.js';
 import { parseCurrency, formatCurrency, formatCurrencyWithSymbol } from './currency.js';
@@ -292,6 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
   safeInit(initReformasModule, 'initReformasModule');
   safeInit(initSonhosModule, 'initSonhosModule');
   safeInit(initComprasModule, 'initComprasModule');
+  safeInit(initShoppingListExport, 'initShoppingListExport');
   safeInit(initMarmitasModule, 'initMarmitasModule');
   safeInit(initShoppingModule, 'initShoppingModule');
   safeInit(initPetsModule, 'initPetsModule');
@@ -7795,6 +7797,131 @@ function initMarmitasModule() {
       }
     }
   });
+}
+
+// ============================================================
+// EXPORTAR LISTA DE MERCADO (CHECKLIST / ENQUETE NO WHATSAPP)
+// ============================================================
+function initShoppingListExport() {
+  const openBtn = document.getElementById('btn-export-shopping-list');
+  const modal = document.getElementById('modal-export-shopping');
+  const textarea = document.getElementById('export-shopping-text');
+  const hint = document.getElementById('export-shopping-hint');
+  const pricesCheckbox = document.getElementById('export-include-prices');
+  const whatsappBtn = document.getElementById('btn-export-whatsapp');
+  const copyBtn = document.getElementById('btn-copy-export');
+  if (!openBtn || !modal || !textarea) return;
+
+  let exportFormat = 'checklist';
+
+  const copyExportText = async (text) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (e) {}
+    try {
+      textarea.focus();
+      textarea.select();
+      return document.execCommand('copy');
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const renderExportPreview = () => {
+    const text = buildShoppingListExportText(state, exportFormat, {
+      includePrices: pricesCheckbox ? pricesCheckbox.checked : true
+    });
+    textarea.value = text;
+    if (hint) {
+      hint.textContent = exportFormat === 'poll'
+        ? 'O WhatsApp não cria enquete por link: use Anexo → Enquete, cole as opções acima e ative “Permitir várias respostas” (máximo 12 opções).'
+        : 'No WhatsApp, troque ⬜ por ✅ conforme for comprando. A mensagem é um retrato do momento; marque também no app.';
+    }
+    if (whatsappBtn) {
+      whatsappBtn.textContent = exportFormat === 'poll'
+        ? '📲 Abrir WhatsApp e copiar opções'
+        : '📲 Enviar no WhatsApp';
+    }
+    modal.querySelectorAll('[data-export-format]').forEach(btn => {
+      const active = btn.getAttribute('data-export-format') === exportFormat;
+      btn.classList.toggle('btn-primary', active);
+      btn.classList.toggle('btn-secondary', !active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  };
+
+  openBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    renderExportPreview();
+    openModal('modal-export-shopping');
+  });
+
+  modal.addEventListener('click', (e) => {
+    const formatBtn = e.target.closest('[data-export-format]');
+    if (formatBtn) {
+      exportFormat = formatBtn.getAttribute('data-export-format') === 'poll' ? 'poll' : 'checklist';
+      playSubtleClick(state?.settings?.soundEnabled);
+      renderExportPreview();
+    }
+  });
+
+  if (pricesCheckbox) pricesCheckbox.addEventListener('change', renderExportPreview);
+
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      const ok = await copyExportText(textarea.value);
+      showToast(ok ? '📋 Lista copiada!' : 'Selecione o texto e copie manualmente.', ok ? 'success' : 'warning', 3000);
+    });
+  }
+
+  if (whatsappBtn) {
+    whatsappBtn.addEventListener('click', async () => {
+      const text = (textarea.value || '').trim();
+      if (!text) return;
+      playSubtleClick(state?.settings?.soundEnabled);
+
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
+      // Enquete: o WhatsApp não aceita criar enquete por link. Copiamos só as
+      // opções numeradas e abrimos o WhatsApp para colar em Anexo → Enquete.
+      if (exportFormat === 'poll') {
+        const pollOptions = text.split('\n').filter(line => /^\d+\.\s/.test(line)).join('\n');
+        if (pollOptions) {
+          // Abre o WhatsApp dentro do gesto do clique (evita bloqueio de pop-up)
+          // e copia as opções em seguida para colar em Anexo → Enquete.
+          window.open('https://wa.me/', '_blank');
+          const copied = await copyExportText(pollOptions);
+          showToast(copied
+            ? '📋 Opções copiadas! No WhatsApp: Anexo → Enquete → cole e ative “Permitir várias respostas”.'
+            : 'No WhatsApp: Anexo → Enquete e cole as opções da enquete.', 'info', 6500);
+          return;
+        }
+      }
+
+      if (isMobile && navigator.share) {
+        try {
+          await navigator.share({ title: 'Lista de Mercado — Casa Maracaju', text });
+          return;
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
+        }
+      }
+
+      const encoded = encodeURIComponent(text);
+      if (encoded.length > 1800) {
+        // URL longa demais para o wa.me: abre o WhatsApp e copia para colar.
+        window.open('https://wa.me/', '_blank');
+        const copied = await copyExportText(text);
+        showToast(copied ? '📋 Lista copiada! Cole no WhatsApp.' : 'Lista longa: abra o WhatsApp e cole o texto manualmente.', 'info', 5000);
+        return;
+      }
+      window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    });
+  }
 }
 
 // ============================================================

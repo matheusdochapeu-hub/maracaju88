@@ -24,7 +24,7 @@ python -m http.server 8000   # abrir http://localhost:8000
 ## Testes
 
 ```powershell
-node --test test/**/*.test.js   # 199 testes
+node --test test/**/*.test.js   # 204 testes
 ```
 
 ## Deploy
@@ -84,6 +84,10 @@ node --test test/**/*.test.js   # 199 testes
 12. **Barra inferior no celular:** 9 abas não cabem com rótulo inteiro. O `@media
     (max-width:767px)` usa `flex: 0 0 auto; min-width: 56px` + rolagem horizontal e
     `applyTabVisibility` centraliza a aba ativa. Não volte para `flex: 1` (truncava "Marmitas").
+13. **Exportar lista (WhatsApp):** o WhatsApp **não** cria enquete por link. O botão
+    `#btn-export-shopping-list` usa `buildShoppingListExportText` e oferece Checklist
+    (⬜/✅, funciona direto no `wa.me`) e Enquete (opções numeradas até 12; copia as opções e
+    abre o WhatsApp para Anexo → Enquete). Não prometa enquete nativa automática.
 
 ## Vizinhança (ecossistema)
 

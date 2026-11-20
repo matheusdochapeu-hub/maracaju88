@@ -3,10 +3,11 @@
 //  Os dois vão adicionando itens durante o mês, conforme lembram.
 // ============================================================
 
-import { parseCurrency } from './currency.js';
+import { parseCurrency, formatCurrencyWithSymbol } from './currency.js';
 import { makeId } from './projects.js';
 import { getBenefitCycleKey, getCurrentBenefitCycleKey, getBenefitCycleRange } from './benefits.js';
 import { getLocalDateString } from './dates.js';
+import { findCategory } from './categories.js';
 
 function list(state) {
   if (!Array.isArray(state.compras)) state.compras = [];
@@ -182,7 +183,80 @@ export function clearBoughtItems(state) {
   return before - state.compras.length;
 }
 
-// Reabre todos os comprados (útil para reaproveitar a lista do mês anterior)
+/**
+ * Monta o texto da lista de mercado para compartilhar no WhatsApp.
+ * - format "checklist": cada item com ⬜ (o casal troca por ✅ durante a compra).
+ * - format "poll": opções numeradas prontas para colar em Anexo → Enquete
+ *   (o WhatsApp não permite criar enquete por link; máximo de 12 opções).
+ * Somente itens pendentes entram; itens já comprados ficam de fora.
+ */
+export function buildShoppingListExportText(state, format = 'checklist', options = {}) {
+  const includePrices = options.includePrices !== false;
+  const pending = (Array.isArray(state && state.compras) ? state.compras : [])
+    .filter(item => item && !item.bought);
+  const today = getLocalDateString().split('-').reverse().join('/');
+  const cleanText = (value) => String(value || '')
+    .replace(/[*_~`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const itemName = (item) => cleanText(item.name || item.title || 'Item');
+  const itemQty = (item) => cleanText(item.quantity || item.qty || '1');
+  const total = Math.round(pending.reduce((sum, item) => sum + getItemTotalPrice(item), 0) * 100) / 100;
+
+  if (pending.length === 0) {
+    return format === 'poll'
+      ? '📊 *Enquete da lista — o que já compramos?*\n\n✅ Todos os itens da lista já foram comprados!'
+      : '🛒 *Lista de Mercado — Casa Maracaju*\n\n✅ Todos os itens da lista já foram comprados!';
+  }
+
+  if (format === 'poll') {
+    const MAX_POLL_OPTIONS = 12;
+    const optionsList = pending.slice(0, MAX_POLL_OPTIONS).map((item, idx) => `${idx + 1}. ${itemName(item)} — ${itemQty(item)}`);
+    const extra = pending.length - optionsList.length;
+    const lines = [
+      '📊 *Enquete da lista — o que já compramos?*',
+      '_No WhatsApp: Anexo → Enquete, cole as opções abaixo e ative “Permitir várias respostas”._',
+      ''
+    ];
+    lines.push(...optionsList);
+    if (extra > 0) {
+      lines.push('', `_+ ${extra} ${extra === 1 ? 'item ficou' : 'itens ficaram'} de fora (limite de 12 opções). Use o formato Checklist para a lista completa._`);
+    }
+    lines.push('', `📅 ${today} • ${pending.length} ${pending.length === 1 ? 'item pendente' : 'itens pendentes'}`);
+    return lines.join('\n');
+  }
+
+  const lines = [
+    '🛒 *Lista de Mercado — Casa Maracaju*',
+    `_${today} • ${pending.length} ${pending.length === 1 ? 'item pendente' : 'itens pendentes'}${includePrices && total > 0 ? ` • Total estimado: ${formatCurrencyWithSymbol(total)}` : ''}_`,
+    '',
+    '_Marque ✅ no que já foi comprado._',
+    ''
+  ];
+
+  // Agrupa por categoria para facilitar a leitura no mercado.
+  const groups = new Map();
+  pending.forEach(item => {
+    const category = findCategory(state, 'compras', item.category || 'outros');
+    const key = `${category.icon || '🛒'} ${category.label || 'Outros'}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  });
+
+  groups.forEach((items, label) => {
+    lines.push(`*${label}*`);
+    items.forEach(item => {
+      const price = includePrices && getItemTotalPrice(item) > 0 ? ` — ${formatCurrencyWithSymbol(getItemTotalPrice(item))}` : '';
+      lines.push(`⬜ ${itemName(item)} — ${itemQty(item)}${price}`);
+    });
+    lines.push('');
+  });
+
+  if (includePrices && total > 0) {
+    lines.push(`*Total estimado:* ${formatCurrencyWithSymbol(total)}`);
+  }
+  return lines.join('\n').trim();
+}// Reabre todos os comprados (útil para reaproveitar a lista do mês anterior)
 export function restoreBoughtItems(state) {
   let count = 0;
   list(state).forEach(i => {

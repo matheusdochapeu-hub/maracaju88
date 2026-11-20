@@ -66,3 +66,16 @@ test('UX: enviar marmitas atualiza unitPrice/totalPrice do item já existente', 
   assert.match(appJs, /existing\.unitPrice = item\.estimatedUnitPrice/);
   assert.match(appJs, /existing\.totalPrice = 0/);
 });
+
+test('Exportar lista: botão na Lista de Mercado, modal e envio pelo WhatsApp', () => {
+  assert.match(html, /id="btn-export-shopping-list"/);
+  assert.match(html, /id="modal-export-shopping"/);
+  assert.match(html, /id="export-shopping-text"/);
+  assert.match(html, /data-export-format="checklist"/);
+  assert.match(html, /data-export-format="poll"/);
+  assert.match(appJs, /function initShoppingListExport/);
+  assert.match(appJs, /buildShoppingListExportText/);
+  assert.match(appJs, /wa\.me\/\?text=/);
+  assert.match(appJs, /navigator\.share/);
+  assert.match(read('js/shopping.js'), /export function buildShoppingListExportText/);
+});

@@ -53,11 +53,11 @@
   <script src="./js/vendor/tesseract.min.js"></script>
 
   <!-- Stylesheets (v2.9.6) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.9.7" />
-  <link rel="stylesheet" href="./css/base.css?v=2.9.7" />
-  <link rel="stylesheet" href="./css/components.css?v=2.9.7" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.9.7" />
-<link rel="stylesheet" href="./nexo-theme.css?v=2.9.7" />
+  <link rel="stylesheet" href="./css/variables.css?v=2.9.8" />
+  <link rel="stylesheet" href="./css/base.css?v=2.9.8" />
+  <link rel="stylesheet" href="./css/components.css?v=2.9.8" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.9.8" />
+<link rel="stylesheet" href="./nexo-theme.css?v=2.9.8" />
 </head>
 <body>
 
@@ -326,6 +326,9 @@
 
       <!-- Barra de Ferramentas da Lista de Mercado -->
       <div class="lista-actions-bar">
+        <button type="button" class="btn btn-primary btn-sm" id="btn-export-shopping-list" title="Exportar a lista para o WhatsApp (checklist ou enquete)">
+          <span>📤</span> Exportar Lista
+        </button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-open-price-comparator" title="Comparador de preços entre mercados e produtos já comprados">
           <span>📊</span> Comparar Preços
         </button>
@@ -3748,7 +3751,39 @@
   </div>
 
   <!-- Script Principal Modular (v2.9.6) -->
-  <script type="module" src="./js/app.js?v=2.9.7"></script>
+<!-- MODAL: EXPORTAR LISTA DE MERCADO (WHATSAPP) -->
+  <div id="modal-export-shopping" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="export-shopping-title">
+    <div class="modal-content" style="max-width: 560px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="export-shopping-title">📤 Exportar Lista de Mercado</h3>
+        <button type="button" class="modal-close" data-close-modal aria-label="Fechar">✕</button>
+      </div>
+
+      <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 0.75rem 0;">
+        A lista vai como mensagem pronta. Para marcar durante a compra, use o <strong>Checklist</strong> (troque ⬜ por ✅).
+      </p>
+
+      <div class="marmitas-mode-switch" style="margin-bottom: 0.75rem;">
+        <button type="button" class="btn btn-xs btn-primary" data-export-format="checklist" aria-pressed="true">✅ Checklist</button>
+        <button type="button" class="btn btn-xs btn-secondary" data-export-format="poll" aria-pressed="false">📊 Enquete</button>
+      </div>
+
+      <label style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.6rem; cursor: pointer;">
+        <input type="checkbox" id="export-include-prices" checked style="width: 1.1rem; height: 1.1rem; accent-color: #16a34a;" />
+        Incluir preços estimados
+      </label>
+
+      <textarea id="export-shopping-text" class="form-control" rows="10" style="font-family: var(--font-mono, monospace); font-size: 0.8rem; line-height: 1.45; white-space: pre-wrap;"></textarea>
+      <div id="export-shopping-hint" role="status" aria-live="polite" style="font-size: 0.74rem; color: var(--text-muted); margin-top: 0.45rem;"></div>
+
+      <div style="display: flex; gap: 0.5rem; margin-top: 0.85rem; flex-wrap: wrap;">
+        <button type="button" class="btn btn-primary" id="btn-export-whatsapp" style="flex: 1; min-width: 190px; justify-content: center;">📲 Enviar no WhatsApp</button>
+        <button type="button" class="btn btn-secondary" id="btn-copy-export" style="justify-content: center;">📋 Copiar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/app.js?v=2.9.8"></script>
 
 <script>
 /* Volta ao Nexo — aparece só quando a página foi aberta pelo shell (?de=nexo). */

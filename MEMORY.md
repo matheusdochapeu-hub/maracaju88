@@ -4,6 +4,45 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-20 14:10] - Exportar Lista de Mercado para WhatsApp (Checklist / Enquete) (v2.9.8)
+
+### 🎯 Demanda
+Botão **“Exportar lista”** na Lista de Mercado para enviar a lista ao WhatsApp em formato de
+enquete, para o casal ir marcando o que já foi comprado.
+
+### ⚠️ Limitação real do WhatsApp
+O WhatsApp **não oferece link/URL/API para criar enquete nativa**. Enquete só existe dentro do
+app (Anexo → Enquete), com no máximo **12 opções** e a chave “Permitir várias respostas”.
+Portanto foram entregues dois formatos:
+- **Checklist (padrão):** mensagem direta no `wa.me`, cada item com `⬜` (troca por `✅` durante
+  a compra).
+- **Enquete:** opções numeradas (até 12). Ao tocar em “Abrir WhatsApp e copiar opções”, o app
+  copia só as opções e abre o WhatsApp para colar em **Anexo → Enquete**.
+
+### 🛠️ Implementação
+1. **`buildShoppingListExportText(state, format, options)`** em `js/shopping.js`:
+   - Somente itens **pendentes** (`!bought`), agrupados por categoria (`findCategory`), com
+     quantidade e preço estimado, total do carrinho e data local.
+   - Escapa `*`, `_`, `~` e backticks para não quebrar a formatação do WhatsApp.
+   - Formato enquete: 12 primeiras opções numeradas + aviso dos itens que ficaram de fora.
+2. **UI:** botão `#btn-export-shopping-list` na `.lista-actions-bar`, modal
+   `#modal-export-shopping` com abas Checklist/Enquete, checkbox “Incluir preços”, textarea
+   editável, “Enviar no WhatsApp” e “Copiar”.
+3. **Envio:** `navigator.share` no celular quando disponível; senão `https://wa.me/?text=...`.
+   Texto com URL > 1.800 caracteres é copiado e o WhatsApp abre vazio para colar.
+   No modo enquete, as opções são copiadas antes de abrir o WhatsApp.
+4. **Testes:** `test/shopping-export.test.js` (4) + checagem estática no `test/ux-polish.test.js`.
+
+### 🧪 Validação
+- **204 testes, 0 falhas**.
+- Exemplo gerado: checklist com “⬜ Banana Prata — 12 unidades — R$ 14,40” e total R$ 47,28;
+  enquete com “1. Banana Prata — 12 unidades” etc.
+
+### 📦 Versão
+- **v2.9.8** em `config.js`, `sw.js` (`maracaju-v2.9.8`), `package.json` e `?v=` do HTML.
+
+---
+
 ## [2026-11-20 13:35] - Revisão de Código e UX pós-v2.9.6 (v2.9.7)
 
 ### 🔍 Escopo
