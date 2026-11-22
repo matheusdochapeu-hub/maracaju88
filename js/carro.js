@@ -22,6 +22,8 @@ export const removePhotoFromCarro = (state, id, idx) => P.removePhoto(state, KEY
 export const addLinkToCarro = (state, id, link) => P.addLink(state, KEY, id, link);
 export const removeLinkFromCarro = (state, id, linkId) => P.removeLink(state, KEY, id, linkId);
 export const addCarroChecklistItem = (state, id, title) => P.addChecklistItem(state, KEY, id, title);
+export const updateCarroChecklistItem = (state, id, checkId, title) => P.updateChecklistItem(state, KEY, id, checkId, title);
 export const toggleCarroChecklistItem = (state, id, checkId) => P.toggleChecklistItem(state, KEY, id, checkId);
+export const removeCarroChecklistItem = (state, id, checkId) => P.removeChecklistItem(state, KEY, id, checkId);
 export const getCarroSummary = (state) => P.getProjectsSummary(state, KEY, CARRO_STATUS_IDS);
 export { compressImageFile } from './projects.js';

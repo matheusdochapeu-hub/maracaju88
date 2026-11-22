@@ -4,6 +4,39 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-22 13:33] - Caixas de seleção e métrica de cumprimento de metas em Carro, Reformas e Sonhos (v2.9.11)
+
+### 🛠️ Implementação
+- **Regras & CRUD (`js/projects.js`, `js/carro.js`, `js/reformas.js`, `js/sonhos.js`):**
+  - `normalizeChecklist` e `updateChecklistItem` em `projects.js` + `updateSonhoMilestone` e `updateSonho` aceitando `milestones`.
+  - `getProjectsSummary` e `getSonhosSummary` agora contabilizam `checklistDone`/`checklistTotal`/`checklistPercent` (e `milestonesDone`/`milestonesTotal`/`milestonesPercent`).
+- **UI nos Cards e Banners (`js/ui.js`, `css/components.css`):**
+  - Helpers compartilhados `renderChecklistBannerMetric` e `renderChecklistCardSection` exibem a métrica (`X/Y (Z%)` + barra de progresso) nos banners e em **todos os cards** (incluindo itens antigos sem caixas), com edição inline (`✏️`), remoção (`✕`) e adição rápida (`+ Caixa`).
+- **Modais de Adicionar e Editar (`index.html`, `js/app.js`):**
+  - `data-checklist-editor` adicionado aos 6 modais (`modal-add-carro`, `modal-edit-carro`, `modal-add-reforma`, `modal-edit-reforma`, `modal-add-sonho`, `modal-edit-sonho`) com `bindChecklistModalEditors` e `attachCardChecklistHandlers`.
+
+### 🧪 Validação
+- `node --check` em `js/*.js` e `sw.js` sem erros; `node --test test/*.test.js` com **206/206 testes passando** (`0` falhas).
+
+---
+
+## [2026-11-22 12:45] - Lista de Mercado: subtrair itens comprados do valor total no banner inicial (v2.9.11)
+
+### 🔍 Contexto
+No banner `#compras-summary-banner` no topo da aba **Lista Mercado** (`#tab-lista`), o card de `Itens a Comprar` já abatia os itens marcados (`pendingCount` de `totalCount`), mas o card ao lado exibia `summary.estimatedTotal` (soma de todos os itens, inclusive os já comprados) em vez de `summary.pendingTotal`.
+
+### 🛠️ Alteração
+- **`js/ui.js` (`renderComprasTab`)**: `#compras-summary-banner` agora exibe **`Estimativa a Comprar`** com `summary.pendingTotal` como valor principal (subtraindo automaticamente os itens marcados como comprados). Quando há itens comprados com valor (`summary.boughtTotal > 0`), mostra `(de R$ <estimatedTotal>)` ao lado e a linha `✓ Já comprado: -R$ <boughtTotal>`.
+- **`test/purchases-history.test.js`**: adicionado teste validando que marcar e desmarcar um item na Lista de Mercado atualiza `#compras-summary-banner` subtraindo e restaurando o valor do total no topo da página.
+
+### 🧪 Validação
+- `node --check` em `js/*.js` e `sw.js` sem erros; `node --test test/*.test.js` com **205/205 testes passando** (`0` falhas).
+
+### 📦 Versão
+- **v2.9.11** em `js/config.js`, `sw.js` (`maracaju-v2.9.11`), `package.json` e `?v=2.9.11` no `index.html`.
+
+---
+
 ## [2026-11-20 14:45] - Enquete ainda não abria: share sheet no lugar de window.open (v2.9.10)
 
 ### 🔍 Contexto

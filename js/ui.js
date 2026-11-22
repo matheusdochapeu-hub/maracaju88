@@ -564,6 +564,96 @@ export function renderHistoryTab(state, targetDateStr = getLocalDateString()) {
 // -------------------------------------------------------------
 // RENDERIZAÇÃO DA ABA 3: CARRO & MANUTENÇÃO (NOVA!)
 // -------------------------------------------------------------
+let editingCardCheckKey = null;
+
+export function setEditingCardCheckKey(key) {
+  editingCardCheckKey = key || null;
+}
+
+export function getEditingCardCheckKey() {
+  return editingCardCheckKey;
+}
+
+function renderChecklistBannerMetric(done = 0, total = 0, percent = 0, barClass = '') {
+  return `
+    <div class="checklist-banner-metric">
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-secondary);">
+        <span>🎯 Cumprimento de Metas / Etapas</span>
+        <strong style="color: var(--brand-forest);">${done}/${total} concluídas (${percent}%)</strong>
+      </div>
+      <div class="progress-container" style="height: 6px; margin: 0.35rem 0 0;">
+        <div class="progress-bar ${barClass}" style="width: ${percent}%"></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderChecklistCardSection({
+  moduleKey,
+  entityId,
+  items = [],
+  checkClass,
+  idAttr,
+  stepAttr,
+  heading = 'Metas & Etapas',
+  barClass = '',
+  placeholder = 'Nova caixa de seleção / meta...'
+}) {
+  const safeItems = Array.isArray(items) ? items : [];
+  const total = safeItems.length;
+  const done = safeItems.filter(c => c && c.done).length;
+  const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  return `
+    <div class="checklist-card-section">
+      <div class="checklist-card-header">
+        <span>🎯 ${heading}</span>
+        <span class="checklist-metric-pill">${done}/${total} (${percent}%)</span>
+      </div>
+      <div class="progress-container" style="height: 6px; margin: 0.2rem 0 0;">
+        <div class="progress-bar ${barClass}" style="width: ${percent}%"></div>
+      </div>
+      ${total > 0 ? `
+        <div class="checklist-items-list">
+          ${safeItems.map(c => {
+            const label = escapeNutritionHtml(c.title || c.text || '');
+            const key = `${moduleKey}:${entityId}:${c.id}`;
+            if (editingCardCheckKey === key) {
+              return `
+                <div class="checklist-inline-edit-row">
+                  <input type="text" class="form-control checklist-inline-edit-input" data-card-check-edit-input="${key}" value="${label}" />
+                  <button type="button" class="btn btn-primary btn-xs" data-card-check-save="${key}" title="Salvar alteração">✓</button>
+                  <button type="button" class="btn btn-secondary btn-xs" data-card-check-cancel title="Cancelar">✕</button>
+                </div>
+              `;
+            }
+            return `
+              <div class="checklist-row">
+                <label class="checklist-row-label">
+                  <input type="checkbox" class="${checkClass}" data-${idAttr}="${entityId}" data-${stepAttr}="${c.id}" ${c.done ? 'checked' : ''} />
+                  <span style="${c.done ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${label}</span>
+                </label>
+                <div class="checklist-row-actions">
+                  <button type="button" class="btn btn-icon btn-xs" data-edit-card-check="${key}" title="Alterar texto desta caixa">✏️</button>
+                  <button type="button" class="btn btn-icon btn-xs" data-del-card-check="${key}" title="Remover caixa">✕</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : `
+        <div style="font-size: 0.74rem; color: var(--text-muted); font-style: italic; margin-top: 0.35rem;">
+          Nenhuma caixa de seleção ainda. Adicione abaixo para acompanhar metas!
+        </div>
+      `}
+      <div class="checklist-inline-add">
+        <input type="text" class="form-control checklist-inline-input" data-card-check-input="${moduleKey}:${entityId}" placeholder="${placeholder}" />
+        <button type="button" class="btn btn-secondary btn-sm" data-card-check-add="${moduleKey}:${entityId}" title="Adicionar caixa de seleção">+ Caixa</button>
+      </div>
+    </div>
+  `;
+}
+
 export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = 'todas') {
   const summary = getCarroSummary(state);
 
@@ -594,6 +684,7 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
         <span>•</span>
         <span>✅ Concluídas: <strong>${summary.byStatus.concluido}</strong></span>
       </div>
+      ${renderChecklistBannerMetric(summary.checklistDone, summary.checklistTotal, summary.checklistPercent)}
     `;
   }
 
@@ -645,8 +736,6 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
   gridEl.innerHTML = list.map(item => {
     const catObj = findCategory(state, 'carro', item.category);
     const checklist = item.checklist || [];
-    const doneChecks = checklist.filter(c => c.done).length;
-    const checkPercent = checklist.length > 0 ? Math.round((doneChecks / checklist.length) * 100) : 0;
     const photos = item.photos || [];
     const links = item.links || [];
 
@@ -731,26 +820,17 @@ export function renderCarroTab(state, categoryFilter = 'todas', statusFilter = '
             `}
           </div>
 
-          <!-- Checklist de Etapas -->
-          ${checklist.length > 0 ? `
-            <div style="margin-top: 0.5rem;">
-              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">
-                <span>Etapas</span>
-                <span>${doneChecks}/${checklist.length} (${checkPercent}%)</span>
-              </div>
-              <div class="progress-container" style="height: 6px;">
-                <div class="progress-bar" style="width: ${checkPercent}%"></div>
-              </div>
-              <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem;">
-                ${checklist.map(c => `
-                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer;">
-                    <input type="checkbox" class="carro-check-item" data-car-id="${item.id}" data-check-id="${c.id}" ${c.done ? 'checked' : ''} />
-                    <span style="${c.done ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${c.title}</span>
-                  </label>
-                `).join('')}
-              </div>
-            </div>
-          ` : ''}
+          <!-- Checklist de Etapas & Metas -->
+          ${renderChecklistCardSection({
+            moduleKey: 'carro',
+            entityId: item.id,
+            items: checklist,
+            checkClass: 'carro-check-item',
+            idAttr: 'car-id',
+            stepAttr: 'check-id',
+            heading: 'Etapas & Metas',
+            placeholder: 'Nova etapa da manutenção...'
+          })}
         </div>
 
         <!-- Rodapé do Card -->
@@ -792,6 +872,7 @@ export function renderReformasTab(state, statusFilter = 'todas', categoryFilter 
           </div>
         </div>
       </div>
+      ${renderChecklistBannerMetric(summary.checklistDone, summary.checklistTotal, summary.checklistPercent)}
     `;
   }
 
@@ -844,8 +925,6 @@ export function renderReformasTab(state, statusFilter = 'todas', categoryFilter 
     const checklist = ref.checklist || [];
     const photos = ref.photos || [];
     const links = ref.links || [];
-    const doneChecks = checklist.filter(c => c.done).length;
-    const checkPercent = checklist.length > 0 ? Math.round((doneChecks / checklist.length) * 100) : 0;
     const roomObj = findCategory(state, 'reformas', ref.room);
 
     return `
@@ -920,25 +999,16 @@ export function renderReformasTab(state, statusFilter = 'todas', categoryFilter 
             `}
           </div>
 
-          ${checklist.length > 0 ? `
-            <div style="margin-top: 0.5rem;">
-              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">
-                <span>Etapas</span>
-                <span>${doneChecks}/${checklist.length} (${checkPercent}%)</span>
-              </div>
-              <div class="progress-container" style="height: 6px;">
-                <div class="progress-bar" style="width: ${checkPercent}%"></div>
-              </div>
-              <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem;">
-                ${checklist.map(c => `
-                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer;">
-                    <input type="checkbox" class="reforma-check-item" data-ref-id="${ref.id}" data-check-id="${c.id}" ${c.done ? 'checked' : ''} />
-                    <span style="${c.done ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${c.title}</span>
-                  </label>
-                `).join('')}
-              </div>
-            </div>
-          ` : ''}
+          ${renderChecklistCardSection({
+            moduleKey: 'reformas',
+            entityId: ref.id,
+            items: checklist,
+            checkClass: 'reforma-check-item',
+            idAttr: 'ref-id',
+            stepAttr: 'check-id',
+            heading: 'Etapas & Metas',
+            placeholder: 'Nova etapa da reforma...'
+          })}
         </div>
 
         <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; margin-top: 0.5rem; flex-wrap: wrap; gap: 0.4rem;">
@@ -977,6 +1047,7 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
           </div>
         </div>
       </div>
+      ${renderChecklistBannerMetric(summary.milestonesDone, summary.milestonesTotal, summary.milestonesPercent, 'gold')}
     `;
   }
 
@@ -1023,8 +1094,6 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
 
   gridEl.innerHTML = list.map(sonho => {
     const milestones = sonho.milestones || [];
-    const doneMilestones = milestones.filter(m => m.done).length;
-    const mPercent = milestones.length > 0 ? Math.round((doneMilestones / milestones.length) * 100) : 0;
     const catObj = findCategory(state, 'sonhos', sonho.category);
 
     return `
@@ -1044,25 +1113,17 @@ export function renderSonhosTab(state, categoryFilter = 'todas') {
             </div>
           ` : ''}
 
-          ${milestones.length > 0 ? `
-            <div style="margin-top: 0.5rem;">
-              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">
-                <span>Passos para realizar</span>
-                <span>${doneMilestones}/${milestones.length} (${mPercent}%)</span>
-              </div>
-              <div class="progress-container" style="height: 6px;">
-                <div class="progress-bar gold" style="width: ${mPercent}%"></div>
-              </div>
-              <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem;">
-                ${milestones.map(m => `
-                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer;">
-                    <input type="checkbox" class="sonho-milestone-item" data-sonho-id="${sonho.id}" data-milestone-id="${m.id}" ${m.done ? 'checked' : ''} />
-                    <span style="${m.done ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${m.title}</span>
-                  </label>
-                `).join('')}
-              </div>
-            </div>
-          ` : ''}
+          ${renderChecklistCardSection({
+            moduleKey: 'sonhos',
+            entityId: sonho.id,
+            items: milestones,
+            checkClass: 'sonho-milestone-item',
+            idAttr: 'sonho-id',
+            stepAttr: 'milestone-id',
+            heading: 'Passos para realizar',
+            barClass: 'gold',
+            placeholder: 'Novo passo / meta do sonho...'
+          })}
 
           <!-- Fotos & Inspirações do Sonho -->
           <div style="margin-top: 0.75rem; border-top: 1px solid var(--border-subtle); padding-top: 0.5rem;">
@@ -1293,10 +1354,15 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
           </div>
         </div>
         <div style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-          <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Estimativa Total</div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Estimativa a Comprar</div>
           <div style="font-size: 1.35rem; font-weight: 800; color: var(--brand-moss-dark);">
-            ${formatCurrencyWithSymbol(summary.estimatedTotal)}
+            ${formatCurrencyWithSymbol(summary.pendingTotal)}${summary.boughtTotal > 0 ? ` <span style="font-size: 0.85rem; font-weight: normal; color: var(--text-muted);">(de ${formatCurrencyWithSymbol(summary.estimatedTotal)})</span>` : ''}
           </div>
+          ${summary.boughtTotal > 0 ? `
+            <div style="font-size: 0.72rem; color: #15803d; font-weight: 600; margin-top: 0.2rem;">
+              ✓ Já comprado: -${formatCurrencyWithSymbol(summary.boughtTotal)}
+            </div>
+          ` : ''}
         </div>
       </div>
     `;

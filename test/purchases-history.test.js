@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { getInitialState } from '../js/storage.js';
-import { addMarketPurchase } from '../js/shopping.js';
+import { addMarketPurchase, addShoppingItem, toggleShoppingItem } from '../js/shopping.js';
 import {
   renderComprasTab,
   setBenefitsCycle,
@@ -157,4 +157,46 @@ test('Sheets Backup: preserva itens e nfeKey das compras mesmo quando JSON ultra
   assert.equal(sentPayload.data.catalog.length, 0, 'Catálogo transitório deve ser sacrificado primeiro');
   assert.equal(sentPayload.data.comprasRegistros[0].nfeKey, '35261145543915028000650110001615009999999999', 'nfeKey precisa sobreviver ao backup');
   assert.equal(sentPayload.data.comprasRegistros[0].items.length, 2, 'Itens da compra precisam ser preservados na nuvem');
+});
+
+test('Lista Mercado: ao marcar item como comprado, subtrai do valor total do banner inicial', () => {
+  const state = getInitialState();
+  const { item: item1 } = addShoppingItem(state, { title: 'Chá Matte', qty: '6', price: '8,00', category: 'bebidas' });
+  addShoppingItem(state, { title: 'Detergente', qty: '2', price: '5,98', category: 'limpeza' });
+
+  const elements = {};
+  global.document = {
+    getElementById: (id) => {
+      if (!elements[id]) {
+        elements[id] = {
+          id,
+          innerHTML: '',
+          style: {},
+          classList: { toggle: () => {}, add: () => {}, remove: () => {} },
+          setAttribute: () => {},
+          getAttribute: () => null
+        };
+      }
+      return elements[id];
+    },
+    querySelectorAll: () => []
+  };
+
+  renderComprasTab(state, 'todas', 'lista');
+  let bannerHtml = elements['compras-summary-banner'].innerHTML;
+  assert.ok(bannerHtml.includes('59,96'), 'Antes de marcar comprado deve exibir R$ 59,96');
+  assert.ok(!bannerHtml.includes('Já comprado:'), 'Sem itens comprados não deve exibir linha de desconto');
+
+  toggleShoppingItem(state, item1.id, 'matheus');
+  renderComprasTab(state, 'todas', 'lista');
+  bannerHtml = elements['compras-summary-banner'].innerHTML;
+  assert.ok(bannerHtml.includes('11,96'), 'Após marcar R$ 48,00 como comprado, valor principal deve cair para R$ 11,96');
+  assert.ok(bannerHtml.includes('de R$ 59,96') || bannerHtml.includes('de R$&nbsp;59,96'), 'Deve mostrar total original entre parênteses');
+  assert.ok(bannerHtml.includes('Já comprado: -R$ 48,00') || bannerHtml.includes('Já comprado: -R$&nbsp;48,00'), 'Deve mostrar valor abatido dos comprados');
+
+  toggleShoppingItem(state, item1.id, 'matheus');
+  renderComprasTab(state, 'todas', 'lista');
+  bannerHtml = elements['compras-summary-banner'].innerHTML;
+  assert.ok(bannerHtml.includes('59,96'), 'Ao desmarcar o item, o total volta para R$ 59,96');
+  assert.ok(!bannerHtml.includes('Já comprado:'), 'Sem itens comprados não deve exibir valor abatido');
 });

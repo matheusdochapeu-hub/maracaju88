@@ -2933,3 +2933,138 @@ body.modal-open {
   background: var(--bg-tertiary, #e9eee6);
   color: var(--text-primary);
 }
+
+/* ============================================================
+   CHECKLIST / METAS (CARRO, REFORMAS E SONHOS)
+   ============================================================ */
+.checklist-card-section {
+  margin-top: 0.65rem;
+  padding: 0.6rem 0.7rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.checklist-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.checklist-metric-pill {
+  font-weight: 700;
+  color: var(--brand-forest);
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.checklist-items-list {
+  margin-top: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.checklist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.checklist-row-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.checklist-row-label input[type="checkbox"] {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  accent-color: var(--brand-forest);
+  width: 1rem;
+  height: 1rem;
+}
+
+.checklist-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.checklist-row-actions .btn-xs {
+  padding: 0.1rem 0.32rem;
+  font-size: 0.72rem;
+  min-height: 26px;
+  min-width: 26px;
+}
+
+.checklist-inline-add {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.checklist-inline-input,
+.checklist-inline-edit-input,
+.checklist-modal-item-input,
+.checklist-modal-new-input {
+  height: 36px;
+  min-height: 36px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.checklist-inline-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.checklist-modal-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+}
+
+.checklist-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+
+.checklist-modal-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.checklist-modal-row input[type="checkbox"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+  accent-color: var(--brand-forest);
+  cursor: pointer;
+}
+
+.checklist-banner-metric {
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+}

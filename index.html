@@ -52,12 +52,12 @@
   <!-- Tesseract.js local para OCR de Cupons Fiscais -->
   <script src="./js/vendor/tesseract.min.js"></script>
 
-  <!-- Stylesheets (v2.9.6) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.9.10" />
-  <link rel="stylesheet" href="./css/base.css?v=2.9.10" />
-  <link rel="stylesheet" href="./css/components.css?v=2.9.10" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.9.10" />
-<link rel="stylesheet" href="./nexo-theme.css?v=2.9.10" />
+  <!-- Stylesheets (v2.9.11) -->
+  <link rel="stylesheet" href="./css/variables.css?v=2.9.11" />
+  <link rel="stylesheet" href="./css/base.css?v=2.9.11" />
+  <link rel="stylesheet" href="./css/components.css?v=2.9.11" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.9.11" />
+<link rel="stylesheet" href="./nexo-theme.css?v=2.9.11" />
 </head>
 <body>
 
@@ -1169,6 +1169,8 @@
           <textarea id="carro-input-notes" class="form-control" rows="3" placeholder="Marca da peça recomendada, especificações, oficina de preferência"></textarea>
         </div>
 
+        <div class="form-group checklist-modal-box" data-checklist-editor="add-carro"></div>
+
         <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar Manutenção do Carro</button>
       </form>
     </div>
@@ -1240,6 +1242,8 @@
           <label class="form-label">Notas e Instruções</label>
           <textarea id="carro-edit-notes" class="form-control" rows="2" placeholder="Oficina de preferência, marca recomendada"></textarea>
         </div>
+
+        <div class="form-group checklist-modal-box" data-checklist-editor="edit-carro"></div>
 
         <div style="display: flex; gap: 0.5rem;">
           <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
@@ -1314,6 +1318,9 @@
           <label class="form-label">Descrição & Inspirações</label>
           <textarea id="reforma-input-desc" class="form-control" rows="3" placeholder="Detalhes de materiais, medidas, referências"></textarea>
         </div>
+
+        <div class="form-group checklist-modal-box" data-checklist-editor="add-reforma"></div>
+
         <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar Projeto de Reforma</button>
       </form>
     </div>
@@ -1381,6 +1388,8 @@
           <textarea id="reforma-edit-desc" class="form-control" rows="3" placeholder="Detalhes de materiais, medidas, referências"></textarea>
         </div>
 
+        <div class="form-group checklist-modal-box" data-checklist-editor="edit-reforma"></div>
+
         <div style="display: flex; gap: 0.5rem;">
           <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
           <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
@@ -1424,6 +1433,9 @@
           <label class="form-label">Descrição & Por que queremos isso?</label>
           <textarea id="sonho-input-desc" class="form-control" rows="3" placeholder="O que esse sonho significa para nós"></textarea>
         </div>
+
+        <div class="form-group checklist-modal-box" data-checklist-editor="add-sonho"></div>
+
         <button type="submit" class="btn btn-primary" style="width: 100%;">Adicionar ao Mural dos Sonhos</button>
       </form>
     </div>
@@ -1484,6 +1496,8 @@
           <label class="form-label">Descrição & Por que queremos isso?</label>
           <textarea id="sonho-edit-desc" class="form-control" rows="3" placeholder="O que esse sonho significa para nós"></textarea>
         </div>
+
+        <div class="form-group checklist-modal-box" data-checklist-editor="edit-sonho"></div>
 
         <div style="display: flex; gap: 0.5rem;">
           <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
@@ -3783,7 +3797,7 @@
     </div>
   </div>
 
-  <script type="module" src="./js/app.js?v=2.9.10"></script>
+  <script type="module" src="./js/app.js?v=2.9.11"></script>
 
 <script>
 /* Volta ao Nexo — aparece só quando a página foi aberta pelo shell (?de=nexo). */

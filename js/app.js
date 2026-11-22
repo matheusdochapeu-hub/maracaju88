@@ -71,20 +71,36 @@ import {
   removePhotoFromCarro,
   addLinkToCarro,
   removeLinkFromCarro,
+  addCarroChecklistItem,
+  updateCarroChecklistItem,
   toggleCarroChecklistItem,
+  removeCarroChecklistItem,
   compressImageFile
 } from './carro.js';
 import {
   addReforma,
   updateReforma,
   deleteReforma,
+  addReformaChecklistItem,
+  updateReformaChecklistItem,
   toggleReformaChecklistItem,
+  removeReformaChecklistItem,
   addPhotoToReforma,
   removePhotoFromReforma,
   addLinkToReforma,
   removeLinkFromReforma
 } from './reformas.js';
-import { addSonho, updateSonho, deleteSonho, toggleSonhoMilestone, addPhotoToSonho, removePhotoFromSonho } from './sonhos.js';
+import {
+  addSonho,
+  updateSonho,
+  deleteSonho,
+  addSonhoMilestone,
+  updateSonhoMilestone,
+  toggleSonhoMilestone,
+  removeSonhoMilestone,
+  addPhotoToSonho,
+  removePhotoFromSonho
+} from './sonhos.js';
 import {
   calculatePetAge,
   addDaysToDateStr,
@@ -175,7 +191,8 @@ import {
   renderSettingsTab,
   populateCategorySelects,
   renderCategoriesManager,
-  renderQuickEmojis
+  renderQuickEmojis,
+  setEditingCardCheckKey
 } from './ui.js';
 import {
   MARMITAS_ITEM_GROUPS,
@@ -289,6 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
   safeInit(initHeaderControls, 'initHeaderControls');
   safeInit(initTasksModule, 'initTasksModule');
   safeInit(initHistoryModule, 'initHistoryModule');
+  safeInit(bindChecklistModalEditors, 'bindChecklistModalEditors');
   safeInit(initCarroModule, 'initCarroModule');
   safeInit(initReformasModule, 'initReformasModule');
   safeInit(initSonhosModule, 'initSonhosModule');
@@ -1555,6 +1573,290 @@ function initHistoryModule() {
 }
 
 // -------------------------------------------------------------
+// CHECKLIST & METAS COMPARTILHADO (CARRO, REFORMAS E SONHOS)
+// -------------------------------------------------------------
+const checklistDrafts = {
+  'add-carro': [],
+  'edit-carro': [],
+  'add-reforma': [],
+  'edit-reforma': [],
+  'add-sonho': [],
+  'edit-sonho': []
+};
+
+const CHECKLIST_EDITOR_META = {
+  'add-carro': { prefix: 'chk', barClass: '', placeholder: 'Ex: Comprar pastilhas, agendar mecânico...' },
+  'edit-carro': { prefix: 'chk', barClass: '', placeholder: 'Ex: Comprar pastilhas, agendar mecânico...' },
+  'add-reforma': { prefix: 'chk', barClass: '', placeholder: 'Ex: Medir parede, comprar tinta...' },
+  'edit-reforma': { prefix: 'chk', barClass: '', placeholder: 'Ex: Medir parede, comprar tinta...' },
+  'add-sonho': { prefix: 'm', barClass: 'gold', placeholder: 'Ex: Pesquisar passagens, reservar hotel...' },
+  'edit-sonho': { prefix: 'm', barClass: 'gold', placeholder: 'Ex: Pesquisar passagens, reservar hotel...' }
+};
+
+function escapeChecklistAttr(text) {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function makeChecklistDraftId(prefix = 'chk') {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+}
+
+function renderChecklistModalEditor(editorKey) {
+  const container = document.querySelector(`[data-checklist-editor="${editorKey}"]`);
+  if (!container) return;
+  const meta = CHECKLIST_EDITOR_META[editorKey] || CHECKLIST_EDITOR_META['add-carro'];
+  const items = checklistDrafts[editorKey] || [];
+  const total = items.length;
+  const done = items.filter(i => i.done).length;
+  const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  container.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+      <label class="form-label" style="margin: 0;">🎯 Metas & Caixas de Seleção (Opcional)</label>
+      <span class="checklist-metric-pill">${done}/${total} (${percent}%)</span>
+    </div>
+    <div class="progress-container" style="height: 6px; margin: 0.35rem 0 0;">
+      <div class="progress-bar ${meta.barClass}" style="width: ${percent}%"></div>
+    </div>
+    ${items.length > 0 ? `
+      <div class="checklist-modal-list">
+        ${items.map((item, idx) => `
+          <div class="checklist-modal-row">
+            <input type="checkbox" data-editor-toggle="${idx}" ${item.done ? 'checked' : ''} title="Marcar meta como concluída" />
+            <input type="text" class="form-control checklist-modal-item-input" data-editor-title="${idx}" value="${escapeChecklistAttr(item.title)}" placeholder="Descreva a meta / etapa..." />
+            <button type="button" class="btn btn-icon btn-xs" data-editor-remove="${idx}" title="Remover caixa">✕</button>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+    <div class="checklist-inline-add">
+      <input type="text" class="form-control checklist-modal-new-input" placeholder="${meta.placeholder}" />
+      <button type="button" class="btn btn-secondary btn-sm" data-editor-add>+ Adicionar</button>
+    </div>
+  `;
+}
+
+function setChecklistEditorItems(editorKey, items = []) {
+  const meta = CHECKLIST_EDITOR_META[editorKey] || CHECKLIST_EDITOR_META['add-carro'];
+  checklistDrafts[editorKey] = (Array.isArray(items) ? items : [])
+    .map(item => {
+      if (typeof item === 'string') {
+        const t = item.trim();
+        return t ? { id: makeChecklistDraftId(meta.prefix), title: t, done: false } : null;
+      }
+      if (!item || typeof item !== 'object') return null;
+      const t = String(item.title !== undefined ? item.title : (item.text || '')).trim();
+      if (!t) return null;
+      return { id: item.id || makeChecklistDraftId(meta.prefix), title: t, done: !!item.done };
+    })
+    .filter(Boolean);
+  renderChecklistModalEditor(editorKey);
+}
+
+function getChecklistEditorItems(editorKey) {
+  const meta = CHECKLIST_EDITOR_META[editorKey] || CHECKLIST_EDITOR_META['add-carro'];
+  const container = document.querySelector(`[data-checklist-editor="${editorKey}"]`);
+  const list = (checklistDrafts[editorKey] || [])
+    .map(item => ({
+      id: item.id || makeChecklistDraftId(meta.prefix),
+      title: String(item.title || '').trim(),
+      done: !!item.done
+    }))
+    .filter(item => item.title);
+
+  if (container) {
+    const pendingInput = container.querySelector('.checklist-modal-new-input');
+    const pendingTitle = pendingInput ? pendingInput.value.trim() : '';
+    if (pendingTitle) {
+      list.push({ id: makeChecklistDraftId(meta.prefix), title: pendingTitle, done: false });
+      pendingInput.value = '';
+    }
+  }
+  return list;
+}
+
+function addDraftItemFromInput(container, editorKey) {
+  const meta = CHECKLIST_EDITOR_META[editorKey] || CHECKLIST_EDITOR_META['add-carro'];
+  const input = container.querySelector('.checklist-modal-new-input');
+  const title = input ? input.value.trim() : '';
+  if (!title) {
+    if (input) input.focus();
+    return;
+  }
+  checklistDrafts[editorKey].push({ id: makeChecklistDraftId(meta.prefix), title, done: false });
+  renderChecklistModalEditor(editorKey);
+  const newInput = container.querySelector('.checklist-modal-new-input');
+  if (newInput) newInput.focus();
+}
+
+function bindChecklistModalEditors() {
+  Object.keys(checklistDrafts).forEach((editorKey) => {
+    const container = document.querySelector(`[data-checklist-editor="${editorKey}"]`);
+    if (!container) return;
+    renderChecklistModalEditor(editorKey);
+
+    container.addEventListener('click', (e) => {
+      if (e.target.closest('[data-editor-add]')) {
+        addDraftItemFromInput(container, editorKey);
+        return;
+      }
+      const removeBtn = e.target.closest('[data-editor-remove]');
+      if (removeBtn) {
+        const idx = parseInt(removeBtn.getAttribute('data-editor-remove'), 10);
+        if (!isNaN(idx)) {
+          checklistDrafts[editorKey].splice(idx, 1);
+          renderChecklistModalEditor(editorKey);
+        }
+      }
+    });
+
+    container.addEventListener('change', (e) => {
+      if (e.target.hasAttribute('data-editor-toggle')) {
+        const idx = parseInt(e.target.getAttribute('data-editor-toggle'), 10);
+        if (!isNaN(idx) && checklistDrafts[editorKey][idx]) {
+          checklistDrafts[editorKey][idx].done = !!e.target.checked;
+          renderChecklistModalEditor(editorKey);
+        }
+      }
+    });
+
+    container.addEventListener('input', (e) => {
+      if (e.target.hasAttribute('data-editor-title')) {
+        const idx = parseInt(e.target.getAttribute('data-editor-title'), 10);
+        if (!isNaN(idx) && checklistDrafts[editorKey][idx]) {
+          checklistDrafts[editorKey][idx].title = e.target.value;
+        }
+      }
+    });
+
+    container.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.classList.contains('checklist-modal-new-input')) {
+        e.preventDefault();
+        addDraftItemFromInput(container, editorKey);
+      }
+    });
+  });
+}
+
+function attachCardChecklistHandlers(gridEl, { moduleKey, addFn, updateFn, removeFn, renderFn }) {
+  if (!gridEl) return;
+
+  const parseCardKey = (raw, expectedParts) => {
+    if (!raw || !raw.startsWith(`${moduleKey}:`)) return null;
+    const parts = raw.split(':');
+    return parts.length === expectedParts ? parts : null;
+  };
+
+  gridEl.addEventListener('click', (e) => {
+    const addBtn = e.target.closest('[data-card-check-add]');
+    if (addBtn) {
+      const parts = parseCardKey(addBtn.getAttribute('data-card-check-add'), 2);
+      if (!parts) return;
+      const entityId = parts[1];
+      const input = gridEl.querySelector(`[data-card-check-input="${moduleKey}:${entityId}"]`);
+      const title = input ? input.value.trim() : '';
+      if (!title) {
+        if (input) input.focus();
+        return;
+      }
+      addFn(state, entityId, title);
+      setEditingCardCheckKey(null);
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      playSubtleClick(state.settings.soundEnabled);
+      showToast('Caixa de seleção adicionada! ✓', 'success', 1800);
+      renderFn();
+      const nextInput = gridEl.querySelector(`[data-card-check-input="${moduleKey}:${entityId}"]`);
+      if (nextInput) nextInput.focus();
+      return;
+    }
+
+    const editBtn = e.target.closest('[data-edit-card-check]');
+    if (editBtn) {
+      const key = editBtn.getAttribute('data-edit-card-check');
+      if (!parseCardKey(key, 3)) return;
+      setEditingCardCheckKey(key);
+      renderFn();
+      const editInput = gridEl.querySelector(`[data-card-check-edit-input="${key}"]`);
+      if (editInput) {
+        editInput.focus();
+        editInput.select();
+      }
+      return;
+    }
+
+    const saveBtn = e.target.closest('[data-card-check-save]');
+    if (saveBtn) {
+      const key = saveBtn.getAttribute('data-card-check-save');
+      const parts = parseCardKey(key, 3);
+      if (!parts) return;
+      const editInput = gridEl.querySelector(`[data-card-check-edit-input="${key}"]`);
+      const newTitle = editInput ? editInput.value.trim() : '';
+      if (!newTitle) {
+        if (editInput) editInput.focus();
+        return;
+      }
+      updateFn(state, parts[1], parts[2], newTitle);
+      setEditingCardCheckKey(null);
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      showToast('Caixa de seleção atualizada!', 'success', 1800);
+      renderFn();
+      return;
+    }
+
+    if (e.target.closest('[data-card-check-cancel]')) {
+      setEditingCardCheckKey(null);
+      renderFn();
+      return;
+    }
+
+    const delBtn = e.target.closest('[data-del-card-check]');
+    if (delBtn) {
+      const key = delBtn.getAttribute('data-del-card-check');
+      const parts = parseCardKey(key, 3);
+      if (!parts) return;
+      removeFn(state, parts[1], parts[2]);
+      setEditingCardCheckKey(null);
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      showToast('Caixa de seleção removida', 'info', 1800);
+      renderFn();
+    }
+  });
+
+  gridEl.addEventListener('keydown', (e) => {
+    if (e.target.hasAttribute('data-card-check-input') && e.key === 'Enter') {
+      const raw = e.target.getAttribute('data-card-check-input');
+      if (!parseCardKey(raw, 2)) return;
+      e.preventDefault();
+      const addBtn = gridEl.querySelector(`[data-card-check-add="${raw}"]`);
+      if (addBtn) addBtn.click();
+      return;
+    }
+
+    if (e.target.hasAttribute('data-card-check-edit-input')) {
+      const raw = e.target.getAttribute('data-card-check-edit-input');
+      if (!parseCardKey(raw, 3)) return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const saveBtn = gridEl.querySelector(`[data-card-check-save="${raw}"]`);
+        if (saveBtn) saveBtn.click();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setEditingCardCheckKey(null);
+        renderFn();
+      }
+    }
+  });
+}
+
+// -------------------------------------------------------------
 // MÓDULO DO CARRO & MANUTENÇÃO (NOVO!)
 // -------------------------------------------------------------
 function initCarroModule() {
@@ -1590,6 +1892,14 @@ function initCarroModule() {
 
   const gridEl = document.getElementById('carro-grid');
   if (gridEl) {
+    attachCardChecklistHandlers(gridEl, {
+      moduleKey: 'carro',
+      addFn: addCarroChecklistItem,
+      updateFn: updateCarroChecklistItem,
+      removeFn: removeCarroChecklistItem,
+      renderFn: () => renderCarroTab(state, currentCarroCategory, currentCarroStatus)
+    });
+
     // Checkbox checklist do carro
     gridEl.addEventListener('change', async (e) => {
       if (e.target.classList.contains('carro-check-item')) {
@@ -1597,6 +1907,7 @@ function initCarroModule() {
         const checkId = e.target.getAttribute('data-check-id');
         toggleCarroChecklistItem(state, carId, checkId);
         saveState(state);
+        triggerAutoSyncIfEnabled();
         playTaskCompleteSound(state.settings.soundEnabled);
         renderCarroTab(state, currentCarroCategory, currentCarroStatus);
         return;
@@ -1693,6 +2004,7 @@ function initCarroModule() {
           document.getElementById('carro-edit-km').value = item.targetKm || '';
           document.getElementById('carro-edit-date').value = item.targetDate || '';
           document.getElementById('carro-edit-notes').value = item.notes || '';
+          setChecklistEditorItems('edit-carro', item.checklist || []);
           openModal('modal-edit-carro');
         }
         return;
@@ -1778,7 +2090,8 @@ function initCarroModule() {
         targetDate,
         notes,
         links,
-        photos
+        photos,
+        checklist: getChecklistEditorItems('add-carro')
       });
 
       saveState(state);
@@ -1786,6 +2099,7 @@ function initCarroModule() {
 
       closeModal('modal-add-carro');
       formAddCarro.reset();
+      setChecklistEditorItems('add-carro', []);
       showToast('Manutenção do carro cadastrada com sucesso! 🚗', 'success');
       refreshAllUI();
     });
@@ -1820,7 +2134,8 @@ function initCarroModule() {
           actualCost,
           targetKm,
           targetDate,
-          notes
+          notes,
+          checklist: getChecklistEditorItems('edit-carro')
         });
 
         saveState(state);
@@ -1871,6 +2186,14 @@ function initReformasModule() {
 
   const gridEl = document.getElementById('reformas-grid');
   if (gridEl) {
+    attachCardChecklistHandlers(gridEl, {
+      moduleKey: 'reformas',
+      addFn: addReformaChecklistItem,
+      updateFn: updateReformaChecklistItem,
+      removeFn: removeReformaChecklistItem,
+      renderFn: () => renderReformasTab(state, currentReformasFilter, currentReformasCategory)
+    });
+
     gridEl.addEventListener('change', async (e) => {
       // Checklist de etapas
       if (e.target.classList.contains('reforma-check-item')) {
@@ -1878,8 +2201,9 @@ function initReformasModule() {
         const checkId = e.target.getAttribute('data-check-id');
         toggleReformaChecklistItem(state, refId, checkId);
         saveState(state);
+        triggerAutoSyncIfEnabled();
         playTaskCompleteSound(state.settings.soundEnabled);
-        renderReformasTab(state, currentReformasFilter);
+        renderReformasTab(state, currentReformasFilter, currentReformasCategory);
         return;
       }
 
@@ -1989,6 +2313,7 @@ function initReformasModule() {
           document.getElementById('reforma-edit-actual').value = ref.actualCost ? formatCurrency(ref.actualCost) : '';
           document.getElementById('reforma-edit-date').value = ref.targetDate || '';
           document.getElementById('reforma-edit-desc').value = ref.description || '';
+          setChecklistEditorItems('edit-reforma', ref.checklist || []);
           openModal('modal-edit-reforma');
         }
         return;
@@ -2058,7 +2383,8 @@ function initReformasModule() {
         targetDate,
         description,
         links,
-        photos
+        photos,
+        checklist: getChecklistEditorItems('add-reforma')
       });
 
       saveState(state);
@@ -2066,6 +2392,7 @@ function initReformasModule() {
 
       closeModal('modal-add-reforma');
       formAddReforma.reset();
+      setChecklistEditorItems('add-reforma', []);
       showToast('Reforma cadastrada com fotos e links! 🛠️', 'success');
       refreshAllUI();
     });
@@ -2098,7 +2425,8 @@ function initReformasModule() {
           estimatedCost,
           actualCost,
           targetDate,
-          description
+          description,
+          checklist: getChecklistEditorItems('edit-reforma')
         });
 
         saveState(state);
@@ -2137,12 +2465,21 @@ function initSonhosModule() {
 
   const gridEl = document.getElementById('sonhos-grid');
   if (gridEl) {
+    attachCardChecklistHandlers(gridEl, {
+      moduleKey: 'sonhos',
+      addFn: addSonhoMilestone,
+      updateFn: updateSonhoMilestone,
+      removeFn: removeSonhoMilestone,
+      renderFn: () => renderSonhosTab(state, currentSonhosFilter)
+    });
+
     gridEl.addEventListener('change', async (e) => {
       if (e.target.classList.contains('sonho-milestone-item')) {
         const sonhoId = e.target.getAttribute('data-sonho-id');
         const mId = e.target.getAttribute('data-milestone-id');
         toggleSonhoMilestone(state, sonhoId, mId);
         saveState(state);
+        triggerAutoSyncIfEnabled();
         playTaskCompleteSound(state.settings.soundEnabled);
         renderSonhosTab(state, currentSonhosFilter);
         return;
@@ -2223,6 +2560,7 @@ function initSonhosModule() {
           document.getElementById('sonho-edit-current').value = sonho.savedAmount ? formatCurrency(sonho.savedAmount) : '';
           document.getElementById('sonho-edit-date').value = sonho.targetDate || '';
           document.getElementById('sonho-edit-desc').value = sonho.description || '';
+          setChecklistEditorItems('edit-sonho', sonho.milestones || []);
           openModal('modal-edit-sonho');
         }
         return;
@@ -2257,12 +2595,20 @@ function initSonhosModule() {
 
       if (!title.trim()) return;
 
-      addSonho(state, { title, category, targetAmount, targetDate, description });
+      addSonho(state, {
+        title,
+        category,
+        targetAmount,
+        targetDate,
+        description,
+        milestones: getChecklistEditorItems('add-sonho')
+      });
       saveState(state);
       triggerAutoSyncIfEnabled();
 
       closeModal('modal-add-sonho');
       formAddSonho.reset();
+      setChecklistEditorItems('add-sonho', []);
       showToast('Sonho adicionado ao mural! ✨', 'success');
       refreshAllUI();
     });
@@ -2293,7 +2639,8 @@ function initSonhosModule() {
           targetAmount,
           savedAmount,
           targetDate,
-          description
+          description,
+          milestones: getChecklistEditorItems('edit-sonho')
         });
 
         saveState(state);
@@ -7074,6 +7421,9 @@ function initModals() {
 function openModal(id) {
   if (id === 'modal-adjust-benefits') prepareBenefitsModal();
   if (id === 'modal-benefits-history' && typeof renderBenefitsHistoryModal === 'function') renderBenefitsHistoryModal(state);
+  if (id === 'modal-add-carro') setChecklistEditorItems('add-carro', []);
+  if (id === 'modal-add-reforma') setChecklistEditorItems('add-reforma', []);
+  if (id === 'modal-add-sonho') setChecklistEditorItems('add-sonho', []);
   const modal = document.getElementById(id);
   if (modal) {
     // Se o modal já estava na pilha, remove da posição anterior para ficar no topo

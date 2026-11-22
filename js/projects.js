@@ -24,6 +24,26 @@ export function makeId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 }
 
+export function normalizeChecklist(items, prefix = 'chk') {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => {
+      if (typeof item === 'string') {
+        const t = item.trim();
+        return t ? { id: makeId(prefix), title: t, done: false } : null;
+      }
+      if (!item || typeof item !== 'object') return null;
+      const t = String(item.title !== undefined ? item.title : (item.text || '')).trim();
+      if (!t) return null;
+      return {
+        id: item.id || makeId(prefix),
+        title: t,
+        done: !!item.done
+      };
+    })
+    .filter(Boolean);
+}
+
 // fields: lista de campos de texto específicos do módulo (ex: category/room, notes/description)
 export function createProject(state, key, prefix, data, defaults = {}) {
   const title = (data.title || '').trim();
@@ -37,7 +57,7 @@ export function createProject(state, key, prefix, data, defaults = {}) {
     actualCost: parseCurrency(data.actualCost),
     photos: Array.isArray(data.photos) ? data.photos : [],
     links: Array.isArray(data.links) ? data.links : [],
-    checklist: Array.isArray(data.checklist) ? data.checklist : [],
+    checklist: normalizeChecklist(data.checklist, 'chk'),
     createdAt: new Date().toISOString()
   };
   list(state, key).push(item);
@@ -51,6 +71,7 @@ export function updateProject(state, key, id, data) {
     if (value === undefined || field === 'id') return;
     if (field === 'estimatedCost' || field === 'actualCost') item[field] = parseCurrency(value);
     else if (field === 'targetKm') item[field] = parseInt(String(value).replace(/\D/g, ''), 10) || 0;
+    else if (field === 'checklist') item.checklist = normalizeChecklist(value, 'chk');
     else if (field === 'title') {
       const t = String(value).trim();
       if (!t) throw new Error('O título é obrigatório.');
@@ -120,6 +141,18 @@ export function toggleChecklistItem(state, key, id, checkId) {
   return check.done;
 }
 
+export function updateChecklistItem(state, key, id, checkId, title) {
+  const item = findProject(state, key, id);
+  const t = (title || '').trim();
+  if (!item || !t) return null;
+  const check = (item.checklist || []).find(c => c.id === checkId);
+  if (!check) return null;
+  check.title = t;
+  if ('text' in check) delete check.text;
+  item.updatedAt = new Date().toISOString();
+  return check;
+}
+
 export function removeChecklistItem(state, key, id, checkId) {
   const item = findProject(state, key, id);
   if (!item || !item.checklist) return false;
@@ -133,16 +166,24 @@ export function getProjectsSummary(state, key, statusIds) {
   const byStatus = Object.fromEntries(statusIds.map(s => [s, 0]));
   let totalEstimated = 0;
   let totalActual = 0;
+  let checklistTotal = 0;
+  let checklistDone = 0;
   arr.forEach(i => {
     totalEstimated += i.estimatedCost || 0;
     totalActual += i.actualCost || 0;
     if (byStatus[i.status] !== undefined) byStatus[i.status]++;
+    const cl = Array.isArray(i.checklist) ? i.checklist : [];
+    checklistTotal += cl.length;
+    checklistDone += cl.filter(c => c.done).length;
   });
   return {
     count: arr.length,
     totalEstimated: Math.round(totalEstimated * 100) / 100,
     totalActual: Math.round(totalActual * 100) / 100,
-    byStatus
+    byStatus,
+    checklistTotal,
+    checklistDone,
+    checklistPercent: checklistTotal > 0 ? Math.round((checklistDone / checklistTotal) * 100) : 0
   };
 }
 

@@ -28,13 +28,19 @@ import {
   removePhotoFromCarro,
   addLinkToCarro,
   removeLinkFromCarro,
-  toggleCarroChecklistItem
+  addCarroChecklistItem,
+  updateCarroChecklistItem,
+  toggleCarroChecklistItem,
+  removeCarroChecklistItem
 } from '../js/carro.js';
 import {
   addReforma,
   updateReforma,
   getReformasSummary,
+  addReformaChecklistItem,
+  updateReformaChecklistItem,
   toggleReformaChecklistItem,
+  removeReformaChecklistItem,
   addPhotoToReforma,
   removePhotoFromReforma,
   addLinkToReforma,
@@ -44,10 +50,21 @@ import {
   addSonho,
   updateSonho,
   getSonhosSummary,
+  addSonhoMilestone,
+  updateSonhoMilestone,
   toggleSonhoMilestone,
+  removeSonhoMilestone,
   addPhotoToSonho,
   removePhotoFromSonho
 } from '../js/sonhos.js';
+import {
+  renderCarroTab,
+  renderReformasTab,
+  renderSonhosTab
+} from '../js/ui.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   normalizeEmail,
   findAuthorizedUser,
@@ -448,6 +465,102 @@ test('Sonhos: Adicionar sonho do casal, marcos e metas', () => {
   assert.equal(summary.count, 1);
   assert.equal(summary.totalTargetAmount, 12000);
   assert.equal(summary.byCategory.viagem, 1);
+  assert.equal(summary.milestonesTotal, 1);
+  assert.equal(summary.milestonesDone, 1);
+  assert.equal(summary.milestonesPercent, 100);
+});
+
+test('Carro, Reformas e Sonhos: caixas de seleção e métrica de metas em itens antigos, novos e modais', () => {
+  const state = createMockState();
+
+  // 1. Itens antigos sem nenhuma caixa de seleção inicial
+  const oldCar = addCarroItem(state, { title: 'Alinhamento antigo' });
+  const oldRef = addReforma(state, { title: 'Pintura antiga', room: 'sala' });
+  const oldSonho = addSonho(state, { title: 'Viagem antiga', category: 'viagem' });
+
+  // 2. Adicionar e editar caixas em itens antigos
+  const carChk1 = addCarroChecklistItem(state, oldCar.id, 'Agendar oficina');
+  addCarroChecklistItem(state, oldCar.id, 'Fazer balanceamento');
+  updateCarroChecklistItem(state, oldCar.id, carChk1.id, 'Agendar oficina autorizada');
+  toggleCarroChecklistItem(state, oldCar.id, carChk1.id);
+  assert.equal(oldCar.checklist[0].title, 'Agendar oficina autorizada');
+  assert.equal(getCarroSummary(state).checklistDone, 1);
+  assert.equal(getCarroSummary(state).checklistTotal, 2);
+  assert.equal(getCarroSummary(state).checklistPercent, 50);
+
+  const refChk1 = addReformaChecklistItem(state, oldRef.id, 'Lixar parede');
+  updateReformaChecklistItem(state, oldRef.id, refChk1.id, 'Lixar e emassar parede');
+  toggleReformaChecklistItem(state, oldRef.id, refChk1.id);
+  assert.equal(getReformasSummary(state).checklistPercent, 100);
+  removeReformaChecklistItem(state, oldRef.id, refChk1.id);
+  assert.equal(getReformasSummary(state).checklistTotal, 0);
+
+  const sChk1 = addSonhoMilestone(state, oldSonho.id, 'Emitir passaporte');
+  addSonhoMilestone(state, oldSonho.id, 'Comprar euro');
+  updateSonhoMilestone(state, oldSonho.id, sChk1.id, 'Renovar passaporte');
+  toggleSonhoMilestone(state, oldSonho.id, sChk1.id);
+  assert.equal(getSonhosSummary(state).milestonesPercent, 50);
+
+  // 3. Atualização via modal Editar (substitui lista mantendo normalização)
+  updateCarroItem(state, oldCar.id, {
+    checklist: ['Nova etapa via edição', { id: 'k2', title: 'Etapa concluída', done: true }]
+  });
+  assert.equal(oldCar.checklist.length, 2);
+  assert.equal(oldCar.checklist[0].title, 'Nova etapa via edição');
+  assert.equal(oldCar.checklist[1].done, true);
+
+  updateSonho(state, oldSonho.id, {
+    milestones: ['Passo atualizado', { id: 'm9', title: 'Meta final', done: false }]
+  });
+  assert.equal(oldSonho.milestones.length, 2);
+  assert.equal(oldSonho.milestones[0].title, 'Passo atualizado');
+
+  // 4. Renderização dos cards (antigos e novos) e banners com métrica de metas
+  const elements = {};
+  const prevDocument = global.document;
+  global.document = {
+    getElementById: (id) => {
+      if (!elements[id]) {
+        elements[id] = {
+          id,
+          innerHTML: '',
+          style: {},
+          classList: { toggle: () => {}, add: () => {}, remove: () => {} },
+          setAttribute: () => {},
+          getAttribute: () => null
+        };
+      }
+      return elements[id];
+    },
+    querySelectorAll: () => []
+  };
+
+  try {
+    renderCarroTab(state, 'todas', 'todas');
+    assert.ok(elements['carro-summary-banner'].innerHTML.includes('1/2 concluídas (50%)'));
+    assert.ok(elements['carro-grid'].innerHTML.includes('data-card-check-add="carro:'));
+    assert.ok(elements['carro-grid'].innerHTML.includes('data-edit-card-check="carro:'));
+
+    renderReformasTab(state, 'todas', 'todas');
+    assert.ok(elements['reformas-summary-banner'].innerHTML.includes('0/0 concluídas (0%)'));
+    // Mesmo sem etapas pré-existentes, o card antigo exibe a barra de métricas e o campo para adicionar caixas
+    assert.ok(elements['reformas-grid'].innerHTML.includes('0/0 (0%)'));
+    assert.ok(elements['reformas-grid'].innerHTML.includes('data-card-check-add="reformas:'));
+
+    renderSonhosTab(state, 'todas');
+    assert.ok(elements['sonhos-summary-banner'].innerHTML.includes('0/2 concluídas (0%)'));
+    assert.ok(elements['sonhos-grid'].innerHTML.includes('data-card-check-add="sonhos:'));
+    assert.ok(elements['sonhos-grid'].innerHTML.includes('data-edit-card-check="sonhos:'));
+  } finally {
+    global.document = prevDocument;
+  }
+
+  // 5. Todos os 6 modais (adicionar e editar) possuem o container de edição de caixas
+  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const html = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf-8');
+  for (const key of ['add-carro', 'edit-carro', 'add-reforma', 'edit-reforma', 'add-sonho', 'edit-sonho']) {
+    assert.ok(html.includes(`data-checklist-editor="${key}"`), `index.html precisa do editor ${key}`);
+  }
 });
 
 test('Auth: Controle de Acesso Restrito Exclusivo para Matheus e Scarlet', () => {

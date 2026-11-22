@@ -21,5 +21,7 @@ export const removePhotoFromReforma = (state, id, idx) => P.removePhoto(state, K
 export const addLinkToReforma = (state, id, link) => P.addLink(state, KEY, id, link);
 export const removeLinkFromReforma = (state, id, linkId) => P.removeLink(state, KEY, id, linkId);
 export const addReformaChecklistItem = (state, id, title) => P.addChecklistItem(state, KEY, id, title);
+export const updateReformaChecklistItem = (state, id, checkId, title) => P.updateChecklistItem(state, KEY, id, checkId, title);
 export const toggleReformaChecklistItem = (state, id, checkId) => P.toggleChecklistItem(state, KEY, id, checkId);
+export const removeReformaChecklistItem = (state, id, checkId) => P.removeChecklistItem(state, KEY, id, checkId);
 export const getReformasSummary = (state) => P.getProjectsSummary(state, KEY, REFORMA_STATUS_IDS);

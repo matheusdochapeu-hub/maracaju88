@@ -3,7 +3,7 @@
 // ============================================================
 
 import { parseCurrency } from './currency.js';
-import { makeId } from './projects.js';
+import { makeId, normalizeChecklist } from './projects.js';
 
 function list(state) {
   if (!Array.isArray(state.sonhos)) state.sonhos = [];
@@ -23,7 +23,7 @@ export function addSonho(state, data) {
     targetDate: data.targetDate || '',
     description: (data.description || '').trim(),
     photos: Array.isArray(data.photos) ? data.photos : [],
-    milestones: Array.isArray(data.milestones) ? data.milestones : [],
+    milestones: normalizeChecklist(data.milestones, 'm'),
     createdAt: new Date().toISOString()
   };
   list(state).push(sonho);
@@ -57,6 +57,7 @@ export function updateSonho(state, id, data) {
   if (data.description !== undefined) item.description = (data.description || '').trim();
   if (data.targetAmount !== undefined) item.targetAmount = parseCurrency(data.targetAmount);
   if (data.savedAmount !== undefined) item.savedAmount = parseCurrency(data.savedAmount);
+  if (data.milestones !== undefined) item.milestones = normalizeChecklist(data.milestones, 'm');
   item.updatedAt = new Date().toISOString();
   return item;
 }
@@ -85,6 +86,18 @@ export function addSonhoMilestone(state, sonhoId, title) {
   return m;
 }
 
+export function updateSonhoMilestone(state, sonhoId, milestoneId, title) {
+  const item = list(state).find(s => s.id === sonhoId);
+  const t = (title || '').trim();
+  if (!item || !t) return null;
+  const m = (item.milestones || []).find(x => x.id === milestoneId);
+  if (!m) return null;
+  m.title = t;
+  if ('text' in m) delete m.text;
+  item.updatedAt = new Date().toISOString();
+  return m;
+}
+
 export function removeSonhoMilestone(state, sonhoId, milestoneId) {
   const item = list(state).find(s => s.id === sonhoId);
   if (!item || !item.milestones) return false;
@@ -103,15 +116,23 @@ export function getSonhosSummary(state) {
   const byCategory = {};
   let totalTargetAmount = 0;
   let totalSaved = 0;
+  let milestonesTotal = 0;
+  let milestonesDone = 0;
   arr.forEach(s => {
     totalTargetAmount += s.targetAmount || 0;
     totalSaved += s.savedAmount || 0;
     byCategory[s.category] = (byCategory[s.category] || 0) + 1;
+    const ms = Array.isArray(s.milestones) ? s.milestones : [];
+    milestonesTotal += ms.length;
+    milestonesDone += ms.filter(m => m.done).length;
   });
   return {
     count: arr.length,
     totalTargetAmount: Math.round(totalTargetAmount * 100) / 100,
     totalSaved: Math.round(totalSaved * 100) / 100,
-    byCategory
+    byCategory,
+    milestonesTotal,
+    milestonesDone,
+    milestonesPercent: milestonesTotal > 0 ? Math.round((milestonesDone / milestonesTotal) * 100) : 0
   };
 }
