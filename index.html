@@ -176,6 +176,12 @@
           <span>Instalar App</span>
         </button>
 
+        <!-- Botão Opção B: Meu Espaço Exclusivo (Visível só quando usuário ativo = Matheus) -->
+        <button type="button" id="btn-header-rotina-matheus" class="active-user-toggle" title="Abrir Meu Espaço Pessoal (Rotina, Capilar, Pele e Fotos)" style="border-color: var(--brand-moss);">
+          <span class="user-avatar-sm">⚡</span>
+          <span>Meu Espaço</span>
+        </button>
+
         <!-- Seletor Rápido de Quem está Usando (Matheus / Scarlet) -->
         <button type="button" id="active-user-btn" class="active-user-toggle" title="Alternar quem está marcando as tarefas">
           <span class="user-avatar-sm">👨‍💻</span>
@@ -910,6 +916,33 @@
           Salvar Configurações
         </button>
       </form>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- ÁREA EXCLUSIVA MATHEUS (OPÇÃO B — CABEÇALHO) -->
+    <!-- ========================================== -->
+    <section id="tab-rotina" class="tab-content">
+      <div class="dash-card" style="margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <button type="button" id="btn-rotina-back-casa" class="btn btn-secondary btn-sm">← Casa</button>
+          <div>
+            <strong style="font-size: 1rem;">⚡ Meu Espaço · Matheus</strong>
+            <div style="font-size: 0.76rem; color: var(--text-muted);">
+              <span id="rm-header-streak">0 🔥</span> · <span id="rm-header-prog">0% hoje</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pets-subnav-pills" id="rotina-subnav-pills" style="margin-bottom: 0.85rem;">
+        <button type="button" class="chip active" data-rotina-subtab="hoje">✅ Hoje</button>
+        <button type="button" class="chip" data-rotina-subtab="capilar">💈 Capilar</button>
+        <button type="button" class="chip" data-rotina-subtab="guias">🧴 Pele & Estilo</button>
+        <button type="button" class="chip" data-rotina-subtab="fotos">📸 Fotos</button>
+        <button type="button" class="chip" data-rotina-subtab="ciclos">🔔 Ciclos</button>
+      </div>
+
+      <div id="rotina-matheus-view"></div>
     </section>
 
   </main>

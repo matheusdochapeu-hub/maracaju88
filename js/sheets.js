@@ -1,4 +1,5 @@
 import { deduplicatePets, getPetAvatarUrl } from './pets.js';
+import { mergeRotinaMatheusState } from './rotina-matheus.js';
 import { DEFAULT_ROOM_CATEGORIES } from './categories.js';
 import { getMonthlyBenefitDetails, getCurrentBenefitCycleKey } from './benefits.js';
 import {
@@ -176,6 +177,7 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
       };
     })(),
     categories: state.categories || {},
+    rotinaMatheus: state.rotinaMatheus || undefined,
     userPasswords: state.userPasswords || {},
     settings: {
       benefits: (state.settings && state.settings.benefits) ? state.settings.benefits : undefined,
@@ -757,6 +759,7 @@ export function applyCloudBackup(currentState, cloudData) {
       ...(safeCurrent.userPasswords || {}),
       ...(cloudData.userPasswords || {})
     },
+    rotinaMatheus: mergeRotinaMatheusState(safeCurrent.rotinaMatheus, cloudData.rotinaMatheus),
     nutrition: (() => {
       const localN = (safeCurrent.nutrition && typeof safeCurrent.nutrition === 'object') ? safeCurrent.nutrition : {};
       const cloudN = (cloudData.nutrition && typeof cloudData.nutrition === 'object') ? cloudData.nutrition : {};

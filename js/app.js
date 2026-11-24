@@ -11,6 +11,11 @@ import {
 } from './shopping-items.js';
 import { renderShoppingTab } from './ui.js';
 import {
+  ensureRotinaMatheusState,
+  syncRotinaAccessVisibility,
+  renderRotinaMatheusTab
+} from './rotina-matheus.js';
+import {
   getMonthlyBenefitDetails,
   updateMonthlyBenefitsConfig,
   closeBenefitCycleEarly,
@@ -320,6 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
   safeInit(initCategoryManagement, 'initCategoryManagement');
   safeInit(initModals, 'initModals');
   safeInit(initGlobalEditDelegation, 'initGlobalEditDelegation');
+  safeInit(initRotinaMatheusModule, 'initRotinaMatheusModule');
 
   try {
     populateCategorySelects(state);
@@ -353,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     let savedTab = getSavedActiveTab();
     if (savedTab === 'tarefas') savedTab = 'compras';
-    if (savedTab && (ACTIVE_TAB_ORDER.includes(savedTab) || savedTab === 'historico') && savedTab !== currentTab) {
+    if (savedTab && (ACTIVE_TAB_ORDER.includes(savedTab) || savedTab === 'historico' || (savedTab === 'rotina' && state.activeUserId === 'matheus')) && savedTab !== currentTab) {
       applyTabVisibility(savedTab, null, false);
     }
   } catch (e) {}
@@ -555,6 +561,11 @@ function initAuthModule() {
 function refreshAllUI() {
   try {
     renderHeaderStats(state);
+    const isMatheus = syncRotinaAccessVisibility(state, currentTab);
+    if (!isMatheus && currentTab === 'rotina') {
+      switchTab(previousCasaTab || 'compras');
+      return;
+    }
   } catch (err) {
     console.warn("[Maracaju] Erro em renderHeaderStats:", err);
   }
@@ -584,6 +595,8 @@ function refreshAllUI() {
       renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
     } else if (currentTab === "marmitas") {
       renderMarmitasTab(state, currentMarmitasPerson, currentMarmitasPeriod, currentMarmitasScope, currentMarmitasExpandedRaw, currentMarmitasCalcOpts);
+    } else if (currentTab === "rotina") {
+      renderRotinaMatheusTab(state, getRotinaMatheusCallbacks());
     } else if (currentTab === "ajustes") {
       renderSettingsTab(state, currentCategoryManageModule);
     }
@@ -939,6 +952,62 @@ function showMatchedShoppingItemsModal(matches) {
 // -------------------------------------------------------------
 // CONTROLES DO CABEÇALHO (Perfil: Matheus / Scarlet)
 // -------------------------------------------------------------
+let previousCasaTab = 'compras';
+
+function getRotinaMatheusCallbacks() {
+  return {
+    onSaveState: () => {
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+    },
+    onAddWishlistItem: (itemData) => {
+      addShoppingWishlistItem(state, itemData, 'matheus');
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+    },
+    onToast: (msg, type = 'info') => {
+      showToast(msg, type, 2400);
+    }
+  };
+}
+
+function initRotinaMatheusModule() {
+  ensureRotinaMatheusState(state);
+  const headerBtn = document.getElementById('btn-header-rotina-matheus');
+  if (headerBtn) {
+    headerBtn.addEventListener('click', () => {
+      playSubtleClick(state.settings.soundEnabled);
+      if (currentTab === 'rotina') {
+        switchTab(previousCasaTab || 'compras');
+      } else {
+        if (currentTab && currentTab !== 'rotina') previousCasaTab = currentTab;
+        switchTab('rotina');
+      }
+    });
+  }
+
+  const backBtn = document.getElementById('btn-rotina-back-casa');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      playSubtleClick(state.settings.soundEnabled);
+      switchTab(previousCasaTab || 'compras');
+    });
+  }
+
+  const subnav = document.getElementById('rotina-subnav-pills');
+  if (subnav) {
+    subnav.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-rotina-subtab]');
+      if (!btn) return;
+      playSubtleClick(state.settings.soundEnabled);
+      const rm = ensureRotinaMatheusState(state);
+      rm.subtab = btn.getAttribute('data-rotina-subtab') || 'hoje';
+      saveState(state);
+      renderRotinaMatheusTab(state, getRotinaMatheusCallbacks());
+    });
+  }
+}
+
 function initHeaderControls() {
   const userBtn = document.getElementById('active-user-btn');
   if (userBtn) {

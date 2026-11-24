@@ -391,6 +391,12 @@ export function getInitialState() {
     pets: JSON.parse(JSON.stringify(INITIAL_PETS)),
     deletedPetIds: [],
     catalog: [],
+    rotinaMatheus: {
+      dias: {},
+      ds: {},
+      subtab: "hoje",
+      updatedAt: new Date().toISOString()
+    },
     categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)),
     settings: {
       sheetsUrl: "https://script.google.com/macros/s/AKfycbywJvIREiTE3wO1J_8dE-vSXWHk4SzsU2XCvL7ktlj1CkF5T24aXMvkLa3XCadNG0sxWg/exec",
