@@ -4,6 +4,24 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-24 21:20] - Rotina Matheus no cabeçalho (v2.10.0) + alinhamento da versão tripla
+
+### O que veio no commit 12db0f1
+- Novo módulo **`js/rotina-matheus.js`** (Rotina, Capilar, Pele e Fotos) importado no `js/app.js`,
+  botão **`#btn-header-rotina-matheus`** no cabeçalho e container **`#rotina-matheus-view`**.
+- `js/sheets.js` e `js/storage.js` atualizados; módulo incluído no precache do `sw.js`.
+
+### 🐞 Correção de release
+O commit subiu o `sw.js` como **v2.10.0**, mas deixou `js/config.js` e `package.json` em
+**2.9.11** e os `?v=` do `index.html` em `2.9.11`. Isso quebra a regra da versão tripla e pode
+manter `app.js` antigo no cache do navegador. Alinhado tudo para **2.10.0**:
+`config.js`, `package.json`, `sw.js` e os seis `?v=` do HTML.
+
+### 🧪 Validação
+- **206 testes, 0 falhas** após o pull e o alinhamento.
+
+---
+
 ## [2026-11-22 13:33] - Caixas de seleção e métrica de cumprimento de metas em Carro, Reformas e Sonhos (v2.9.11)
 
 ### 🛠️ Implementação
