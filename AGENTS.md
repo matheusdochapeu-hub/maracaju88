@@ -100,6 +100,11 @@ node --test test/**/*.test.js   # 212 testes
     usa a URL para buscar os itens na SEFAZ, não depende só do OCR. Não reintroduza dados de
     amostra por chave; o item-fantasma `COMPRA` não vai ao catálogo e nomes são escapados
     (`escapeQrText`/`escapeHtmlText`).
+15. **Busca de compras ≠ URL de sincronização:** se a URL do Apps Script for colada no
+    `#purchases-filter-search`, ela **não** pode filtrar (senão a lista inteira some).
+    O `renderComprasTab` detecta URL, ignora como termo e mostra um banner com
+    **Salvar em Ajustes** / **Limpar**; o botão salva em `state.settings.sheetsUrl` e
+    sincroniza. O campo usa `autocomplete="off"`.
 
 ## Vizinhança (ecossistema)
 

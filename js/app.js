@@ -3283,6 +3283,8 @@ function initComprasModule() {
     // Busca em tempo real com preservação do foco
     purchasesContainer.addEventListener('input', (e) => {
       if (e.target.id === 'purchases-filter-search') {
+        // A URL do Apps Script pode ser colada aqui por engano; o ui.js ignora
+        // URL como filtro e mostra um banner com "Salvar em Ajustes".
         currentPurchasesSearch = e.target.value;
         renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
         const newInput = document.getElementById('purchases-filter-search');
@@ -3354,6 +3356,35 @@ function initComprasModule() {
         allDetails.forEach(d => { d.open = false; });
         playSubtleClick(state?.settings?.soundEnabled);
         showToast('Todos os itens recolhidos', 'info', 1500);
+        return;
+      }
+
+      // URL do Apps Script colada por engano na busca: salva no lugar certo
+      const useScriptUrlBtn = e.target.closest('#btn-use-purchases-script-url');
+      if (useScriptUrlBtn) {
+        const inputUrl = document.getElementById('purchases-filter-search');
+        const scriptUrl = (inputUrl ? inputUrl.value : currentPurchasesSearch || '').trim();
+        if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(?:\?.*)?$/i.test(scriptUrl)) {
+          showToast('URL inválida. Copie o link completo do Apps Script terminado em /exec.', 'warning', 5000);
+          return;
+        }
+        state.settings.sheetsUrl = scriptUrl;
+        const settingsInput = document.getElementById('settings-sheets-url');
+        if (settingsInput) settingsInput.value = scriptUrl;
+        saveState(state);
+        currentPurchasesSearch = '';
+        triggerAutoSyncIfEnabled();
+        renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
+        playSubtleClick(state?.settings?.soundEnabled);
+        showToast('URL do Apps Script salva em Ajustes → Sincronização.', 'success', 5000);
+        return;
+      }
+
+      // Descartar a URL colada na busca
+      const clearPurchasesUrlBtn = e.target.closest('#btn-clear-purchases-url');
+      if (clearPurchasesUrlBtn) {
+        currentPurchasesSearch = '';
+        renderComprasTab(state, currentComprasCategory, currentComprasView, currentPurchasesSort, currentPurchasesSearch);
         return;
       }
 

@@ -4,6 +4,39 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-24 22:05] - URL do Apps Script na busca escondia os lançamentos (v2.10.2)
+
+### 🐞 Sintoma (print do usuário)
+No **Gastos & Notas**, o campo “Filtrar por mercado ou produto...” estava com a **URL do
+Apps Script**; abaixo aparecia **“Ciclo Novembro/2026 (0 registros)”** e **“Nenhuma compra
+encontrada para <URL>”**. Parecia que os lançamentos tinham sumido.
+
+### 🔍 Causa raiz
+A URL foi **colada/autofill no campo de busca** (`#purchases-filter-search`). O valor virou
+`currentPurchasesSearch` e o filtro comparou a URL com mercado/notas/itens — nada casou,
+então a lista ficou vazia. **Nenhum lançamento foi apagado**; era só o filtro.
+O campo também não tinha `autocomplete="off"`, facilitando autofill.
+
+### 🛠️ Correção
+- `renderComprasTab` detecta `purchaseSearchLooksLikeUrl`; **URL não é usada como filtro**,
+  então os lançamentos continuam visíveis.
+- Banner no topo da lista: “A URL do Apps Script não é um filtro…” com **Salvar em Ajustes**
+  (grava `state.settings.sheetsUrl`, atualiza o campo de Ajustes, `saveState` e sincroniza) e
+  **Limpar** (descarta a URL). A URL fica visível para o usuário decidir.
+- `autocomplete="off"`, `autocapitalize="off"` e `spellcheck="false"` no campo.
+- Teste em `test/purchases-history.test.js`: URL na busca mantém Carrefour/Pão de Açúcar
+  visíveis, mostra o banner e não cai no estado vazio.
+
+### 🧪 Validação
+- **212 testes, 0 falhas**.
+- Se seus lançamentos não voltarem ao clicar em **Limpar**, aí sim é outro problema de
+  sincronização — mas o filtro com URL não apaga nada.
+
+### 📦 Versão
+- **v2.10.2** em `config.js`, `sw.js` (`maracaju-v2.10.2`), `package.json` e `?v=` do HTML.
+
+---
+
 ## [2026-11-24 21:45] - Correção da área de QR Code e captação NFC-e (v2.10.1)
 
 ### 🐞 O que estava errado depois do merge da v2.10.0

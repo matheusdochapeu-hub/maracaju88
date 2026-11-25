@@ -105,6 +105,17 @@ test('Mercado: Histórico de Compras e Notas com Ordenação e Expansão de Iten
   assert.ok(htmlSearch.includes('Pão de Açúcar'), 'Search for Vinho must include Pão de Açúcar');
   assert.ok(!htmlSearch.includes('Carrefour'), 'Search for Vinho must exclude Carrefour');
 
+  // 3b. URL do Apps Script colada na busca não pode esconder os lançamentos
+  renderComprasTab(state, 'todas', 'notas', 'date-desc', 'https://script.google.com/macros/s/AKfycbz9uHQZiq_e/exec');
+  const htmlUrlSearch = elements['market-purchases-container'].innerHTML;
+  assert.ok(htmlUrlSearch.includes('Carrefour'), 'URL na busca não pode esconder Carrefour');
+  assert.ok(htmlUrlSearch.includes('Pão de Açúcar'), 'URL na busca não pode esconder Pão de Açúcar');
+  assert.ok(!htmlUrlSearch.includes('Nenhuma compra encontrada'), 'URL não deve produzir estado vazio');
+  assert.ok(htmlUrlSearch.includes('A URL do Apps Script não é um filtro'));
+  assert.ok(htmlUrlSearch.includes('btn-use-purchases-script-url'), 'Deve oferecer salvar a URL em Ajustes');
+  assert.ok(htmlUrlSearch.includes('btn-clear-purchases-url'), 'Deve oferecer limpar a URL');
+  assert.ok(htmlUrlSearch.includes('value="https://script.google.com'), 'URL fica visível para o usuário salvar/limpar');
+
   // 4. Test collapse / expand persistence and fallback de name/quantity
   const ids = state.comprasRegistros.map(r => r.id);
   setAllPurchasesCollapsed(ids, true);

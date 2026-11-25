@@ -1696,6 +1696,13 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
     if (purchasesSort) currentPurchasesSort = purchasesSort;
     if (purchasesSearch !== null && purchasesSearch !== undefined) currentPurchasesSearch = purchasesSearch;
 
+    // A URL do Apps Script já apareceu colada no campo de busca e escondia
+    // todos os lançamentos (o filtro não achava nenhum mercado com essa URL).
+    // URL não é termo de busca: mostra tudo e orienta a configurar em Ajustes.
+    const purchaseSearchRaw = (currentPurchasesSearch || '').trim();
+    const purchaseSearchLooksLikeUrl = /^(https?:\/\/|script\.google\.com)/i.test(purchaseSearchRaw);
+    const purchaseSearchTerm = purchaseSearchLooksLikeUrl ? '' : purchaseSearchRaw;
+
     const allPurchases = (state.comprasRegistros || []);
     const activeCycle = getActiveBenefitsCycle();
     const period = getAnalyticsPeriod();
@@ -1722,8 +1729,8 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
 
     let filteredPurchases = periodPurchases;
 
-    if (currentPurchasesSearch && currentPurchasesSearch.trim()) {
-      const q = currentPurchasesSearch.trim().toLowerCase();
+    if (purchaseSearchTerm) {
+      const q = purchaseSearchTerm.toLowerCase();
       filteredPurchases = filteredPurchases.filter(p => {
         const mMatch = (p.marketName || '').toLowerCase().includes(q);
         const nMatch = (p.notes || '').toLowerCase().includes(q);
@@ -1758,8 +1765,15 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
 
     const toolbarHtml = `
       <div class="purchases-history-toolbar" style="display: flex; gap: 0.5rem; margin-bottom: 0.85rem; flex-wrap: wrap; align-items: center; background: #ffffff; padding: 0.65rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        ${purchaseSearchLooksLikeUrl ? `
+          <div style="width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; background: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius-sm); padding: 0.5rem 0.65rem; font-size: 0.75rem; line-height: 1.35; color: #92400e;">
+            <span style="flex: 1; min-width: 180px;">⚠️ A URL do Apps Script não é um filtro de compras — os lançamentos continuam aqui. Salve a URL em <strong>Ajustes → Sincronização</strong>.</span>
+            <button type="button" class="btn btn-primary btn-xs" id="btn-use-purchases-script-url" style="font-size: 0.71rem; padding: 0.35rem 0.55rem; white-space: nowrap;">Salvar em Ajustes</button>
+            <button type="button" class="btn btn-secondary btn-xs" id="btn-clear-purchases-url" style="font-size: 0.71rem; padding: 0.35rem 0.55rem; white-space: nowrap;">Limpar</button>
+          </div>
+        ` : ''}
         <div style="flex: 2; min-width: 170px;">
-          <input type="text" id="purchases-filter-search" class="form-input" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; height: 36px; border-radius: var(--radius-sm);" placeholder="🔍 Filtrar por mercado ou produto..." value="${currentPurchasesSearch || ''}" />
+          <input type="text" id="purchases-filter-search" class="form-input" autocomplete="off" autocapitalize="off" spellcheck="false" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; height: 36px; border-radius: var(--radius-sm);" placeholder="🔍 Filtrar por mercado ou produto..." value="${purchaseSearchRaw}" />
         </div>
         <div style="flex: 1.5; min-width: 170px;">
           <select id="purchases-sort-select" class="form-select" style="padding: 0.35rem 0.65rem; font-size: 0.82rem; height: 36px; border-radius: var(--radius-sm); font-weight: 600;">
@@ -1802,7 +1816,7 @@ export function renderComprasTab(state, activeCategory = 'todas', activeView = '
         ${toolbarHtml}
         <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-subtle);">
           <p style="font-size: 1.8rem; margin-bottom: 0.35rem;">🔍</p>
-          <p style="font-weight: 700; color: var(--brand-moss-dark);">Nenhuma compra encontrada para "${currentPurchasesSearch}".</p>
+          <p style="font-weight: 700; color: var(--brand-moss-dark);">Nenhuma compra encontrada para "${purchaseSearchTerm}".</p>
           <p style="font-size: 0.82rem; margin-top: 0.25rem;">Tente buscar por outro termo ou limpe o filtro.</p>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-purchases-filter" style="margin-top: 0.65rem; font-weight: 600;">Limpar Busca</button>
         </div>
