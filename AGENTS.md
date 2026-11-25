@@ -24,7 +24,7 @@ python -m http.server 8000   # abrir http://localhost:8000
 ## Testes
 
 ```powershell
-node --test test/**/*.test.js   # 204 testes
+node --test test/**/*.test.js   # 212 testes
 ```
 
 ## Deploy
@@ -66,7 +66,8 @@ node --test test/**/*.test.js   # 204 testes
    direta → proxy. Não volte a exigir que o usuário abra a SEFAZ e cole o HTML. A ponte nativa
    exige republicar `apps_script.gs` (o endpoint publicado pode estar sem `fetchNfce`).
    A URL do QR tem `|` no parâmetro `p`: envie sempre `%7C` (UrlFetchApp recusa pipe cru) e
-   **repita a tentativa** (até 4x) — a SEFAZ derruba conexões do Google de forma intermitente.
+   **repita a tentativa** (até 3x em POST e GET paralelos) — a SEFAZ derruba conexões do
+   Google de forma intermitente.
    `r.jina.ai` é bloqueado pelo WAF da SEFAZ; não conte com ele para notas reais.
 9. **Atualização do PWA:** não recarregue a página no `controllerchange`; mostre o banner
    `#app-update-banner` e deixe o usuário tocar em "Atualizar agora". Registre o SW com
@@ -92,6 +93,13 @@ node --test test/**/*.test.js   # 204 testes
     `window.open` é bloqueado na PWA instalada e não abre nada. **Chat vazio:** `https://wa.me/`
     e `wa.me/?text=` vazio respondem **HTTP 400**; use `https://api.whatsapp.com/send?text=`
     via âncora (`openExternalLink`). Não prometa enquete nativa automática.
+14. **Área do QR Code (NFC-e):** abertura única — o FAB **não** usa `data-open-modal`, o
+    handler genérico ignora `modal-qr-scanner` e `openScannerFlow` é idempotente. Câmera usa
+    `cameraStartToken` (nunca dois `getUserMedia` concorrentes) e um `MutationObserver` para
+    parar em qualquer fechamento (✕, backdrop, Esc, Voltar do Android). Foto do cupom com QR
+    usa a URL para buscar os itens na SEFAZ, não depende só do OCR. Não reintroduza dados de
+    amostra por chave; o item-fantasma `COMPRA` não vai ao catálogo e nomes são escapados
+    (`escapeQrText`/`escapeHtmlText`).
 
 ## Vizinhança (ecossistema)
 

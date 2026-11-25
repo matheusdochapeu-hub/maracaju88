@@ -597,6 +597,10 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
   }
 
   const fetchErrors = [];
+  // Quando uma fonte vence, as outras continuam rodando em segundo plano. Sem
+  // esta trava, o retry de uma fonte perdedora atualizava o status ("tentando
+  // novamente...") depois de os itens já terem sido carregados.
+  let consultationFinished = false;
 
   function withTimeout(promise, ms, label) {
     return new Promise((resolve, reject) => {
@@ -649,7 +653,8 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
         if (err && err.code === 'BRIDGE_OUTDATED') throw err;
         const isLast = attempt === maxAttempts - 1;
         if (!isLast) {
-          if (typeof options.onProgress === 'function') {
+          if (consultationFinished) throw lastError;
+          if (typeof options.onProgress === 'function' && !consultationFinished) {
             try {
               options.onProgress(`A SEFAZ recusou a conexão automática. Tentando novamente (${attempt + 2}/${maxAttempts})...`);
             } catch (e) {}
@@ -745,12 +750,16 @@ export async function fetchNfceDetailsOnline(url, options = {}) {
       Promise.any(attempts.map(p => p.catch(err => {
         fetchErrors.push(err && err.message ? err.message : String(err));
         throw err;
-      }))),
+      }))).then(result => {
+        consultationFinished = true;
+        return result;
+      }),
       30000,
       'Consulta automática'
     );
     if (winner) return winner;
   } catch (e) {
+    consultationFinished = true;
     // Promise.any só rejeita quando todas falham.
     if (e && e.message) fetchErrors.push(e.message);
   }

@@ -4,6 +4,53 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-24 21:45] - Correção da área de QR Code e captação NFC-e (v2.10.1)
+
+### 🐞 O que estava errado depois do merge da v2.10.0
+1. **Abertura tripla do leitor.** O botão do herói tinha listener direto + listener global;
+   o FAB tinha listener direto + `data-open-modal` (handler genérico) + listener global. Um
+   toque chamava `openScannerFlow` 2–3 vezes e iniciava a câmera várias vezes.
+2. **`getUserMedia` concorrente.** Duas chamadas enquanto a primeira ainda pedia permissão
+   deixavam duas transmissões abertas (uma vazava) e o preview travava.
+3. **Câmera não parava ao fechar pelo backdrop, Esc ou Voltar do Android.** O `stopCamera`
+   estava amarrado a **todos** os `[data-close-modal]` do app, mas não ao fechamento do modal.
+4. **Foto do cupom não usava o QR para buscar a SEFAZ.** O fluxo híbrido parava no OCR e
+   ignorava a URL oficial; havia até um bloco de **dados de amostra hardcoded** para a chave
+   da Padaria.
+5. **Item-fantasma `COMPRA ...`** (usado só para carregar o total) era gravado no histórico e
+   no Catálogo Inteligente.
+6. **Nomes de itens/números da nota iam para `innerHTML` sem escape** (XSS em HTML colado).
+7. **Corrida de progresso:** POST e GET rodam em paralelo; o retry de uma fonte perdedora
+   sobrescrevia o status depois de os itens já terem carregado.
+8. **Total** era convertido com `Number()` (podia vir `"71,06"` e virar NaN/0) e dava para
+   confirmar compra com total 0.
+
+### 🛠️ Correções
+- `openScannerFlow` idempotente; FAB sem `data-open-modal`; handler genérico ignora
+  `modal-qr-scanner`; sobrou **um** caminho de abertura.
+- `cameraStartToken` + parada da transmissão anterior; `startScanningLoop` limpa intervalo e
+  só processa quadro se `activeStream` existir; `acceptCameraCode` exige modal ativo.
+- `MutationObserver` no `#modal-qr-scanner` para `stopCamera` em qualquer fechamento.
+- Foto híbrida: se o QR tem URL e não veio com itens, chama `fetchNfceDetailsForPending()`;
+  removido o bloco de amostra por chave.
+- Confirmação filtra `code === 'COMPRA'`, calcula total pelos itens quando falta, recusa total
+  zero e não registra o placeholder no catálogo.
+- `escapeQrText` na prévia e `escapeHtmlText` na conciliação da lista.
+- `consultationFinished` em `fetchNfceDetailsOnline` para não atualizar status após o vencedor.
+- `renderPreviewUI` usa `parseCurrency` no total.
+
+### 🧪 Validação
+- **212 testes, 0 falhas** (5 novos em `test/qr-scanner.test.js`).
+- **Chrome headless real:** um clique no herói = **1** `getUserMedia`, modal abre; fecha pelo
+  ✕ e a câmera para; FAB reabre com mais **1** chamada; nenhum erro de JS.
+- **Cadeia real:** QR da Padaria via Apps Script → 4 itens, R$ 71,06, em ~5 s.
+- Parser validado com URL de pipes crus e `%7C`.
+
+### 📦 Versão
+- **v2.10.1** em `config.js`, `sw.js` (`maracaju-v2.10.1`), `package.json` e `?v=` do HTML.
+
+---
+
 ## [2026-11-24 21:20] - Rotina Matheus no cabeçalho (v2.10.0) + alinhamento da versão tripla
 
 ### O que veio no commit 12db0f1

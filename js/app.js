@@ -920,6 +920,15 @@ function initNavigation() {
 // Preenche e abre o modal de conciliação. Fica no escopo do módulo porque é
 // usado tanto pelo lançamento manual quanto pela confirmação da NFC-e
 // (initQrCodeScanner), que são funções diferentes.
+function escapeHtmlText(value) {
+  return String(value === undefined || value === null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function showMatchedShoppingItemsModal(matches) {
   if (!Array.isArray(matches) || matches.length === 0) return false;
 
@@ -928,14 +937,14 @@ function showMatchedShoppingItemsModal(matches) {
 
   listContainer.innerHTML = matches.map((m) => `
     <label style="display: flex; align-items: center; gap: 0.65rem; background: rgba(22, 163, 74, 0.06); border: 1px solid rgba(22, 163, 74, 0.25); border-radius: var(--radius-md); padding: 0.6rem 0.75rem; cursor: pointer;">
-      <input type="checkbox" class="match-item-checkbox" data-match-id="${m.shoppingItem.id}" checked style="width: 1.15rem; height: 1.15rem; accent-color: #16a34a; cursor: pointer;" />
+      <input type="checkbox" class="match-item-checkbox" data-match-id="${escapeHtmlText(m.shoppingItem.id)}" checked style="width: 1.15rem; height: 1.15rem; accent-color: #16a34a; cursor: pointer;" />
       <div style="flex: 1; min-width: 0;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <strong style="font-size: 0.88rem; color: var(--text-primary);">${m.shoppingItem.name || m.shoppingItem.title}</strong>
-          ${m.shoppingItem.quantity ? `<span class="badge" style="font-size: 0.7rem; background: rgba(0,0,0,0.06);">${m.shoppingItem.quantity}</span>` : ''}
+          <strong style="font-size: 0.88rem; color: var(--text-primary);">${escapeHtmlText(m.shoppingItem.name || m.shoppingItem.title)}</strong>
+          ${m.shoppingItem.quantity ? `<span class="badge" style="font-size: 0.7rem; background: rgba(0,0,0,0.06);">${escapeHtmlText(m.shoppingItem.quantity)}</span>` : ''}
         </div>
         <div style="font-size: 0.73rem; color: #15803d; margin-top: 0.15rem;">
-          🧾 Identificado na compra: <em>${m.matchedWith}</em>
+          🧾 Identificado na compra: <em>${escapeHtmlText(m.matchedWith)}</em>
         </div>
       </div>
     </label>
@@ -4328,8 +4337,6 @@ async function recognizeWithTesseract(imageSource, statusCallback, docLabel = 'c
 }
 
 function initQrCodeScanner() {
-  const btnScan = document.getElementById('btn-scan-nfce-qr');
-  const btnScanFab = document.getElementById('btn-scan-nfce-qr-fab');
   const videoEl = document.getElementById('qr-video');
   const btnToggleCam = document.getElementById('btn-toggle-camera');
   const fileInput = document.getElementById('qr-file-input');
@@ -4382,6 +4389,9 @@ function initQrCodeScanner() {
   let scanInterval = null;
   let currentFacingMode = 'environment';
   let pendingPurchase = null;
+  // Evita duas chamadas concorrentes de getUserMedia (o botão do QR tinha dois
+  // listeners e abria a câmera duas vezes, deixando o preview travado).
+  let cameraStartToken = 0;
 
   // Alternar abas do modal
   function switchScannerTab(tabName) {
@@ -4416,9 +4426,17 @@ function initQrCodeScanner() {
       return;
     }
 
+    const myToken = ++cameraStartToken;
+
     try {
+      // Encerra a transmissão anterior sem invalidar este token.
       if (activeStream) {
-        stopCamera();
+        activeStream.getTracks().forEach(t => t.stop());
+        activeStream = null;
+      }
+      if (scanInterval) {
+        clearInterval(scanInterval);
+        scanInterval = null;
       }
 
       const constraints = {
@@ -4429,12 +4447,21 @@ function initQrCodeScanner() {
         }
       };
 
+      let stream;
       try {
-        activeStream = await navigator.mediaDevices.getUserMedia(constraints);
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
       } catch (errConstraint) {
         // Fallback básico caso o navegador não aceite ideal facingMode
-        activeStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
       }
+
+      // Se outra chamada começou ou o modal foi fechado, descarta esta câmera.
+      if (myToken !== cameraStartToken) {
+        stream.getTracks().forEach(t => t.stop());
+        return;
+      }
+
+      activeStream = stream;
 
       if (videoEl) {
         videoEl.srcObject = activeStream;
@@ -4448,15 +4475,19 @@ function initQrCodeScanner() {
         }
       }
 
+      if (myToken !== cameraStartToken) return;
+
       if (statusMsg) statusMsg.textContent = 'Câmera ativa! Aponte para o QR Code impresso no cupom fiscal.';
       startScanningLoop();
     } catch (err) {
+      if (myToken !== cameraStartToken) return;
       console.warn('Erro ao acessar câmera:', err);
       if (statusMsg) statusMsg.textContent = 'Acesso à câmera não concedido. Use foto do cupom (OCR), arquivo ou cole o link da nota.';
     }
   }
 
   function stopCamera() {
+    cameraStartToken++;
     if (scanInterval) {
       clearInterval(scanInterval);
       scanInterval = null;
@@ -4482,6 +4513,8 @@ function initQrCodeScanner() {
   }
 
   function acceptCameraCode(value) {
+    const modalQr = document.getElementById('modal-qr-scanner');
+    if (!modalQr || !modalQr.classList.contains('active')) return false;
     if (!looksLikeNfceCode(value)) {
       if (statusMsg) statusMsg.textContent = 'QR Code lido, mas não é de NFC-e. Aponte para o QR Code do cupom fiscal (geralmente no rodapé).';
       return false;
@@ -4492,6 +4525,10 @@ function initQrCodeScanner() {
   }
 
   function startScanningLoop() {
+    if (scanInterval) {
+      clearInterval(scanInterval);
+      scanInterval = null;
+    }
     let detector = null;
     if (window.BarcodeDetector) {
       try {
@@ -4500,6 +4537,10 @@ function initQrCodeScanner() {
     }
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) {
+      if (statusMsg) statusMsg.textContent = 'Não foi possível iniciar o leitor de QR neste navegador. Use a foto do cupom.';
+      return;
+    }
     let frameCount = 0;
 
     let scanningFrame = false;
@@ -4509,7 +4550,7 @@ function initQrCodeScanner() {
       if (scanningFrame) return;
       scanningFrame = true;
       try {
-        if (!videoEl || videoEl.readyState < 2) return;
+        if (!activeStream || !videoEl || videoEl.readyState < 2) return;
         frameCount++;
 
         const vw = videoEl.videoWidth;
@@ -4659,6 +4700,7 @@ function initQrCodeScanner() {
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) return null;
 
         // Regiões candidatas para NFC-e e fotos de cupom:
         // A: Centro 75% (foto focada no QR code)
@@ -4769,25 +4811,18 @@ function initQrCodeScanner() {
     // Se o QR code já tiver preenchido as informações, ok; senão o OCR preenche o que faltou!
     if (qrData || ocrData) {
       const merged = mergeNfceComplementary(qrData || {}, ocrData || {});
-
-      // Amostra de teste conhecida (Padaria Irmãos Araújo) se veio sem itens pelo QR
-      const isSampleKey = merged.accessKey === '35261150489095000127650010000505041101032350' ||
-                          (merged.rawUrl && merged.rawUrl.includes('35261150489095000127650010000505041101032350'));
-      if (isSampleKey && (!merged.items || merged.items.length === 0)) {
-        merged.total = 71.06;
-        merged.totalAmount = 71.06;
-        merged.paymentMethod = 'credito';
-        merged.time = '10:32';
-        merged.items = [
-          { code: '3000', name: 'CAFE DA MANHA', quantity: 0.442, unit: 'KG', unitPrice: 59.90, price: 26.48, category: 'bebidas' },
-          { code: '3076', name: 'SUCO MIX JARRA', quantity: 1, unit: 'UN', unitPrice: 17.90, price: 17.90, category: 'bebidas' },
-          { code: '7079', name: 'CAPPUCCINO GELADO COM CHANTILY', quantity: 1, unit: 'UN', unitPrice: 13.50, price: 13.50, category: 'mercearia' },
-          { code: '3000', name: 'CAFE DA MANHA', quantity: 0.22, unit: 'KG', unitPrice: 59.90, price: 13.18, category: 'bebidas' }
-        ];
-      }
-
       pendingPurchase = merged;
       renderPreviewUI();
+
+      // O QR da foto também vale como URL oficial: busca os itens na SEFAZ em
+      // vez de depender só do OCR (antes a foto parava no texto reconhecido).
+      const qrHasDetailedItems = !!(qrData && Array.isArray(qrData.items) && qrData.items.some(it => it && it.code && it.code !== 'COMPRA'));
+      if (pendingPurchase.rawUrl && /^https?:\/\//i.test(pendingPurchase.rawUrl) && !qrHasDetailedItems) {
+        if (statusMsg) statusMsg.textContent = 'QR Code detectado! Buscando automaticamente os itens na SEFAZ...';
+        fetchNfceDetailsForPending();
+        return;
+      }
+
       triggerConfetti();
       playTaskCompleteSound(state.settings.soundEnabled);
 
@@ -4814,13 +4849,24 @@ function initQrCodeScanner() {
     showToast('Não foi possível identificar o QR Code ou texto nesta foto. Tente uma foto mais nítida e iluminada.', 'warning', 4500);
   }
 
+  function escapeQrText(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   function renderPreviewUI() {
     if (!pendingPurchase || !previewBox) return;
 
     if (resMarket) resMarket.textContent = pendingPurchase.marketName || 'Supermercado';
     if (resCnpj) resCnpj.textContent = pendingPurchase.cnpj || '--';
     if (resDate) resDate.textContent = pendingPurchase.date || getLocalDateString();
-    const totalNum = Number(pendingPurchase.total || pendingPurchase.totalAmount || 0);
+    const totalNum = parseCurrency(pendingPurchase.total !== undefined && pendingPurchase.total !== null && pendingPurchase.total !== ''
+      ? pendingPurchase.total
+      : pendingPurchase.totalAmount);
     if (resTotal) {
       resTotal.textContent = formatCurrencyWithSymbol(totalNum);
       if (totalNum <= 0) {
@@ -4856,9 +4902,9 @@ function initQrCodeScanner() {
           return `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0.2rem; border-bottom: 1px dashed var(--border-subtle); gap: 0.5rem;">
               <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                <strong style="color: var(--text-primary);">${idx + 1}. ${it.name || it.rawName || it.alias || 'Produto'}</strong>
+                <strong style="color: var(--text-primary);">${idx + 1}. ${escapeQrText(it.name || it.rawName || it.alias || 'Produto')}</strong>
                 <div style="font-size: 0.72rem; color: var(--text-muted);">
-                  ${it.quantity || it.qty || 1} ${it.unit || 'UN'} × ${formatCurrencyWithSymbol(unitPrice)}${it.code ? ' · Cód: ' + it.code : ''}
+                  ${escapeQrText(it.quantity || it.qty || 1)} ${escapeQrText(it.unit || 'UN')} × ${formatCurrencyWithSymbol(unitPrice)}${it.code ? ' · Cód: ' + escapeQrText(it.code) : ''}
                 </div>
               </div>
               <div style="font-weight: 700; color: var(--success); white-space: nowrap; font-size: 0.85rem;">
@@ -4964,7 +5010,8 @@ function initQrCodeScanner() {
 
   function handleDetectedCode(rawText) {
     if (!rawText) return;
-    const parsed = parseNfceQrCodeText(rawText);
+    try {
+      const parsed = parseNfceQrCodeText(rawText);
 
     const initialItems = Array.isArray(parsed.items) ? [...parsed.items] : [];
     const initialTotal = parsed.total || parsed.totalAmount || 0;
@@ -5001,6 +5048,11 @@ function initQrCodeScanner() {
     if (pendingPurchase.rawUrl && pendingPurchase.rawUrl.startsWith('http') && !hasDetailedItems) {
       fetchNfceDetailsForPending();
     }
+    } catch (err) {
+      console.error('[Maracaju] Erro ao interpretar o QR Code da NFC-e:', err);
+      if (statusMsg) statusMsg.textContent = 'Não foi possível interpretar este QR Code. Use "Colar / Arquivo" ou uma foto do cupom.';
+      showToast('QR Code lido, mas não foi possível extrair os dados da nota.', 'error', 5000);
+    }
   }
 
   // Busca (ou busca de novo) os itens completos da nota pela URL do QR.
@@ -5008,6 +5060,7 @@ function initQrCodeScanner() {
   async function fetchNfceDetailsForPending() {
     if (!pendingPurchase || !pendingPurchase.rawUrl || !pendingPurchase.rawUrl.startsWith('http')) return;
 
+    const requestedUrl = pendingPurchase.rawUrl;
     const sheetsUrl = state.settings && state.settings.sheetsUrl;
     const sheetsToken = state.settings && state.settings.sheetsToken;
 
@@ -5025,8 +5078,13 @@ function initQrCodeScanner() {
         sheetsUrl,
         sheetsToken,
         baseInfo: pendingPurchase,
-        onProgress: (msg) => { if (statusMsg) statusMsg.textContent = msg; }
+        onProgress: (msg) => {
+          if (pendingPurchase && pendingPurchase.rawUrl === requestedUrl && statusMsg) statusMsg.textContent = msg;
+        }
       });
+
+      // Uma resposta atrasada de um QR antigo não pode sobrescrever o atual.
+      if (!pendingPurchase || pendingPurchase.rawUrl !== requestedUrl) return;
 
       if (!enhanced || !enhanced.success) return;
 
@@ -5076,6 +5134,9 @@ function initQrCodeScanner() {
 
   // 1. Abrir modal
   function openScannerFlow() {
+    const modalQr = document.getElementById('modal-qr-scanner');
+    // Já aberto (clique repetido/dois listeners): não reinicia a câmera.
+    if (modalQr && modalQr.classList.contains('active')) return;
     openModal('modal-qr-scanner');
     if (previewBox) previewBox.style.display = 'none';
     pendingPurchase = null;
@@ -5093,12 +5154,8 @@ function initQrCodeScanner() {
     }
   }
 
-  if (btnScan) {
-    btnScan.addEventListener('click', openScannerFlow);
-  }
-  if (btnScanFab) {
-    btnScanFab.addEventListener('click', openScannerFlow);
-  }
+  // Um único ponto de abertura. Antes o botão tinha listener direto + listener
+  // global + data-open-modal (3 aberturas), iniciando a câmera várias vezes.
   document.addEventListener('click', (e) => {
     const trigger = e.target.closest('#btn-scan-nfce-qr, #btn-scan-nfce-qr-fab, [data-open-modal="modal-qr-scanner"]');
     if (trigger && !trigger.closest('#modal-qr-scanner')) {
@@ -5395,28 +5452,52 @@ function initQrCodeScanner() {
         pendingPurchase.paymentMethod = resPayment.value || pendingPurchase.paymentMethod || 'va';
       }
 
+      // O parser cria um item-fantasma "COMPRA ..." só para carregar o total
+      // quando a SEFAZ não devolveu os itens. Ele não deve virar produto no
+      // catálogo nem aparecer no histórico da compra.
+      const detailedItems = (Array.isArray(pendingPurchase.items) ? pendingPurchase.items : [])
+        .filter(item => item && item.code !== 'COMPRA');
+
+      const itemsTotal = detailedItems.reduce((sum, item) => sum + parseCurrency(item.totalPrice || item.price), 0);
+      const informedTotal = parseCurrency(
+        pendingPurchase.total !== undefined && pendingPurchase.total !== null && pendingPurchase.total !== ''
+          ? pendingPurchase.total
+          : pendingPurchase.totalAmount
+      );
+      const finalTotal = informedTotal > 0 ? informedTotal : Math.round(itemsTotal * 100) / 100;
+
+      if (finalTotal <= 0) {
+        showToast('Informe o valor total da compra para registrar.', 'warning', 4000);
+        if (resTotalInput) {
+          resTotalInput.style.display = 'inline-block';
+          if (resTotal) resTotal.style.display = 'none';
+          resTotalInput.focus();
+        }
+        return;
+      }
+
       const purchaseData = {
         marketName: pendingPurchase.marketName || 'Supermercado',
         date: pendingPurchase.date || getLocalDateString(),
-        total: pendingPurchase.total || pendingPurchase.totalAmount || 0,
+        total: finalTotal,
         paymentMethod: pendingPurchase.paymentMethod || 'va',
         nfeKey: pendingPurchase.nfeKey || pendingPurchase.accessKey || '',
         nfeUrl: pendingPurchase.rawUrl || '',
-        items: Array.isArray(pendingPurchase.items) ? pendingPurchase.items : [],
-        notes: pendingPurchase.items && pendingPurchase.items.length > 0
-          ? `${pendingPurchase.items.length} itens (importados via NFC-e)`
-          : 'Importado via NFC-e QR Code'
+        items: detailedItems,
+        notes: detailedItems.length > 0
+          ? `${detailedItems.length} itens (importados via NFC-e)`
+          : 'Importado via NFC-e QR Code (itens não detalhados)'
       };
 
-      const savedPurchase = addMarketPurchase(state, purchaseData);
+      addMarketPurchase(state, purchaseData);
 
       // Se houver produtos na nota, grava e memoriza no Catálogo Inteligente
-      if (Array.isArray(purchaseData.items) && purchaseData.items.length > 0) {
+      if (detailedItems.length > 0) {
         registerInvoiceInCatalog(state, {
           marketName: purchaseData.marketName,
           date: purchaseData.date,
           nfeKey: purchaseData.nfeKey,
-          items: purchaseData.items
+          items: detailedItems
         });
         updateCatalogDatalist(state);
       }
@@ -5442,12 +5523,18 @@ function initQrCodeScanner() {
     });
   }
 
-  // Desativa câmera ao fechar modal
-  document.querySelectorAll('#btn-close-qr-scanner, [data-close-modal]').forEach(b => {
-    b.addEventListener('click', () => {
-      stopCamera();
-    });
-  });
+  // Desativa a câmera sempre que o modal do QR for fechado — inclusive por
+  // backdrop, Esc ou botão Voltar do Android (antes só o ✕ parava a câmera).
+  const modalQrEl = document.getElementById('modal-qr-scanner');
+  if (modalQrEl && typeof MutationObserver !== 'undefined') {
+    try {
+      new MutationObserver(() => {
+        if (!modalQrEl.classList.contains('active')) stopCamera();
+      }).observe(modalQrEl, { attributes: true, attributeFilter: ['class'] });
+    } catch (e) {}
+  }
+  const btnCloseQr = document.getElementById('btn-close-qr-scanner');
+  if (btnCloseQr) btnCloseQr.addEventListener('click', stopCamera);
 }
 
 
@@ -7411,6 +7498,8 @@ function initModals() {
         }
       } catch (err) {}
       const modalId = openBtn.getAttribute('data-open-modal');
+      // O QR tem fluxo próprio (liga a câmera); initQrCodeScanner cuida da abertura.
+      if (modalId === 'modal-qr-scanner') return;
       if (modalId) {
         openModal(modalId);
       }
