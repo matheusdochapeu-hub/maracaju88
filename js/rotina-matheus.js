@@ -447,6 +447,151 @@ export function gerarPlanoRotinaDoArsenal(produtos = []) {
   };
 }
 
+
+// ============================================================
+//  MOTOR AUTOMÁTICO DE GUARDA-ROUPA & MONTADOR DE LOOKS
+// ============================================================
+export const CATEGORIAS_GUARDA_ROUPA = ['roupa-trabalho', 'roupa-casual', 'calcados', 'acessorios', 'eu-vestido'];
+
+export const LOOKS_BASE_SUGERIDOS = [
+  {
+    id: 'look_trabalho_usp',
+    titulo: '🏢 Look 1 · Trabalho / USP (Elegante & Fresco para Ribeirão Preto)',
+    pecas: 'Camisa de botão manga longa dobrada no antebraço (azul-marinho, branca, verde-oliva ou linho areia) OU Polo estruturada + Calça Chino ou Jeans Escuro reto sem sobra na barra + Tênis casual limpo (branco/couro) ou Sapato casual + Relógio.',
+    grooming: 'Cabelo finalizado com Amend Gold Black + 2 gotas de Elseve Óleo Extraordinário (laterais alinhadas com Cera Charming Matte) · Rosto protegido com Creamy Watery Lotion FPS 60 · 5 borrifadas de O Boticário Uomini Infinite (+ decant pós-almoço).'
+  },
+  {
+    id: 'look_encontro_scarlet',
+    titulo: '🍷 Look 2 · Encontro / Jantar com a Scarlet (Presença & Contraste)',
+    pecas: 'Camiseta encorpada lisa (preta, vinho/bordô, verde-musgo ou off-white de algodão pesado) ou Camisa preta/marinho aberta sobre camiseta + Calça escura bem cortada + Calçado impecável + Relógio/Corrente discreta.',
+    grooming: 'Banho pré-saída com Óleo Natura Sève Amêndoas Doces + Nivea Loção Milk 72h no pescoço/braços (segura o perfume pelo dobro do tempo) + 6 borrifadas de O Boticário Uomini Infinite · Cabelo com brilho espelhado da linha Elseve [Glycolic] Gloss.'
+  },
+  {
+    id: 'look_casual_fds',
+    titulo: '☀️ Look 3 · Casual / Fim de Semana & Passeio',
+    pecas: 'Camiseta lisa de ótimo caimento no ombro (off-white, terracota, verde-oliva, preta ou cinza-chumbo) + Bermuda de sarja/linho 1 a 2 dedos acima do joelho + Tênis limpo + Óculos de sol.',
+    grooming: 'Rosto com Creamy Vitamina C + Creamy Watery Lotion FPS 60 · Cabelo com volume solto no topo e protegido do sol com Creme Super Gloss Elseve (Filtro UV) · Natura Erva Doce Roll-On 72h + Uomini Infinite.'
+  },
+  {
+    id: 'look_corrida_treino',
+    titulo: '🏃 Look 4 · Corrida (Qui 5km · Sáb 5km · Dom 10km) & Pós-Banho em Casa',
+    pecas: 'Camiseta dry-fit/poliamida leve + Shorts de corrida acima do joelho + Meia de poliamida (anti-bolha) + Tênis de corrida · Pós-banho em casa: roupa confortável limpa.',
+    grooming: 'Pré-corrida: Natura Fotoequilíbrio Facial FPS 60 (resistente ao suor) + Elseve Creme Super Gloss UV no cabelo · Pós-corrida: Co-Wash com Ápice Nutri Waves + Nivea Milk 72h + Body Splash Nativa SPA Ameixa.'
+  }
+];
+
+/**
+ * Classifica o tom/cor dominante a partir de valores médios RGB (0-255).
+ */
+export function classificarCorRgb(r = 128, g = 128, b = 128) {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const lum = (r * 0.299 + g * 0.587 + b * 0.114);
+  const sat = max === 0 ? 0 : (max - min) / max;
+
+  if (lum < 52) return { id: 'preto', nome: 'Preto / Grafite', hex: '#222222' };
+  if (lum > 205 && sat < 0.18) return { id: 'branco', nome: 'Branco / Off-White', hex: '#f3f3ee' };
+  if (sat < 0.16) return { id: 'cinza', nome: 'Cinza / Chumbo', hex: '#7a7f85' };
+  if (b > r + 20 && b > g + 10) return { id: 'marinho', nome: 'Azul-Marinho / Jeans', hex: '#1e3a5f' };
+  if (g >= r && g > b + 12) return { id: 'oliva', nome: 'Verde-Oliva / Musgo', hex: '#3d5a3c' };
+  if (r > g + 35 && g < 90 && b < 90) return { id: 'vinho', nome: 'Vinho / Terracota', hex: '#6e262b' };
+  if (r > b + 25 && g > b + 15 && lum > 150) return { id: 'bege', nome: 'Bege / Areia / Caqui', hex: '#cbb799' };
+  if (r > b + 20 && g >= b) return { id: 'terroso', nome: 'Marrom / Caramelo', hex: '#6e4b32' };
+  return { id: 'neutro', nome: 'Tom Neutro', hex: '#666666' };
+}
+
+/**
+ * Extrai a cor dominante do centro de uma imagem/blob no navegador (recorta 50% centrais para ignorar fundo).
+ */
+async function extrairCorDominanteBlob(blob) {
+  try {
+    if (typeof document === 'undefined') return null;
+    const img = await carregarImgElemento(blob);
+    const c = document.createElement('canvas');
+    c.width = 32;
+    c.height = 32;
+    const ctx = c.getContext('2d');
+    const sx = Math.round((img.naturalWidth || img.width) * 0.25);
+    const sy = Math.round((img.naturalHeight || img.height) * 0.25);
+    const sw = Math.max(1, Math.round((img.naturalWidth || img.width) * 0.5));
+    const sh = Math.max(1, Math.round((img.naturalHeight || img.height) * 0.5));
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 32, 32);
+    const data = ctx.getImageData(0, 0, 32, 32).data;
+    let r = 0, g = 0, b = 0, cnt = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      r += data[i]; g += data[i + 1]; b += data[i + 2]; cnt++;
+    }
+    return classificarCorRgb(Math.round(r / cnt), Math.round(g / cnt), Math.round(b / cnt));
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Monta combinações automáticas de looks cruzando as fotos de roupas, calçados e acessórios enviadas com os produtos de higiene/perfumaria.
+ */
+export function gerarLooksDoGuardaRoupa(fotosList = []) {
+  const pecas = (Array.isArray(fotosList) ? fotosList : []).filter(f => f && CATEGORIAS_GUARDA_ROUPA.includes(f.cat));
+  const porCat = {
+    'roupa-trabalho': pecas.filter(p => p.cat === 'roupa-trabalho'),
+    'roupa-casual': pecas.filter(p => p.cat === 'roupa-casual'),
+    'calcados': pecas.filter(p => p.cat === 'calcados'),
+    'acessorios': pecas.filter(p => p.cat === 'acessorios'),
+    'eu-vestido': pecas.filter(p => p.cat === 'eu-vestido')
+  };
+
+  const fmtPeca = (p, idx, prefix) => {
+    const cor = (p.corNome || (p.cor && p.cor.nome) || '').trim();
+    const lbl = (p.productLabel || p.ocrText || '').trim().slice(0, 40);
+    return `${prefix} #${idx + 1}${cor ? ' (' + cor + ')' : ''}${lbl ? ' — ' + lbl : ''}`;
+  };
+
+  const looksMontados = [];
+  if (porCat['roupa-trabalho'].length || porCat['calcados'].length) {
+    porCat['roupa-trabalho'].slice(0, 4).forEach((top, i) => {
+      const calc = porCat['calcados'][i % Math.max(1, porCat['calcados'].length)];
+      const aces = porCat['acessorios'][i % Math.max(1, porCat['acessorios'].length)];
+      looksMontados.push({
+        titulo: `🏢 Look Trabalho Fotografado #${i + 1}`,
+        combinacao: [
+          fmtPeca(top, i, 'Peça Trabalho'),
+          calc ? fmtPeca(calc, i % porCat['calcados'].length, 'Calçado') : 'Calçado casual limpo',
+          aces ? fmtPeca(aces, i % porCat['acessorios'].length, 'Acessório') : 'Relógio / acessório discreto'
+        ].join(' + '),
+        acabamento: 'Creamy Watery Lotion FPS 60 + Cabelo alinhado com Amend Gold Black & Cera Charming Matte + 5 borrifadas de Uomini Infinite'
+      });
+    });
+  }
+  if (porCat['roupa-casual'].length) {
+    porCat['roupa-casual'].slice(0, 4).forEach((cas, i) => {
+      const calc = porCat['calcados'][(i + 1) % Math.max(1, porCat['calcados'].length)];
+      const aces = porCat['acessorios'][(i + 1) % Math.max(1, porCat['acessorios'].length)];
+      looksMontados.push({
+        titulo: `☀️ Look Casual / Encontro Fotografado #${i + 1}`,
+        combinacao: [
+          fmtPeca(cas, i, 'Peça Casual'),
+          calc ? fmtPeca(calc, (i + 1) % porCat['calcados'].length, 'Calçado') : 'Tênis casual limpo',
+          aces ? fmtPeca(aces, (i + 1) % porCat['acessorios'].length, 'Acessório') : 'Acessório do dia'
+        ].join(' + '),
+        acabamento: 'Pele hidratada com Nivea Milk 72h + Cabelo com Elseve [Glycolic] Gloss & Óleo Extraordinário + Uomini Infinite (ou Nativa SPA Ameixa à noite)'
+      });
+    });
+  }
+
+  return {
+    totalFotosGuardaRoupa: pecas.length,
+    contagem: {
+      trabalho: porCat['roupa-trabalho'].length,
+      casual: porCat['roupa-casual'].length,
+      calcados: porCat['calcados'].length,
+      acessorios: porCat['acessorios'].length,
+      euVestido: porCat['eu-vestido'].length
+    },
+    looksFotografados: looksMontados,
+    looksBase: LOOKS_BASE_SUGERIDOS
+  };
+}
+
 export const ROTINA_BLOCOS_HOJE = {
   m1: [
     { id: 'agua', t: 'Beber 1 copo cheio de água', d: 'Logo ao levantar da cama para despertar o corpo', surv: true },
@@ -556,11 +701,15 @@ export const ROTINA_CICLOS = [
 ];
 
 export const PRODUTOS_SUGERIDOS_SHOPPING = [
-  { title: '2 Fronhas de Cetim Escuras', price: 55, category: 'beleza_pessoal', notes: 'Complemento para o seu arsenal — anti-quebra noturna do cabelo crespo' },
-  { title: 'Raspador de Língua em Inox ou Cobre', price: 18, category: 'beleza_pessoal', notes: 'Complemento para o seu arsenal — higiene matinal em 10 segundos' },
-  { title: 'Kit 2 Porta-Perfumes Decant 5ml Recarregáveis', price: 22, category: 'beleza_pessoal', notes: 'Para levar o seu O Boticário Uomini Infinite na gaveta do trabalho' },
-  { title: 'Escova Polvo ou Pente Garfo + Borrifador Névoa', price: 28, category: 'beleza_pessoal', notes: 'Para desembaraçar com a Máscara Wella Nutri-Enrich e revitalizar de manhã' },
-  { title: 'Máscara Reconstrutora Queratina (ex: Lola Tarja Preta) ou Tonalizante Kamaleão Color', price: 45, category: 'beleza_pessoal', notes: 'Opcional apenas quando for descolorir/colorir os fios' }
+  { title: 'Máscara de Hidratação Pura — Lola Morte Súbita (450g) ou Widi Care Juba Hidro-Nutritiva', price: 42, category: 'beleza_pessoal', notes: 'Prioridade 1 (Cremes) — Sua Wella Nutri-Enrich é de Nutrição; falta uma máscara de Hidratação pura para as Semanas 1 e 3' },
+  { title: 'Máscara de Reconstrução — Lola Tarja Preta (Queratina Vegetal 230g)', price: 45, category: 'beleza_pessoal', notes: 'Prioridade 2 (Cremes) — Reposição forte de massa na Semana 4 (indispensável se for descolorir/colorir)' },
+  { title: 'Co-Wash Dedicado 500ml — Widi Care Juba Co-Wash ou Lola Comigo Ninguém Pode', price: 39, category: 'beleza_pessoal', notes: 'Prioridade 3 (Cremes) — Para lavar o suor nos 3 dias de corrida (Qui/Sáb/Dom) sem gastar todo o seu Ápice Nutri Waves' },
+  { title: 'Óleo 100% Vegetal em Pump — Lola Pinga! (Patauá & Moringa ou Açaí & Pracaxi 55ml)', price: 29, category: 'beleza_pessoal', notes: 'Prioridade 4 (Óleos) — Óleo vegetal líquido sem silicone para batizar a máscara (seu Elseve tem silicones de selagem e o de coco solidifica no frio)' },
+  { title: '2 Fronhas de Cetim Escuras (Preta / Azul-Marinho)', price: 48, category: 'beleza_pessoal', notes: 'Prioridade 1 (Acessórios Capilares) — Evita que o algodão sugue o Amend Gold Black e quebre o cabelo à noite' },
+  { title: 'Borrifador Spray de Névoa Contínua (200ml)', price: 18, category: 'beleza_pessoal', notes: 'Prioridade 2 (Acessórios Capilares) — Umedece o cabelo em 5s às 05h50 para reativar o Creme Amend Gold Black' },
+  { title: 'Kit Escova Polvo Flexível + Pente Garfo Dentes Largos', price: 26, category: 'beleza_pessoal', notes: 'Prioridade 3 (Acessórios Capilares) — Escova polvo desembaraça no banho com a máscara Wella; pente garfo dá volume na raiz' },
+  { title: 'Raspador de Língua em Inox + Kit 2 Porta-Perfumes Decant 5ml', price: 32, category: 'beleza_pessoal', notes: 'Complemento Higiene & Presença — Hálito 05h50 + levar seu Uomini Infinite pro trabalho' },
+  { title: 'Tonalizante Sem Amônia Kamaleão Color (150ml) + Luvas Pretas', price: 38, category: 'beleza_pessoal', notes: 'Opcional (apenas quando for colorir de Vermelho, Azul ou Platinado)' }
 ];
 
 const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -1364,8 +1513,25 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
         </div>
       </div>
 
+      <div class="dash-card" style="margin-bottom:0.85rem;border-left:3px solid var(--brand-moss);">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem;">
+          <h3 style="margin:0;">👔 Looks Sugeridos & Montador Automático</h3>
+          <span class="chip">Pronto para suas fotos</span>
+        </div>
+        <p style="margin:0 0 0.55rem;font-size:0.8rem;color:var(--text-muted);">Assim que você bater e enviar as fotos nas categorias <b>🏢 Roupas — trabalho</b>, <b>☀️ Roupas — casual</b>, <b>👟 Calçados</b>, <b>⌚ Acessórios</b> e <b>🧍 Eu vestido</b> na aba Fotos, o app detecta a cor/tipo de cada peça e monta seus looks automaticamente. Abaixo estão os 4 looks-base já cruzados com seus perfumes e finalizadores atuais:</p>
+        <div style="font-size:0.83rem;display:flex;flex-direction:column;gap:0.5rem;">
+          ${LOOKS_BASE_SUGERIDOS.map(l => `
+            <div style="padding:0.55rem;background:rgba(46,89,51,0.06);border-radius:var(--radius-sm);">
+              <b>${l.titulo}</b>
+              <div style="margin-top:0.2rem;"><b>Peças:</b> ${l.pecas}</div>
+              <div style="margin-top:0.2rem;color:var(--brand-moss);"><b>Cabelo, Pele & Perfume:</b> ${l.grooming}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
       <div class="dash-card" style="margin-bottom:0.85rem;">
-        <h3 style="margin:0 0 0.4rem;">👔 Guarda-Roupa & Cores com Cabelo Colorido</h3>
+        <h3 style="margin:0 0 0.4rem;">🎨 Paleta de Roupas & Cores com Cabelo Colorido</h3>
         <div style="font-size:0.84rem;display:flex;flex-direction:column;gap:0.45rem;">
           <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>🔴 Cabelo Vermelho:</b> Preto, Branco, Off-white, Cinza-chumbo, Jeans escuro, Bege, Areia e Azul-marinho liso.</div>
           <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>🔵 Cabelo Azul:</b> Branco, Off-white, Preto, Azul-marinho tom sobre tom, Bege, Caramelo e Cinza.</div>
@@ -1613,7 +1779,12 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
               prod = identificarProdutoPorTextoOuId({ id, cat, ocrText });
             }
           }
-          await idbFoto('readwrite', s => s.put({ id, cat, blob, thumb, size, sent: false, ocrText, productKey: prod ? prod.key : null, productLabel: prod ? prod.curto : null }));
+          let corInfo = null;
+          if (CATEGORIAS_GUARDA_ROUPA.includes(cat)) {
+            corInfo = await extrairCorDominanteBlob(thumb || blob);
+          }
+          const autoLabel = prod ? prod.curto : (corInfo ? corInfo.nome : null);
+          await idbFoto('readwrite', s => s.put({ id, cat, blob, thumb, size, sent: false, ocrText, corNome: corInfo ? corInfo.nome : null, productKey: prod ? prod.key : null, productLabel: autoLabel }));
           n++;
         } catch (err) {
           falhas++;
@@ -1894,7 +2065,7 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
     document.getElementById('rm-btn-gh-mais')?.addEventListener('click', () => { ghPagina++; renderGaleriaGitHub(); });
     document.getElementById('rm-btn-test-cfg')?.addEventListener('click', () => setTimeout(() => renderGaleriaGitHub(true), 1500));
 
-    const renderResumoAi = (produtos) => {
+    const renderResumoAi = (produtos, todasFotos = []) => {
       const box = document.getElementById('rm-ai-resumo');
       const badge = document.getElementById('rm-ai-badge');
       if (!box) return;
@@ -1921,6 +2092,25 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
           <b>📅 Cronograma Capilar de Domingo (4 Semanas):</b>
           <div style="margin-top:0.25rem;color:var(--text-secondary);">${plano.cronogramaDomingo.join('<br>')}</div>
         </div>
+        ${(() => {
+          const w = gerarLooksDoGuardaRoupa(todasFotos);
+          if (w.totalFotosGuardaRoupa > 0) {
+            return `
+              <div style="padding:0.55rem;background:rgba(46,89,51,0.11);border-radius:var(--radius-sm);border-left:3px solid var(--brand-moss);">
+                <b>👔 Looks Montados com suas Fotos (${w.totalFotosGuardaRoupa} peças: ${w.contagem.trabalho} trab · ${w.contagem.casual} casual · ${w.contagem.calcados} calçados · ${w.contagem.acessorios} acess.):</b>
+                <div style="margin-top:0.3rem;display:flex;flex-direction:column;gap:0.35rem;">
+                  ${w.looksFotografados.map(lk => `<div><b>${lk.titulo}:</b> ${lk.combinacao}<br><span style="font-size:0.76rem;color:var(--brand-moss);">✨ ${lk.acabamento}</span></div>`).join('')}
+                </div>
+              </div>
+            `;
+          }
+          return `
+            <div style="padding:0.55rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);">
+              <b>👔 Montador Automático de Looks (Aguardando fotos de Roupas, Calçados e Acessórios):</b>
+              <div style="margin-top:0.2rem;color:var(--text-muted);">Selecione acima <b>🏢 Roupas — trabalho</b>, <b>☀️ Roupas — casual</b>, <b>👟 Calçados</b> ou <b>⌚ Acessórios</b> e envie suas fotos: o app detecta a cor de cada peça e monta seus looks automaticamente aqui.</div>
+            </div>
+          `;
+        })()}
         <details style="margin-top:0.2rem;">
           <summary style="cursor:pointer;font-weight:700;color:var(--brand-moss);">📋 Ver todos os ${ (produtos || CATALOGO_PRODUTOS_ROTINA).length } produtos identificados nas fotos</summary>
           <div style="display:flex;flex-direction:column;gap:0.35rem;margin-top:0.4rem;">
@@ -1969,7 +2159,7 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
         rm.arsenal = detectados.map(p => ({ key: p.key, nome: p.nome, curto: p.curto, cat: p.cat, slot: p.slot, quando: p.quando, comoUsar: p.comoUsar }));
         save();
       }
-      renderResumoAi(detectados.length ? detectados : CATALOGO_PRODUTOS_ROTINA);
+      renderResumoAi(detectados.length ? detectados : CATALOGO_PRODUTOS_ROTINA, [...ghFs, ...localFs]);
       if (stEl) {
         stEl.textContent = `✅ ${detectados.length || CATALOGO_PRODUTOS_ROTINA.length} produtos identificados nas fotos e integrados nas abas Hoje, Capilar e Pele & Estilo.`;
       }

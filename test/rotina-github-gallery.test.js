@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import {
   parseGhFotosTree,
   CATALOGO_PRODUTOS_ROTINA,
+  PRODUTOS_SUGERIDOS_SHOPPING,
   identificarProdutoPorTextoOuId,
   analisarListaFotosArsenal,
-  gerarPlanoRotinaDoArsenal
+  gerarPlanoRotinaDoArsenal,
+  classificarCorRgb,
+  gerarLooksDoGuardaRoupa
 } from '../js/rotina-matheus.js';
 import { applyCloudBackup, mergeCloudWithLocalPriority } from '../js/sheets.js';
 
@@ -142,4 +145,27 @@ test('mergeCloudWithLocalPriority preserva lançamentos novos do celular e do PC
   const car1 = merged.carro.find(c => c.id === 'car_1');
   assert.equal(car1.status, 'concluido');
   assert.equal(car1.title, 'Troca de Óleo (Editado no PC)');
+});
+
+test('PRODUTOS_SUGERIDOS_SHOPPING lista apenas o que falta para completar o arsenal capilar e gerarLooksDoGuardaRoupa monta looks com fotos de roupas', () => {
+  assert.ok(PRODUTOS_SUGERIDOS_SHOPPING.length >= 8);
+  assert.ok(PRODUTOS_SUGERIDOS_SHOPPING.some(p => p.title.includes('Máscara de Hidratação Pura')));
+  assert.ok(PRODUTOS_SUGERIDOS_SHOPPING.some(p => p.title.includes('Máscara de Reconstrução')));
+  assert.ok(PRODUTOS_SUGERIDOS_SHOPPING.some(p => p.title.includes('Fronhas de Cetim')));
+
+  assert.equal(classificarCorRgb(20, 20, 20).id, 'preto');
+  assert.equal(classificarCorRgb(240, 240, 238).id, 'branco');
+  assert.equal(classificarCorRgb(25, 55, 110).id, 'marinho');
+
+  const w = gerarLooksDoGuardaRoupa([
+    { id: 'r1', cat: 'roupa-trabalho', corNome: 'Azul-Marinho / Jeans', productLabel: 'Camisa Linho' },
+    { id: 'r2', cat: 'roupa-casual', corNome: 'Verde-Oliva / Musgo', productLabel: 'Camiseta Heavy' },
+    { id: 'c1', cat: 'calcados', corNome: 'Branco / Off-White', productLabel: 'Tênis Couro' },
+    { id: 'a1', cat: 'acessorios', corNome: 'Preto / Grafite', productLabel: 'Relógio' }
+  ]);
+  assert.equal(w.totalFotosGuardaRoupa, 4);
+  assert.equal(w.looksFotografados.length, 2);
+  assert.ok(w.looksFotografados[0].combinacao.includes('Camisa Linho'));
+  assert.ok(w.looksFotografados[0].combinacao.includes('Tênis Couro'));
+  assert.ok(w.looksBase.length === 4);
 });
