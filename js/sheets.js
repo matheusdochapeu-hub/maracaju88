@@ -826,6 +826,32 @@ export function applyCloudBackup(currentState, cloudData) {
 
 
 /**
+ * Mescla a nuvem no estado local dando PRIORIDADE AO APARELHO.
+ * Usado quando há alterações locais ainda não enviadas (push pendente) e logo
+ * antes de cada envio: assim um snapshot antigo da planilha (gravado pelo outro
+ * aparelho) não reverte edições locais, e os lançamentos novos do outro aparelho
+ * entram por união antes de regravarmos a planilha.
+ */
+export function mergeCloudWithLocalPriority(localState, cloudData) {
+  if (!cloudData || typeof cloudData !== 'object') return localState;
+  const local = localState || {};
+  // Direção normal (nuvem vence) só para o que já é "local vence" por desenho:
+  // compras/notas, ajustes do aparelho e benefícios.
+  const normal = applyCloudBackup(local, cloudData);
+  // Direção invertida: o aparelho vence nos conflitos das demais coleções.
+  const swapped = applyCloudBackup(cloudData, local);
+  const merged = {
+    ...swapped,
+    activeUserId: normal.activeUserId,
+    comprasRegistros: normal.comprasRegistros,
+    settings: { ...normal.settings, lastCloudUpdatedAt: (local.settings || {}).lastCloudUpdatedAt }
+  };
+  normalizePurchasesInState(merged);
+  filterDeletedFromState(merged);
+  return merged;
+}
+
+/**
  * Busca o HTML de uma NFC-e via backend do Google Apps Script (contorna restrições de CORS).
  * Metodo POST evita o limite de tamanho da query string (a URL do QR Code carrega
  * a chave + hash e pode ser longa). Retorna o HTML ou lança erro explicativo.

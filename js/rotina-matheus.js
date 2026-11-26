@@ -6,6 +6,447 @@
 //  Fotos em Grande Volume (Git Data API) e Ciclos.
 // ============================================================
 
+// ============================================================
+//  CATÁLOGO INTELIGENTE DE PRODUTOS (26 FOTOS DO GITHUB + OCR)
+// ============================================================
+export const CATALOGO_PRODUTOS_ROTINA = [
+  // --- CABELO (11 produtos fotografados) ---
+  {
+    key: 'wella_nutri_shampoo',
+    nome: 'Wella Professionals Invigo Nutri-Enrich Shampoo (1L · Goji Berry)',
+    curto: 'Shampoo Wella Invigo Nutri-Enrich',
+    cat: 'cremes-cabelo',
+    slot: 'shampoo_nutritivo',
+    quando: '💈 Domingo (Cronograma) e Quinta pós-corrida',
+    comoUsar: 'Aplicar só no couro cabeludo 1 a 2× na semana, massagear por 2 min e enxaguar.',
+    photoIds: ['1795572214673-000-i34d'],
+    keywords: ['wella', 'invigo', 'nutri-enrich', 'shampoo', 'champu']
+  },
+  {
+    key: 'wella_nutri_mascara',
+    nome: 'Wella Professionals Invigo Nutri-Enrich Máscara de Nutrição Profunda (500ml)',
+    curto: 'Máscara Wella Invigo Nutri-Enrich',
+    cat: 'cremes-cabelo',
+    slot: 'mascara_nutricao',
+    quando: '💈 Todo Domingo no banho (10 min)',
+    comoUsar: 'Tirar o excesso de água, enluvar mecha a mecha por 10 min enquanto esfolia o corpo e enxaguar 100%.',
+    photoIds: ['1795572275880-000-py8h'],
+    keywords: ['wella', 'invigo', 'nutri-enrich', 'mascara', 'tratamiento intensivo']
+  },
+  {
+    key: 'wella_nutri_condicionador',
+    nome: 'Wella Professionals Invigo Nutri-Enrich Condicionador (1L · Goji Berry)',
+    curto: 'Condicionador Wella Invigo Nutri-Enrich',
+    cat: 'cremes-cabelo',
+    slot: 'condicionador_nutritivo',
+    quando: '💈 Domingo após a máscara e lavagens nutritivas',
+    comoUsar: 'Aplicar do meio às pontas por 2 min após enxaguar a máscara para selar a cutícula.',
+    photoIds: ['1795572199358-000-zl1l'],
+    keywords: ['wella', 'invigo', 'nutri-enrich', 'condicionador', 'acondicionador']
+  },
+  {
+    key: 'elseve_glycolic_shampoo',
+    nome: "L'Oréal Elseve [Glycolic] Gloss Shampoo Extra Gloss (200ml · 3% Ácido Glicólico)",
+    curto: 'Shampoo Elseve [Glycolic] Gloss',
+    cat: 'cremes-cabelo',
+    slot: 'shampoo_gloss',
+    quando: '✨ Semana 3 (Banho de Brilho / Anti-Porosidade)',
+    comoUsar: 'Usar na Semana 3 ou quando o fio estiver opaco/poroso para alinhar a cutícula com pH ácido.',
+    photoIds: ['1795572225345-000-mhqt'],
+    keywords: ['elseve', 'glycolic', 'shampoo extra gloss', 'combate a porosidade']
+  },
+  {
+    key: 'elseve_glycolic_condicionador',
+    nome: "L'Oréal Elseve [Glycolic] Gloss Condicionador Sela Gloss (400ml · 4% Ácido Glicólico)",
+    curto: 'Condicionador Elseve [Glycolic] Sela Gloss',
+    cat: 'cremes-cabelo',
+    slot: 'condicionador_gloss',
+    quando: '✨ Semana 3 e selagem anti-porosidade',
+    comoUsar: 'Deixar agir 2 a 3 min após a máscara ou shampoo Glycolic para laminar a cutícula e dar brilho espelhado.',
+    photoIds: ['1795572236743-000-us4h'],
+    keywords: ['elseve', 'glycolic', 'condicionador sela gloss', 'lamina a cuticula']
+  },
+  {
+    key: 'elseve_glycolic_creme_uv',
+    nome: "L'Oréal Elseve [Glycolic] Gloss Creme Super Gloss com Filtro UV (250ml)",
+    curto: 'Creme Super Gloss Elseve (Filtro UV)',
+    cat: 'cremes-cabelo',
+    slot: 'leavein_uv_corrida',
+    quando: '🏃 Pré-corrida no sol (Qui/Sáb/Dom) e Semana 3',
+    comoUsar: 'Passar 1 moeda nos fios antes de correr no sol de Ribeirão Preto para blindar contra raios UV e suor.',
+    photoIds: ['1795572038284-000-rtbu'],
+    keywords: ['elseve', 'glycolic', 'creme super gloss', 'com filtro uv']
+  },
+  {
+    key: 'apice_nutri_waves',
+    nome: 'Ápice Nutri Waves Condicionador · Leave-In · Acidificante (Proteína do Arroz · 0% Sulfato)',
+    curto: 'Ápice Nutri Waves (Acidificante / Co-Wash / Leave-In)',
+    cat: 'cremes-cabelo',
+    slot: 'acidificante_leavein_cowash',
+    quando: '🏃 Pós-corrida (Co-Wash) e 🧱 Semana 4 (Acidificante + Proteína)',
+    comoUsar: 'Curinga 3 em 1: usar como Co-Wash limpante pós-corrida (0% sulfato/silicone) e como Acidificante reconstrutor por 5 min na Semana 4.',
+    photoIds: ['1795572245691-000-wa1c'],
+    keywords: ['apice', 'nutri waves', 'acidificante', 'proteina do arroz']
+  },
+  {
+    key: 'amend_gold_black_creme',
+    nome: 'Amend Gold Black Hidratação Nutritiva Creme para Pentear (250ml · Coco, Karité e D-Pantenol)',
+    curto: 'Creme de Pentear Amend Gold Black',
+    cat: 'cremes-cabelo',
+    slot: 'creme_pentear',
+    quando: '🌅 Manhã (revitalização) e pós-banho',
+    comoUsar: 'Com o cabelo úmido, aplicar do meio às pontas para definir e nutrir os cachos/crespos sem enxágue.',
+    photoIds: ['1795572016292-000-bsou'],
+    keywords: ['amend', 'gold black', 'creme para pentear', 'crema para peinar']
+  },
+  {
+    key: 'amend_gold_black_gelatina',
+    nome: 'Amend Gold Black Hidratação Nutritiva Gelatina Modeladora de Cachos (500g)',
+    curto: 'Gelatina Modeladora Amend Gold Black',
+    cat: 'cremes-cabelo',
+    slot: 'gelatina_cachos',
+    quando: '💈 Finalização pós-banho para definição de 2 a 3 dias',
+    comoUsar: 'Misturar na palma da mão com o Creme de Pentear Gold Black para segurar a definição e travar o frizz.',
+    photoIds: ['1795572027148-000-qdei'],
+    keywords: ['amend', 'gold black', 'gelatina', 'modeladora de cachos']
+  },
+  {
+    key: 'elseve_oleo_extraordinario',
+    nome: "L'Oréal Elseve Óleo Extraordinário Tratamento Sublime (100ml)",
+    curto: 'Elseve Óleo Extraordinário',
+    cat: 'cremes-cabelo',
+    slot: 'oleo_capilar',
+    quando: '🌅 Manhã (2 gotas no cabelo + 2 na barba) e pós-finalização',
+    comoUsar: 'Espalhar 2 a 3 gotas nas mãos e amassar as pontas do cabelo (quebra o durinho da gelatina) e hidratar a barba.',
+    photoIds: ['1795572006556-000-a7dz'],
+    keywords: ['elseve', 'oleo extraordinario', 'tratamento sublime', 'flores preciosas']
+  },
+  {
+    key: 'charming_cera_matte',
+    nome: 'Charming Cless Cera Finalizadora Capilar Efeito Matte Fixação Extraforte (50g)',
+    curto: 'Cera Charming Efeito Matte',
+    cat: 'cremes-cabelo',
+    slot: 'cera_modeladora',
+    quando: '💈 Acabamento a seco (laterais do fade / eventos)',
+    comoUsar: 'Pegar uma ponta de dedo a seco para alinhar as laterais do taper fade ou fios rebeldes com acabamento fosco.',
+    photoIds: ['1795571915034-000-w6p6'],
+    keywords: ['charming', 'cera finalizadora', 'efeito matte', 'cless']
+  },
+
+  // --- PELE, SKINCARE, CORPO & PERFUMES (15 produtos fotografados) ---
+  {
+    key: 'creamy_gel_limpeza',
+    nome: 'Creamy Skincare Gel de Limpeza Facial (200ml · PCA Zinco + Centella Asiática + Camomila)',
+    curto: 'Creamy Gel de Limpeza (PCA Zinco + Centella)',
+    cat: 'pele-perfumes',
+    slot: 'limpeza_facial',
+    quando: '🌅 Manhã (05h50) e 🌙 Noite (banho)',
+    comoUsar: '1 pump no rosto e barba úmidos por 30s. Limpa sem sulfato, controla oleosidade e acalma a pele.',
+    photoIds: ['1795572255299-000-208i'],
+    keywords: ['creamy', 'gel de limpeza', 'pca zinco', 'centella asiatica']
+  },
+  {
+    key: 'creamy_vitamina_c',
+    nome: 'Creamy Skincare Sérum Facial 10% Vitamina C (+ Ácido Ferúlico + Vitamina E · 30ml)',
+    curto: 'Creamy Sérum 10% Vitamina C + Ferúlico',
+    cat: 'pele-perfumes',
+    slot: 'vitamina_c_manha',
+    quando: '🌅 Manhã (após lavar o rosto e antes do protetor)',
+    comoUsar: '3 a 4 gotas no rosto seco pela manhã: antioxidante que multiplica a proteção solar e uniformiza o tom da pele negra.',
+    photoIds: ['1795572056900-000-btp7'],
+    keywords: ['creamy', 'serum facial', '10% vitamina c', 'acido ferulico']
+  },
+  {
+    key: 'creamy_eye_cream',
+    nome: 'Creamy Skincare Eye Cream (15g · Matrixyl + Ácido Kójico Dipalmitato + Cafeisilane C)',
+    curto: 'Creamy Eye Cream (Olheiras & Pálpebras)',
+    cat: 'pele-perfumes',
+    slot: 'area_olhos',
+    quando: '🌅 Manhã e 🌙 Noite',
+    comoUsar: '1 grão de arroz dando leves batidinhas abaixo dos olhos: Cafeisilane desincha de manhã e Ácido Kójico clareia olheiras.',
+    photoIds: ['1795572049290-000-qpod'],
+    keywords: ['creamy', 'eye cream', 'matrixyl', 'acido kojico', 'cafeisilane']
+  },
+  {
+    key: 'creamy_calming_cream',
+    nome: 'Creamy Skincare Calming Cream (40g · Hypskin + Vitamina E + Alfa-Bisabolol)',
+    curto: 'Creamy Calming Cream (Hidratante Leve & Pós-Barba)',
+    cat: 'pele-perfumes',
+    slot: 'hidratante_facial_manha',
+    quando: '🌅 Manhã e pós-barba',
+    comoUsar: 'Aplicar após a Vitamina C pela manhã e no pescoço após fazer a barba: acalma irritação e protege contra o ar-condicionado.',
+    photoIds: ['1795571978882-000-suwe'],
+    keywords: ['creamy', 'calming cream', 'hypskin', 'alfa-bisabolol']
+  },
+  {
+    key: 'creamy_ceramide_repair',
+    nome: 'Creamy Skincare Ceramide Skin Repair (40g · Prata Pura Ag+ + Esqualano + Ceramidas + CicaRecover)',
+    curto: 'Creamy Ceramide Skin Repair (Reparador Noturno Ag+)',
+    cat: 'pele-perfumes',
+    slot: 'hidratante_facial_noite',
+    quando: '🌙 Noite (último passo facial antes de dormir)',
+    comoUsar: 'Aplicar à noite no rosto e contorno da barba: as Ceramidas regeneram a barreira e a Prata Pura (Ag+) previne foliculite/pelo encravado.',
+    photoIds: ['1795571973296-000-6ccw'],
+    keywords: ['creamy', 'ceramide skin repair', 'prata pura', 'cicarecover', 'esqualano']
+  },
+  {
+    key: 'creamy_watery_lotion_fps60',
+    nome: 'Creamy Skincare Watery Lotion Protetor Solar FPS 60 UVA+UVB (50ml · Resistente ao Suor)',
+    curto: 'Creamy Watery Lotion FPS 60 (Toque Aquoso Invisível)',
+    cat: 'pele-perfumes',
+    slot: 'protetor_solar_dia',
+    quando: '🌅 Manhã — dias de trabalho e rotina urbana',
+    comoUsar: 'Aplicar 3 dedos no rosto, pálpebras e pescoço. Textura aquosa invisível na pele negra e não arde os olhos.',
+    photoIds: ['1795571986790-000-atc3'],
+    keywords: ['creamy', 'watery lotion', 'locao aquosa', 'protetor solar', '60']
+  },
+  {
+    key: 'natura_fotoequilibrio_fps60',
+    nome: 'Natura Fotoequilíbrio Facial Gel Creme Protetor Solar FPS 60 / FPUVA 20 (50g)',
+    curto: 'Natura Fotoequilíbrio Facial FPS 60',
+    cat: 'pele-perfumes',
+    slot: 'protetor_solar_corrida',
+    quando: '🏃 Dias de corrida ao ar livre (Qui/Sáb/Dom) e pescoço/orelhas',
+    comoUsar: 'Usar nos treinos de corrida e sol forte (resistente à água e ao suor), poupando o Creamy Watery Lotion para o trabalho.',
+    photoIds: ['1795572071725-000-h08p'],
+    keywords: ['natura', 'fotoequilibrio', 'gel creme', 'fpuva 20']
+  },
+  {
+    key: 'nivea_milk_400ml',
+    nome: 'Nivea Loção Deo-Hidratante Milk 72h (400ml · Ácido Hialurônico Puro + Óleo de Amêndoas)',
+    curto: 'Nivea Loção Milk 72h (400ml)',
+    cat: 'pele-perfumes',
+    slot: 'hidratante_corporal',
+    quando: '🌙 Noite (nos 2 min pós-banho com a pele úmida)',
+    comoUsar: 'Passar no corpo todo (braços, pernas, cotovelos e tronco) logo ao sair do chuveiro. Zera o aspecto acinzentado e fixa o perfume.',
+    photoIds: ['1795571949506-000-eoxp'],
+    keywords: ['nivea', 'locao deo-hidratante', 'milk', 'acido hialuronico puro', '400ml']
+  },
+  {
+    key: 'nivea_creme_lata',
+    nome: 'Nivea Creme Lata Azul (56g · Hidratação Oclusiva Intensiva)',
+    curto: 'Nivea Creme Lata Azul (56g)',
+    cat: 'pele-perfumes',
+    slot: 'hidratante_oclusivo_pes',
+    quando: '🦶 Terça e Sábado à noite nos pés + mãos no trabalho',
+    comoUsar: 'Camada generosa nos calcanhares/pés antes de dormir (Ter/Sáb) contra calos da corrida, e nos cotovelos/mãos ressecados.',
+    photoIds: ['1795571926049-000-srls'],
+    keywords: ['nivea creme', '56g', 'lata']
+  },
+  {
+    key: 'natura_seve_amendoas',
+    nome: 'Natura Sève Óleo Corporal Amêndoas Doces Intensa com Enxágue (200ml)',
+    curto: 'Óleo Corporal Natura Sève Amêndoas Doces',
+    cat: 'pele-perfumes',
+    slot: 'oleo_banho',
+    quando: '🌙 Banho noturno (dias rápidos ou saída com a Scarlet)',
+    comoUsar: 'Aplicar no corpo molhado no fim do banho e enxaguar levemente: deixa a pele acetinada e perfumada em 30 segundos.',
+    photoIds: ['1795572081685-000-26nw'],
+    keywords: ['natura', 'seve', 'amendoas doces', 'oleo corporal']
+  },
+  {
+    key: 'corpo_dourado_esfoliante_maracuja',
+    nome: 'Corpo Dourado Esfoliante Corporal Maracujá com Argila Branca e Camomila (300g)',
+    curto: 'Esfoliante Corpo Dourado Maracujá (Argila Branca + Camomila)',
+    cat: 'pele-perfumes',
+    slot: 'esfoliante_corporal',
+    quando: '💈 Todo Domingo no banho (enquanto a máscara capilar age)',
+    comoUsar: 'Massagear corpo, pescoço e região da barba no banho de Domingo (e 48h antes da depilação) para renovar a pele e desencravar pelos.',
+    photoIds: ['1795572264351-000-q249'],
+    keywords: ['corpo dourado', 'esfoliante', 'maracuja', 'argila branca']
+  },
+  {
+    key: 'oleo_coco_virgem_pote',
+    nome: 'Óleo de Coco Virgem 100% Vegetal (Pote de Vidro)',
+    curto: 'Óleo de Coco Virgem Puro',
+    cat: 'pele-perfumes',
+    slot: 'umectacao_oleo_vegetal',
+    quando: '🥑 Semana 2 — Umectação Capilar 30 min pré-banho',
+    comoUsar: 'Aquecer 1 colher de chá nas mãos, aplicar nos fios secos 30 min antes do banho de Domingo (Sem 2) e remover com Co-Wash Ápice Nutri Waves.',
+    photoIds: ['1795571905429-000-r8xz'],
+    keywords: ['oleo de coco', 'coco virgem']
+  },
+  {
+    key: 'natura_erva_doce_rollon',
+    nome: 'Natura Erva Doce Desodorante Antitranspirante Roll-On 72h Secagem Rápida (70ml)',
+    curto: 'Natura Erva Doce Roll-On 72h',
+    cat: 'pele-perfumes',
+    slot: 'antitranspirante',
+    quando: '🌙 Noite (axila seca pós-banho) e 🌅 Manhã',
+    comoUsar: 'Aplicar à noite antes de dormir (atua nas glândulas em repouso dobrando a proteção) e reaplicar de manhã.',
+    photoIds: ['1795571897035-000-vadf'],
+    keywords: ['natura', 'erva doce', '72h', '70ml', 'desodorante antitranspirante']
+  },
+  {
+    key: 'boticario_uomini_infinite',
+    nome: 'O Boticário Uomini Infinite Desodorante Colônia',
+    curto: 'O Boticário Uomini Infinite',
+    cat: 'pele-perfumes',
+    slot: 'perfume_dia',
+    quando: '🌅 Manhã (trabalho/dia) e 🍷 Saídas',
+    comoUsar: '5 a 6 borrifadas sobre a pele hidratada (2× pescoço/orelhas, 1× nuca, 1× peito, 1× dobras do cotovelo sem esfregar).',
+    photoIds: ['1795571882555-000-uvfr'],
+    keywords: ['uomini', 'infinite', 'boticario']
+  },
+  {
+    key: 'nativa_spa_ameixa_splash',
+    nome: 'O Boticário Nativa SPA Ameixa Body Splash Desodorante Colônia (200ml)',
+    curto: 'Body Splash Nativa SPA Ameixa',
+    cat: 'pele-perfumes',
+    slot: 'body_splash_noite',
+    quando: '🌙 Pós-banho noturno / ficar cheiroso em casa e ao dormir',
+    comoUsar: 'Borrifar no peito, braços e nuca após o hidratante Nivea Milk à noite para dormir cheiroso com a Scarlet.',
+    photoIds: ['1795572094095-000-6m7d'],
+    keywords: ['nativa spa', 'ameixa', 'body splash']
+  }
+];
+
+function normTxt(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * Identifica um produto do catálogo a partir do ID da foto no GitHub, caminho, ou texto lido via OCR.
+ * Caso o OCR traga um produto novo fora do catálogo base, extrai o nome e classifica automaticamente pela categoria/palavras-chave.
+ */
+export function identificarProdutoPorTextoOuId({ id = '', path = '', cat = '', ocrText = '' } = {}) {
+  const cleanId = String(id || path || '').replace(/^.*\//, '').replace(/\.[^.]+$/, '');
+  // 1. Match instantâneo por photoId conhecido do repositório
+  for (const prod of CATALOGO_PRODUTOS_ROTINA) {
+    if (prod.photoIds && prod.photoIds.some(pid => cleanId.includes(pid) || pid.includes(cleanId))) {
+      return { ...prod, matchedBy: 'photoId', photoId: cleanId };
+    }
+  }
+
+  // 2. Match por palavras-chave no texto OCR ou nome do arquivo
+  const blobTxt = normTxt(ocrText + ' ' + cleanId + ' ' + path);
+  if (blobTxt.trim()) {
+    let best = null;
+    let bestScore = 0;
+    let bestMatches = 0;
+    for (const prod of CATALOGO_PRODUTOS_ROTINA) {
+      let score = 0;
+      let matches = 0;
+      for (const kw of (prod.keywords || [])) {
+        if (blobTxt.includes(normTxt(kw))) {
+          score += kw.length >= 6 ? 2 : 1;
+          matches++;
+        }
+      }
+      if (matches >= 2 && score > bestScore) {
+        bestScore = score;
+        bestMatches = matches;
+        best = prod;
+      }
+    }
+    if (best && bestMatches >= 2 && bestScore >= 3) {
+      return { ...best, matchedBy: 'ocr', photoId: cleanId };
+    }
+  }
+
+  // 3. Produto novo detectado por OCR (heurística automática para futuros uploads)
+  const rawLines = String(ocrText || '')
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l.length >= 3 && /[a-zA-ZÀ-ÿ]{3,}/.test(l));
+  if (rawLines.length > 0) {
+    const label = rawLines.slice(0, 3).join(' · ').slice(0, 90);
+    const t = normTxt(rawLines.join(' '));
+    let slot = cat === 'cremes-cabelo' ? 'creme_pentear' : 'hidratante_facial_manha';
+    let quando = cat === 'cremes-cabelo' ? '💈 Rotina Capilar' : '🧴 Rotina de Skincare';
+    let comoUsar = 'Produto identificado via leitura automática do rótulo.';
+    if (/shampoo|champu/.test(t)) { slot = 'shampoo_nutritivo'; quando = '💈 Lavagem Capilar (1-2×/sem)'; comoUsar = 'Aplicar no couro cabeludo molhado, massagear e enxaguar.'; }
+    else if (/mascara|tratamento|nutricao|hidratacao|reconstrucao/.test(t) && cat === 'cremes-cabelo') { slot = 'mascara_nutricao'; quando = '💈 Domingo (Cronograma 10 min)'; comoUsar = 'Enluvar mecha a mecha por 10 min após o shampoo e enxaguar.'; }
+    else if (/acidificante|co-wash|cowash/.test(t)) { slot = 'acidificante_leavein_cowash'; quando = '🏃 Pós-corrida / Semana 4'; comoUsar = 'Usar para selar cutículas ou lavar suavemente pós-corrida.'; }
+    else if (/condicionador|acondicionador/.test(t)) { slot = 'condicionador_nutritivo'; quando = '💈 Pós-máscara (2 min)'; comoUsar = 'Selar pontas por 2 min e enxaguar.'; }
+    else if (/gelatina|cera|pomada|matte/.test(t)) { slot = 'gelatina_cachos'; quando = '💈 Finalização e definição'; comoUsar = 'Modelar os fios para segurar a definição.'; }
+    else if (/protetor|fps|spf|solar|uva|uvb/.test(t)) { slot = 'protetor_solar_dia'; quando = '🌅 Manhã (3 dedos rosto e pescoço)'; comoUsar = 'Aplicar toda manhã como último passo facial.'; }
+    else if (/limpeza|sabonete|cleanser|gel/.test(t) && cat !== 'cremes-cabelo') { slot = 'limpeza_facial'; quando = '🌅 Manhã e 🌙 Noite'; comoUsar = 'Lavar o rosto suavemente por 30s.'; }
+    else if (/serum|vitamina c|niacinamida|acido/.test(t)) { slot = 'vitamina_c_manha'; quando = '🌅 Manhã / 🌙 Noite (Sérum)'; comoUsar = 'Aplicar 3-4 gotas na pele limpa e seca antes do hidratante.'; }
+    else if (/olhos|eye/.test(t)) { slot = 'area_olhos'; quando = '🌅 Manhã e 🌙 Noite'; comoUsar = 'Dar leves batidinhas na região das olheiras.'; }
+    else if (/esfoliante/.test(t)) { slot = 'esfoliante_corporal'; quando = '💈 Domingo no banho'; comoUsar = 'Massagear pele úmida para renovar e desencravar pelos.'; }
+    else if (/desodorante|antitranspirante|roll-on/.test(t)) { slot = 'antitranspirante'; quando = '🌙 Noite e 🌅 Manhã'; comoUsar = 'Aplicar nas axilas secas.'; }
+    else if (/colonia|perfume|parfum|toilette|splash/.test(t)) { slot = 'perfume_dia'; quando = '🌅 Manhã / Pós-banho'; comoUsar = 'Aplicar nos pontos de pulsação sobre a pele hidratada.'; }
+
+    return {
+      key: 'custom_' + (cleanId || Date.now()),
+      nome: label,
+      curto: label,
+      cat: cat || 'pele-perfumes',
+      slot,
+      quando,
+      comoUsar,
+      photoIds: cleanId ? [cleanId] : [],
+      matchedBy: 'ocr_custom',
+      photoId: cleanId
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Analisa uma lista de fotos (do GitHub ou do IndexedDB) e retorna a lista deduplicada de produtos identificados.
+ */
+export function analisarListaFotosArsenal(fotos = [], savedOcrMap = {}) {
+  const byKey = new Map();
+  (Array.isArray(fotos) ? fotos : []).forEach(f => {
+    if (!f) return;
+    const id = f.id || (f.path ? f.path.split('/').pop().replace(/\.[^.]+$/, '') : '');
+    const ocrText = f.ocrText || savedOcrMap[id] || '';
+    const detected = identificarProdutoPorTextoOuId({ id, path: f.path || '', cat: f.cat || '', ocrText });
+    if (detected && !byKey.has(detected.key)) {
+      byKey.set(detected.key, detected);
+    }
+  });
+  return Array.from(byKey.values());
+}
+
+/**
+ * Gera um diagnóstico estruturado de rotina (Manhã, Corrida, Noite e Cronograma Capilar) a partir dos produtos detectados.
+ */
+export function gerarPlanoRotinaDoArsenal(produtos = []) {
+  const list = Array.isArray(produtos) && produtos.length ? produtos : CATALOGO_PRODUTOS_ROTINA;
+  const pick = (slot, fallback) => {
+    const found = list.filter(p => p.slot === slot);
+    return found.length ? found.map(p => p.curto).join(' ou ') : fallback;
+  };
+  return {
+    totalProdutos: list.length,
+    totalCabelo: list.filter(p => p.cat === 'cremes-cabelo').length,
+    totalPele: list.filter(p => p.cat === 'pele-perfumes').length,
+    manhaRosto: [
+      `1. Limpeza: ${pick('limpeza_facial', 'Creamy Gel de Limpeza (PCA Zinco + Centella)')}`,
+      `2. Antioxidante: ${pick('vitamina_c_manha', 'Creamy Sérum 10% Vitamina C + Ácido Ferúlico')}`,
+      `3. Área dos Olhos: ${pick('area_olhos', 'Creamy Eye Cream (Cafeisilane + Ácido Kójico)')}`,
+      `4. Hidratação Leve / Pós-Barba: ${pick('hidratante_facial_manha', 'Creamy Calming Cream')}`,
+      `5. Fotoproteção: ${pick('protetor_solar_dia', 'Creamy Watery Lotion FPS 60')}`
+    ],
+    manhaCabeloPresenca: [
+      `Cabelo & Barba: Água + ${pick('creme_pentear', 'Creme Amend Gold Black')} + 2 gotas de ${pick('oleo_capilar', 'Elseve Óleo Extraordinário')} (e ${pick('cera_modeladora', 'Cera Charming Matte')} a seco nas laterais se precisar)`,
+      `Axilas & Perfume: ${pick('antitranspirante', 'Natura Erva Doce Roll-On 72h')} + 5 borrifadas de ${pick('perfume_dia', 'O Boticário Uomini Infinite')}`
+    ],
+    diasCorrida: [
+      `Antes de sair pro sol (Qui/Sáb/Dom): ${pick('protetor_solar_corrida', 'Natura Fotoequilíbrio Facial FPS 60')} no rosto + ${pick('leavein_uv_corrida', 'Creme Super Gloss Elseve [Glycolic] com Filtro UV')} nos fios`,
+      `Banho pós-corrida (Co-Wash sem ressecar): ${pick('acidificante_leavein_cowash', 'Ápice Nutri Waves (0% sulfato/silicones)')} + finalização com ${pick('creme_pentear', 'Amend Gold Black')}`
+    ],
+    noiteRecuperacao: [
+      `Banho & Corpo (2 min pós-banho): ${pick('hidratante_corporal', 'Nivea Loção Milk 72h (400ml)')} ou ${pick('oleo_banho', 'Óleo Natura Sève Amêndoas Doces')} + ${pick('body_splash_noite', 'Body Splash Nativa SPA Ameixa')}`,
+      `Pés & Cotovelos (Terça e Sábado): ${pick('hidratante_oclusivo_pes', 'Nivea Creme Lata Azul (56g)')} + ${pick('antitranspirante', 'Natura Erva Doce Roll-On 72h')} noturno`,
+      `Rosto Noturno: ${pick('limpeza_facial', 'Creamy Gel de Limpeza')} → ${pick('area_olhos', 'Creamy Eye Cream')} → ${pick('hidratante_facial_noite', 'Creamy Ceramide Skin Repair (Prata Ag+ + Ceramidas)')}`
+    ],
+    cronogramaDomingo: [
+      `Sem 1 (Hidratação Nutritiva): ${pick('shampoo_nutritivo', 'Shampoo Wella Nutri-Enrich')} → ${pick('mascara_nutricao', 'Máscara Wella Nutri-Enrich')} 10 min (enquanto passa o ${pick('esfoliante_corporal', 'Esfoliante Corpo Dourado Maracujá')} no corpo/barba) → ${pick('condicionador_nutritivo', 'Condicionador Wella Nutri-Enrich')}`,
+      `Sem 2 (Umectação + Nutrição): Pré-banho 30 min com ${pick('umectacao_oleo_vegetal', 'Óleo de Coco Virgem')} → remover com ${pick('acidificante_leavein_cowash', 'Ápice Nutri Waves')} → ${pick('mascara_nutricao', 'Máscara Wella Nutri-Enrich')} + 3 gotas de ${pick('oleo_capilar', 'Elseve Óleo Extraordinário')}`,
+      `Sem 3 (Banho de Gloss Anti-Porosidade): ${pick('shampoo_gloss', 'Shampoo Elseve [Glycolic] Gloss')} → ${pick('mascara_nutricao', 'Máscara Wella Nutri-Enrich')} 5 min → ${pick('condicionador_gloss', 'Condicionador Elseve Sela Gloss')} → ${pick('leavein_uv_corrida', 'Creme Super Gloss Elseve')}`,
+      `Sem 4 (Acidificação & Proteína do Arroz): ${pick('shampoo_nutritivo', 'Shampoo Wella Nutri-Enrich')} → ${pick('acidificante_leavein_cowash', 'Ápice Nutri Waves (Acidificante + Proteína do Arroz)')} 5 min → ${pick('mascara_nutricao', 'Máscara Wella Nutri-Enrich')} 10 min → ${pick('creme_pentear', 'Amend Gold Black Creme')} + ${pick('gelatina_cachos', 'Gelatina Gold Black')}`
+    ]
+  };
+}
+
 export const ROTINA_BLOCOS_HOJE = {
   m1: [
     { id: 'agua', t: 'Beber 1 copo cheio de água', d: 'Logo ao levantar da cama para despertar o corpo', surv: true },
@@ -13,20 +454,22 @@ export const ROTINA_BLOCOS_HOJE = {
     { id: 'raspador', t: 'Passar o raspador de língua', d: 'Remove 80% da saburra em 10 segundos e garante hálito limpo', surv: true }
   ],
   m2: [
-    { id: 'gel_m', t: 'Lavar o rosto com Gel de Limpeza Facial', d: 'Principia GL-01, GL-02 ou CeraVe — sem sabonete corporal no rosto' },
-    { id: 'hid_m', t: 'Aplicar Hidratante Facial Leve', d: 'CeraVe Loção ou Hydro Boost — blinda contra o ar-condicionado do trabalho' },
-    { id: 'prot_m', t: 'Passar Protetor Solar FPS 50+ Invisível', d: '3 dedos no rosto, orelhas e pescoço — ISDIN, Principia PS-01/03 ou Nivea Toque Seco', surv: true }
+    { id: 'gel_m', t: 'Lavar o rosto com Creamy Gel de Limpeza Facial', d: 'Frasco verde-água (PCA Zinco + Centella Asiática + Camomila) — limpa sem sulfato e acalma a barba' },
+    { id: 'vitc_m', t: 'Aplicar Creamy Sérum 10% Vitamina C + Ácido Ferúlico', d: 'Frasco laranja · 3 a 4 gotas no rosto seco: antioxidante que multiplica a proteção solar e uniformiza o tom' },
+    { id: 'olhos_m', t: 'Aplicar Creamy Eye Cream na área dos olhos', d: 'Frasco cinza · 1 grão de arroz nas olheiras: Cafeisilane C desincha às 05h50 e Ácido Kójico clareia' },
+    { id: 'hid_m', t: 'Aplicar Creamy Calming Cream (Hidratante Leve)', d: 'Bisnaga coral (Hypskin + Vitamina E + Alfa-bisabolol) — acalma pós-barba e blinda contra o ar-condicionado' },
+    { id: 'prot_m', t: 'Passar Protetor Solar FPS 60 (Creamy Watery Lotion ou Natura Fotoequilíbrio)', d: '3 dedos no rosto e pescoço — Creamy Watery Lotion FPS 60 no escritório ou Natura Fotoequilíbrio FPS 60 nos dias de corrida', surv: true }
   ],
   m3: [
-    { id: 'cab_m', t: 'Revitalizar o cabelo', d: 'Borrifar água + 2 gotas de óleo finalizador nas pontas e modelar com a mão ou nudred' },
-    { id: 'barba_m', t: 'Alinhar e hidratar a barba', d: '3 gotas de óleo ou balm de barba para maciez e cheiro agradável' },
-    { id: 'desod_m', t: 'Aplicar antitranspirante neutro', d: 'Rexona ou Dove Clinical ou Nivea Black & White', surv: true },
+    { id: 'cab_m', t: 'Revitalizar o cabelo com Amend Gold Black + Elseve Óleo Extraordinário', d: 'Borrifar água + Creme para Pentear Amend Gold Black + 2 gotas do Óleo Extraordinário Elseve (e Cera Charming Matte a seco nas laterais se precisar)' },
+    { id: 'barba_m', t: 'Alinhar e hidratar a barba', d: '2 gotas do Elseve Óleo Extraordinário nos fios da barba + Creamy Calming Cream no pescoço' },
+    { id: 'desod_m', t: 'Aplicar Natura Erva Doce Roll-On 72h', d: 'Secagem rápida e aroma limpo que não briga com o perfume', surv: true },
     { id: 'roupa_m', t: 'Vestir a roupa já separada ontem', d: 'Zero gasto de energia decidindo roupa às 05h50', surv: true },
-    { id: 'perf_m', t: 'Aplicar Perfume do Dia', d: '5 a 6 borrifadas: 2× pescoço e orelhas, 1× nuca, 1× peito, 1× dobras do cotovelo sem esfregar', surv: true }
+    { id: 'perf_m', t: 'Aplicar O Boticário Uomini Infinite', d: '5 a 6 borrifadas: 2× pescoço e orelhas, 1× nuca, 1× peito, 1× dobras do cotovelo sem esfregar', surv: true }
   ],
   t1: [
-    { id: 'labial_t', t: 'Passar Protetor Labial e Creme de Mãos', d: '1 a 2× durante o expediente no ar-condicionado', opt: true },
-    { id: 'decant_t', t: 'Retocar Perfume pós-almoço', d: '2 borrifadas do mini porta-perfume de 5 ml da gaveta', opt: true }
+    { id: 'labial_t', t: 'Hidratar mãos e cotovelos com Nivea Creme (Lata Azul)', d: '1 a 2× durante o expediente no ar-condicionado', opt: true },
+    { id: 'decant_t', t: 'Retocar Uomini Infinite pós-almoço', d: '2 borrifadas do mini porta-perfume de 5 ml da gaveta', opt: true }
   ],
   n1: [
     { id: 'casa_pia', t: 'Reset Casa 1/3: Cozinha — pia zerada e lixo', d: 'Guardar louça e lavar copo ou prato usado' },
@@ -35,70 +478,73 @@ export const ROTINA_BLOCOS_HOJE = {
     { id: 'roupa_n', t: 'Separar roupa de amanhã + mochila e tênis', d: 'Deixar pendurada no gancho antes do banho' }
   ],
   n2: [
-    { id: 'banho_n', t: 'Banho morno com sabonete hidratante ou óleo', d: 'Atenção atrás das orelhas, nuca, axilas e pés · Pós-corrida: Co-Wash no cabelo' },
-    { id: 'hid_corpo', t: 'Hidratante Corporal sem cheiro nos 2 min pós-banho', d: 'CeraVe Loção 473 ml com a pele ainda úmida em braços, pernas, cotovelos e joelhos' },
-    { id: 'desod_n', t: 'Aplicar Antitranspirante Noturno', d: 'Com axila seca antes de dormir — bloqueia o suor 2× melhor no dia seguinte' },
-    { id: 'pes_n', t: 'Creme com Ureia 10% nos pés', d: 'Terça e Sábado — previne calos, rachaduras e atrito das corridas', days: [2, 6] },
+    { id: 'banho_n', t: 'Banho morno (Sabonete + Óleo Natura Sève / Co-Wash Ápice pós-corrida)', d: 'Pós-corrida (Qui/Sáb/Dom): lavar o cabelo com Ápice Nutri Waves (0% sulfato) · Domingo: Esfoliante Corpo Dourado Maracujá' },
+    { id: 'hid_corpo', t: 'Nivea Loção Milk 72h (400ml) + Body Splash Nativa SPA Ameixa nos 2 min pós-banho', d: 'Com a pele ainda úmida em braços, pernas e tronco (Ácido Hialurônico + Óleo de Amêndoas)' },
+    { id: 'desod_n', t: 'Aplicar Natura Erva Doce Roll-On 72h noturno', d: 'Com axila seca antes de dormir — bloqueia o suor 2× melhor no dia seguinte' },
+    { id: 'pes_n', t: 'Nivea Creme Lata Azul (56g) nos pés, cotovelos e joelhos', d: 'Terça e Sábado — oclusão profunda que previne calos, rachaduras e atrito das corridas', days: [2, 6] },
     { id: 'fio_n', t: 'Passar o Fio Dental', d: 'Seu hábito âncora consolidado — nunca pular' },
     { id: 'escova_n', t: 'Escovar os dentes', d: 'Higiene noturna completa' },
-    { id: 'gel_n', t: 'Lavar o rosto com Gel de Limpeza Facial', d: 'Remove protetor solar, suor da corrida e poluição' },
-    { id: 'serum_n', t: 'Aplicar Sérum Niacinamida 10%', d: 'Segunda, Quarta e Sexta · Principia NC-10 contra manchas e pelos encravados', days: [1, 3, 5] },
-    { id: 'hid_n', t: 'Aplicar Hidratante Facial Noturno', d: 'Regeneração da barreira da pele durante o sono' },
+    { id: 'gel_n', t: 'Lavar o rosto com Creamy Gel de Limpeza Facial', d: 'Remove protetor solar FPS 60, suor da corrida e poluição sem agredir a barreira' },
+    { id: 'olhos_n', t: 'Aplicar Creamy Eye Cream nas olheiras e pálpebras', d: 'Tratamento noturno com Ácido Kójico Dipalmitato + Peptídeos Matrixyl' },
+    { id: 'hid_n', t: 'Aplicar Creamy Ceramide Skin Repair (Bisnaga Azul-Petróleo)', d: 'Ultra reparador noturno com Ceramidas, Esqualano, CicaRecover e Prata Pura (Ag+) contra pelos encravados' },
     { id: 'cetim_n', t: 'Dormir na Fronha de Cetim Escura', d: 'Evita quebra do cabelo crespo crescendo · Meta pós-04/12: dormir às 22h30' }
   ]
 };
 
 export const ETAPAS_CAPILARES = [
   {
-    titulo: 'Semana 1 · 💧 Hidratação',
-    foco: 'Repor a água sugada pelo ar-condicionado do trabalho e pelo sol de Ribeirão Preto. Devolve maciez e balanço.',
-    cremes: 'Máscara Lola Morte Súbita • Widi Care Operação Resgate • Bio Extratus Botica Cachos • Skala Babosa',
+    titulo: 'Semana 1 · 💧 Hidratação Nutritiva Wella + Definição Gold Black',
+    foco: 'Repor água e nutrientes perdidos no ar-condicionado e no sol de Ribeirão Preto usando seu trio Wella Invigo Nutri-Enrich + dupla Amend Gold Black.',
+    cremes: 'Shampoo Wella Invigo Nutri-Enrich (1L) • Máscara Wella Nutri-Enrich (500ml) • Condicionador Wella Nutri-Enrich (1L) • Creme + Gelatina Amend Gold Black • Elseve Óleo Extraordinário',
     passos: [
-      '<b>1. Shampoo Hidratante · 2 min:</b> Molhe bem, aplique o shampoo só no couro cabeludo como <i>Widi Care Juba</i> ou <i>Salon Line Babosa</i>, massageie com as pontas dos dedos e enxágue.',
+      '<b>1. Shampoo Wella Invigo Nutri-Enrich · 2 min:</b> Molhe bem, aplique só no couro cabeludo, massageie com as pontas dos dedos e enxágue.',
       '<b>2. Tirar excesso de água:</b> Aperte suavemente com toalha de microfibra ou camiseta de algodão para a máscara não escorrer.',
-      '<b>3. Aplicar Máscara de Hidratação · 2 min:</b> Pegue 1 colher de máscara com espátula limpa e enluve mecha por mecha da raiz às pontas.',
-      '<b>4. Desembaraçar no banho:</b> Com a máscara no fio, passe a escova polvo ou pente garfo das pontas para a raiz.',
-      '<b>5. Pausa · 10 min:</b> Deixe agir enquanto toma banho e faz esfoliação corporal e da barba.',
-      '<b>6. Enxágue + Condicionador Selante · 2 min:</b> Enxágue 100% da máscara, aplique o condicionador por 2 min para fechar a cutícula e enxágue.',
-      '<b>7. Finalização:</b> Com o cabelo úmido, aplique 2 gotas de óleo vegetal + Creme de Pentear como <i>Encrespando a Juba</i> ou <i>Crespo Divino</i>.'
+      '<b>3. Máscara Wella Invigo Nutri-Enrich · 10 min:</b> Enluve mecha a mecha da raiz às pontas e desembarace no banho.',
+      '<b>4. Esfoliação Corporal & Barba durante a pausa:</b> Enquanto a máscara age, massageie o <b>Esfoliante Corpo Dourado Maracujá (Argila Branca + Camomila)</b> no corpo e pescoço/barba.',
+      '<b>5. Condicionador Wella Invigo Nutri-Enrich · 2 min:</b> Enxágue 100% da máscara, aplique o condicionador Wella por 2 min para selar a cutícula e enxágue.',
+      '<b>6. Finalização Gold Black:</b> Com o cabelo úmido, aplique o <b>Creme para Pentear Amend Gold Black</b> + um toque da <b>Gelatina Amend Gold Black</b> e finalize com 2 gotas do <b>Elseve Óleo Extraordinário</b>.'
     ]
   },
   {
-    titulo: 'Semana 2 · 🥑 Nutrição e Umectação',
-    foco: 'A etapa mais importante do cabelo crespo. Repõe lipídios e óleos naturais que não chegam às pontas, eliminando o frizz e dando brilho.',
-    cremes: 'Máscara Lola Dream Cream • Widi Care Juba Manteiga • Eudora Siàge Nutri Óleos + Óleo 100% Vegetal de Rícino, Abacate ou Argan',
+    titulo: 'Semana 2 · 🥑 Umectação com Óleo de Coco + Nutrição Profunda',
+    foco: 'A etapa rainha do cabelo crespo: seu Óleo de Coco Virgem repõe lipídios profundos e o trio Wella + Elseve Óleo Extraordinário elimina o ressecamento.',
+    cremes: 'Óleo de Coco Virgem (pote de vidro) • Ápice Nutri Waves (Co-Wash 0% sulfato) • Máscara Wella Invigo Nutri-Enrich • Elseve Óleo Extraordinário',
     passos: [
-      '<b>Opção A — No Banho · 15 min:</b> Lavar com Shampoo Hidratante → tirar excesso de água → enluvar a <b>Máscara de Nutrição</b> com 3 gotas de óleo vegetal misturadas → deixar 10 a 15 min → enxaguar → Condicionador Selante → Finalizar.',
-      '<b>Opção B — Umectação Antes do Banho:</b> 30 min antes do banho, passe óleo 100% vegetal puro nos fios secos. No banho, aplique Co-Wash por cima do óleo por 5 min para remover o excesso sem ressecar, enxágue, passe a máscara nutritiva por 5 min e finalize.'
+      '<b>1. Umectação Pré-Banho · 30 min:</b> Espalhe 1 colher de chá do seu <b>Óleo de Coco Virgem</b> nos fios secos 30 min antes do banho.',
+      '<b>2. Emulsificação Suave com Ápice Nutri Waves:</b> No banho, aplique o <b>Ápice Nutri Waves (0% sulfato/silicones)</b> por cima do óleo por 3 a 5 min para soltar o excesso sem agredir, enxágue e lave o couro com 1 pump do <b>Shampoo Wella Nutri-Enrich</b>.',
+      '<b>3. Máscara Wella + Óleo Extraordinário · 10 min:</b> Misture 1 colher da <b>Máscara Wella Invigo Nutri-Enrich</b> com 3 gotas do <b>Elseve Óleo Extraordinário</b>, enluve por 10 min e enxágue.',
+      '<b>4. Selagem & Finalização:</b> Sele com <b>Condicionador Wella Nutri-Enrich</b> por 2 min e finalize com <b>Creme para Pentear Amend Gold Black</b>.'
     ]
   },
   {
-    titulo: 'Semana 3 · 💧 Hidratação + Banho de Brilho',
-    foco: 'Manter a reposição hídrica do mês. Se o cabelo estiver Vermelho ou Azul, é a semana ideal para renovar a cor sem amônia.',
-    cremes: 'Máscara de Hidratação branca + 1 colher de Tonalizante Kamaleão Color ou Salon Line Color Express',
+    titulo: 'Semana 3 · ✨ Banho de Gloss & Alinhamento Anti-Porosidade ([Glycolic] Gloss)',
+    foco: 'Usar sua linha completa L’Oréal Elseve [Glycolic] Gloss com Ácido Glicólico para fechar a porosidade do fio, alinhar as escamas e blindar com filtro UV.',
+    cremes: 'Shampoo Elseve [Glycolic] Gloss (3%) • Máscara Wella Nutri-Enrich • Condicionador Elseve [Glycolic] Sela Gloss (4%) • Creme Super Gloss Elseve (Com Filtro UV)',
     passos: [
-      '<b>Se estiver com cor natural:</b> Repetir o passo a passo da Semana 1: Shampoo Hidratante → Máscara de Hidratação por 10 min → Condicionador → Finalizador.',
-      '<b>Se estiver Vermelho ou Azul:</b> Misture num potinho 2 colheres de máscara branca hidratante + 1 colher do tonalizante sem amônia. Lave com shampoo, tire o excesso de água, aplique a mistura com luva, deixe 20 a 25 min, enxágue e passe condicionador.'
+      '<b>1. Shampoo Elseve [Glycolic] Gloss · 2 min:</b> Lave o couro cabeludo com o Shampoo Extra Gloss (3% complexo com Ácido Glicólico, anti-sal) e enxágue.',
+      '<b>2. Pausa Nutritiva Rápida · 5 min:</b> Aplique uma camada leve da <b>Máscara Wella Nutri-Enrich</b> por 5 min e enxágue.',
+      '<b>3. Condicionador Elseve Sela Gloss (4% Ácido Glicólico) · 3 min:</b> Enluve os fios para laminar a cutícula e travar o brilho espelhado, depois enxágue.',
+      '<b>4. Blindagem com Filtro UV:</b> Finalize com o <b>Creme Super Gloss Elseve [Glycolic] Gloss (Com Filtro UV)</b> combinado ao <b>Amend Gold Black</b> + 2 gotas de <b>Elseve Óleo Extraordinário</b>.'
     ]
   },
   {
-    titulo: 'Semana 4 · 🧱 Reconstrução',
-    foco: 'Repor massa proteica e queratina perdidas na descoloração e no sol. Impede o corte químico e a quebra das pontas.',
-    cremes: 'Máscara Lola Tarja Preta Queratina Vegetal • Widi Care Operação Resgate • Eudora Siàge Cauterização • Salon Line S.O.S Reconstrução',
+    titulo: 'Semana 4 · 🧱 Acidificação & Reconstrução com Proteína do Arroz (Ápice + Wella)',
+    foco: 'Repor aminoácidos com a Proteína do Arroz do seu Ápice Nutri Waves e reequilibrar o pH do fio contra quebra e ressecamento.',
+    cremes: 'Shampoo Wella Invigo Nutri-Enrich • Ápice Nutri Waves (Acidificante + Proteína do Arroz) • Máscara Wella Nutri-Enrich • Amend Gold Black + Cera Charming Matte',
     passos: [
-      '<b>1. Shampoo Hidratante:</b> Lave o couro cabeludo e enxágue bem.',
-      '<b>2. Acidificante pós-química:</b> Tire o excesso de água, aplique o <b>Acidificante</b> como <i>Lola Densidade</i> ou <i>Widi Care</i>, deixe 3 a 5 min e enxágue para fechar as escamas abertas pela química.',
-      '<b>3. Máscara Reconstrutora · 10 min:</b> Aplique a máscara reconstrutora enluvando bem e deixe agir por 10 min.',
-      '<b>4. Condicionador + Óleo:</b> Enxágue 100%, sele com condicionador por 2 min e finalize com creme de pentear + óleo.'
+      '<b>1. Shampoo Wella Invigo Nutri-Enrich:</b> Lave o couro cabeludo e enxágue bem.',
+      '<b>2. Etapa Acidificante + Proteína do Arroz · 5 min:</b> Tire o excesso de água e aplique o <b>Ápice Nutri Waves (Condicionador / Leave-In / Acidificante com Proteína do Arroz)</b> enluvando bem por 3 a 5 min para fechar as escamas e repor proteína vegetal. Enxágue.',
+      '<b>3. Máscara Wella Nutri-Enrich · 10 min:</b> Aplique a máscara por 10 min para devolver maciez após a acidificação e enxágue 100%.',
+      '<b>4. Finalização Estruturada:</b> Finalize com <b>Creme + Gelatina Amend Gold Black</b> nos cachos e, depois de seco, use uma ponta de dedo da <b>Cera Charming Efeito Matte</b> nas laterais do fade.'
     ]
   }
 ];
 
 export const ROTINA_ONDAS = [
-  { ini: '2026-11-25', fim: '2026-12-08', t: 'Onda 1 · Bandeja da Pia + Rosto + Raspador', d: 'Foco único: deixar produtos visíveis ao lado da escova e fixar Raspador + Gel facial + Protetor solar.' },
-  { ini: '2026-12-09', fim: '2026-12-22', t: 'Onda 2 · Pós-Banho + Homem Cheiroso', d: 'Foco único: Hidratante corporal nos 2 min pós-banho + Antitranspirante à noite + 5 borrifadas de perfume e decant.' },
+  { ini: '2026-11-25', fim: '2026-12-08', t: 'Onda 1 · Bandeja Creamy na Pia + Raspador', d: 'Foco único: deixar Gel de Limpeza Creamy + Vitamina C + Calming Cream + Watery Lotion FPS 60 visíveis ao lado da escova.' },
+  { ini: '2026-12-09', fim: '2026-12-22', t: 'Onda 2 · Pós-Banho Nivea Milk + Uomini Infinite', d: 'Foco único: Nivea Milk 72h nos 2 min pós-banho + Natura Erva Doce Roll-On à noite + 5 borrifadas de Uomini Infinite.' },
   { ini: '2026-12-23', fim: '2027-01-05', t: 'Onda 3 · Reset 5 min da Casa + Roupa à Noite', d: 'Foco único: Timer de 5 min da casa antes do banho e deixar a roupa da manhã pendurada.' },
-  { ini: '2027-01-06', fim: '2027-01-19', t: 'Onda 4 · Ritual de Domingo Consolidado', d: 'Foco único: Cronograma capilar de 15 min no domingo + esfoliação barba e corpo + troca da fronha de cetim.' }
+  { ini: '2027-01-06', fim: '2027-01-19', t: 'Onda 4 · Ritual de Domingo Wella + Corpo Dourado', d: 'Foco único: Cronograma capilar de 15 min no domingo (Wella/Elseve/Ápice) + esfoliação Corpo Dourado Maracujá + troca da fronha.' }
 ];
 
 export const ROTINA_CICLOS = [
@@ -110,16 +556,11 @@ export const ROTINA_CICLOS = [
 ];
 
 export const PRODUTOS_SUGERIDOS_SHOPPING = [
-  { title: 'Shampoo Hidratante Widi Care Juba / Lola Morte Súbita', price: 38, category: 'beleza_pessoal', notes: 'Plano Capilar Matheus — Limpeza sem ressecar' },
-  { title: 'Co-Wash Condicionador Limpante', price: 32, category: 'beleza_pessoal', notes: 'Plano Capilar Matheus — Quinta, Sábado e Domingo pós-corrida' },
-  { title: 'Máscara Nutrição Lola Dream Cream / Juba Manteiga', price: 42, category: 'beleza_pessoal', notes: 'Cronograma Capilar Semana 2' },
-  { title: 'Máscara Reconstrução Lola Tarja Preta', price: 45, category: 'beleza_pessoal', notes: 'Cronograma Capilar Semana 4 — Pós-coloração' },
-  { title: 'Acidificante Capilar Lola Densidade / Widi Care', price: 44, category: 'beleza_pessoal', notes: 'Sela cutículas pós-descoloração e segura a cor' },
-  { title: '2 Fronhas de Cetim Escuras', price: 55, category: 'beleza_pessoal', notes: 'Anti-quebra noturna para cabelo crespo colorido' },
-  { title: 'CeraVe Loção Hidratante 473ml com Pump Sem Cheiro', price: 89, category: 'beleza_pessoal', notes: 'Skincare Corpo pós-banho + Rosto' },
-  { title: 'Protetor Solar Facial Invisível FPS 50+ ISDIN ou Principia', price: 65, category: 'beleza_pessoal', notes: 'Zero resíduo branco na pele negra + corrida' },
-  { title: 'Sérum Niacinamida 10% Principia NC-10', price: 54, category: 'beleza_pessoal', notes: 'Uso Segunda, Quarta e Sexta à noite' },
-  { title: 'Raspador de Língua em Inox ou Cobre', price: 18, category: 'beleza_pessoal', notes: 'Higiene matinal em 10 segundos' }
+  { title: '2 Fronhas de Cetim Escuras', price: 55, category: 'beleza_pessoal', notes: 'Complemento para o seu arsenal — anti-quebra noturna do cabelo crespo' },
+  { title: 'Raspador de Língua em Inox ou Cobre', price: 18, category: 'beleza_pessoal', notes: 'Complemento para o seu arsenal — higiene matinal em 10 segundos' },
+  { title: 'Kit 2 Porta-Perfumes Decant 5ml Recarregáveis', price: 22, category: 'beleza_pessoal', notes: 'Para levar o seu O Boticário Uomini Infinite na gaveta do trabalho' },
+  { title: 'Escova Polvo ou Pente Garfo + Borrifador Névoa', price: 28, category: 'beleza_pessoal', notes: 'Para desembaraçar com a Máscara Wella Nutri-Enrich e revitalizar de manhã' },
+  { title: 'Máscara Reconstrutora Queratina (ex: Lola Tarja Preta) ou Tonalizante Kamaleão Color', price: 45, category: 'beleza_pessoal', notes: 'Opcional apenas quando for descolorir/colorir os fios' }
 ];
 
 const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -148,6 +589,11 @@ export function ensureRotinaMatheusState(state) {
   }
   if (!state.rotinaMatheus.dias) state.rotinaMatheus.dias = {};
   if (!state.rotinaMatheus.ds) state.rotinaMatheus.ds = {};
+  if (!state.rotinaMatheus.ocrMap || typeof state.rotinaMatheus.ocrMap !== 'object') state.rotinaMatheus.ocrMap = {};
+  if (state.rotinaMatheus.autoRotinaFotos === undefined) state.rotinaMatheus.autoRotinaFotos = true;
+  if (!Array.isArray(state.rotinaMatheus.arsenal) || state.rotinaMatheus.arsenal.length === 0) {
+    state.rotinaMatheus.arsenal = CATALOGO_PRODUTOS_ROTINA.map(p => ({ key: p.key, nome: p.nome, curto: p.curto, cat: p.cat, slot: p.slot, quando: p.quando }));
+  }
   return state.rotinaMatheus;
 }
 
@@ -173,6 +619,16 @@ export function mergeRotinaMatheusState(localRM, cloudRM) {
   mergeDias(cloudRM);
   mergeDias(localRM);
   base.ds = { ...((cloudRM && cloudRM.ds) || {}), ...((localRM && localRM.ds) || {}) };
+  base.ocrMap = { ...((cloudRM && cloudRM.ocrMap) || {}), ...((localRM && localRM.ocrMap) || {}) };
+  base.autoRotinaFotos = (localRM && localRM.autoRotinaFotos !== undefined)
+    ? localRM.autoRotinaFotos
+    : ((cloudRM && cloudRM.autoRotinaFotos !== undefined) ? cloudRM.autoRotinaFotos : true);
+  const mapArs = new Map();
+  CATALOGO_PRODUTOS_ROTINA.forEach(p => mapArs.set(p.key, { key: p.key, nome: p.nome, curto: p.curto, cat: p.cat, slot: p.slot, quando: p.quando }));
+  [((cloudRM && cloudRM.arsenal) || []), ((localRM && localRM.arsenal) || [])].forEach(arr => {
+    if (Array.isArray(arr)) arr.forEach(item => { if (item && item.key) mapArs.set(item.key, item); });
+  });
+  base.arsenal = Array.from(mapArs.values());
   return base;
 }
 
@@ -562,7 +1018,7 @@ function abrirFotoTelaCheia(url, legenda = '') {
  * Renderiza toda a central "Meu Espaço (Matheus)" dentro do Maracaju
  */
 export function renderRotinaMatheusTab(state, callbacks = {}) {
-  const { onSaveState, onAddWishlistItem, onToast } = callbacks;
+  const { onSaveState, onAddWishlistItem, onToast, onOcrImage } = callbacks;
   const container = document.getElementById('rotina-matheus-view');
   if (!container) return;
 
@@ -773,10 +1229,10 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
         <h3 style="margin:0 0 0.4rem;">🏃 Cuidado nos Dias de Corrida</h3>
         <p style="margin:0 0 0.6rem;font-size:0.8rem;color:var(--text-muted);">Quinta, Sábado e Domingo · O sal do suor e o sol de Ribeirão Preto ressecam o fio crespo e desbotam a tinta.</p>
         <div style="display:flex;flex-direction:column;gap:0.45rem;font-size:0.84rem;">
-          <div style="padding:0.5rem;border-radius:var(--radius-sm);background:rgba(0,0,0,0.03);"><b>1. Antes de correr no sol:</b> Aplicar uma ervilha de <b>Leave-in com proteção solar UV</b> como <i>Amend Solar Defense</i>, <i>Bio Extratus Pós-Sol</i> ou <i>Lola Danos Vorazes</i>.</div>
-          <div style="padding:0.5rem;border-radius:var(--radius-sm);background:rgba(0,0,0,0.03);"><b>2. Lavagem pós-corrida com Co-Wash:</b> Não use shampoo tradicional nos 3 dias de corrida. Aplique <b>Condicionador Limpante Co-Wash</b> como <i>Salon Line Co-Wash #TodeCacho</i>, <i>Lola Comigo Ninguém Pode</i> ou <i>Widi Care Juba Co-Wash</i>, massageie por 1 min e enxágue 100%.</div>
-          <div style="padding:0.5rem;border-radius:var(--radius-sm);background:rgba(0,0,0,0.03);"><b>3. Selagem rápida:</b> Com o cabelo úmido, passe <b>2 gotas de óleo vegetal finalizador</b> + <b>Creme de Pentear para Crespos</b> amassando de baixo para cima.</div>
-          <div style="padding:0.5rem;border-radius:var(--radius-sm);background:rgba(0,0,0,0.03);"><b>4. Dias de Shampoo Hidratante:</b> Use o Shampoo Hidratante apenas <b>1 a 2× na semana</b>, como na Quinta pós-corrida e no Domingo antes da máscara.</div>
+          <div style="padding:0.5rem;border-radius:var(--radius-sm);background:rgba(0,0,0,0.03);"><b>1. Antes de correr no sol (Seus produtos das fotos):</b> No rosto passe o <b>Natura Fotoequilíbrio Facial FPS 60</b> (resistente à água e ao suor) e no cabelo passe 1 moeda do seu <b>Creme Super Gloss Elseve [Glycolic] Gloss (Com Filtro UV)</b>.</div>
+          <div style="padding:0.5rem;border-radius:var(--radius-sm);background:rgba(0,0,0,0.03);"><b>2. Lavagem pós-corrida com Co-Wash (Seu produto):</b> Nos dias de corrida sem shampoo, use o seu <b>Ápice Nutri Waves (0% sulfatos, parabenos, sal e silicones)</b> como Co-Wash limpante suave: massageie o couro cabeludo por 1 min e enxágue 100%.</div>
+          <div style="padding:0.5rem;border-radius:var(--radius-sm);background:rgba(0,0,0,0.03);"><b>3. Selagem rápida pós-corrida:</b> Com o cabelo úmido, passe o <b>Creme para Pentear Amend Gold Black</b> + <b>2 gotas do Elseve Óleo Extraordinário</b> amassando de baixo para cima.</div>
+          <div style="padding:0.5rem;border-radius:var(--radius-sm);background:rgba(0,0,0,0.03);"><b>4. Dias de Shampoo Nutritivo:</b> Use o seu <b>Shampoo Wella Invigo Nutri-Enrich (1L)</b> apenas <b>1 a 2× na semana</b> (Quinta pós-corrida e Domingo antes da máscara Wella; ou o <b>Shampoo Elseve [Glycolic] Gloss</b> na Semana 3).</div>
         </div>
       </div>
 
@@ -889,22 +1345,22 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
     const ondaIdx = ROTINA_ONDAS.findIndex(o => H >= o.ini && H <= o.fim);
     container.innerHTML = `
       <div class="dash-card" style="margin-bottom:0.85rem;">
-        <h3 style="margin:0 0 0.4rem;">🧴 Skincare Pele Negra: Rosto & Corpo</h3>
+        <h3 style="margin:0 0 0.4rem;">🧴 Seu Arsenal Real de Skincare (15 Fotos do GitHub)</h3>
         <div style="font-size:0.84rem;display:flex;flex-direction:column;gap:0.45rem;">
-          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>1. Gel de Limpeza Facial — Manhã e Noite:</b> Principia GL-01 ou GL-02 • CeraVe Gel de Limpeza • La Roche-Posay Effaclar</div>
-          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>2. Hidratante Facial + Corporal Sem Cheiro:</b> CeraVe Loção Hidratante 473 ml com pump — serve no corpo nos 2 min pós-banho e no rosto, sem brigar com o perfume</div>
-          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>3. Protetor Solar FPS 50+ Invisível:</b> ISDIN Fusion Water Magic FPS 60 • Principia PS-01 ou PS-03 • Nivea Sun Toque Seco</div>
-          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>4. Sérum Noturno & Extras:</b> Principia NC-10 Niacinamida 10% nas noites de Segunda, Quarta e Sexta • Ureia 10% nos pés nas Terças e Sábados • Protetor Labial Nivea Med Repair na mesa do trabalho</div>
+          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>1. Limpeza Facial — Manhã e Noite:</b> <b>Creamy Gel de Limpeza (frasco verde-água 200ml)</b> com PCA Zinco + Centella Asiática + Camomila (sem sulfato e sem fragrância).</div>
+          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>2. Combo Facial da Manhã (Ordem Exata):</b> 1º <b>Creamy Sérum 10% Vitamina C + Ácido Ferúlico (frasco laranja)</b> → 2º <b>Creamy Eye Cream (frasco cinza)</b> nas olheiras → 3º <b>Creamy Calming Cream (bisnaga coral)</b> no rosto/pós-barba → 4º <b>Creamy Watery Lotion FPS 60</b> (trabalho) ou <b>Natura Fotoequilíbrio Facial FPS 60</b> (dias de corrida).</div>
+          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>3. Combo Facial da Noite (Reparação Profunda):</b> 1º <b>Creamy Gel de Limpeza</b> → 2º <b>Creamy Eye Cream</b> (Ácido Kójico clareador) → 3º <b>Creamy Ceramide Skin Repair (bisnaga azul-petróleo)</b> com Ceramidas, Esqualano, CicaRecover e Prata Pura (Ag+) que regenera a pele e evita foliculite na barba.</div>
+          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>4. Corpo, Banho & Pés:</b> <b>Nivea Loção Milk 72h (400ml)</b> nos 2 min pós-banho com pele úmida • <b>Óleo Natura Sève Amêndoas Doces</b> no banho noturno • <b>Esfoliante Corpo Dourado Maracujá (Argila Branca + Camomila)</b> todo Domingo • <b>Nivea Creme Lata Azul (56g)</b> nos pés (Terça e Sábado) e cotovelos.</div>
         </div>
       </div>
 
       <div class="dash-card" style="margin-bottom:0.85rem;">
-        <h3 style="margin:0 0 0.4rem;">✨ As 5 Camadas do Homem Sempre Cheiroso</h3>
+        <h3 style="margin:0 0 0.4rem;">✨ As 5 Camadas do Homem Sempre Cheiroso (Com Seus Produtos)</h3>
         <div style="font-size:0.84rem;display:flex;flex-direction:column;gap:0.45rem;">
-          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>Camadas 1 a 3 — Base, Suor & Barba:</b> Raspador de língua de manhã + fio dental à noite + antitranspirante neutro à noite após o banho + spray antisséptico nos tênis pós-corrida + 3 gotas de óleo na barba.</div>
-          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>Camada 4 — Aplicação de Perfume:</b> Hidratante sem cheiro antes → 5 a 6 borrifadas: 2× pescoço e orelhas, 1× nuca, 1× peito, 1× dobras do cotovelo sem esfregar + Decant de 5 ml na gaveta do trabalho para 2 borrifadas pós-almoço.</div>
-          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>☀️ Perfume Trabalho & Dia:</b> Natura Kaiak Aero • Natura Homem Verum • Quasar Surf • Versace Pour Homme • Acqua di Giò</div>
-          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>🍷 Perfume Noite & Jantar com a Scarlet:</b> Natura Essencial Único ou Oud • Homem Sagaz • O Boticário The Blend ou Zaad Santal • Bleu de Chanel</div>
+          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>Camadas 1 a 3 — Base, Suor & Barba:</b> Raspador de língua de manhã + fio dental à noite + <b>Natura Erva Doce Roll-On 72h</b> à noite com axila seca e de manhã + 2 gotas do <b>Elseve Óleo Extraordinário</b> na barba.</div>
+          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>Camada 4 — Fixação com Hidratante:</b> Passar <b>Nivea Loção Milk 72h</b> no pescoço/peito/braços antes de borrifar o perfume (pele hidratada segura a fragrância pelo dobro do tempo).</div>
+          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>☀️ Perfume Principal (Trabalho, Dia & Encontros):</b> <b>O Boticário Uomini Infinite</b> — 5 a 6 borrifadas (2× pescoço/orelhas, 1× nuca, 1× peito, 1× dobras do cotovelo sem esfregar).</div>
+          <div style="padding:0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);"><b>🌙 Pós-Banho Noturno & Dormir Cheiroso com a Scarlet:</b> <b>O Boticário Nativa SPA Ameixa Body Splash (200ml)</b> combinado ao <b>Óleo Natura Sève Amêndoas Doces</b>.</div>
         </div>
       </div>
 
@@ -1011,6 +1467,22 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
         <button type="button" class="btn btn-secondary" id="rm-btn-mais-fotos" style="width:100%;justify-content:center;margin-top:0.65rem;display:none;">Mostrar mais fotos</button>
       </div>
 
+      <div class="dash-card" style="margin-bottom:0.85rem;border-left:3px solid var(--brand-moss);">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem;">
+          <h3 style="margin:0;">🧠 Produtos & Rotina Automática das Fotos</h3>
+          <span class="chip" id="rm-ai-badge">${(rm.arsenal || CATALOGO_PRODUTOS_ROTINA).length} produtos ativos</span>
+        </div>
+        <p id="rm-ai-status" style="margin:0 0 0.55rem;font-size:0.8rem;color:var(--text-muted);">Cada foto adicionada ou enviada ao GitHub é analisada automaticamente (catálogo + OCR do rótulo) e encaixada na sua rotina de Manhã, Corrida, Noite e Cronograma Capilar.</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.65rem;">
+          <label style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.8rem;font-weight:600;cursor:pointer;">
+            <input type="checkbox" id="rm-chk-auto-rotina" ${rm.autoRotinaFotos !== false ? 'checked' : ''} style="accent-color:var(--brand-moss);width:16px;height:16px;" />
+            Atualizar rotina automaticamente a cada upload de fotos
+          </label>
+          <button type="button" class="btn btn-secondary btn-sm" id="rm-btn-reanalisar-fotos">🔍 Reanalisar fotos</button>
+        </div>
+        <div id="rm-ai-resumo" style="display:flex;flex-direction:column;gap:0.45rem;font-size:0.82rem;"></div>
+      </div>
+
       <div class="dash-card" style="margin-bottom:0.85rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
           <h3 style="margin:0;">☁️ Salvas no GitHub</h3>
@@ -1093,9 +1565,10 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
         d.style.cssText = 'position:relative;';
         const u = URL.createObjectURL(f.thumb || f.blob);
         activeUrls.push(u);
+        const localTag = f.productLabel || (identificarProdutoPorTextoOuId({ id: f.id, cat: f.cat, ocrText: f.ocrText || rm.ocrMap[f.id] || '' }) || {}).curto || f.cat;
         d.innerHTML = `
           <img src="${u}" loading="lazy" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;" />
-          <span style="position:absolute;left:4px;bottom:4px;font-size:0.65rem;background:rgba(0,0,0,0.75);color:#fff;border-radius:6px;padding:2px 5px;">${f.sent ? '✅' : '⏳'} ${f.cat}</span>
+          <span style="position:absolute;left:4px;right:4px;bottom:4px;font-size:0.63rem;background:rgba(0,0,0,0.78);color:#fff;border-radius:6px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.sent ? '✅' : '⏳'} ${localTag}</span>
           <button type="button" style="position:absolute;right:4px;top:4px;background:rgba(0,0,0,0.75);color:#fff;border:0;border-radius:50%;width:26px;height:26px;cursor:pointer;">×</button>
         `;
         d.querySelector('button').addEventListener('click', async () => {
@@ -1130,7 +1603,17 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
         try {
           const { blob, thumb, size } = await comprimirParFoto(files[i]);
           const id = Date.now() + '-' + String(i).padStart(3, '0') + '-' + Math.random().toString(36).slice(2, 6);
-          await idbFoto('readwrite', s => s.put({ id, cat, blob, thumb, size, sent: false }));
+          let ocrText = '';
+          let prod = identificarProdutoPorTextoOuId({ id: files[i].name || id, cat });
+          if (!prod && rm.autoRotinaFotos !== false && typeof onOcrImage === 'function') {
+            setImpMsg(`🔍 Lendo rótulo da foto ${i + 1} de ${files.length} para ajustar sua rotina...`);
+            ocrText = await onOcrImage(blob, (st) => setImpMsg(st));
+            if (ocrText) {
+              rm.ocrMap[id] = ocrText;
+              prod = identificarProdutoPorTextoOuId({ id, cat, ocrText });
+            }
+          }
+          await idbFoto('readwrite', s => s.put({ id, cat, blob, thumb, size, sent: false, ocrText, productKey: prod ? prod.key : null, productLabel: prod ? prod.curto : null }));
           n++;
         } catch (err) {
           falhas++;
@@ -1140,9 +1623,10 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
       setTimeout(() => { if (barImp) barImp.style.display = 'none'; }, 600);
       if (bGal) bGal.disabled = false;
       if (bCam) bCam.disabled = false;
-      setImpMsg(n ? `✅ ${n} fotos prontas na fila${falhas ? ` · ${falhas} falharam` : ''}` : '');
+      setImpMsg(n ? `✅ ${n} fotos prontas na fila e analisadas na rotina${falhas ? ` · ${falhas} falharam` : ''}` : '');
       await manterTelaAcesa(false);
-      notify(`${n} fotos adicionadas à fila`, 'success');
+      await sincronizarArsenalERotina(false);
+      notify(`${n} fotos adicionadas e rotina atualizada 🧠`, 'success');
       atualizarGaleria();
     };
 
@@ -1368,10 +1852,12 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
       const fila = [];
       visiveis.forEach(f => {
         const d = document.createElement('div');
+        const det = identificarProdutoPorTextoOuId({ id: f.id, path: f.path, cat: f.cat, ocrText: rm.ocrMap[f.id] || '' });
+        const tag = det ? det.curto : f.cat;
         d.style.cssText = 'position:relative;aspect-ratio:1;background:rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;cursor:zoom-in;';
         d.innerHTML = `
           <div class="rm-gh-ph" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:var(--text-muted);">carregando…</div>
-          <span style="position:absolute;left:4px;bottom:4px;font-size:0.65rem;background:rgba(0,0,0,0.75);color:#fff;border-radius:6px;padding:2px 5px;">☁️ ${f.cat}</span>
+          <span title="${det ? det.nome : f.cat}" style="position:absolute;left:4px;right:4px;bottom:4px;font-size:0.63rem;background:rgba(0,0,0,0.78);color:#fff;border-radius:6px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">☁️ ${tag}</span>
         `;
         g.appendChild(d);
         fila.push({ f, d });
@@ -1389,7 +1875,7 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
             img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
             d.querySelector('.rm-gh-ph')?.remove();
             d.prepend(img);
-            d.addEventListener('click', () => abrirFotoTelaCheia(url, f.cat));
+            d.addEventListener('click', () => abrirFotoTelaCheia(url, det ? `${det.nome} · ${det.quando}` : f.cat));
           } catch (err) {
             const ph = d.querySelector('.rm-gh-ph');
             if (ph) ph.textContent = '⚠️ falhou';
@@ -1408,8 +1894,103 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
     document.getElementById('rm-btn-gh-mais')?.addEventListener('click', () => { ghPagina++; renderGaleriaGitHub(); });
     document.getElementById('rm-btn-test-cfg')?.addEventListener('click', () => setTimeout(() => renderGaleriaGitHub(true), 1500));
 
+    const renderResumoAi = (produtos) => {
+      const box = document.getElementById('rm-ai-resumo');
+      const badge = document.getElementById('rm-ai-badge');
+      if (!box) return;
+      const plano = gerarPlanoRotinaDoArsenal(produtos);
+      if (badge) badge.textContent = `${plano.totalProdutos} produtos (${plano.totalCabelo} cabelo · ${plano.totalPele} pele/perfume)`;
+      box.innerHTML = `
+        <div style="padding:0.55rem;background:rgba(46,89,51,0.07);border-radius:var(--radius-sm);">
+          <b>🌅 Manhã — Rosto (Ordem ideal dos seus produtos):</b>
+          <div style="margin-top:0.25rem;color:var(--text-secondary);">${plano.manhaRosto.join('<br>')}</div>
+        </div>
+        <div style="padding:0.55rem;background:rgba(46,89,51,0.07);border-radius:var(--radius-sm);">
+          <b>💈 Manhã — Cabelo, Barba & Perfume:</b>
+          <div style="margin-top:0.25rem;color:var(--text-secondary);">${plano.manhaCabeloPresenca.join('<br>')}</div>
+        </div>
+        <div style="padding:0.55rem;background:rgba(46,89,51,0.07);border-radius:var(--radius-sm);">
+          <b>🏃 Dias de Corrida (Quinta, Sábado e Domingo):</b>
+          <div style="margin-top:0.25rem;color:var(--text-secondary);">${plano.diasCorrida.join('<br>')}</div>
+        </div>
+        <div style="padding:0.55rem;background:rgba(46,89,51,0.07);border-radius:var(--radius-sm);">
+          <b>🌙 Noite — Pós-Banho, Pés & Reparação Facial:</b>
+          <div style="margin-top:0.25rem;color:var(--text-secondary);">${plano.noiteRecuperacao.join('<br>')}</div>
+        </div>
+        <div style="padding:0.55rem;background:rgba(46,89,51,0.07);border-radius:var(--radius-sm);">
+          <b>📅 Cronograma Capilar de Domingo (4 Semanas):</b>
+          <div style="margin-top:0.25rem;color:var(--text-secondary);">${plano.cronogramaDomingo.join('<br>')}</div>
+        </div>
+        <details style="margin-top:0.2rem;">
+          <summary style="cursor:pointer;font-weight:700;color:var(--brand-moss);">📋 Ver todos os ${ (produtos || CATALOGO_PRODUTOS_ROTINA).length } produtos identificados nas fotos</summary>
+          <div style="display:flex;flex-direction:column;gap:0.35rem;margin-top:0.4rem;">
+            ${(produtos || CATALOGO_PRODUTOS_ROTINA).map(p => `
+              <div style="padding:0.4rem 0.5rem;background:rgba(0,0,0,0.03);border-radius:var(--radius-sm);">
+                <b>${p.nome}</b> <span class="chip" style="font-size:0.68rem;padding:1px 6px;">${p.quando}</span>
+                <div style="font-size:0.76rem;color:var(--text-muted);margin-top:2px;">${p.comoUsar || ''}</div>
+              </div>
+            `).join('')}
+          </div>
+        </details>
+      `;
+    };
+
+    const sincronizarArsenalERotina = async (runDeepOcr = false) => {
+      const stEl = document.getElementById('rm-ai-status');
+      const localFs = await listarFotosIdb();
+      const ghFs = (ghFotosCache && Array.isArray(ghFotosCache.list)) ? ghFotosCache.list : [];
+      if (runDeepOcr && typeof onOcrImage === 'function') {
+        // Roda OCR nas fotos que ainda não possuem match no catálogo nem texto OCR salvo
+        for (const f of localFs) {
+          if (!identificarProdutoPorTextoOuId({ id: f.id, cat: f.cat, ocrText: f.ocrText || rm.ocrMap[f.id] || '' }) && f.blob) {
+            if (stEl) stEl.textContent = `🔍 Lendo rótulo da foto local ${f.id}...`;
+            const txt = await onOcrImage(f.blob);
+            if (txt) { f.ocrText = txt; rm.ocrMap[f.id] = txt; await idbFoto('readwrite', s => s.put(f)); }
+          }
+        }
+        for (const gf of ghFs) {
+          if (!identificarProdutoPorTextoOuId({ id: gf.id, path: gf.path, cat: gf.cat, ocrText: rm.ocrMap[gf.id] || '' })) {
+            try {
+              if (stEl) stEl.textContent = `🔍 Lendo rótulo da foto do GitHub ${gf.id}...`;
+              const url = await baixarFotoGitHub(gf);
+              const txt = await onOcrImage(url);
+              if (txt) rm.ocrMap[gf.id] = txt;
+            } catch (e) {}
+          }
+        }
+      }
+      const todasFotos = [
+        ...CATALOGO_PRODUTOS_ROTINA.map(p => ({ id: (p.photoIds && p.photoIds[0]) || p.key, cat: p.cat })),
+        ...ghFs,
+        ...localFs
+      ];
+      const detectados = analisarListaFotosArsenal(todasFotos, rm.ocrMap);
+      if (detectados.length) {
+        rm.arsenal = detectados.map(p => ({ key: p.key, nome: p.nome, curto: p.curto, cat: p.cat, slot: p.slot, quando: p.quando, comoUsar: p.comoUsar }));
+        save();
+      }
+      renderResumoAi(detectados.length ? detectados : CATALOGO_PRODUTOS_ROTINA);
+      if (stEl) {
+        stEl.textContent = `✅ ${detectados.length || CATALOGO_PRODUTOS_ROTINA.length} produtos identificados nas fotos e integrados nas abas Hoje, Capilar e Pele & Estilo.`;
+      }
+    };
+
+    document.getElementById('rm-chk-auto-rotina')?.addEventListener('change', (e) => {
+      rm.autoRotinaFotos = Boolean(e.target.checked);
+      save();
+      notify(rm.autoRotinaFotos ? 'Atualização automática de rotina ativada ✅' : 'Atualização automática pausada');
+    });
+
+    document.getElementById('rm-btn-reanalisar-fotos')?.addEventListener('click', async () => {
+      await sincronizarArsenalERotina(true);
+      notify('Arsenal de fotos reanalisado e rotina sincronizada! 🧠', 'success');
+    });
+
+    renderResumoAi(CATALOGO_PRODUTOS_ROTINA);
     atualizarGaleria();
-    renderGaleriaGitHub();
+    renderGaleriaGitHub().then(() => {
+      if (rm.autoRotinaFotos !== false) sincronizarArsenalERotina(false);
+    });
     return;
   }
 

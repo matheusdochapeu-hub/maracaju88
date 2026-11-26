@@ -173,7 +173,7 @@ import {
   setPurchaseCollapsed,
   setAllPurchasesCollapsed
 } from './ui.js';
-import { testSheetsConnection, backupToSheets, restoreFromSheets, applyCloudBackup } from './sheets.js';
+import { testSheetsConnection, backupToSheets, restoreFromSheets, applyCloudBackup, mergeCloudWithLocalPriority } from './sheets.js';
 import {
   getCategories,
   findCategory,
@@ -340,6 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Durante o pull, o saveState é só persistência local do que veio da nuvem;
     // disparar outro backup aqui criava um ciclo de sincronização (tela piscando).
     if (isApplyingCloudState) return;
+    markPendingCloudPush();
     triggerAutoSyncIfEnabled();
   });
 
@@ -369,8 +370,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Sincronização em segundo plano não-bloqueante: inicia após pintura da interface
   setTimeout(() => {
-    syncPullFromSheets(true);
+    // Se ficou alteração sem enviar da última vez (app fechado, sem sinal,
+    // timeout), envia primeiro — o envio já mescla a planilha antes de gravar.
+    if (hasPendingCloudPush() && state.settings && state.settings.autoSync !== false) {
+      triggerAutoSyncIfEnabled(true);
+    } else {
+      syncPullFromSheets(true);
+    }
   }, 400);
+});
+
+// Voltou a internet: reenvia o que ficou pendente
+window.addEventListener('online', () => {
+  if (hasPendingCloudPush()) triggerAutoSyncIfEnabled(true);
 });
 
 // Ao retornar ao aplicativo (desbloqueio de tela no celular ou volta de aba) ou foco na janela, puxa a planilha
@@ -385,7 +397,7 @@ window.addEventListener('focus', () => {
 
 // Sincronização periódica contínua em segundo plano (a cada 30 segundos se visível)
 setInterval(() => {
-  if (document.visibilityState === 'visible' && !isSyncPulling && !autoSyncTimeout) {
+  if (document.visibilityState === 'visible' && !isSyncPulling && !autoSyncTimeout && !isPushingToCloud) {
     syncPullFromSheets(true);
   }
 }, 30000);
@@ -976,6 +988,14 @@ function getRotinaMatheusCallbacks() {
     },
     onToast: (msg, type = 'info') => {
       showToast(msg, type, 2400);
+    },
+    onOcrImage: async (imgSource, onStatus) => {
+      try {
+        return await recognizeWithTesseract(imgSource, onStatus, 'rótulo do produto');
+      } catch (e) {
+        console.warn('[Rotina OCR] Falha ao ler rótulo:', e.message);
+        return '';
+      }
     }
   };
 }
@@ -2988,6 +3008,77 @@ function initSettingsModule() {
 // SINCRONIZAÇÃO EM NUVEM E PRIORIDADE GOOGLE SHEETS
 // -------------------------------------------------------------
 let autoSyncTimeout = null;
+
+// --- Fila de envio confiável (computador ⇄ celular) ---
+// Antes: se o envio falhasse (sem sinal, timeout do Apps Script, app fechado
+// logo após o lançamento) ninguém tentava de novo, e o pull seguinte ainda
+// podia sobrescrever a edição local com a versão antiga da planilha.
+// Agora toda alteração local marca "envio pendente" (persistido), o envio é
+// repetido com espera progressiva e, antes de gravar, a planilha é mesclada
+// com prioridade para o aparelho (sem apagar o que o outro aparelho lançou).
+const PENDING_PUSH_KEY = 'maracaju_pending_cloud_push';
+const PUSH_RETRY_DELAYS = [5000, 15000, 30000, 60000, 120000];
+let pendingPushStamp = 0;
+try { pendingPushStamp = Number(localStorage.getItem(PENDING_PUSH_KEY)) || 0; } catch (e) {}
+let isPushingToCloud = false;
+let pushRetryTimer = null;
+let pushRetryAttempt = 0;
+
+function markPendingCloudPush() {
+  pendingPushStamp = Date.now();
+  try { localStorage.setItem(PENDING_PUSH_KEY, String(pendingPushStamp)); } catch (e) {}
+}
+
+function clearPendingCloudPush(stampAtStart) {
+  // Só limpa se nada novo foi salvo enquanto o envio estava em andamento
+  if (pendingPushStamp && pendingPushStamp > stampAtStart) return;
+  pendingPushStamp = 0;
+  try { localStorage.removeItem(PENDING_PUSH_KEY); } catch (e) {}
+}
+
+function hasPendingCloudPush() {
+  return pendingPushStamp > 0;
+}
+
+function schedulePushRetry() {
+  if (pushRetryTimer) return;
+  const delay = PUSH_RETRY_DELAYS[Math.min(pushRetryAttempt, PUSH_RETRY_DELAYS.length - 1)];
+  pushRetryAttempt++;
+  pushRetryTimer = setTimeout(() => {
+    pushRetryTimer = null;
+    if (hasPendingCloudPush()) triggerAutoSyncIfEnabled(true);
+  }, delay);
+}
+
+async function mergeLatestCloudBeforePush() {
+  let cloudData = null;
+  try {
+    cloudData = await restoreFromSheets(state);
+  } catch (e) {
+    console.warn('[Maracaju] Não consegui ler a planilha antes do envio:', e.message);
+    return;
+  }
+  if (!cloudData) return;
+  const cloudStamp = String(cloudData.lastUpdated || cloudData.updatedAt || '');
+  const knownStamp = state.settings && state.settings.lastCloudUpdatedAt;
+  if (cloudStamp && knownStamp && cloudStamp === knownStamp) return; // nada novo na nuvem
+  isApplyingCloudState = true;
+  try {
+    state = mergeCloudWithLocalPriority(state, cloudData);
+    ensureRecoveredPurchases(state);
+    syncPurchasesIntoCatalog(state);
+    if (!state.settings) state.settings = {};
+    state.settings.lastCloudUpdatedAt = cloudStamp || new Date().toISOString();
+    saveState(state);
+  } finally {
+    isApplyingCloudState = false;
+  }
+  if (!isUserBusyInUI()) {
+    populateCategorySelects(state);
+    refreshAllUI();
+  }
+}
+
 function triggerAutoSyncIfEnabled(immediate = false) {
   if (!state.settings.sheetsUrl) return;
   // Respeita o botão "Sincronização automática" dos Ajustes. Antes o toggle
@@ -3002,8 +3093,17 @@ function triggerAutoSyncIfEnabled(immediate = false) {
 
   const runSync = async () => {
     autoSyncTimeout = null;
+    if (isPushingToCloud) {
+      autoSyncTimeout = setTimeout(runSync, 1500);
+      return;
+    }
+    isPushingToCloud = true;
+    const stampAtStart = pendingPushStamp || Date.now();
     try {
-      await backupToSheets(state);
+      await mergeLatestCloudBeforePush();
+      await backupToSheets(state, null, null, 30000);
+      clearPendingCloudPush(stampAtStart);
+      pushRetryAttempt = 0;
       if (syncDot) {
         syncDot.className = 'sync-status-indicator synced';
         syncDot.title = `Sincronizado com Google Sheets às ${new Date().toLocaleTimeString('pt-BR')}`;
@@ -3012,8 +3112,15 @@ function triggerAutoSyncIfEnabled(immediate = false) {
       console.warn('[Maracaju] Auto-sync falhou em background:', err);
       if (syncDot) {
         syncDot.className = 'sync-status-indicator error';
-        syncDot.title = `Falha ao sincronizar: ${err.message}`;
+        syncDot.title = `Alterações pendentes — nova tentativa automática (${err.message})`;
       }
+      schedulePushRetry();
+    } finally {
+      isPushingToCloud = false;
+    }
+    // Algo foi salvo durante o envio: manda de novo
+    if (hasPendingCloudPush() && pendingPushStamp > stampAtStart && !autoSyncTimeout) {
+      autoSyncTimeout = setTimeout(runSync, 800);
     }
   };
 
@@ -3023,7 +3130,7 @@ function triggerAutoSyncIfEnabled(immediate = false) {
     runSync();
   } else {
     if (autoSyncTimeout) clearTimeout(autoSyncTimeout);
-    autoSyncTimeout = setTimeout(runSync, 400);
+    autoSyncTimeout = setTimeout(runSync, 1200);
   }
 }
 
@@ -3045,6 +3152,13 @@ function isUserBusyInUI() {
 async function syncPullFromSheets(silent = false) {
   if (!state || !state.settings || !state.settings.sheetsUrl) return;
   if (isSyncPulling) return;
+  // Envio em andamento/agendado: ele mesmo mescla a planilha antes de gravar.
+  if (isPushingToCloud || autoSyncTimeout) return;
+  // Há alteração local não enviada: envia (com mescla) em vez de puxar por cima.
+  if (hasPendingCloudPush() && state.settings.autoSync !== false) {
+    triggerAutoSyncIfEnabled(true);
+    return;
+  }
   // Não recarrega/repinta a tela enquanto o usuário está em outra aba com um
   // modal aberto, digitando ou com o app em segundo plano (causava o "pisca").
   if (isUserBusyInUI()) return;
@@ -3081,7 +3195,9 @@ async function syncPullFromSheets(silent = false) {
       const cloudRegCount = Array.isArray(cloudData.comprasRegistros) ? cloudData.comprasRegistros.length : 0;
       isApplyingCloudState = true;
       try {
-        state = applyCloudBackup(state, cloudData);
+        state = hasPendingCloudPush()
+          ? mergeCloudWithLocalPriority(state, cloudData)
+          : applyCloudBackup(state, cloudData);
         ensureRecoveredPurchases(state);
         syncPurchasesIntoCatalog(state);
         if (!state.settings) state.settings = {};
