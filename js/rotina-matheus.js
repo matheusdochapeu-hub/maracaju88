@@ -482,6 +482,82 @@ async function enviarLoteGitData(repo, branch, lote, onBlobDone) {
   return true;
 }
 
+/* ===== Galeria das fotos já salvas no GitHub =====
+ * A galeria "Envio & Galeria" só enxerga a fila local (IndexedDB) do aparelho.
+ * Se o navegador limpar o armazenamento, o app for reinstalado ou as fotos
+ * tiverem sido tiradas em outro app/aparelho, elas somem dali — mas continuam
+ * no repositório. Esta seção lista e baixa as miniaturas direto do GitHub.
+ */
+let ghFotosCache = null; // { repo, at, list, truncated }
+const ghImgCache = new Map(); // path -> objectURL
+let ghPagina = 1;
+let ghFiltroAtual = 'todas';
+let renderGaleriaGitHubRef = null;
+const GH_FOTOS_POR_PAGINA = 18;
+
+function encodeGhPath(p) {
+  return String(p).split('/').map(encodeURIComponent).join('/');
+}
+
+export function parseGhFotosTree(tree) {
+  return (Array.isArray(tree) ? tree : [])
+    .filter(t => t && t.type === 'blob' && /^fotos\/[^/]+\/[^/]+\.(jpe?g|png|webp)$/i.test(t.path || ''))
+    .map(t => {
+      const [, cat, file] = t.path.split('/');
+      return { path: t.path, cat, id: file.replace(/\.[^.]+$/, ''), sha: t.sha, size: t.size || 0 };
+    })
+    .sort((a, b) => (a.id < b.id ? 1 : -1));
+}
+
+async function listarFotosGitHub(force = false) {
+  const cfg = getGhCfg();
+  if (!cfg.repo || !cfg.tok) throw new Error('GitHub não configurado — preencha repositório e token abaixo');
+  if (!force && ghFotosCache && ghFotosCache.repo === cfg.repo && Date.now() - ghFotosCache.at < 5 * 60 * 1000) {
+    return ghFotosCache;
+  }
+  const repoRes = await ghFetch(`https://api.github.com/repos/${cfg.repo}`, {}, 15000);
+  if (!repoRes.ok) throw new Error(explicaStatusGh(repoRes.status));
+  const branch = (await repoRes.json()).default_branch || 'main';
+  const treeRes = await ghFetch(`https://api.github.com/repos/${cfg.repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`, {}, 30000);
+  let list = [];
+  let truncated = false;
+  if (treeRes.ok) {
+    const j = await treeRes.json();
+    list = parseGhFotosTree(j.tree);
+    truncated = Boolean(j.truncated);
+  } else if (treeRes.status !== 404 && treeRes.status !== 409) {
+    // 404/409 = repositório ainda vazio (nenhuma foto enviada)
+    throw new Error(explicaStatusGh(treeRes.status));
+  }
+  ghFotosCache = { repo: cfg.repo, at: Date.now(), list, truncated };
+  return ghFotosCache;
+}
+
+async function baixarFotoGitHub(foto) {
+  if (ghImgCache.has(foto.path)) return ghImgCache.get(foto.path);
+  const cfg = getGhCfg();
+  const r = await ghFetch(`https://api.github.com/repos/${cfg.repo}/contents/${encodeGhPath(foto.path)}`, {
+    headers: { Accept: 'application/vnd.github.raw' }
+  }, 45000);
+  if (!r.ok) throw new Error(explicaStatusGh(r.status));
+  const raw = await r.blob();
+  const blob = raw.type && raw.type.startsWith('image/') ? raw : new Blob([raw], { type: 'image/jpeg' });
+  const url = URL.createObjectURL(blob);
+  ghImgCache.set(foto.path, url);
+  return url;
+}
+
+function abrirFotoTelaCheia(url, legenda = '') {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem;cursor:zoom-out;';
+  ov.innerHTML = `
+    <img src="${url}" alt="" style="max-width:100%;max-height:85vh;object-fit:contain;border-radius:8px;" />
+    <div style="color:#fff;font-size:0.8rem;margin-top:0.6rem;opacity:0.85;">${legenda} · toque para fechar</div>
+  `;
+  ov.addEventListener('click', () => ov.remove());
+  document.body.appendChild(ov);
+}
+
 /**
  * Renderiza toda a central "Meu Espaço (Matheus)" dentro do Maracaju
  */
@@ -935,6 +1011,20 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
         <button type="button" class="btn btn-secondary" id="rm-btn-mais-fotos" style="width:100%;justify-content:center;margin-top:0.65rem;display:none;">Mostrar mais fotos</button>
       </div>
 
+      <div class="dash-card" style="margin-bottom:0.85rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+          <h3 style="margin:0;">☁️ Salvas no GitHub</h3>
+          <span class="chip" id="rm-gh-cnt">—</span>
+        </div>
+        <p id="rm-gh-msg" style="margin:0 0 0.6rem;font-size:0.8rem;color:var(--text-muted);">Fotos que já estão no seu repositório privado, mesmo que a cópia do aparelho tenha sido apagada.</p>
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
+          <select id="rm-gh-filtro" class="form-control" style="flex:1;"><option value="todas">Todas as categorias</option></select>
+          <button type="button" class="btn btn-secondary btn-sm" id="rm-btn-gh-load">🔄 Atualizar</button>
+        </div>
+        <div id="rm-gh-gal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
+        <button type="button" class="btn btn-secondary" id="rm-btn-gh-mais" style="width:100%;justify-content:center;margin-top:0.65rem;display:none;">Mostrar mais</button>
+      </div>
+
       <div class="dash-card">
         <details id="rm-det-cfg" ${!okCfg ? 'open' : ''}>
           <summary style="cursor:pointer;font-weight:700;">⚙️ Conexão com o GitHub Privado de Fotos</summary>
@@ -987,7 +1077,7 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
       const btnMais = document.getElementById('rm-btn-mais-fotos');
       if (!filtradas.length) {
         if (btnMais) btnMais.style.display = 'none';
-        g.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:1rem 0;font-size:0.84rem;">Nenhuma foto neste filtro.</div>';
+        g.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:1rem 0;font-size:0.84rem;">Nenhuma foto guardada neste aparelho. As já enviadas aparecem em ☁️ Salvas no GitHub, logo abaixo.</div>';
         return;
       }
 
@@ -1213,6 +1303,8 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
         if (bPause) bPause.style.display = 'none';
         await manterTelaAcesa(false);
         atualizarGaleria();
+        ghFotosCache = null;
+        if (typeof renderGaleriaGitHubRef === 'function') renderGaleriaGitHubRef(true);
       }
     });
 
@@ -1227,7 +1319,97 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
       }
     });
 
+    const ghSel = document.getElementById('rm-gh-filtro');
+    const catSel = document.getElementById('rm-f-cat');
+    if (ghSel && catSel) {
+      [...catSel.options].forEach(o => ghSel.add(new Option(o.textContent, o.value)));
+      ghSel.value = ghFiltroAtual;
+    }
+    const setGhMsg = (t) => { const el = document.getElementById('rm-gh-msg'); if (el) el.textContent = t; };
+
+    const renderGaleriaGitHub = renderGaleriaGitHubRef = async (force = false) => {
+      const g = document.getElementById('rm-gh-gal');
+      const cnt = document.getElementById('rm-gh-cnt');
+      const btnMais = document.getElementById('rm-btn-gh-mais');
+      if (!g) return;
+      const cfg = getGhCfg();
+      if (!cfg.repo || !cfg.tok) {
+        setGhMsg('Configure o repositório e o token em "Conexão com o GitHub" para ver as fotos salvas.');
+        if (cnt) cnt.textContent = '—';
+        return;
+      }
+      setGhMsg('Buscando fotos no GitHub...');
+      let info;
+      try {
+        info = await listarFotosGitHub(force);
+      } catch (err) {
+        setGhMsg('❌ ' + err.message);
+        return;
+      }
+      const filtradas = info.list.filter(f => ghFiltroAtual === 'todas' || f.cat === ghFiltroAtual);
+      if (cnt) cnt.textContent = `${filtradas.length} fotos`;
+      const st3El = document.getElementById('rm-st3n');
+      if (st3El && st3El.textContent === '0' && info.list.length) st3El.textContent = `${info.list.length} ☁️`;
+      setGhMsg(info.list.length
+        ? `${info.list.length} fotos no repositório ${info.repo}${info.truncated ? ' (lista parcial — repositório muito grande)' : ''}. Toque para ampliar.`
+        : 'Nenhuma foto encontrada no repositório ainda.');
+      g.innerHTML = '';
+      if (!filtradas.length) {
+        if (btnMais) btnMais.style.display = 'none';
+        if (info.list.length) g.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:1rem 0;font-size:0.84rem;">Nenhuma foto nesta categoria.</div>';
+        return;
+      }
+      const limite = ghPagina * GH_FOTOS_POR_PAGINA;
+      const visiveis = filtradas.slice(0, limite);
+      if (btnMais) {
+        btnMais.style.display = filtradas.length > limite ? 'inline-flex' : 'none';
+        btnMais.textContent = `Mostrar mais (${filtradas.length - limite} restantes)`;
+      }
+      const fila = [];
+      visiveis.forEach(f => {
+        const d = document.createElement('div');
+        d.style.cssText = 'position:relative;aspect-ratio:1;background:rgba(0,0,0,0.06);border-radius:8px;overflow:hidden;cursor:zoom-in;';
+        d.innerHTML = `
+          <div class="rm-gh-ph" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:var(--text-muted);">carregando…</div>
+          <span style="position:absolute;left:4px;bottom:4px;font-size:0.65rem;background:rgba(0,0,0,0.75);color:#fff;border-radius:6px;padding:2px 5px;">☁️ ${f.cat}</span>
+        `;
+        g.appendChild(d);
+        fila.push({ f, d });
+      });
+      // Baixa as miniaturas com no máximo 4 downloads simultâneos
+      const workers = Array.from({ length: Math.min(4, fila.length) }, async () => {
+        while (fila.length) {
+          const { f, d } = fila.shift();
+          if (!d.isConnected) continue;
+          try {
+            const url = await baixarFotoGitHub(f);
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = '';
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+            d.querySelector('.rm-gh-ph')?.remove();
+            d.prepend(img);
+            d.addEventListener('click', () => abrirFotoTelaCheia(url, f.cat));
+          } catch (err) {
+            const ph = d.querySelector('.rm-gh-ph');
+            if (ph) ph.textContent = '⚠️ falhou';
+          }
+        }
+      });
+      await Promise.all(workers);
+    };
+
+    ghSel?.addEventListener('change', (e) => {
+      ghFiltroAtual = e.target.value;
+      ghPagina = 1;
+      renderGaleriaGitHub();
+    });
+    document.getElementById('rm-btn-gh-load')?.addEventListener('click', () => { ghPagina = 1; renderGaleriaGitHub(true); });
+    document.getElementById('rm-btn-gh-mais')?.addEventListener('click', () => { ghPagina++; renderGaleriaGitHub(); });
+    document.getElementById('rm-btn-test-cfg')?.addEventListener('click', () => setTimeout(() => renderGaleriaGitHub(true), 1500));
+
     atualizarGaleria();
+    renderGaleriaGitHub();
     return;
   }
 
