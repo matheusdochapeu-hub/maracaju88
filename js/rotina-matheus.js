@@ -458,7 +458,7 @@ export const LOOKS_BASE_SUGERIDOS = [
     id: 'look_trabalho_usp',
     titulo: '🏢 Look 1 · Trabalho / USP (Elegante & Fresco para Ribeirão Preto)',
     pecas: 'Camisa de botão manga longa dobrada no antebraço (azul-marinho, branca, verde-oliva ou linho areia) OU Polo estruturada + Calça Chino ou Jeans Escuro reto sem sobra na barra + Tênis casual limpo (branco/couro) ou Sapato casual + Relógio.',
-    grooming: 'Cabelo finalizado com Amend Gold Black + 2 gotas de Elseve Óleo Extraordinário (laterais alinhadas com Cera Charming Matte) · Rosto protegido com Creamy Watery Lotion FPS 60 · 5 borrifadas de O Boticário Uomini Infinite (+ decant pós-almoço).'
+    grooming: 'Cabelo finalizado com Amend Gold Black + 2 gotas de Elseve Óleo Extraordinário (laterais alinhadas com Cera Charming Matte) · Rosto protegido com Creamy Watery Lotion FPS 60 · 5 a 6 borrifadas de O Boticário Uomini Infinite pela manhã.'
   },
   {
     id: 'look_encontro_scarlet',
@@ -613,8 +613,7 @@ export const ROTINA_BLOCOS_HOJE = {
     { id: 'perf_m', t: 'Aplicar O Boticário Uomini Infinite', d: '5 a 6 borrifadas: 2× pescoço e orelhas, 1× nuca, 1× peito, 1× dobras do cotovelo sem esfregar', surv: true }
   ],
   t1: [
-    { id: 'labial_t', t: 'Hidratar mãos e cotovelos com Nivea Creme (Lata Azul)', d: '1 a 2× durante o expediente no ar-condicionado', opt: true },
-    { id: 'decant_t', t: 'Retocar Uomini Infinite pós-almoço', d: '2 borrifadas do mini porta-perfume de 5 ml da gaveta', opt: true }
+    { id: 'labial_t', t: 'Hidratar mãos e cotovelos com Nivea Creme (Lata Azul)', d: '1 a 2× durante o expediente no ar-condicionado', opt: true }
   ],
   n1: [
     { id: 'casa_pia', t: 'Reset Casa 1/3: Cozinha — pia zerada e lixo', d: 'Guardar louça e lavar copo ou prato usado' },
@@ -708,7 +707,7 @@ export const PRODUTOS_SUGERIDOS_SHOPPING = [
   { title: '2 Fronhas de Cetim Escuras (Preta / Azul-Marinho)', price: 48, category: 'beleza_pessoal', notes: 'Prioridade 1 (Acessórios Capilares) — Evita que o algodão sugue o Amend Gold Black e quebre o cabelo à noite' },
   { title: 'Borrifador Spray de Névoa Contínua (200ml)', price: 18, category: 'beleza_pessoal', notes: 'Prioridade 2 (Acessórios Capilares) — Umedece o cabelo em 5s às 05h50 para reativar o Creme Amend Gold Black' },
   { title: 'Kit Escova Polvo Flexível + Pente Garfo Dentes Largos', price: 26, category: 'beleza_pessoal', notes: 'Prioridade 3 (Acessórios Capilares) — Escova polvo desembaraça no banho com a máscara Wella; pente garfo dá volume na raiz' },
-  { title: 'Raspador de Língua em Inox + Kit 2 Porta-Perfumes Decant 5ml', price: 32, category: 'beleza_pessoal', notes: 'Complemento Higiene & Presença — Hálito 05h50 + levar seu Uomini Infinite pro trabalho' },
+  { title: 'Raspador de Língua em Inox ou Cobre', price: 18, category: 'beleza_pessoal', notes: 'Complemento Higiene & Presença — Hálito limpo em 10 segundos às 05h50' },
   { title: 'Tonalizante Sem Amônia Kamaleão Color (150ml) + Luvas Pretas', price: 38, category: 'beleza_pessoal', notes: 'Opcional (apenas quando for colorir de Vermelho, Azul ou Platinado)' }
 ];
 
