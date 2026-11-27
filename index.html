@@ -53,11 +53,11 @@
   <script src="./js/vendor/tesseract.min.js"></script>
 
   <!-- Stylesheets (v2.9.11) -->
-  <link rel="stylesheet" href="./css/variables.css?v=2.10.10" />
-  <link rel="stylesheet" href="./css/base.css?v=2.10.10" />
-  <link rel="stylesheet" href="./css/components.css?v=2.10.10" />
-  <link rel="stylesheet" href="./css/animations.css?v=2.10.10" />
-<link rel="stylesheet" href="./nexo-theme.css?v=2.10.10" />
+  <link rel="stylesheet" href="./css/variables.css?v=2.10.11" />
+  <link rel="stylesheet" href="./css/base.css?v=2.10.11" />
+  <link rel="stylesheet" href="./css/components.css?v=2.10.11" />
+  <link rel="stylesheet" href="./css/animations.css?v=2.10.11" />
+<link rel="stylesheet" href="./nexo-theme.css?v=2.10.11" />
 </head>
 <body>
 
@@ -516,9 +516,10 @@
             </div>
           </div>
 
-          <div class="marmitas-mode-switch" style="margin-bottom: 0.75rem;">
+          <div class="marmitas-mode-switch" style="margin-bottom: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
             <button type="button" class="btn btn-xs btn-primary" data-marmitas-scope="completo" style="justify-content: center; font-weight: 700;">🌟 Dia Todo</button>
             <button type="button" class="btn btn-xs btn-secondary" data-marmitas-scope="almoco" style="justify-content: center; font-weight: 700;">🍱 Só Marmitas de Almoço</button>
+            <button type="button" class="btn btn-xs btn-secondary" data-marmitas-scope="jantar" style="justify-content: center; font-weight: 700;">🌙 Só Jantar</button>
           </div>
 
           <div class="marmitas-filter-pills">
@@ -3840,7 +3841,7 @@
     </div>
   </div>
 
-  <script type="module" src="./js/app.js?v=2.10.10"></script>
+  <script type="module" src="./js/app.js?v=2.10.11"></script>
 
 <script>
 /* Volta ao Nexo — aparece só quando a página foi aberta pelo shell (?de=nexo). */

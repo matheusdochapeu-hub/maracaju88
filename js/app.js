@@ -8394,7 +8394,81 @@ function initMarmitasModule() {
     const meatModeBtn = e.target.closest('[data-marmitas-meat-mode]');
     if (meatModeBtn) {
       const mode = meatModeBtn.getAttribute('data-marmitas-meat-mode') || 'padrao';
-      currentMarmitasCalcOpts.meatSplit = { mode };
+      if (mode === 'almoco_frango_janta_bovina') {
+        currentMarmitasCalcOpts.meatSplit = {
+          mode,
+          splitByMeal: true,
+          almoco: { mode: 'so_frango' },
+          jantar: { mode: 'so_bovina' }
+        };
+      } else if (mode === 'almoco_bovina_janta_frango') {
+        currentMarmitasCalcOpts.meatSplit = {
+          mode,
+          splitByMeal: true,
+          almoco: { mode: 'so_bovina' },
+          jantar: { mode: 'so_frango' }
+        };
+      } else if (mode === 'split_meal') {
+        const cur = currentMarmitasCalcOpts.meatSplit || {};
+        currentMarmitasCalcOpts.meatSplit = {
+          mode: 'split_meal',
+          splitByMeal: true,
+          almoco: cur.almoco || { mode: 'so_frango' },
+          jantar: cur.jantar || { mode: 'so_bovina' }
+        };
+      } else {
+        currentMarmitasCalcOpts.meatSplit = { mode, splitByMeal: false };
+      }
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const mealMeatPresetBtn = e.target.closest('[data-marmitas-meal-meat-preset]');
+    if (mealMeatPresetBtn) {
+      const raw = mealMeatPresetBtn.getAttribute('data-marmitas-meal-meat-preset') || '';
+      const [mealKey, presetMode] = raw.split(':');
+      const cur = currentMarmitasCalcOpts.meatSplit || {};
+      const next = {
+        mode: 'split_meal',
+        splitByMeal: true,
+        almoco: cur.almoco || { mode: 'so_frango' },
+        jantar: cur.jantar || { mode: 'so_bovina' }
+      };
+      if (mealKey === 'almoco' || mealKey === 'jantar') {
+        next[mealKey] = { mode: presetMode || 'so_frango' };
+      }
+      currentMarmitasCalcOpts.meatSplit = next;
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const mealMeatStepBtn = e.target.closest('[data-marmitas-meal-meat-step]');
+    if (mealMeatStepBtn) {
+      const raw = mealMeatStepBtn.getAttribute('data-marmitas-meal-meat-step') || '';
+      const [mealKey, meatType, deltaStr] = raw.split(':');
+      const delta = parseInt(deltaStr, 10) || 0;
+      const cur = currentMarmitasCalcOpts.meatSplit || {};
+      const curAlmoco = resolveMeatDaysSplit(currentMarmitasPeriod, cur.almoco || { mode: 'so_frango' });
+      const curJantar = resolveMeatDaysSplit(currentMarmitasPeriod, cur.jantar || { mode: 'so_bovina' });
+      const targetSplit = mealKey === 'jantar' ? curJantar : curAlmoco;
+      const updatedMeal = {
+        mode: 'custom',
+        bovinaDays: targetSplit.bovinaDays,
+        frangoDays: targetSplit.frangoDays,
+        suinaDays: targetSplit.suinaDays
+      };
+      if (meatType === 'bovina') updatedMeal.bovinaDays = Math.max(0, updatedMeal.bovinaDays + delta);
+      else if (meatType === 'frango') updatedMeal.frangoDays = Math.max(0, updatedMeal.frangoDays + delta);
+      else if (meatType === 'suina') updatedMeal.suinaDays = Math.max(0, updatedMeal.suinaDays + delta);
+
+      currentMarmitasCalcOpts.meatSplit = {
+        mode: 'split_meal',
+        splitByMeal: true,
+        almoco: mealKey === 'almoco' ? updatedMeal : curAlmoco,
+        jantar: mealKey === 'jantar' ? updatedMeal : curJantar
+      };
       playSubtleClick(state?.settings?.soundEnabled);
       rerenderMarmitas();
       return;

@@ -4452,13 +4452,16 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
           </div>
         </div>
 
-        <!-- Filtro de Escopo: Dia Completo ou Só Almoço -->
-        <div class="marmitas-mode-switch" style="margin-bottom: 0.75rem;">
+        <!-- Filtro de Escopo: Dia Todo, Só Almoço ou Só Jantar -->
+        <div class="marmitas-mode-switch" style="margin-bottom: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
           <button type="button" class="btn btn-xs ${scope === 'completo' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-scope="completo" style="justify-content: center; font-weight: 700;">
             🌟 Dia Todo
           </button>
           <button type="button" class="btn btn-xs ${scope === 'almoco' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-scope="almoco" style="justify-content: center; font-weight: 700;">
             🍱 Só Marmitas de Almoço
+          </button>
+          <button type="button" class="btn btn-xs ${scope === 'jantar' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-scope="jantar" style="justify-content: center; font-weight: 700;">
+            🌙 Só Jantar
           </button>
         </div>
 
@@ -4482,11 +4485,11 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
           </button>
         </div>
 
-        <!-- Divisão de Carnes no Período (Escolher quantos dias de Bovina, Frango e Suína) -->
+        <!-- Divisão de Carnes no Período (Escolher quantos dias de Bovina, Frango e Suína + Separar Almoço vs Jantar em Dia Todo) -->
         <div class="marmitas-meat-split-box" style="background: var(--bg-surface); border: 1px solid rgba(220, 38, 38, 0.22); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 0.85rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
             <strong style="font-size: 0.8rem; color: #b91c1c; display: flex; align-items: center; gap: 0.35rem;">
-              <span>🥩🍗🐷</span> Dividir Carnes por Tipo (${safePeriod} ${safePeriod === 1 ? 'dia' : 'dias'})
+              <span>🥩🍗🐷</span> Dividir Carnes por Tipo (${safePeriod} ${safePeriod === 1 ? 'dia' : 'dias'}${scope === 'almoco' ? ' • Só Almoço' : (scope === 'jantar' ? ' • Só Jantar' : '')})
             </strong>
             <div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">
               <button type="button" class="btn btn-xs ${mb.mode === 'padrao' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-meat-mode="padrao" style="font-size: 0.7rem; font-weight: 700;">
@@ -4501,51 +4504,132 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
               <button type="button" class="btn btn-xs ${mb.mode === 'so_frango' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-meat-mode="so_frango" style="font-size: 0.7rem; font-weight: 700;">
                 🍗 100% Frango
               </button>
+              ${scope === 'completo' ? `
+                <button type="button" class="btn btn-xs ${mb.mode === 'almoco_frango_janta_bovina' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-meat-mode="almoco_frango_janta_bovina" style="font-size: 0.7rem; font-weight: 700;">
+                  🍗 Almoço Frango + 🥩 Janta Bovina
+                </button>
+                <button type="button" class="btn btn-xs ${mb.mode === 'almoco_bovina_janta_frango' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-meat-mode="almoco_bovina_janta_frango" style="font-size: 0.7rem; font-weight: 700;">
+                  🥩 Almoço Bovina + 🍗 Janta Frango
+                </button>
+                <button type="button" class="btn btn-xs ${mb.mode === 'split_meal' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-meat-mode="split_meal" style="font-size: 0.7rem; font-weight: 700;">
+                  🔀 Separar Almoço vs Jantar
+                </button>
+              ` : ''}
             </div>
           </div>
 
-          <div class="marmitas-meat-split-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.5rem;">
-            <!-- Bovina -->
-            <div style="background: var(--bg-card); border: 1px solid ${mb.bovina.days > 0 ? 'rgba(220, 38, 38, 0.35)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
-              <div>
-                <div style="font-size: 0.74rem; font-weight: 800; color: #b91c1c;">🥩 Carne Vermelha</div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);"><strong>${mb.bovina.cruaKgStr} kg</strong> crua <span style="color: var(--text-muted);">(x1.67)</span></div>
+          ${(scope === 'completo' && mb.splitByMeal && mb.almoco && mb.jantar) ? `
+            <!-- Modo Separado: Almoço vs Jantar -->
+            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+              <!-- Bloco Almoço -->
+              <div style="background: rgba(217, 119, 6, 0.05); border: 1px dashed rgba(217, 119, 6, 0.35); border-radius: var(--radius-sm); padding: 0.55rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.4rem;">
+                  <strong style="font-size: 0.75rem; color: #b45309;">🍱 Carnes do Almoço (${daily.prontoDiario.carneAlmocoProntaG}g pronta/dia • ${mb.almoco.totalDays}d)</strong>
+                  <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-xs ${mb.almoco.frango.days === safePeriod ? 'btn-primary' : 'btn-secondary'}" data-marmitas-meal-meat-preset="almoco:so_frango" style="font-size: 0.66rem; padding: 0.12rem 0.4rem; font-weight: 700;">🍗 100% Frango</button>
+                    <button type="button" class="btn btn-xs ${mb.almoco.bovina.days === safePeriod ? 'btn-primary' : 'btn-secondary'}" data-marmitas-meal-meat-preset="almoco:so_bovina" style="font-size: 0.66rem; padding: 0.12rem 0.4rem; font-weight: 700;">🥩 100% Bovina</button>
+                    <button type="button" class="btn btn-xs ${mb.almoco.suina.days === safePeriod ? 'btn-primary' : 'btn-secondary'}" data-marmitas-meal-meat-preset="almoco:so_suina" style="font-size: 0.66rem; padding: 0.12rem 0.4rem; font-weight: 700;">🐷 100% Suína</button>
+                    <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meal-meat-preset="almoco:misto" style="font-size: 0.66rem; padding: 0.12rem 0.4rem; font-weight: 700;">⚖️ Misto</button>
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 0.4rem;">
+                  ${[
+                    { key: 'bovina', label: '🥩 Bovina Almoço', color: '#b91c1c', factor: 'x1.67', data: mb.almoco.bovina },
+                    { key: 'frango', label: '🍗 Frango Almoço', color: '#b45309', factor: 'x1.39', data: mb.almoco.frango },
+                    { key: 'suina', label: '🐷 Suína Almoço', color: '#9d174d', factor: 'x1.47', data: mb.almoco.suina }
+                  ].map(mItem => `
+                    <div style="background: var(--bg-card); border: 1px solid ${mItem.data.days > 0 ? 'rgba(217, 119, 6, 0.4)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.4rem 0.45rem; display: flex; justify-content: space-between; align-items: center; gap: 0.35rem;">
+                      <div>
+                        <div style="font-size: 0.72rem; font-weight: 800; color: ${mItem.color};">${mItem.label}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary);"><strong>${mItem.data.cruaKgStr} kg</strong> cru <span style="color: var(--text-muted);">(${mItem.factor})</span></div>
+                      </div>
+                      <div style="display: inline-flex; align-items: center; gap: 0.2rem;">
+                        <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meal-meat-step="almoco:${mItem.key}:-1" style="min-width: 26px; min-height: 26px; padding: 0; font-weight: 800;">−</button>
+                        <span style="font-size: 0.76rem; font-weight: 800; min-width: 30px; text-align: center;">${mItem.data.days}d</span>
+                        <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meal-meat-step="almoco:${mItem.key}:1" style="min-width: 26px; min-height: 26px; padding: 0; font-weight: 800;">+</button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
               </div>
-              <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="bovina:-1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Menos 1 dia de carne vermelha">−</button>
-                <span style="font-size: 0.78rem; font-weight: 800; min-width: 34px; text-align: center;">${mb.bovina.days}d</span>
-                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="bovina:1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Mais 1 dia de carne vermelha">+</button>
-              </div>
-            </div>
 
-            <!-- Frango -->
-            <div style="background: var(--bg-card); border: 1px solid ${mb.frango.days > 0 ? 'rgba(217, 119, 6, 0.4)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
-              <div>
-                <div style="font-size: 0.74rem; font-weight: 800; color: #b45309;">🍗 Peito de Frango</div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);"><strong>${mb.frango.cruaKgStr} kg</strong> cru <span style="color: var(--text-muted);">(x1.39)</span></div>
-              </div>
-              <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="frango:-1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Menos 1 dia de frango">−</button>
-                <span style="font-size: 0.78rem; font-weight: 800; min-width: 34px; text-align: center;">${mb.frango.days}d</span>
-                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="frango:1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Mais 1 dia de frango">+</button>
+              <!-- Bloco Jantar -->
+              <div style="background: rgba(220, 38, 38, 0.04); border: 1px dashed rgba(220, 38, 38, 0.32); border-radius: var(--radius-sm); padding: 0.55rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.4rem;">
+                  <strong style="font-size: 0.75rem; color: #b91c1c;">🌙 Carnes do Jantar (${daily.prontoDiario.carneNoiteProntaG}g pronta/noite • ${mb.jantar.totalDays}d)</strong>
+                  <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-xs ${mb.jantar.bovina.days === safePeriod ? 'btn-primary' : 'btn-secondary'}" data-marmitas-meal-meat-preset="jantar:so_bovina" style="font-size: 0.66rem; padding: 0.12rem 0.4rem; font-weight: 700;">🥩 100% Bovina</button>
+                    <button type="button" class="btn btn-xs ${mb.jantar.frango.days === safePeriod ? 'btn-primary' : 'btn-secondary'}" data-marmitas-meal-meat-preset="jantar:so_frango" style="font-size: 0.66rem; padding: 0.12rem 0.4rem; font-weight: 700;">🍗 100% Frango</button>
+                    <button type="button" class="btn btn-xs ${mb.jantar.suina.days === safePeriod ? 'btn-primary' : 'btn-secondary'}" data-marmitas-meal-meat-preset="jantar:so_suina" style="font-size: 0.66rem; padding: 0.12rem 0.4rem; font-weight: 700;">🐷 100% Suína</button>
+                    <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meal-meat-preset="jantar:misto" style="font-size: 0.66rem; padding: 0.12rem 0.4rem; font-weight: 700;">⚖️ Misto</button>
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 0.4rem;">
+                  ${[
+                    { key: 'bovina', label: '🥩 Bovina Jantar', color: '#b91c1c', factor: 'x1.67', data: mb.jantar.bovina },
+                    { key: 'frango', label: '🍗 Frango Jantar', color: '#b45309', factor: 'x1.39', data: mb.jantar.frango },
+                    { key: 'suina', label: '🐷 Suína Jantar', color: '#9d174d', factor: 'x1.47', data: mb.jantar.suina }
+                  ].map(mItem => `
+                    <div style="background: var(--bg-card); border: 1px solid ${mItem.data.days > 0 ? 'rgba(220, 38, 38, 0.35)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.4rem 0.45rem; display: flex; justify-content: space-between; align-items: center; gap: 0.35rem;">
+                      <div>
+                        <div style="font-size: 0.72rem; font-weight: 800; color: ${mItem.color};">${mItem.label}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary);"><strong>${mItem.data.cruaKgStr} kg</strong> cru <span style="color: var(--text-muted);">(${mItem.factor})</span></div>
+                      </div>
+                      <div style="display: inline-flex; align-items: center; gap: 0.2rem;">
+                        <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meal-meat-step="jantar:${mItem.key}:-1" style="min-width: 26px; min-height: 26px; padding: 0; font-weight: 800;">−</button>
+                        <span style="font-size: 0.76rem; font-weight: 800; min-width: 30px; text-align: center;">${mItem.data.days}d</span>
+                        <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meal-meat-step="jantar:${mItem.key}:1" style="min-width: 26px; min-height: 26px; padding: 0; font-weight: 800;">+</button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
               </div>
             </div>
+          ` : `
+            <div class="marmitas-meat-split-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.5rem;">
+              <!-- Bovina -->
+              <div style="background: var(--bg-card); border: 1px solid ${mb.bovina.days > 0 ? 'rgba(220, 38, 38, 0.35)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
+                <div>
+                  <div style="font-size: 0.74rem; font-weight: 800; color: #b91c1c;">🥩 Carne Vermelha</div>
+                  <div style="font-size: 0.72rem; color: var(--text-secondary);"><strong>${mb.bovina.cruaKgStr} kg</strong> crua <span style="color: var(--text-muted);">(x1.67)</span></div>
+                </div>
+                <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                  <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="bovina:-1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Menos 1 dia de carne vermelha">−</button>
+                  <span style="font-size: 0.78rem; font-weight: 800; min-width: 34px; text-align: center;">${mb.bovina.days}d</span>
+                  <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="bovina:1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Mais 1 dia de carne vermelha">+</button>
+                </div>
+              </div>
 
-            <!-- Suína -->
-            <div style="background: var(--bg-card); border: 1px solid ${mb.suina.days > 0 ? 'rgba(190, 24, 93, 0.35)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
-              <div>
-                <div style="font-size: 0.74rem; font-weight: 800; color: #9d174d;">🐷 Carne Suína</div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);"><strong>${mb.suina.cruaKgStr} kg</strong> crua <span style="color: var(--text-muted);">(x1.47)</span></div>
+              <!-- Frango -->
+              <div style="background: var(--bg-card); border: 1px solid ${mb.frango.days > 0 ? 'rgba(217, 119, 6, 0.4)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
+                <div>
+                  <div style="font-size: 0.74rem; font-weight: 800; color: #b45309;">🍗 Peito de Frango</div>
+                  <div style="font-size: 0.72rem; color: var(--text-secondary);"><strong>${mb.frango.cruaKgStr} kg</strong> cru <span style="color: var(--text-muted);">(x1.39)</span></div>
+                </div>
+                <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                  <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="frango:-1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Menos 1 dia de frango">−</button>
+                  <span style="font-size: 0.78rem; font-weight: 800; min-width: 34px; text-align: center;">${mb.frango.days}d</span>
+                  <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="frango:1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Mais 1 dia de frango">+</button>
+                </div>
               </div>
-              <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="suina:-1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Menos 1 dia de carne suína">−</button>
-                <span style="font-size: 0.78rem; font-weight: 800; min-width: 34px; text-align: center;">${mb.suina.days}d</span>
-                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="suina:1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Mais 1 dia de carne suína">+</button>
+
+              <!-- Suína -->
+              <div style="background: var(--bg-card); border: 1px solid ${mb.suina.days > 0 ? 'rgba(190, 24, 93, 0.35)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
+                <div>
+                  <div style="font-size: 0.74rem; font-weight: 800; color: #9d174d;">🐷 Carne Suína</div>
+                  <div style="font-size: 0.72rem; color: var(--text-secondary);"><strong>${mb.suina.cruaKgStr} kg</strong> crua <span style="color: var(--text-muted);">(x1.47)</span></div>
+                </div>
+                <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                  <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="suina:-1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Menos 1 dia de carne suína">−</button>
+                  <span style="font-size: 0.78rem; font-weight: 800; min-width: 34px; text-align: center;">${mb.suina.days}d</span>
+                  <button type="button" class="btn btn-xs btn-secondary" data-marmitas-meat-step="suina:1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Mais 1 dia de carne suína">+</button>
+                </div>
               </div>
             </div>
-          </div>
+          `}
         </div>
 
+        ${scope !== 'jantar' ? `
         <!-- Divisão / Substituição de Carboidratos no Período (Arroz, Macarrão e Batata-Doce) -->
         <div class="marmitas-carb-split-box" style="background: var(--bg-surface); border: 1px solid rgba(234, 179, 8, 0.35); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 0.85rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
@@ -4612,14 +4696,15 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
             </div>
           </div>
         </div>
+        ` : ''}
 
         <!-- Linha 1 Simétrica: Base das Marmitas (Carne, Arroz/Carbo, Feijão) -->
         <div class="marmitas-cards-grid-core">
           <button type="button" class="marmitas-nutri-card ${cardStateCls('carne')}" data-marmitas-toggle-group="carne" style="--card-accent-color: #b91c1c; --card-accent-border: rgba(220, 38, 38, 0.35);">
             <div class="marmitas-card-top">
-              <span class="marmitas-card-title"><span>🥩</span> Carnes / Frango</span>
+              <span class="marmitas-card-title"><span>🥩</span> Carnes / Frango${scope === 'jantar' ? ' (Jantar)' : ''}</span>
               <span class="marmitas-card-badges">
-                <span class="marmitas-card-badge">${mb.isSplitActive ? 'Dividido' : 'x1.67'}</span>
+                <span class="marmitas-card-badge">${mb.splitByMeal ? 'Almoço ≠ Janta' : (mb.isSplitActive ? 'Dividido' : 'x1.67')}</span>
                 <span class="marmitas-card-check">${cardCheckLabel('carne')}</span>
               </span>
             </div>
@@ -4632,9 +4717,9 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
               <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 0.2rem;">
                 ${mb.isSplitActive
                   ? [
-                      mb.bovina.days > 0 ? `🥩 Bovina ${mb.bovina.cruaKgStr}kg (${mb.bovina.days}d)` : '',
-                      mb.frango.days > 0 ? `🍗 Frango ${mb.frango.cruaKgStr}kg (${mb.frango.days}d)` : '',
-                      mb.suina.days > 0 ? `🐷 Suína ${mb.suina.cruaKgStr}kg (${mb.suina.days}d)` : ''
+                      mb.bovina.cruaG > 0 ? `🥩 Bovina ${mb.bovina.cruaKgStr}kg${mb.splitByMeal ? ` (Alm:${mb.almoco.bovina.cruaKgStr}kg/Jan:${mb.jantar.bovina.cruaKgStr}kg)` : ` (${mb.bovina.days}d)`}` : '',
+                      mb.frango.cruaG > 0 ? `🍗 Frango ${mb.frango.cruaKgStr}kg${mb.splitByMeal ? ` (Alm:${mb.almoco.frango.cruaKgStr}kg/Jan:${mb.jantar.frango.cruaKgStr}kg)` : ` (${mb.frango.days}d)`}` : '',
+                      mb.suina.cruaG > 0 ? `🐷 Suína ${mb.suina.cruaKgStr}kg${mb.splitByMeal ? ` (Alm:${mb.almoco.suina.cruaKgStr}kg/Jan:${mb.jantar.suina.cruaKgStr}kg)` : ` (${mb.suina.days}d)`}` : ''
                     ].filter(Boolean).join(' • ')
                   : `🥩 Bovina ${((plan.totaisProntos.carneProntaG * (COOKING_FACTORS.carneVermelhaCruaMult || 1.6667)) / 1000).toFixed(2)}kg • 🐷 Suína ${((plan.totaisProntos.carneProntaG * (COOKING_FACTORS.carneSuinaCruaMult || 1.4706)) / 1000).toFixed(2)}kg • 🍗 Frango ${((plan.totaisProntos.carneProntaG * (COOKING_FACTORS.frangoCruaMult || 1.3889)) / 1000).toFixed(2)}kg`}
               </div>
@@ -4699,28 +4784,31 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
           </button>
         </div>
 
-        ${scope === 'completo' ? `
-          <!-- Linha 2 Simétrica (2 cards pareados, sem card órfão) -->
+        ${(scope === 'completo' || scope === 'jantar') ? `
+          <!-- Linha 2 Simétrica (Pães, Frutas & Laticínios) -->
           <div class="marmitas-cards-grid-extras">
             <button type="button" class="marmitas-nutri-card ${cardStateCls('paes_frutas')}" data-marmitas-toggle-group="paes_frutas" style="--card-accent-color: var(--brand-forest); --card-accent-border: rgba(22, 163, 74, 0.25);">
               <div class="marmitas-card-top">
-                <span class="marmitas-card-title"><span>🥖</span> Pães, Frutas & Saladas</span>
+                <span class="marmitas-card-title"><span>🥖</span> ${scope === 'jantar' ? 'Pães do Jantar' : 'Pães, Frutas & Saladas'}</span>
                 <span class="marmitas-card-badges">
-                  <span class="marmitas-card-badge">${bb.effectivePerDay}p • ${daily.prontoDiario.frutasTotal}f/dia</span>
+                  <span class="marmitas-card-badge">${bb.effectivePerDay}p${scope === 'jantar' ? '/noite' : ` • ${daily.prontoDiario.frutasTotal}f/dia`}</span>
                   <span class="marmitas-card-check">${cardCheckLabel('paes_frutas')}</span>
                 </span>
               </div>
               <div class="marmitas-card-value">
-                <span>${plan.totaisProntos.paes} ${plan.totaisProntos.paes === 1 ? 'pão' : 'pães'} • ${plan.totaisProntos.frutas} frutas</span>
+                <span>${plan.totaisProntos.paes} ${plan.totaisProntos.paes === 1 ? 'pão' : 'pães'}${scope === 'jantar' ? ' (noite)' : ` • ${plan.totaisProntos.frutas} frutas`}</span>
               </div>
               <div class="marmitas-card-meta">
-                Inclui ovos (${plan.totaisProntos.ovos} un), banana, maçã, uva 500g, mamão, cenoura, beterraba, chuchu, alface e tomates para ${safePeriod} ${safePeriod === 1 ? 'dia' : 'dias'}.
+                ${scope === 'jantar'
+                  ? `Pães para o lanche/jantar da noite em ${safePeriod} ${safePeriod === 1 ? 'noite' : 'noites'}.`
+                  : `Inclui ovos (${plan.totaisProntos.ovos} un), banana, maçã, uva 500g, mamão, cenoura, beterraba, chuchu, alface e tomates para ${safePeriod} ${safePeriod === 1 ? 'dia' : 'dias'}.`}
                 <div style="font-size: 0.68rem; color: var(--brand-forest); font-weight: 700; margin-top: 0.2rem;">
                   🥖 Pães: 👨‍💻 Matheus ${bb.matheusPaes} un • 👩‍💼 Scarlet ${bb.scarletPaes} un${bb.scarletPaes === 0 ? ' (sem pão)' : ''}
                 </div>
               </div>
             </button>
 
+            ${scope === 'completo' ? `
             <button type="button" class="marmitas-nutri-card ${cardStateCls('laticinios')}" data-marmitas-toggle-group="laticinios" style="--card-accent-color: #0f766e; --card-accent-border: rgba(13, 148, 136, 0.28);">
               <div class="marmitas-card-top">
                 <span class="marmitas-card-title"><span>🥛</span> YoPRO & Whey</span>
@@ -4736,6 +4824,7 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
                 Leite em pó (+${plan.totaisProntos.leiteEmPoG}g), queijo (${plan.totaisProntos.queijoG}g) e requeijão (${plan.totaisProntos.requeijaoG}g).
               </div>
             </button>
+            ` : ''}
           </div>
 
           <!-- Controle Rápido para Editar Quantidade de Pães (Matheus & Scarlet) -->

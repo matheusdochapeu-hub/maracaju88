@@ -642,5 +642,66 @@ test('Marmitas v2.10.10: Edição da quantidade de pães (Scarlet sem pão, 1 p�
   assert.ok(mockHtml.includes('id="input-marmitas-custom-bread"'));
 });
 
+test('Marmitas v2.10.11: Aba Só Jantar e separação de carnes Almoço vs Jantar em Dia Todo (ex: Frango no almoço e Carne Vermelha no jantar)', async () => {
+  // 1. Escopo "Só Jantar" (7 noites): 280g carne pronta/noite * 7 = 1960g pronta (~3.27 kg crua bovina) e 14 pães da noite
+  const planJantar = calculateMarmitasPlan(7, 'jantar', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal');
+  assert.equal(planJantar.totaisProntos.carneProntaG, 1960);
+  assert.equal(planJantar.totaisProntos.arrozProntoG, 0);
+  assert.equal(planJantar.totaisProntos.feijaoProntoG, 0);
+  assert.equal(planJantar.totaisProntos.paes, 14);
+  assert.equal(planJantar.totaisProntos.frutas, 0);
+
+  // 2. Dia Todo com separação Almoço = 100% Frango (7d) e Jantar = 100% Carne Bovina (7d)
+  const planSplitMeal = calculateMarmitasPlan(
+    7,
+    'completo',
+    DEFAULT_NUTRITION_MEALS,
+    COOKING_FACTORS,
+    'casal',
+    ['carne'],
+    { mode: 'almoco_frango_janta_bovina' }
+  );
+  assert.equal(planSplitMeal.meatBreakdown.splitByMeal, true);
+  // Almoço: 260g/dia * 7 = 1820g pronta -> Frango cru (1820 / 0.72) = 2528g (2.53 kg)
+  assert.equal(planSplitMeal.meatBreakdown.frango.prontaG, 1820);
+  assert.equal(planSplitMeal.meatBreakdown.frango.cruaKgStr, '2.53');
+  // Jantar: 280g/noite * 7 = 1960g pronta -> Bovina crua (1960 * 900/540) = 3267g (3.27 kg)
+  assert.equal(planSplitMeal.meatBreakdown.bovina.prontaG, 1960);
+  assert.equal(planSplitMeal.meatBreakdown.bovina.cruaKgStr, '3.27');
+  assert.equal(planSplitMeal.shoppingItems.length, 2);
+
+  // 3. Vice-versa: Almoço = 100% Bovina (3.03 kg) e Jantar = 100% Frango (2.72 kg)
+  const planViceVersa = calculateMarmitasPlan(
+    7,
+    'completo',
+    DEFAULT_NUTRITION_MEALS,
+    COOKING_FACTORS,
+    'casal',
+    ['carne'],
+    { mode: 'almoco_bovina_janta_frango' }
+  );
+  assert.equal(planViceVersa.meatBreakdown.bovina.cruaKgStr, '3.03');
+  assert.equal(planViceVersa.meatBreakdown.frango.cruaKgStr, '2.72');
+
+  // 4. UI renderiza o botão "Só Jantar" e os controles separados de Almoço e Jantar
+  const ui = await import('../js/ui.js');
+  let mockHtml = '';
+  globalThis.document = {
+    getElementById: (id) => (id === 'marmitas-main-view'
+      ? { set innerHTML(v) { mockHtml = v; }, get innerHTML() { return mockHtml; } }
+      : null)
+  };
+  ui.renderMarmitasTab({}, 'casal', 7, 'completo', {}, {
+    calcMode: 'periodo',
+    meatSplit: { mode: 'almoco_frango_janta_bovina' }
+  });
+  assert.ok(mockHtml.includes('data-marmitas-scope="jantar"'));
+  assert.ok(mockHtml.includes('data-marmitas-meat-mode="almoco_frango_janta_bovina"'));
+  assert.ok(mockHtml.includes('data-marmitas-meat-mode="almoco_bovina_janta_frango"'));
+  assert.ok(mockHtml.includes('Carnes do Almoço'));
+  assert.ok(mockHtml.includes('Carnes do Jantar'));
+});
+
+
 
 
