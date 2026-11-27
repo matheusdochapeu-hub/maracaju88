@@ -205,6 +205,7 @@ import {
   DEFAULT_HORTIFRUTI_IDS,
   resolveMeatDaysSplit,
   resolveCarbDaysSplit,
+  resolveBreadPlan,
   buildAutoMealDescriptions,
   calculateMarmitasPlan,
   calculateCustomQuantityConversion,
@@ -278,6 +279,7 @@ let currentMarmitasCalcOpts = {
   selectedGroups: [...MARMITAS_ITEM_GROUPS],
   meatSplit: { mode: 'padrao' },
   carbSplit: { mode: 'padrao' },
+  breadOpt: { mode: 'padrao' },
   selectedHortifruti: [...DEFAULT_HORTIFRUTI_IDS],
   specificItem: 'carne_vermelha',
   specificDirection: 'pronto_para_cru',
@@ -8465,6 +8467,35 @@ function initMarmitasModule() {
       return;
     }
 
+    const breadModeBtn = e.target.closest('[data-marmitas-bread-mode]');
+    if (breadModeBtn) {
+      const mode = breadModeBtn.getAttribute('data-marmitas-bread-mode') || 'padrao';
+      currentMarmitasCalcOpts.breadOpt = { mode };
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const breadStepBtn = e.target.closest('[data-marmitas-bread-step]');
+    if (breadStepBtn) {
+      const raw = breadStepBtn.getAttribute('data-marmitas-bread-step') || '';
+      const [who, deltaStr] = raw.split(':');
+      const delta = parseInt(deltaStr, 10) || 0;
+      const effectiveMeals = getEffectiveNutritionMeals(state);
+      const curBread = resolveBreadPlan(currentMarmitasPeriod, effectiveMeals, currentMarmitasPerson, currentMarmitasCalcOpts.breadOpt);
+      const next = {
+        mode: 'custom',
+        matheusPaes: curBread.matheusPaes,
+        scarletPaes: curBread.scarletPaes
+      };
+      if (who === 'scarlet') next.scarletPaes = Math.max(0, next.scarletPaes + delta);
+      else if (who === 'matheus') next.matheusPaes = Math.max(0, next.matheusPaes + delta);
+      currentMarmitasCalcOpts.breadOpt = next;
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
     const hortiToggleBtn = e.target.closest('[data-marmitas-horti-toggle]');
     if (hortiToggleBtn) {
       const hortiId = hortiToggleBtn.getAttribute('data-marmitas-horti-toggle');
@@ -8699,7 +8730,8 @@ function initMarmitasModule() {
         currentMarmitasCalcOpts.selectedGroups,
         currentMarmitasCalcOpts.meatSplit,
         currentMarmitasCalcOpts.selectedHortifruti,
-        currentMarmitasCalcOpts.carbSplit
+        currentMarmitasCalcOpts.carbSplit,
+        currentMarmitasCalcOpts.breadOpt
       );
       if (!plan || !plan.shoppingItems || plan.shoppingItems.length === 0) {
         showToast('Selecione ao menos 1 alimento nos cartões para enviar.', 'warning', 3000);
@@ -8756,6 +8788,16 @@ function initMarmitasModule() {
       const val = parseInt(e.target.value, 10);
       if (Number.isFinite(val) && val >= 1) {
         currentMarmitasPeriod = Math.min(365, val);
+        rerenderMarmitas();
+      }
+    }
+    if (e.target && e.target.id === 'input-marmitas-custom-bread') {
+      const val = parseInt(e.target.value, 10);
+      if (Number.isFinite(val) && val >= 0) {
+        currentMarmitasCalcOpts.breadOpt = {
+          mode: 'custom',
+          totalPaes: Math.min(500, val)
+        };
         rerenderMarmitas();
       }
     }

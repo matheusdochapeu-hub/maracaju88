@@ -5,6 +5,7 @@ import {
   DEFAULT_HORTIFRUTI_IDS,
   resolveMeatDaysSplit,
   resolveCarbDaysSplit,
+  resolveBreadPlan,
   calculateMarmitasProductionPlan,
   getDailyNutritionSummary,
   calculateMarmitasPlan,
@@ -4304,13 +4305,14 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
 
   const meatSplitOpt = calcOpts.meatSplit || { mode: 'padrao' };
   const carbSplitOpt = calcOpts.carbSplit || { mode: 'padrao' };
+  const breadOpt = calcOpts.breadOpt || { mode: 'padrao' };
   const selectedHortifruti = Array.isArray(calcOpts.selectedHortifruti)
     ? calcOpts.selectedHortifruti
     : DEFAULT_HORTIFRUTI_IDS;
 
   const nutritionState = getNutritionState(state);
   const effectiveMeals = getEffectiveNutritionMeals(state);
-  const plan = calculateMarmitasPlan(safePeriod, scope, effectiveMeals, COOKING_FACTORS, activePerson, selectedGroups, meatSplitOpt, selectedHortifruti, carbSplitOpt);
+  const plan = calculateMarmitasPlan(safePeriod, scope, effectiveMeals, COOKING_FACTORS, activePerson, selectedGroups, meatSplitOpt, selectedHortifruti, carbSplitOpt, breadOpt);
   const daily = getDailyNutritionSummary(effectiveMeals, COOKING_FACTORS, activePerson);
   const prodPlan = calculateMarmitasProductionPlan({
     dias: safePeriod,
@@ -4341,6 +4343,7 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
 
   const mb = plan.meatBreakdown || resolveMeatDaysSplit(safePeriod, meatSplitOpt);
   const cb = plan.carbBreakdown || resolveCarbDaysSplit(safePeriod, carbSplitOpt);
+  const bb = plan.breadBreakdown || resolveBreadPlan(safePeriod, effectiveMeals, activePerson, breadOpt);
   const hortiItems = Array.isArray(plan.hortifrutiItems) ? plan.hortifrutiItems : [];
   const hortiSaladas = hortiItems.filter(i => i.section === 'saladas');
   const hortiLegumes = hortiItems.filter(i => i.section === 'legumes');
@@ -4703,15 +4706,18 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
               <div class="marmitas-card-top">
                 <span class="marmitas-card-title"><span>🥖</span> Pães, Frutas & Saladas</span>
                 <span class="marmitas-card-badges">
-                  <span class="marmitas-card-badge">${daily.prontoDiario.paesTotal}p • ${daily.prontoDiario.frutasTotal}f/dia</span>
+                  <span class="marmitas-card-badge">${bb.effectivePerDay}p • ${daily.prontoDiario.frutasTotal}f/dia</span>
                   <span class="marmitas-card-check">${cardCheckLabel('paes_frutas')}</span>
                 </span>
               </div>
               <div class="marmitas-card-value">
-                <span>${plan.totaisProntos.paes} pães • ${plan.totaisProntos.frutas} frutas</span>
+                <span>${plan.totaisProntos.paes} ${plan.totaisProntos.paes === 1 ? 'pão' : 'pães'} • ${plan.totaisProntos.frutas} frutas</span>
               </div>
               <div class="marmitas-card-meta">
                 Inclui ovos (${plan.totaisProntos.ovos} un), banana, maçã, uva 500g, mamão, cenoura, beterraba, chuchu, alface e tomates para ${safePeriod} ${safePeriod === 1 ? 'dia' : 'dias'}.
+                <div style="font-size: 0.68rem; color: var(--brand-forest); font-weight: 700; margin-top: 0.2rem;">
+                  🥖 Pães: 👨‍💻 Matheus ${bb.matheusPaes} un • 👩‍💼 Scarlet ${bb.scarletPaes} un${bb.scarletPaes === 0 ? ' (sem pão)' : ''}
+                </div>
               </div>
             </button>
 
@@ -4730,6 +4736,68 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
                 Leite em pó (+${plan.totaisProntos.leiteEmPoG}g), queijo (${plan.totaisProntos.queijoG}g) e requeijão (${plan.totaisProntos.requeijaoG}g).
               </div>
             </button>
+          </div>
+
+          <!-- Controle Rápido para Editar Quantidade de Pães (Matheus & Scarlet) -->
+          <div class="marmitas-bread-edit-box" style="background: var(--bg-surface); border: 1px solid rgba(22, 163, 74, 0.28); border-radius: var(--radius-md); padding: 0.75rem; margin-top: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
+              <strong style="font-size: 0.8rem; color: var(--brand-forest); display: flex; align-items: center; gap: 0.35rem;">
+                <span>🥖</span> Editar Quantidade de Pães (${safePeriod} ${safePeriod === 1 ? 'dia' : 'dias'})
+              </strong>
+              <div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-xs ${bb.mode === 'padrao' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-bread-mode="padrao" style="font-size: 0.7rem; font-weight: 700;">
+                  🥖 Padrão (${bb.defaultTotalPaes} un)
+                </button>
+                <button type="button" class="btn btn-xs ${bb.mode === 'scarlet_sem_pao' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-bread-mode="scarlet_sem_pao" style="font-size: 0.7rem; font-weight: 700;">
+                  👩‍💼🚫 Scarlet sem pão (${bb.defaultMatheusPaes} un)
+                </button>
+                <button type="button" class="btn btn-xs ${bb.mode === 'scarlet_1_pao' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-bread-mode="scarlet_1_pao" style="font-size: 0.7rem; font-weight: 700;">
+                  👩‍💼½ Scarlet 1 pão/dia (${bb.defaultMatheusPaes + (activePerson === 'matheus' ? 0 : safePeriod)} un)
+                </button>
+                <button type="button" class="btn btn-xs ${bb.mode === 'sem_pao' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-bread-mode="sem_pao" style="font-size: 0.7rem; font-weight: 700;">
+                  🚫 Sem pão (0 un)
+                </button>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.5rem;">
+              <!-- Pães da Scarlet -->
+              <div style="background: var(--bg-card); border: 1px solid ${bb.scarletPaes > 0 ? 'rgba(13, 148, 136, 0.4)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
+                <div>
+                  <div style="font-size: 0.74rem; font-weight: 800; color: #0f766e;">👩‍💼 Pães Scarlet</div>
+                  <div style="font-size: 0.7rem; color: var(--text-muted);">${bb.scarletPaes === 0 ? 'Sem pão neste período' : `~${+(bb.scarletPaes / safePeriod).toFixed(1)} pão/dia`}</div>
+                </div>
+                <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                  <button type="button" class="btn btn-xs btn-secondary" data-marmitas-bread-step="scarlet:-1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Menos 1 pão para Scarlet">−</button>
+                  <span style="font-size: 0.8rem; font-weight: 800; min-width: 40px; text-align: center;">${bb.scarletPaes} un</span>
+                  <button type="button" class="btn btn-xs btn-secondary" data-marmitas-bread-step="scarlet:1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Mais 1 pão para Scarlet">+</button>
+                </div>
+              </div>
+
+              <!-- Pães do Matheus -->
+              <div style="background: var(--bg-card); border: 1px solid ${bb.matheusPaes > 0 ? 'rgba(22, 163, 74, 0.4)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
+                <div>
+                  <div style="font-size: 0.74rem; font-weight: 800; color: var(--brand-forest);">👨‍💻 Pães Matheus</div>
+                  <div style="font-size: 0.7rem; color: var(--text-muted);">${bb.matheusPaes === 0 ? 'Sem pão neste período' : `~${+(bb.matheusPaes / safePeriod).toFixed(1)} pão/dia`}</div>
+                </div>
+                <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                  <button type="button" class="btn btn-xs btn-secondary" data-marmitas-bread-step="matheus:-1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Menos 1 pão para Matheus">−</button>
+                  <span style="font-size: 0.8rem; font-weight: 800; min-width: 40px; text-align: center;">${bb.matheusPaes} un</span>
+                  <button type="button" class="btn btn-xs btn-secondary" data-marmitas-bread-step="matheus:1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Mais 1 pão para Matheus">+</button>
+                </div>
+              </div>
+
+              <!-- Digitar Quantidade Total Livre -->
+              <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
+                <label for="input-marmitas-custom-bread" style="font-size: 0.74rem; font-weight: 800; color: var(--text-primary); margin: 0;">
+                  🔢 Total de Pães
+                </label>
+                <div style="display: inline-flex; align-items: center; gap: 0.3rem;">
+                  <input type="number" id="input-marmitas-custom-bread" class="form-control" min="0" max="500" value="${bb.totalPaes}" aria-label="Digitar quantidade total de pães" style="width: 72px; font-weight: 800; text-align: center; padding: 0.2rem 0.35rem;" />
+                  <span style="font-size: 0.74rem; font-weight: 700; color: var(--text-muted);">un</span>
+                </div>
+              </div>
+            </div>
           </div>
         ` : ''}
 

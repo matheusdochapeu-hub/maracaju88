@@ -10,6 +10,7 @@ import {
   DEFAULT_HORTIFRUTI_IDS,
   resolveMeatDaysSplit,
   resolveCarbDaysSplit,
+  resolveBreadPlan,
   calculateMarmitasProductionPlan,
   buildAutoMealDescriptions,
   getDailyNutritionSummary,
@@ -596,5 +597,50 @@ test('Marmitas v2.10.9: Substituição/Divisão de Arroz por Macarrão ou Batata
   assert.ok(mockHtml.includes('data-marmitas-carb-step="macarrao:1"'));
   assert.ok(mockHtml.includes('data-marmitas-carb-step="batata_doce:1"'));
 });
+
+test('Marmitas v2.10.10: Edição da quantidade de pães (Scarlet sem pão, 1 pão/dia ou quantidade personalizada)', async () => {
+  // 1. Padrão 7 dias: Matheus 14 + Scarlet 14 = 28 pães
+  const padrao = resolveBreadPlan(7, DEFAULT_NUTRITION_MEALS, 'casal', { mode: 'padrao' });
+  assert.equal(padrao.matheusPaes, 14);
+  assert.equal(padrao.scarletPaes, 14);
+  assert.equal(padrao.totalPaes, 28);
+
+  // 2. Scarlet sem pão: Matheus 14 + Scarlet 0 = 14 pães
+  const planSemPaoScarlet = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['paes_frutas'], null, null, null, { mode: 'scarlet_sem_pao' });
+  assert.equal(planSemPaoScarlet.totaisProntos.paes, 14);
+  assert.equal(planSemPaoScarlet.breadBreakdown.matheusPaes, 14);
+  assert.equal(planSemPaoScarlet.breadBreakdown.scarletPaes, 0);
+  const paoItem = planSemPaoScarlet.shoppingItems.find(i => i.name === 'Pão');
+  assert.equal(paoItem.quantity, '14 un');
+
+  // 3. Scarlet 1 pão/dia: Matheus 14 + Scarlet 7 = 21 pães
+  const plan1PaoScarlet = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['paes_frutas'], null, null, null, { mode: 'scarlet_1_pao' });
+  assert.equal(plan1PaoScarlet.totaisProntos.paes, 21);
+
+  // 4. Quantidade personalizada livre (ex: 18 pães ou 0 pães)
+  const planCustom18 = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['paes_frutas'], null, null, null, { mode: 'custom', totalPaes: 18 });
+  assert.equal(planCustom18.totaisProntos.paes, 18);
+  assert.equal(planCustom18.breadBreakdown.matheusPaes, 14);
+  assert.equal(planCustom18.breadBreakdown.scarletPaes, 4);
+
+  const planZeroPao = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['paes_frutas'], null, null, null, { mode: 'sem_pao' });
+  assert.equal(planZeroPao.totaisProntos.paes, 0);
+  assert.equal(planZeroPao.shoppingItems.some(i => i.name === 'Pão'), false);
+
+  // 5. UI exibe controles de edição de pães da Scarlet e do Matheus
+  const ui = await import('../js/ui.js');
+  let mockHtml = '';
+  globalThis.document = {
+    getElementById: (id) => (id === 'marmitas-main-view'
+      ? { set innerHTML(v) { mockHtml = v; }, get innerHTML() { return mockHtml; } }
+      : null)
+  };
+  ui.renderMarmitasTab({}, 'casal', 7, 'completo', {}, { calcMode: 'periodo', breadOpt: { mode: 'scarlet_sem_pao' } });
+  assert.ok(mockHtml.includes('14 pães • 28 frutas'));
+  assert.ok(mockHtml.includes('data-marmitas-bread-mode="scarlet_sem_pao"'));
+  assert.ok(mockHtml.includes('data-marmitas-bread-step="scarlet:-1"'));
+  assert.ok(mockHtml.includes('id="input-marmitas-custom-bread"'));
+});
+
 
 

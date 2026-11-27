@@ -903,11 +903,96 @@ export function resolveCarbDaysSplit(dias = 7, carbSplit = null) {
 }
 
 /**
- * Calcula o planejamento completo de compras e marmitas para N dias (ex: 3, 7, 15, 30 dias),
- * permite filtrar por grupos específicos e suporta divisão de carnes (Bovina, Frango, Suína)
- * e substituição/divisão de carboidratos (Arroz, Macarrão, Batata-Doce).
+ * Calcula e permite editar a quantidade de pães no período para Matheus e Scarlet
+ * (ex: quando a Scarlet não come pão na semana, come apenas 1/dia ou quando o casal
+ * quer digitar uma quantidade personalizada de pães para a lista de compras).
+ * Presets:
+ * - 'padrao': usa a prescrição diária do cardápio (Matheus 2/dia + Scarlet 2/dia = 28 pães em 7d)
+ * - 'scarlet_sem_pao': Scarlet 0 pães no período, Matheus mantém o padrão (14 pães em 7d)
+ * - 'scarlet_1_pao': Scarlet 1 pão/dia (7 pães em 7d), Matheus mantém o padrão (21 pães em 7d)
+ * - 'sem_pao': 0 pães para ambos
+ * - 'custom': permite ajustar individualmente { matheusPaes, scarletPaes } ou { totalPaes }
  */
-export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEFAULT_NUTRITION_MEALS, factors = COOKING_FACTORS, person = 'casal', selectedItems = null, meatSplitOpt = null, selectedHortifruti = null, carbSplitOpt = null) {
+export function resolveBreadPlan(dias = 7, meals = DEFAULT_NUTRITION_MEALS, person = 'casal', breadOpt = null) {
+  const safeDias = Math.max(1, Math.min(365, Math.round(Number(dias) || 7)));
+  const m = (meals && meals.matheus) || DEFAULT_NUTRITION_MEALS.matheus;
+  const s = (meals && meals.scarlet) || DEFAULT_NUTRITION_MEALS.scarlet;
+
+  const matheusPaesDia = (Number(m?.manha?.paes) || 0) + (Number(m?.noite?.paes) || 0);
+  const scarletPaesDia = (Number(s?.manha?.paes) || 0) + (Number(s?.noite?.paes) || 0);
+
+  const includeMatheus = person === 'casal' || person === 'matheus';
+  const includeScarlet = person === 'casal' || person === 'scarlet';
+
+  const defaultMatheusPaes = includeMatheus ? (matheusPaesDia * safeDias) : 0;
+  const defaultScarletPaes = includeScarlet ? (scarletPaesDia * safeDias) : 0;
+  const defaultTotalPaes = defaultMatheusPaes + defaultScarletPaes;
+
+  if (!breadOpt || typeof breadOpt !== 'object' || !breadOpt.mode || breadOpt.mode === 'padrao') {
+    return {
+      mode: 'padrao',
+      isCustom: false,
+      matheusPaes: defaultMatheusPaes,
+      scarletPaes: defaultScarletPaes,
+      totalPaes: defaultTotalPaes,
+      defaultMatheusPaes,
+      defaultScarletPaes,
+      defaultTotalPaes,
+      effectivePerDay: +(defaultTotalPaes / safeDias).toFixed(1)
+    };
+  }
+
+  const mode = breadOpt.mode;
+  let matheusPaes = defaultMatheusPaes;
+  let scarletPaes = defaultScarletPaes;
+
+  if (mode === 'scarlet_sem_pao') {
+    scarletPaes = 0;
+  } else if (mode === 'scarlet_1_pao') {
+    scarletPaes = includeScarlet ? safeDias : 0;
+  } else if (mode === 'sem_pao') {
+    matheusPaes = 0;
+    scarletPaes = 0;
+  } else {
+    if (breadOpt.totalPaes !== undefined && breadOpt.totalPaes !== null && breadOpt.matheusPaes === undefined && breadOpt.scarletPaes === undefined) {
+      const targetTotal = Math.max(0, Math.round(Number(breadOpt.totalPaes) || 0));
+      if (!includeMatheus) {
+        matheusPaes = 0;
+        scarletPaes = targetTotal;
+      } else if (!includeScarlet) {
+        matheusPaes = targetTotal;
+        scarletPaes = 0;
+      } else {
+        // Prioriza manter os pães do Matheus e ajusta a diferença na Scarlet (já que ela às vezes não come pão)
+        matheusPaes = Math.min(defaultMatheusPaes, targetTotal);
+        scarletPaes = Math.max(0, targetTotal - matheusPaes);
+      }
+    } else {
+      matheusPaes = includeMatheus ? Math.max(0, Math.round(Number(breadOpt.matheusPaes ?? defaultMatheusPaes))) : 0;
+      scarletPaes = includeScarlet ? Math.max(0, Math.round(Number(breadOpt.scarletPaes ?? defaultScarletPaes))) : 0;
+    }
+  }
+
+  const totalPaes = matheusPaes + scarletPaes;
+  return {
+    mode,
+    isCustom: true,
+    matheusPaes,
+    scarletPaes,
+    totalPaes,
+    defaultMatheusPaes,
+    defaultScarletPaes,
+    defaultTotalPaes,
+    effectivePerDay: +(totalPaes / safeDias).toFixed(1)
+  };
+}
+
+/**
+ * Calcula o planejamento completo de compras e marmitas para N dias (ex: 3, 7, 15, 30 dias),
+ * permite filtrar por grupos específicos e suporta divisão de carnes (Bovina, Frango, Suína),
+ * substituição/divisão de carboidratos (Arroz, Macarrão, Batata-Doce) e ajuste de pães.
+ */
+export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEFAULT_NUTRITION_MEALS, factors = COOKING_FACTORS, person = 'casal', selectedItems = null, meatSplitOpt = null, selectedHortifruti = null, carbSplitOpt = null, breadOpt = null) {
   const safeDias = Math.max(1, Math.min(365, Math.round(Number(dias) || 7)));
   const daily = getDailyNutritionSummary(meals, factors, person);
   const isAlmocoOnly = escopo === 'almoco';
@@ -1052,7 +1137,8 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
   };
 
   // Outros itens (se escopo completo)
-  const paes = isAlmocoOnly ? 0 : daily.prontoDiario.paesTotal * safeDias;
+  const breadBreakdown = resolveBreadPlan(safeDias, meals, person, breadOpt);
+  const paes = isAlmocoOnly ? 0 : breadBreakdown.totalPaes;
   const frutas = isAlmocoOnly ? 0 : daily.prontoDiario.frutasTotal * safeDias;
   const yopro = isAlmocoOnly ? 0 : daily.prontoDiario.yoproTotal * safeDias;
   const wheyG = isAlmocoOnly ? 0 : daily.prontoDiario.wheyTotalG * safeDias;
@@ -1181,13 +1267,16 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
 
   if (!isAlmocoOnly) {
     if (paes > 0) {
+      const breadDetailNotes = breadBreakdown.isCustom
+        ? `Ajustado: Matheus ${breadBreakdown.matheusPaes} un • Scarlet ${breadBreakdown.scarletPaes} un (${safeDias} ${safeDias === 1 ? 'dia' : 'dias'}).`
+        : `${daily.prontoDiario.paesTotal} pães por dia ${targetLabel} (Matheus ${breadBreakdown.matheusPaes} un + Scarlet ${breadBreakdown.scarletPaes} un).`;
       allShoppingItems.push({
         groupKey: 'paes_frutas',
         title: `Pães franceses / forma (${paes} un)`,
         name: `Pão`,
         category: 'padaria',
         quantity: `${paes} un`,
-        notes: `${daily.prontoDiario.paesTotal} pães por dia ${targetLabel} (café da manhã + lanche da noite).`,
+        notes: breadDetailNotes,
         estimatedUnitPrice: 0.90
       });
     }
@@ -1324,6 +1413,7 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
     escopo,
     meatBreakdown,
     carbBreakdown,
+    breadBreakdown,
     hortifrutiItems,
     totaisProntos: {
       carneProntaG,
