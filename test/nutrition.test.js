@@ -6,6 +6,11 @@ import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_NUTRITION_MEALS,
   COOKING_FACTORS,
+  HORTIFRUTI_WEEKLY_CATALOG,
+  DEFAULT_HORTIFRUTI_IDS,
+  resolveMeatDaysSplit,
+  calculateMarmitasProductionPlan,
+  buildAutoMealDescriptions,
   getDailyNutritionSummary,
   calculateMarmitasPlan,
   parseNutritionDiaryText,
@@ -434,5 +439,104 @@ test('Nutrição: fatores parciais não geram NaN', () => {
   const conv = calculateCustomQuantityConversion({ item: 'arroz', grams: 500, factors: {} });
   assert.ok(Number.isFinite(conv.cruG));
   assert.equal(conv.prontoG, 500);
+});
+
+test('Marmitas v2.10.8: Divisão de carnes por período (Bovina, Frango e Suína) calcula pesos separados e gera itens distintos', () => {
+  // 7 dias no modo misto (3d Bovina, 3d Frango, 1d Suína)
+  const split = resolveMeatDaysSplit(7, { mode: 'misto' });
+  assert.equal(split.isSplitActive, true);
+  assert.equal(split.bovinaDays, 3);
+  assert.equal(split.frangoDays, 3);
+  assert.equal(split.suinaDays, 1);
+
+  const plan = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['carne'], { mode: 'misto' });
+  assert.equal(plan.shoppingItems.length, 3);
+  assert.ok(plan.shoppingItems.some(i => i.name === 'Carne Bovina in natura'));
+  assert.ok(plan.shoppingItems.some(i => i.name === 'Peito de Frango in natura'));
+  assert.ok(plan.shoppingItems.some(i => i.name === 'Carne Suína in natura'));
+  // Bovina 3d * 540g * (900/540) = 2700g (2.70 kg)
+  assert.equal(plan.meatBreakdown.bovina.cruaG, 2700);
+  // Frango 3d * 540g / 0.72 = 2250g (2.25 kg)
+  assert.equal(plan.meatBreakdown.frango.cruaG, 2250);
+  // Suína 1d * 540g / 0.68 = 794g (0.79 kg)
+  assert.equal(plan.meatBreakdown.suina.cruaG, 794);
+});
+
+test('Marmitas v2.10.8: Hortifrúti real da semana inclui saladas (Tomate, Tomate Cereja, Alface), legumes (Cenoura, Beterraba, Chuchu) e frutas (Banana, Maçã, Uvas 500g, Mamão e opcionais Morango/Melancia)', () => {
+  assert.equal(HORTIFRUTI_WEEKLY_CATALOG.length, 12);
+  // 10 marcados por padrão + 2 opcionais ("às vezes": morango congelado e melancia)
+  assert.equal(DEFAULT_HORTIFRUTI_IDS.length, 10);
+  assert.equal(DEFAULT_HORTIFRUTI_IDS.includes('morango_congelado'), false);
+  assert.equal(DEFAULT_HORTIFRUTI_IDS.includes('melancia'), false);
+
+  const planDefault = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['paes_frutas']);
+  const namesDefault = planDefault.shoppingItems.map(i => i.name);
+  assert.ok(namesDefault.includes('Alface'));
+  assert.ok(namesDefault.includes('Tomate'));
+  assert.ok(namesDefault.includes('Tomate Cereja'));
+  assert.ok(namesDefault.includes('Cenoura para cozinhar'));
+  assert.ok(namesDefault.includes('Beterraba para cozinhar'));
+  assert.ok(namesDefault.includes('Chuchu para cozinhar'));
+  assert.ok(namesDefault.includes('Banana'));
+  assert.ok(namesDefault.includes('Maçã'));
+  assert.ok(namesDefault.includes('Uvas (Caixa 500g)'));
+  assert.ok(namesDefault.includes('Mamão Papaia Grande'));
+
+  // Banana 7 dias casal = 14 un (1 pra cada por dia)
+  const bananaItem = planDefault.shoppingItems.find(i => i.name === 'Banana');
+  assert.equal(bananaItem.quantity, '14 un');
+
+  // Ativando os opcionais Morango Congelado e Melancia
+  const withOptionals = [...DEFAULT_HORTIFRUTI_IDS, 'morango_congelado', 'melancia'];
+  const planWithOpt = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['paes_frutas'], null, withOptionals);
+  const namesOpt = planWithOpt.shoppingItems.map(i => i.name);
+  assert.ok(namesOpt.includes('Morango Congelado'));
+  assert.ok(namesOpt.includes('Melancia (1/4 a 1/2)'));
+});
+
+test('Marmitas v2.10.8: Planejador de Produção e Edição Rápida nos cards funcionam com novos alimentos', async () => {
+  const prod = calculateMarmitasProductionPlan({
+    dias: 7,
+    meals: DEFAULT_NUTRITION_MEALS,
+    factors: COOKING_FACTORS,
+    meatSplit: { mode: 'misto' },
+    person: 'casal'
+  });
+
+  assert.equal(prod.totalPotes, 14);
+  assert.equal(prod.matheus.potesCount, 7);
+  assert.equal(prod.scarlet.potesCount, 7);
+  // Matheus pote base: 100g arroz + 90g feijão + 130g carne = 320g
+  assert.equal(prod.matheus.porPote.totalPoteG, 320);
+  // Scarlet pote base: 90g arroz + 80g feijão + 130g carne = 300g
+  assert.equal(prod.scarlet.porPote.totalPoteG, 300);
+  assert.equal(prod.matheus.potesPorCarne.bovina, 3);
+  assert.equal(prod.matheus.potesPorCarne.frango, 3);
+  assert.equal(prod.matheus.potesPorCarne.suina, 1);
+  assert.equal(prod.checklistSteps.length, 6);
+
+  const descs = buildAutoMealDescriptions({
+    manha: { frutas: 1, paes: 1, ovos: 2, queijoG: 0, requeijaoG: 20 },
+    almoco: { arrozProntoG: 0, macarraoProntoG: 120, batataDoceProntaG: 0, feijaoProntoG: 90, carneProntaG: 150, legumesProntoG: 100 },
+    tarde: { frutas: 1, yopro: 1 },
+    noite: { paes: 1, carneProntaG: 160 }
+  }, 'matheus');
+  assert.ok(descs.almoco.includes('120g macarrão cozido'));
+  assert.ok(descs.almoco.includes('100g legumes/salada'));
+
+  const ui = await import('../js/ui.js');
+  let mockHtml = '';
+  globalThis.document = {
+    getElementById: (id) => (id === 'marmitas-main-view'
+      ? { set innerHTML(v) { mockHtml = v; }, get innerHTML() { return mockHtml; } }
+      : null)
+  };
+  ui.renderMarmitasTab({}, 'casal', 7, 'completo', { quickEdit_matheus: true }, { calcMode: 'periodo', meatSplit: { mode: 'misto' } });
+  assert.ok(mockHtml.includes('Planejador de Produção & Montagem (14 Potes'));
+  assert.ok(mockHtml.includes('data-quick-edit-box="matheus"'));
+  assert.ok(mockHtml.includes('data-marmitas-quick-save="matheus"'));
+  assert.ok(mockHtml.includes('data-marmitas-horti-toggle="tomate_cereja"'));
+  assert.ok(mockHtml.includes('data-marmitas-horti-toggle="morango_congelado"'));
+  assert.ok(mockHtml.includes('data-marmitas-horti-toggle="melancia"'));
 });
 

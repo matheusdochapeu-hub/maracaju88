@@ -118,16 +118,92 @@ export function getNutritionState(state) {
         nome: base.nome,
         avatar: base.avatar,
         manha: { ...base.manha, ...(customMeals.manha || {}) },
-        almoco: { ...base.almoco, ...(customMeals.almoco || {}) },
+        almoco: {
+          macarraoProntoG: 0,
+          batataDoceProntaG: 0,
+          legumesProntoG: 0,
+          ...base.almoco,
+          ...(customMeals.almoco || {})
+        },
         tarde: { ...base.tarde, ...(customMeals.tarde || {}) },
         noite: { ...base.noite, ...(customMeals.noite || {}) }
       }
     };
   };
 
+  const prepChecklist = (saved.prepChecklist && typeof saved.prepChecklist === 'object' && !Array.isArray(saved.prepChecklist))
+    ? { ...saved.prepChecklist }
+    : {};
+
   return {
     matheus: normalizePerson('matheus'),
-    scarlet: normalizePerson('scarlet')
+    scarlet: normalizePerson('scarlet'),
+    prepChecklist
+  };
+}
+
+/**
+ * Reconstrói automaticamente as descrições legíveis das 4 refeições a partir das gramaturas/unidades
+ * quando o usuário edita rapidamente os valores direto no cartão.
+ */
+export function buildAutoMealDescriptions(meals, person = 'matheus') {
+  const base = DEFAULT_NUTRITION_MEALS[person] || DEFAULT_NUTRITION_MEALS.matheus;
+  const m = meals || base;
+
+  // Manhã
+  const manhaParts = [];
+  if ((m.manha?.frutas || 0) > 0) manhaParts.push(`${String(m.manha.frutas).padStart(2, '0')} ${m.manha.frutas === 1 ? 'fruta' : 'frutas'}`);
+  if ((m.manha?.paes || 0) > 0) {
+    const acompanhamento = [];
+    if ((m.manha?.ovos || 0) > 0) acompanhamento.push(`${m.manha.ovos} ${m.manha.ovos === 1 ? 'ovo' : 'ovos'}`);
+    if ((m.manha?.queijoG || 0) > 0) acompanhamento.push(`${m.manha.queijoG}g queijo`);
+    if ((m.manha?.requeijaoG || 0) > 0) acompanhamento.push(`${m.manha.requeijaoG}g requeijão`);
+    const acompStr = acompanhamento.length > 0 ? ` com ${acompanhamento.join(' e ')}` : '';
+    manhaParts.push(`${String(m.manha.paes).padStart(2, '0')} ${m.manha.paes === 1 ? 'pão' : 'pães'}${acompStr}`);
+  } else {
+    if ((m.manha?.ovos || 0) > 0) manhaParts.push(`${m.manha.ovos} ${m.manha.ovos === 1 ? 'ovo' : 'ovos'}`);
+    if ((m.manha?.queijoG || 0) > 0) manhaParts.push(`${m.manha.queijoG}g queijo`);
+    if ((m.manha?.requeijaoG || 0) > 0) manhaParts.push(`${m.manha.requeijaoG}g requeijão`);
+  }
+
+  // Almoço
+  const almocoParts = [];
+  if ((m.almoco?.arrozProntoG || 0) > 0) almocoParts.push(`${m.almoco.arrozProntoG}g arroz cozido`);
+  if ((m.almoco?.macarraoProntoG || 0) > 0) almocoParts.push(`${m.almoco.macarraoProntoG}g macarrão cozido`);
+  if ((m.almoco?.batataDoceProntaG || 0) > 0) almocoParts.push(`${m.almoco.batataDoceProntaG}g batata-doce cozida`);
+  if ((m.almoco?.feijaoProntoG || 0) > 0) almocoParts.push(`${m.almoco.feijaoProntoG}g feijão cozido`);
+  if ((m.almoco?.carneProntaG || 0) > 0) almocoParts.push(`${m.almoco.carneProntaG}g carne cozida`);
+  if ((m.almoco?.legumesProntoG || 0) > 0) {
+    almocoParts.push(`${m.almoco.legumesProntoG}g legumes/salada`);
+  } else {
+    almocoParts.push('legumes/salada');
+  }
+
+  // Tarde
+  const tardeParts = [];
+  if ((m.tarde?.frutas || 0) > 0) tardeParts.push(`${String(m.tarde.frutas).padStart(2, '0')} ${m.tarde.frutas === 1 ? 'fruta' : 'frutas'}`);
+  if ((m.tarde?.yopro || 0) > 0) tardeParts.push(`${String(m.tarde.yopro).padStart(2, '0')} YoPRO líquido`);
+  if ((m.tarde?.wheyG || 0) > 0) {
+    const leiteStr = (m.tarde?.leiteEmPoG || 0) > 0 ? ` com ${m.tarde.leiteEmPoG}g leite em pó` : '';
+    tardeParts.push(`${m.tarde.wheyG}g whey protein${leiteStr}`);
+  } else if ((m.tarde?.leiteEmPoG || 0) > 0) {
+    tardeParts.push(`${m.tarde.leiteEmPoG}g leite em pó`);
+  }
+
+  // Noite
+  const noiteParts = [];
+  if ((m.noite?.paes || 0) > 0 && (m.noite?.carneProntaG || 0) > 0) {
+    noiteParts.push(`${String(m.noite.paes).padStart(2, '0')} ${m.noite.paes === 1 ? 'pão' : 'pães'} com ${m.noite.carneProntaG}g de carne cozida`);
+  } else {
+    if ((m.noite?.paes || 0) > 0) noiteParts.push(`${String(m.noite.paes).padStart(2, '0')} ${m.noite.paes === 1 ? 'pão' : 'pães'}`);
+    if ((m.noite?.carneProntaG || 0) > 0) noiteParts.push(`${m.noite.carneProntaG}g de carne cozida`);
+  }
+
+  return {
+    manha: manhaParts.length > 0 ? manhaParts.join(' + ') : base.manha.descricao,
+    almoco: almocoParts.length > 0 ? almocoParts.join(' + ') : base.almoco.descricao,
+    tarde: tardeParts.length > 0 ? tardeParts.join(' + ') : base.tarde.descricao,
+    noite: noiteParts.length > 0 ? noiteParts.join(' + ') : base.noite.descricao
   };
 }
 
@@ -373,7 +449,16 @@ export function parseNutritionDiaryText(rawText, person = 'matheus') {
       descricao: formatDesc(buckets.almoco, base.almoco.descricao),
       arrozProntoG: gramsField(almocoPrimary, 'arroz(?:\\s+(?:branco|integral|cozido|parboilizado))?', base.almoco.arrozProntoG, { unitPattern: 'colher(?:es)?(?:\\s+de\\s+sopa)?', gramsPerUnit: 25 }),
       feijaoProntoG: gramsField(almocoPrimary, 'feij[aã]o(?:\\s+(?:carioca|preto|cozido))?', base.almoco.feijaoProntoG, { unitPattern: 'concha[s]?', gramsPerUnit: 80 }),
-      carneProntaG: gramsField(almocoPrimary, meatWords, base.almoco.carneProntaG)
+      carneProntaG: gramsField(almocoPrimary, meatWords, base.almoco.carneProntaG),
+      macarraoProntoG: mentioned(almocoPrimary, 'macarr[aã]o|massa|espaguete|penne')
+        ? (extractGramsFor(almocoPrimary, 'macarr[aã]o|massa|espaguete|penne') ?? 120)
+        : 0,
+      batataDoceProntaG: mentioned(almocoPrimary, 'batata[\\s-]*doce|mandioca|aipim|inhame')
+        ? (extractGramsFor(almocoPrimary, 'batata[\\s-]*doce|mandioca|aipim|inhame') ?? 120)
+        : 0,
+      legumesProntoG: mentioned(almocoPrimary, 'legumes?|cenoura|abobrinha|br[oó]colis|beterraba|vagem|chuchu')
+        ? (extractGramsFor(almocoPrimary, 'legumes?|cenoura|abobrinha|br[oó]colis|beterraba|vagem|chuchu') ?? 0)
+        : 0
     },
     tarde: {
       descricao: formatDesc(buckets.tarde, base.tarde.descricao),
@@ -412,6 +497,9 @@ export function getDailyNutritionSummary(meals = DEFAULT_NUTRITION_MEALS, factor
   const arrozAlmocoProntoG = pick(m.almoco.arrozProntoG, s.almoco.arrozProntoG); // 190g
   const feijaoAlmocoProntoG = pick(m.almoco.feijaoProntoG, s.almoco.feijaoProntoG); // 170g
   const carneAlmocoProntaG = pick(m.almoco.carneProntaG, s.almoco.carneProntaG); // 260g
+  const macarraoAlmocoProntoG = pick(m.almoco.macarraoProntoG, s.almoco.macarraoProntoG); // 0g padrão
+  const batataDoceAlmocoProntaG = pick(m.almoco.batataDoceProntaG, s.almoco.batataDoceProntaG); // 0g padrão
+  const legumesAlmocoProntoG = pick(m.almoco.legumesProntoG, s.almoco.legumesProntoG); // 0g padrão
   const carneNoiteProntaG = pick(m.noite.carneProntaG, s.noite.carneProntaG); // 280g
   const carneTotalProntaG = carneAlmocoProntaG + carneNoiteProntaG; // 540g
 
@@ -429,18 +517,26 @@ export function getDailyNutritionSummary(meals = DEFAULT_NUTRITION_MEALS, factor
   const carneMult = factors.carneCruaMult || (900 / 540);
   const arrozDiv = factors.arrozCruDiv || 2.2;
   const feijaoDiv = factors.feijaoCruDiv || 2.6;
+  const macDiv = factors.macarraoCruDiv || 2.5;
+  const batRend = factors.batataDoceBrutaRend || 0.90;
   const carneAlmocoCruaG = Math.round(carneAlmocoProntaG * carneMult); // ~433g
   const carneNoiteCruaG = Math.round(carneNoiteProntaG * carneMult); // ~467g
   const carneTotalCruaG = Math.round(carneTotalProntaG * carneMult); // ~900g
 
   const arrozCruG = Math.round(arrozAlmocoProntoG / arrozDiv); // ~86g
   const feijaoCruG = Math.round(feijaoAlmocoProntoG / feijaoDiv); // ~65g
+  const macarraoCruG = Math.round(macarraoAlmocoProntoG / macDiv);
+  const batataDoceCruaG = Math.round(batataDoceAlmocoProntaG / batRend);
+  const legumesCruG = Math.round(legumesAlmocoProntoG / 0.85);
 
   return {
     prontoDiario: {
       arrozAlmocoProntoG,
       feijaoAlmocoProntoG,
       carneAlmocoProntaG,
+      macarraoAlmocoProntoG,
+      batataDoceAlmocoProntaG,
+      legumesAlmocoProntoG,
       carneNoiteProntaG,
       carneTotalProntaG,
       paesTotal,
@@ -455,6 +551,9 @@ export function getDailyNutritionSummary(meals = DEFAULT_NUTRITION_MEALS, factor
     inNaturaDiario: {
       arrozCruG,
       feijaoCruG,
+      macarraoCruG,
+      batataDoceCruaG,
+      legumesCruG,
       carneAlmocoCruaG,
       carneNoiteCruaG,
       carneTotalCruaG
@@ -465,29 +564,355 @@ export function getDailyNutritionSummary(meals = DEFAULT_NUTRITION_MEALS, factor
 export const MARMITAS_ITEM_GROUPS = ['carne', 'arroz', 'feijao', 'paes_frutas', 'laticinios'];
 
 /**
- * Calcula o planejamento completo de compras e marmitas para N dias (ex: 3, 7, 15, 30 dias)
- * e permite filtrar por grupos específicos (ex: só carne, só feijão, ou combinação).
+ * Catálogo real de Saladas, Legumes para Cozinhar e Frutas Semanais do casal (Matheus & Scarlet)
  */
-export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEFAULT_NUTRITION_MEALS, factors = COOKING_FACTORS, person = 'casal', selectedItems = null) {
+export const HORTIFRUTI_WEEKLY_CATALOG = [
+  // --- SALADAS FRESCAS ---
+  {
+    id: 'alface',
+    name: 'Alface',
+    icon: '🥬',
+    section: 'saladas',
+    defaultChecked: true,
+    optional: false,
+    unitPrice: 4.50,
+    calcQty: (dias) => {
+      const weeks = Math.max(1, Math.round(dias / 7));
+      const pes = Math.max(1, weeks * 2);
+      return { qtyNum: pes, qtyText: `${pes} ${pes === 1 ? 'pé' : 'pés'}`, label: `Alface (${pes} ${pes === 1 ? 'pé' : 'pés'})` };
+    },
+    notes: 'Salada fresca da semana'
+  },
+  {
+    id: 'tomate',
+    name: 'Tomate',
+    icon: '🍅',
+    section: 'saladas',
+    defaultChecked: true,
+    optional: false,
+    unitPrice: 1.50,
+    calcQty: (dias) => {
+      const un = Math.max(2, Math.round((dias / 7) * 6));
+      return { qtyNum: un, qtyText: `${un} un`, label: `Tomate (${un} un)` };
+    },
+    notes: 'Salada do dia a dia'
+  },
+  {
+    id: 'tomate_cereja',
+    name: 'Tomate Cereja',
+    icon: '🍒',
+    section: 'saladas',
+    defaultChecked: true,
+    optional: false,
+    unitPrice: 8.90,
+    calcQty: (dias) => {
+      const bdj = Math.max(1, Math.round(dias / 7));
+      return { qtyNum: bdj, qtyText: `${bdj} ${bdj === 1 ? 'bandeja' : 'bandejas'}`, label: `Tomate Cereja (${bdj} ${bdj === 1 ? 'bandeja' : 'bandejas'})` };
+    },
+    notes: 'Salada rápida e acompanhamento das marmitas'
+  },
+  // --- LEGUMES PARA COZINHAR (MARMITAS) ---
+  {
+    id: 'cenoura',
+    name: 'Cenoura para cozinhar',
+    icon: '🥕',
+    section: 'legumes',
+    defaultChecked: true,
+    optional: false,
+    unitPrice: 1.40,
+    calcQty: (dias) => {
+      const un = Math.max(2, Math.round((dias / 7) * 4));
+      const g = un * 150;
+      return { qtyNum: un, qtyText: `${un} un (~${g}g)`, label: `Cenoura para cozinhar (${un} un / ~${g}g)` };
+    },
+    notes: 'Cozinhar e porcionar nas marmitas de almoço'
+  },
+  {
+    id: 'beterraba',
+    name: 'Beterraba para cozinhar',
+    icon: '🟣',
+    section: 'legumes',
+    defaultChecked: true,
+    optional: false,
+    unitPrice: 1.50,
+    calcQty: (dias) => {
+      const un = Math.max(2, Math.round((dias / 7) * 3));
+      const g = un * 160;
+      return { qtyNum: un, qtyText: `${un} un (~${g}g)`, label: `Beterraba para cozinhar (${un} un / ~${g}g)` };
+    },
+    notes: 'Cozinhar e porcionar nas marmitas de almoço'
+  },
+  {
+    id: 'chuchu',
+    name: 'Chuchu para cozinhar',
+    icon: '🥒',
+    section: 'legumes',
+    defaultChecked: true,
+    optional: false,
+    unitPrice: 1.30,
+    calcQty: (dias) => {
+      const un = Math.max(2, Math.round((dias / 7) * 3));
+      const g = un * 180;
+      return { qtyNum: un, qtyText: `${un} un (~${g}g)`, label: `Chuchu para cozinhar (${un} un / ~${g}g)` };
+    },
+    notes: 'Cozinhar e porcionar nas marmitas de almoço'
+  },
+  // --- FRUTAS SEMANAIS DO CASAL ---
+  {
+    id: 'banana',
+    name: 'Banana',
+    icon: '🍌',
+    section: 'frutas',
+    defaultChecked: true,
+    optional: false,
+    unitPrice: 1.10,
+    calcQty: (dias, person = 'casal') => {
+      const perDay = person === 'casal' ? 2 : 1; // 1 pra cada por dia
+      const un = Math.max(1, dias * perDay);
+      return { qtyNum: un, qtyText: `${un} un`, label: `Banana (${un} un — 1/dia ${person === 'casal' ? 'para cada' : ''})`.replace(/\s+\)/, ')') };
+    },
+    notes: '1 unidade para cada por dia'
+  },
+  {
+    id: 'maca',
+    name: 'Maçã',
+    icon: '🍎',
+    section: 'frutas',
+    defaultChecked: true,
+    optional: false,
+    unitPrice: 1.80,
+    calcQty: (dias, person = 'casal') => {
+      if (person === 'scarlet') {
+        const unS = Math.max(2, Math.round((dias / 7) * 3));
+        return { qtyNum: unS, qtyText: `${unS} un`, label: `Maçã (${unS} un)` };
+      }
+      // 1 por dia para o Matheus (às vezes menos -> ~6 por semana de 7d)
+      const un = Math.max(1, Math.round((dias / 7) * 6));
+      return { qtyNum: un, qtyText: `${un} un`, label: `Maçã (${un} un — Matheus ~1/dia)` };
+    },
+    notes: '1 por dia para o Matheus (às vezes menos)'
+  },
+  {
+    id: 'uva',
+    name: 'Uvas (Caixa 500g)',
+    icon: '🍇',
+    section: 'frutas',
+    defaultChecked: true,
+    optional: false,
+    unitPrice: 11.90,
+    calcQty: (dias) => {
+      const cx = Math.max(1, Math.round(dias / 7));
+      return { qtyNum: cx, qtyText: `${cx} ${cx === 1 ? 'caixa 500g' : 'caixas 500g'}`, label: `Uvas (${cx} ${cx === 1 ? 'caixa de 500g' : 'caixas de 500g'})` };
+    },
+    notes: '1 caixa de 500g dá para a semana'
+  },
+  {
+    id: 'mamao',
+    name: 'Mamão Papaia Grande',
+    icon: '🍈',
+    section: 'frutas',
+    defaultChecked: true,
+    optional: false,
+    unitPrice: 9.50,
+    calcQty: (dias) => {
+      const un = Math.max(1, Math.round(dias / 7));
+      return { qtyNum: un, qtyText: `${un} un grande`, label: `Mamão Papaia Grande (${un} un)` };
+    },
+    notes: '1 papaia grande é suficiente para a semana'
+  },
+  {
+    id: 'morango_congelado',
+    name: 'Morango Congelado',
+    icon: '🍓',
+    section: 'frutas',
+    defaultChecked: false,
+    optional: true,
+    unitPrice: 16.90,
+    calcQty: (dias) => {
+      const pct = Math.max(1, Math.round(dias / 15));
+      return { qtyNum: pct, qtyText: `${pct} ${pct === 1 ? 'pacote' : 'pacotes'}`, label: `Morango Congelado (${pct} ${pct === 1 ? 'pacote' : 'pacotes'})` };
+    },
+    notes: 'Opcional — às vezes deixamos no freezer para bater com whey/vitamina'
+  },
+  {
+    id: 'melancia',
+    name: 'Melancia (1/4 a 1/2)',
+    icon: '🍉',
+    section: 'frutas',
+    defaultChecked: false,
+    optional: true,
+    unitPrice: 14.00,
+    calcQty: (dias) => {
+      const un = Math.max(1, Math.round(dias / 7));
+      return { qtyNum: un, qtyText: `${un} banda (1/4 a 1/2)`, label: `Melancia — 1/4 a 1/2 (${un} un)` };
+    },
+    notes: 'Opcional — às vezes pegamos 1/4 a 1/2 melancia na semana'
+  }
+];
+
+export const DEFAULT_HORTIFRUTI_IDS = HORTIFRUTI_WEEKLY_CATALOG
+  .filter(it => it.defaultChecked)
+  .map(it => it.id);
+
+export function resolveSelectedHortifruti(selectedHortifruti = null) {
+  if (!Array.isArray(selectedHortifruti)) {
+    return new Set(DEFAULT_HORTIFRUTI_IDS);
+  }
+  return new Set(selectedHortifruti);
+}
+
+/**
+ * Calcula a distribuição de dias entre Carne Bovina, Frango e Suína para o período selecionado.
+ * Presets:
+ * - 'padrao': sem divisão separada (100% fator padrão x1.67)
+ * - 'misto': ~3/7 Bovina, ~3/7 Frango, ~1/7 Suína
+ * - 'bovina_frango': 50% Bovina, 50% Frango
+ * - 'so_frango': 100% Frango
+ * - 'so_bovina': 100% Bovina
+ * - 'so_suina': 100% Suína
+ * - 'custom': usa os dias { bovina, frango, suina } informados pelo usuário
+ */
+export function resolveMeatDaysSplit(dias = 7, meatSplit = null) {
+  const safeDias = Math.max(1, Math.min(365, Math.round(Number(dias) || 7)));
+  if (!meatSplit || typeof meatSplit !== 'object' || !meatSplit.mode || meatSplit.mode === 'padrao') {
+    return {
+      mode: 'padrao',
+      isSplitActive: false,
+      bovinaDays: safeDias,
+      frangoDays: 0,
+      suinaDays: 0,
+      totalDays: safeDias
+    };
+  }
+
+  const mode = meatSplit.mode;
+  let bovinaDays = 0;
+  let frangoDays = 0;
+  let suinaDays = 0;
+
+  if (mode === 'misto') {
+    bovinaDays = Math.round((safeDias * 3) / 7);
+    suinaDays = safeDias >= 4 ? Math.max(1, Math.round((safeDias * 1) / 7)) : 0;
+    frangoDays = Math.max(0, safeDias - bovinaDays - suinaDays);
+  } else if (mode === 'bovina_frango') {
+    bovinaDays = Math.ceil(safeDias / 2);
+    frangoDays = Math.max(0, safeDias - bovinaDays);
+    suinaDays = 0;
+  } else if (mode === 'so_frango') {
+    bovinaDays = 0;
+    frangoDays = safeDias;
+    suinaDays = 0;
+  } else if (mode === 'so_bovina') {
+    bovinaDays = safeDias;
+    frangoDays = 0;
+    suinaDays = 0;
+  } else if (mode === 'so_suina') {
+    bovinaDays = 0;
+    frangoDays = 0;
+    suinaDays = safeDias;
+  } else {
+    bovinaDays = Math.max(0, Math.round(Number(meatSplit.bovinaDays ?? meatSplit.bovina ?? 0)));
+    frangoDays = Math.max(0, Math.round(Number(meatSplit.frangoDays ?? meatSplit.frango ?? 0)));
+    suinaDays = Math.max(0, Math.round(Number(meatSplit.suinaDays ?? meatSplit.suina ?? 0)));
+    if (bovinaDays === 0 && frangoDays === 0 && suinaDays === 0) {
+      bovinaDays = safeDias;
+    }
+  }
+
+  return {
+    mode,
+    isSplitActive: true,
+    bovinaDays,
+    frangoDays,
+    suinaDays,
+    totalDays: bovinaDays + frangoDays + suinaDays
+  };
+}
+
+/**
+ * Calcula o planejamento completo de compras e marmitas para N dias (ex: 3, 7, 15, 30 dias),
+ * permite filtrar por grupos específicos e suporta divisão de carnes por tipo (Bovina, Frango, Suína).
+ */
+export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEFAULT_NUTRITION_MEALS, factors = COOKING_FACTORS, person = 'casal', selectedItems = null, meatSplitOpt = null, selectedHortifruti = null) {
   const safeDias = Math.max(1, Math.min(365, Math.round(Number(dias) || 7)));
   const daily = getDailyNutritionSummary(meals, factors, person);
   const isAlmocoOnly = escopo === 'almoco';
 
-  // Carnes
-  const carneProntaG = (isAlmocoOnly ? daily.prontoDiario.carneAlmocoProntaG : daily.prontoDiario.carneTotalProntaG) * safeDias;
-  const carneCruaG = (isAlmocoOnly ? daily.inNaturaDiario.carneAlmocoCruaG : daily.inNaturaDiario.carneTotalCruaG) * safeDias;
+  const dailyCarneProntaG = isAlmocoOnly
+    ? daily.prontoDiario.carneAlmocoProntaG
+    : daily.prontoDiario.carneTotalProntaG;
+  const dailyCarneCruaPadraoG = isAlmocoOnly
+    ? daily.inNaturaDiario.carneAlmocoCruaG
+    : daily.inNaturaDiario.carneTotalCruaG;
+
+  const bovMult = factors.carneVermelhaCruaMult || factors.carneCruaMult || (900 / 540);
+  const frangoMult = factors.frangoCruaMult || (1 / 0.72);
+  const suinaMult = factors.carneSuinaCruaMult || (1 / 0.68);
+
+  const split = resolveMeatDaysSplit(safeDias, meatSplitOpt);
+
+  const bovinaProntaG = dailyCarneProntaG * split.bovinaDays;
+  const bovinaCruaG = split.isSplitActive
+    ? Math.round(bovinaProntaG * bovMult)
+    : dailyCarneCruaPadraoG * safeDias;
+  const frangoProntaG = dailyCarneProntaG * split.frangoDays;
+  const frangoCruaG = Math.round(frangoProntaG * frangoMult);
+  const suinaProntaG = dailyCarneProntaG * split.suinaDays;
+  const suinaCruaG = Math.round(suinaProntaG * suinaMult);
+
+  // Carnes consolidadas
+  const carneProntaG = split.isSplitActive
+    ? (bovinaProntaG + frangoProntaG + suinaProntaG)
+    : (dailyCarneProntaG * safeDias);
+  const carneCruaG = split.isSplitActive
+    ? (bovinaCruaG + frangoCruaG + suinaCruaG)
+    : (dailyCarneCruaPadraoG * safeDias);
   const carneCruaKg = (carneCruaG / 1000).toFixed(2);
 
-  // Arroz e Feijão (sempre do almoço)
+  const meatBreakdown = {
+    mode: split.mode,
+    isSplitActive: split.isSplitActive,
+    totalDays: split.totalDays,
+    bovina: {
+      days: split.bovinaDays,
+      prontaG: bovinaProntaG,
+      cruaG: bovinaCruaG,
+      cruaKg: parseFloat((bovinaCruaG / 1000).toFixed(2)),
+      cruaKgStr: (bovinaCruaG / 1000).toFixed(2)
+    },
+    frango: {
+      days: split.frangoDays,
+      prontaG: frangoProntaG,
+      cruaG: frangoCruaG,
+      cruaKg: parseFloat((frangoCruaG / 1000).toFixed(2)),
+      cruaKgStr: (frangoCruaG / 1000).toFixed(2)
+    },
+    suina: {
+      days: split.suinaDays,
+      prontaG: suinaProntaG,
+      cruaG: suinaCruaG,
+      cruaKg: parseFloat((suinaCruaG / 1000).toFixed(2)),
+      cruaKgStr: (suinaCruaG / 1000).toFixed(2)
+    }
+  };
+
+  // Arroz, Feijão e opcionais do almoço (Macarrão, Batata-Doce, Legumes)
   const arrozProntoG = daily.prontoDiario.arrozAlmocoProntoG * safeDias;
   const arrozCruG = daily.inNaturaDiario.arrozCruG * safeDias;
   const arrozCruKg = (arrozCruG / 1000).toFixed(2);
-  const arrozPacotes1Kg = Math.ceil(arrozCruG / 1000);
+  const arrozPacotes1Kg = arrozCruG > 0 ? Math.ceil(arrozCruG / 1000) : 0;
 
   const feijaoProntoG = daily.prontoDiario.feijaoAlmocoProntoG * safeDias;
   const feijaoCruG = daily.inNaturaDiario.feijaoCruG * safeDias;
   const feijaoCruKg = (feijaoCruG / 1000).toFixed(2);
-  const feijaoPacotes1Kg = Math.ceil(feijaoCruG / 1000);
+  const feijaoPacotes1Kg = feijaoCruG > 0 ? Math.ceil(feijaoCruG / 1000) : 0;
+
+  const macarraoProntoG = (daily.prontoDiario.macarraoAlmocoProntoG || 0) * safeDias;
+  const macarraoCruG = (daily.inNaturaDiario.macarraoCruG || 0) * safeDias;
+  const batataDoceProntaG = (daily.prontoDiario.batataDoceAlmocoProntaG || 0) * safeDias;
+  const batataDoceCruaG = (daily.inNaturaDiario.batataDoceCruaG || 0) * safeDias;
+  const legumesProntoG = (daily.prontoDiario.legumesAlmocoProntoG || 0) * safeDias;
+  const legumesCruG = (daily.inNaturaDiario.legumesCruG || 0) * safeDias;
 
   // Outros itens (se escopo completo)
   const paes = isAlmocoOnly ? 0 : daily.prontoDiario.paesTotal * safeDias;
@@ -504,15 +929,51 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
   const allShoppingItems = [];
 
   if (carneCruaG > 0) {
-    allShoppingItems.push({
-      groupKey: 'carne',
-      title: `Carne / Frango in natura (${carneCruaKg} kg)`,
-      name: `Carne / Frango in natura`,
-      category: 'carnes',
-      quantity: `${carneCruaKg} kg`,
-      notes: `Para ${safeDias} ${safeDias === 1 ? 'dia' : 'dias'} (${isAlmocoOnly ? 'apenas marmitas de almoço' : 'almoço + pão da noite'}). Rende ~${(carneProntaG / 1000).toFixed(2)} kg pronto.`,
-      estimatedUnitPrice: 38.00
-    });
+    if (split.isSplitActive) {
+      if (meatBreakdown.bovina.cruaG > 0) {
+        allShoppingItems.push({
+          groupKey: 'carne',
+          title: `Carne Bovina in natura (${meatBreakdown.bovina.cruaKgStr} kg)`,
+          name: `Carne Bovina in natura`,
+          category: 'carnes',
+          quantity: `${meatBreakdown.bovina.cruaKgStr} kg`,
+          notes: `Para ${meatBreakdown.bovina.days} ${meatBreakdown.bovina.days === 1 ? 'dia' : 'dias'} de carne vermelha (${isAlmocoOnly ? 'almoço' : 'almoço + noite'}). Rende ~${(meatBreakdown.bovina.prontaG / 1000).toFixed(2)} kg pronta.`,
+          estimatedUnitPrice: 42.00
+        });
+      }
+      if (meatBreakdown.frango.cruaG > 0) {
+        allShoppingItems.push({
+          groupKey: 'carne',
+          title: `Peito de Frango in natura (${meatBreakdown.frango.cruaKgStr} kg)`,
+          name: `Peito de Frango in natura`,
+          category: 'carnes',
+          quantity: `${meatBreakdown.frango.cruaKgStr} kg`,
+          notes: `Para ${meatBreakdown.frango.days} ${meatBreakdown.frango.days === 1 ? 'dia' : 'dias'} de frango (${isAlmocoOnly ? 'almoço' : 'almoço + noite'}). Rende ~${(meatBreakdown.frango.prontaG / 1000).toFixed(2)} kg pronto.`,
+          estimatedUnitPrice: 22.00
+        });
+      }
+      if (meatBreakdown.suina.cruaG > 0) {
+        allShoppingItems.push({
+          groupKey: 'carne',
+          title: `Carne Suína in natura (${meatBreakdown.suina.cruaKgStr} kg)`,
+          name: `Carne Suína in natura`,
+          category: 'carnes',
+          quantity: `${meatBreakdown.suina.cruaKgStr} kg`,
+          notes: `Para ${meatBreakdown.suina.days} ${meatBreakdown.suina.days === 1 ? 'dia' : 'dias'} de carne suína (${isAlmocoOnly ? 'almoço' : 'almoço + noite'}). Rende ~${(meatBreakdown.suina.prontaG / 1000).toFixed(2)} kg pronta.`,
+          estimatedUnitPrice: 24.00
+        });
+      }
+    } else {
+      allShoppingItems.push({
+        groupKey: 'carne',
+        title: `Carne / Frango in natura (${carneCruaKg} kg)`,
+        name: `Carne / Frango in natura`,
+        category: 'carnes',
+        quantity: `${carneCruaKg} kg`,
+        notes: `Para ${safeDias} ${safeDias === 1 ? 'dia' : 'dias'} (${isAlmocoOnly ? 'apenas marmitas de almoço' : 'almoço + pão da noite'}). Rende ~${(carneProntaG / 1000).toFixed(2)} kg pronto.`,
+        estimatedUnitPrice: 38.00
+      });
+    }
   }
 
   if (arrozCruG > 0) {
@@ -524,6 +985,32 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
       quantity: `${arrozPacotes1Kg} kg`,
       notes: `Consumo exato: ${arrozCruG}g cru para ${safeDias} ${safeDias === 1 ? 'dia' : 'dias'} de marmita (${arrozProntoG}g pronto).`,
       estimatedUnitPrice: 6.50
+    });
+  }
+
+  if (macarraoCruG > 0) {
+    const pct500 = Math.max(1, Math.ceil(macarraoCruG / 500));
+    allShoppingItems.push({
+      groupKey: 'arroz',
+      title: `Macarrão in natura (${macarraoCruG}g / ~${pct500} pct 500g)`,
+      name: `Macarrão in natura`,
+      category: 'mercado',
+      quantity: `${pct500} pct`,
+      notes: `Consumo exato: ${macarraoCruG}g cru para ${safeDias} ${safeDias === 1 ? 'dia' : 'dias'} (${macarraoProntoG}g cozido).`,
+      estimatedUnitPrice: 5.50
+    });
+  }
+
+  if (batataDoceCruaG > 0) {
+    const batKg = (batataDoceCruaG / 1000).toFixed(2);
+    allShoppingItems.push({
+      groupKey: 'arroz',
+      title: `Batata-Doce in natura (${batKg} kg)`,
+      name: `Batata-Doce in natura`,
+      category: 'hortifruti',
+      quantity: `${batKg} kg`,
+      notes: `Compra com casca: ${batataDoceCruaG}g para render ${batataDoceProntaG}g cozida em ${safeDias} ${safeDias === 1 ? 'dia' : 'dias'}.`,
+      estimatedUnitPrice: 6.00
     });
   }
 
@@ -540,6 +1027,17 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
   }
 
   const targetLabel = person === 'matheus' ? 'para Matheus' : (person === 'scarlet' ? 'para Scarlet' : 'para o casal');
+  const hortiSet = resolveSelectedHortifruti(selectedHortifruti);
+  const hortifrutiItems = HORTIFRUTI_WEEKLY_CATALOG.map(entry => {
+    const q = entry.calcQty(safeDias, person);
+    return {
+      ...entry,
+      selected: hortiSet.has(entry.id),
+      qtyNum: q.qtyNum,
+      qtyText: q.qtyText,
+      label: q.label
+    };
+  });
 
   if (!isAlmocoOnly) {
     if (paes > 0) {
@@ -554,7 +1052,22 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
       });
     }
 
-    if (frutas > 0) {
+    // Frutas semanais reais selecionadas pelo casal (Banana, Maçã, Uvas 500g, Mamão Papaia, e opcionais Morango Congelado / Melancia)
+    const selectedFruits = hortifrutiItems.filter(it => it.section === 'frutas' && it.selected);
+    if (selectedFruits.length > 0) {
+      selectedFruits.forEach(fr => {
+        allShoppingItems.push({
+          groupKey: 'paes_frutas',
+          hortiId: fr.id,
+          title: fr.label,
+          name: fr.name,
+          category: 'hortifruti',
+          quantity: fr.qtyText,
+          notes: `${fr.notes} (${safeDias} ${safeDias === 1 ? 'dia' : 'dias'}).`,
+          estimatedUnitPrice: fr.unitPrice
+        });
+      });
+    } else if (frutas > 0 && !Array.isArray(selectedHortifruti)) {
       allShoppingItems.push({
         groupKey: 'paes_frutas',
         title: `Frutas da semana (banana, maçã) (${frutas} un)`,
@@ -628,24 +1141,34 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
       });
     }
 
-    // Vegetais para o período
-    allShoppingItems.push({
-      groupKey: 'paes_frutas',
-      title: `Legumes para marmitas (cenoura, abobrinha, beterraba)`,
-      name: `Legumes cozidos para marmita`,
-      category: 'hortifruti',
-      quantity: `${Math.max(1, Math.round(safeDias / 7))} kit`,
-      notes: `Deixar cozidos e porcionados com arroz, feijão e carne.`,
-      estimatedUnitPrice: 18.00
+    // Legumes para cozinhar nas marmitas (Cenoura, Beterraba, Chuchu) e Saladas (Alface, Tomate, Tomate Cereja)
+    const selectedVeggiesAndSalads = hortifrutiItems.filter(it => (it.section === 'legumes' || it.section === 'saladas') && it.selected);
+    selectedVeggiesAndSalads.forEach(vg => {
+      allShoppingItems.push({
+        groupKey: 'paes_frutas',
+        hortiId: vg.id,
+        title: vg.label,
+        name: vg.name,
+        category: 'hortifruti',
+        quantity: vg.qtyText,
+        notes: `${vg.notes} (${safeDias} ${safeDias === 1 ? 'dia' : 'dias'}).`,
+        estimatedUnitPrice: vg.unitPrice
+      });
     });
-    allShoppingItems.push({
-      groupKey: 'paes_frutas',
-      title: `Verduras / Saladas (alface, tomate, repolho, couve)`,
-      name: `Saladas da semana`,
-      category: 'hortifruti',
-      quantity: `${Math.max(1, Math.round(safeDias / 7))} kit`,
-      notes: `Saladas frescas para o período.`,
-      estimatedUnitPrice: 15.00
+  } else {
+    // Mesmo no modo "Só Marmitas de Almoço", inclui os legumes para cozinhar nas marmitas (Cenoura, Beterraba, Chuchu) se o grupo paes_frutas estiver ativo
+    const selectedCookingVeggies = hortifrutiItems.filter(it => it.section === 'legumes' && it.selected);
+    selectedCookingVeggies.forEach(vg => {
+      allShoppingItems.push({
+        groupKey: 'paes_frutas',
+        hortiId: vg.id,
+        title: vg.label,
+        name: vg.name,
+        category: 'hortifruti',
+        quantity: vg.qtyText,
+        notes: `${vg.notes} (${safeDias} ${safeDias === 1 ? 'dia' : 'dias'} de marmita).`,
+        estimatedUnitPrice: vg.unitPrice
+      });
     });
   }
 
@@ -659,10 +1182,15 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
   return {
     dias: safeDias,
     escopo,
+    meatBreakdown,
+    hortifrutiItems,
     totaisProntos: {
       carneProntaG,
       arrozProntoG,
       feijaoProntoG,
+      macarraoProntoG,
+      batataDoceProntaG,
+      legumesProntoG,
       paes,
       frutas,
       yopro,
@@ -680,10 +1208,186 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
       arrozPacotes1Kg,
       feijaoCruG,
       feijaoCruKg: parseFloat(feijaoCruKg),
-      feijaoPacotes1Kg
+      feijaoPacotes1Kg,
+      macarraoCruG,
+      batataDoceCruaG,
+      legumesCruG
     },
     shoppingItems,
     allShoppingItems
+  };
+}
+
+/**
+ * Planejador de Produção e Montagem de Marmitas (Potes da Semana):
+ * Calcula quantos potes montar para Matheus e para Scarlet, a pesagem exata por pote
+ * na balança, a divisão de potes por tipo de carne (Bovina, Frango, Suína) e o checklist da fornada.
+ */
+export function calculateMarmitasProductionPlan({
+  dias = 7,
+  meals = DEFAULT_NUTRITION_MEALS,
+  factors = COOKING_FACTORS,
+  meatSplit = null,
+  person = 'casal'
+} = {}) {
+  const safeDias = Math.max(1, Math.min(365, Math.round(Number(dias) || 7)));
+  const split = resolveMeatDaysSplit(safeDias, meatSplit);
+  const effDays = split.isSplitActive ? Math.max(1, split.totalDays) : safeDias;
+
+  const bovMult = factors.carneVermelhaCruaMult || factors.carneCruaMult || (900 / 540);
+  const frangoMult = factors.frangoCruaMult || (1 / 0.72);
+  const suinaMult = factors.carneSuinaCruaMult || (1 / 0.68);
+  const arrozDiv = factors.arrozCruDiv || 2.2;
+  const feijaoDiv = factors.feijaoCruDiv || 2.6;
+  const macDiv = factors.macarraoCruDiv || 2.5;
+  const batRend = factors.batataDoceBrutaRend || 0.90;
+
+  const buildPersonPot = (key, pMeals) => {
+    const alm = (pMeals && pMeals.almoco) || {};
+    const noi = (pMeals && pMeals.noite) || {};
+    const arrozG = Number(alm.arrozProntoG) || 0;
+    const feijaoG = Number(alm.feijaoProntoG) || 0;
+    const carneG = Number(alm.carneProntaG) || 0;
+    const macarraoG = Number(alm.macarraoProntoG) || 0;
+    const batataDoceG = Number(alm.batataDoceProntaG) || 0;
+    const legumesG = Number(alm.legumesProntoG) || 0;
+    const totalPoteG = arrozG + feijaoG + carneG + macarraoG + batataDoceG + legumesG;
+    const carneNoiteG = Number(noi.carneProntaG) || 0;
+
+    return {
+      key,
+      nome: pMeals?.nome || (key === 'scarlet' ? 'Scarlet' : 'Matheus'),
+      avatar: pMeals?.avatar || (key === 'scarlet' ? '👩‍💼' : '👨‍💻'),
+      potesCount: effDays,
+      porPote: {
+        arrozG,
+        feijaoG,
+        carneG,
+        macarraoG,
+        batataDoceG,
+        legumesG,
+        totalPoteG
+      },
+      potesPorCarne: {
+        bovina: split.bovinaDays,
+        frango: split.frangoDays,
+        suina: split.suinaDays
+      },
+      carneNoiteDiariaG: carneNoiteG
+    };
+  };
+
+  const matheusPot = buildPersonPot('matheus', meals.matheus || DEFAULT_NUTRITION_MEALS.matheus);
+  const scarletPot = buildPersonPot('scarlet', meals.scarlet || DEFAULT_NUTRITION_MEALS.scarlet);
+
+  const includeMatheus = person === 'casal' || person === 'matheus';
+  const includeScarlet = person === 'casal' || person === 'scarlet';
+  const activePersons = [
+    ...(includeMatheus ? [matheusPot] : []),
+    ...(includeScarlet ? [scarletPot] : [])
+  ];
+
+  const totalPotes = activePersons.reduce((acc, p) => acc + p.potesCount, 0);
+  const dailyAlmocoCarneG = activePersons.reduce((acc, p) => acc + p.porPote.carneG, 0);
+  const dailyNoiteCarneG = activePersons.reduce((acc, p) => acc + p.carneNoiteDiariaG, 0);
+  const dailyArrozG = activePersons.reduce((acc, p) => acc + p.porPote.arrozG, 0);
+  const dailyFeijaoG = activePersons.reduce((acc, p) => acc + p.porPote.feijaoG, 0);
+  const dailyMacarraoG = activePersons.reduce((acc, p) => acc + p.porPote.macarraoG, 0);
+  const dailyBatataDoceG = activePersons.reduce((acc, p) => acc + p.porPote.batataDoceG, 0);
+  const dailyLegumesG = activePersons.reduce((acc, p) => acc + p.porPote.legumesG, 0);
+
+  const fornada = {
+    arrozProntoG: dailyArrozG * effDays,
+    arrozCruG: Math.round((dailyArrozG * effDays) / arrozDiv),
+    feijaoProntoG: dailyFeijaoG * effDays,
+    feijaoCruG: Math.round((dailyFeijaoG * effDays) / feijaoDiv),
+    macarraoProntoG: dailyMacarraoG * effDays,
+    macarraoCruG: Math.round((dailyMacarraoG * effDays) / macDiv),
+    batataDoceProntaG: dailyBatataDoceG * effDays,
+    batataDoceCruaG: Math.round((dailyBatataDoceG * effDays) / batRend),
+    legumesProntoG: dailyLegumesG * effDays,
+    carneAlmocoProntaG: dailyAlmocoCarneG * effDays,
+    carneNoiteProntaG: dailyNoiteCarneG * effDays,
+    bovina: {
+      days: split.bovinaDays,
+      potesTotal: split.bovinaDays * activePersons.length,
+      almocoProntaG: dailyAlmocoCarneG * split.bovinaDays,
+      almocoCruaG: Math.round(dailyAlmocoCarneG * split.bovinaDays * bovMult)
+    },
+    frango: {
+      days: split.frangoDays,
+      potesTotal: split.frangoDays * activePersons.length,
+      almocoProntaG: dailyAlmocoCarneG * split.frangoDays,
+      almocoCruaG: Math.round(dailyAlmocoCarneG * split.frangoDays * frangoMult)
+    },
+    suina: {
+      days: split.suinaDays,
+      potesTotal: split.suinaDays * activePersons.length,
+      almocoProntaG: dailyAlmocoCarneG * split.suinaDays,
+      almocoCruaG: Math.round(dailyAlmocoCarneG * split.suinaDays * suinaMult)
+    }
+  };
+  fornada.carneAlmocoCruaTotalG = fornada.bovina.almocoCruaG + fornada.frango.almocoCruaG + fornada.suina.almocoCruaG;
+
+  const checklistSteps = [
+    {
+      id: 'prep_carnes_descongelar',
+      icon: '🥩',
+      title: `Separar e temperar carnes das marmitas (${(fornada.carneAlmocoCruaTotalG / 1000).toFixed(2)} kg crua p/ almoço)`,
+      detail: [
+        fornada.bovina.days > 0 ? `🥩 Bovina: ${fornada.bovina.almocoCruaG}g crua → ${fornada.bovina.almocoProntaG}g pronta (${fornada.bovina.potesTotal} potes)` : '',
+        fornada.frango.days > 0 ? `🍗 Frango: ${fornada.frango.almocoCruaG}g cru → ${fornada.frango.almocoProntaG}g pronto (${fornada.frango.potesTotal} potes)` : '',
+        fornada.suina.days > 0 ? `🐷 Suína: ${fornada.suina.almocoCruaG}g crua → ${fornada.suina.almocoProntaG}g pronta (${fornada.suina.potesTotal} potes)` : ''
+      ].filter(Boolean).join(' • ') || 'Sem carne no almoço'
+    },
+    {
+      id: 'prep_arroz_carbo',
+      icon: '🍚',
+      title: `Cozinhar base de carboidrato (${fornada.arrozCruG}g arroz cru → ~${fornada.arrozProntoG}g cozido)`,
+      detail: [
+        fornada.arrozProntoG > 0 ? `Arroz: ${matheusPot.porPote.arrozG}g/pote Matheus • ${scarletPot.porPote.arrozG}g/pote Scarlet` : '',
+        fornada.macarraoProntoG > 0 ? `🍝 Macarrão: ${fornada.macarraoCruG}g cru → ${fornada.macarraoProntoG}g cozido` : '',
+        fornada.batataDoceProntaG > 0 ? `🍠 Batata-doce: ${fornada.batataDoceCruaG}g bruta → ${fornada.batataDoceProntaG}g cozida` : ''
+      ].filter(Boolean).join(' • ') || 'Carboidrato zerado'
+    },
+    {
+      id: 'prep_feijao',
+      icon: '🫘',
+      title: `Cozinhar feijão na pressão (${fornada.feijaoCruG}g cru → ~${fornada.feijaoProntoG}g cozido)`,
+      detail: `Porcionar ${matheusPot.porPote.feijaoG}g/pote Matheus e ${scarletPot.porPote.feijaoG}g/pote Scarlet`
+    },
+    {
+      id: 'prep_grelhar_carnes',
+      icon: '🍳',
+      title: `Grelhar / assar as carnes (~${(fornada.carneAlmocoProntaG / 1000).toFixed(2)} kg prontas p/ almoço)`,
+      detail: `Porcionar ${matheusPot.porPote.carneG}g/pote Matheus e ${scarletPot.porPote.carneG}g/pote Scarlet`
+    },
+    {
+      id: 'prep_legumes',
+      icon: '🥕',
+      title: `Cozinhar legumes das marmitas (Cenoura, Beterraba e Chuchu) + higienizar saladas (Alface, Tomate e Tomate Cereja)`,
+      detail: fornada.legumesProntoG > 0
+        ? `Total da fornada: ${fornada.legumesProntoG}g prontos (${matheusPot.porPote.legumesG}g Matheus • ${scarletPot.porPote.legumesG}g Scarlet)`
+        : 'Cozinhar cenoura, beterraba e chuchu para os potes e lavar alface/tomate/tomate cereja'
+    },
+    {
+      id: 'prep_pesar_potes',
+      icon: '⚖️',
+      title: `Pesar na balança, etiquetar e fechar os ${totalPotes} potes (${effDays} dias)`,
+      detail: includeMatheus && includeScarlet
+        ? `${matheusPot.potesCount} potes Matheus (${matheusPot.porPote.totalPoteG}g/pote) + ${scarletPot.potesCount} potes Scarlet (${scarletPot.porPote.totalPoteG}g/pote)`
+        : `${totalPotes} potes montados e prontos para geladeira/freezer`
+    }
+  ];
+
+  return {
+    dias: effDays,
+    person,
+    totalPotes,
+    matheus: matheusPot,
+    scarlet: scarletPot,
+    fornada,
+    checklistSteps
   };
 }
 

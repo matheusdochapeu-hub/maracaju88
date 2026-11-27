@@ -4,6 +4,29 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-27 12:15] - Redesign Completo da Aba Marmitas: Divisão de Carnes, Planejador de Produção (Potes), Edição Rápida nos Cards e Hortifrúti Real do Casal (v2.10.8)
+
+### 🎯 Demandas do Usuário
+1. **Melhorar o visual e organização da aba**: destacar primeiro o resumo diário, a calculadora in natura e o planejador de montagem de marmitas, deixando os diários alimentares mais limpos.
+2. **Dividir as carnes no cálculo por período**: escolher quantos dias de Carne Vermelha (Bovina), Frango e Carne Suína na semana/quinzena/mês em vez de somar tudo junto.
+3. **Planejador de Produção / Montagem de Marmitas**: mostrar quantos potes montar para Matheus e Scarlet, gramatura exata para pesar na balança por pote, divisão por sabor de carne e checklist interativo da fornada.
+4. **Edição direta e fácil do cardápio nos cards**: permitir ajustar gramas, incluir macarrão, batata-doce ou legumes e aplicar substituições em 1 toque sem precisar subir PDF.
+5. **Hortifrúti real do casal (Saladas, Legumes para Cozinhar e Frutas da Semana)**:
+   - Saladas: **Tomate**, **Tomate cereja**, **Alface**.
+   - Legumes para cozinhar nas marmitas: **Cenoura**, **Beterraba**, **Chuchu**.
+   - Frutas semanais: **Banana** (1 para cada por dia), **Maçã** (1 para o Matheus por dia, às vezes menos), **Uvas** (1 caixa de 500g), **Mamão** (1 papaia grande) e opcionais ("às vezes") **Morango congelado** e **Melancia (1/4 a 1/2)**.
+
+### 🛠️ Implementação (`js/nutrition.js`, `js/ui.js`, `js/app.js`, `js/sheets.js`, `css/components.css`)
+- **`resolveMeatDaysSplit` & `calculateMarmitasPlan`**: presets `Padrão`, `Misto (Bov+Frango+Suína)`, `Meio a Meio`, `100% Frango` + steppers `− / +` de dias individuais para Carne Vermelha (`x1.67`), Peito de Frango (`x1.39`) e Carne Suína (`x1.47`), gerando itens separados para a Lista de Mercado.
+- **`HORTIFRUTI_WEEKLY_CATALOG`**: catálogo com os 12 itens reais de hortifrúti do casal (Alface, Tomate, Tomate Cereja, Cenoura, Beterraba, Chuchu, Banana, Maçã, Uvas 500g, Mamão Papaia Grande + opcionais Morango Congelado e Melancia 1/4 a 1/2), com chips clicáveis para ativar/desativar na compra da semana e botão dedicado `🥗 Enviar Só Hortifrúti`.
+- **`calculateMarmitasProductionPlan`**: guia de pesagem na balança por pote para Matheus e Scarlet (`14 potes` em 7 dias), divisão de potes por sabor de carne e checklist interativo de 6 etapas persistido em `state.nutrition.prepChecklist` e sincronizado no Google Sheets.
+- **Edição Rápida Inline nos Cards (`data-marmitas-quick-edit`)**: painel direto nos cartões de Matheus e Scarlet com substituições em 1 toque (Arroz ↔ Macarrão ↔ Batata-Doce, Manhã c/ Ovos ↔ Queijo) e reconstrução automática das descrições (`buildAutoMealDescriptions`).
+
+### 📦 Versão
+- **v2.10.8** em `js/config.js`, `sw.js` (`maracaju-v2.10.8`), `package.json` e `?v=2.10.8` no `index.html`.
+
+---
+
 ## [2026-11-27 11:15] - Correção do Redirecionamento Forçado para Aba Fotos no Meu Espaço & Turbo Sync Multi-Aparelhos (v2.10.7)
 
 ### 🐞 Problemas Relatados

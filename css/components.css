@@ -2869,6 +2869,19 @@ body.modal-open {
   align-items: center;
 }
 
+.marmitas-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 0.4rem;
+}
+
+.marmitas-quick-grid .form-control {
+  padding: 0.3rem 0.45rem;
+  font-weight: 700;
+  text-align: center;
+  min-height: 36px;
+}
+
 /* ============================================================
    MODAL DO DIÁRIO ALIMENTAR: RODAPÉ VISÍVEL & FEEDBACK COM ESTADO
    ============================================================ */

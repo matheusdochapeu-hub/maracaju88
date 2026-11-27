@@ -195,7 +195,8 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
       };
       return {
         matheus: compactPerson(n.matheus),
-        scarlet: compactPerson(n.scarlet)
+        scarlet: compactPerson(n.scarlet),
+        prepChecklist: (n.prepChecklist && typeof n.prepChecklist === 'object') ? n.prepChecklist : undefined
       };
     })(),
     categories: state.categories || {},
@@ -862,7 +863,11 @@ export function applyCloudBackup(currentState, cloudData) {
       };
       return {
         matheus: pickPerson('matheus'),
-        scarlet: pickPerson('scarlet')
+        scarlet: pickPerson('scarlet'),
+        prepChecklist: {
+          ...((cloudN && cloudN.prepChecklist && typeof cloudN.prepChecklist === 'object') ? cloudN.prepChecklist : {}),
+          ...((localN && localN.prepChecklist && typeof localN.prepChecklist === 'object') ? localN.prepChecklist : {})
+        }
       };
     })(),
     settings: {

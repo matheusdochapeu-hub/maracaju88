@@ -200,7 +200,11 @@ import {
   setEditingCardCheckKey
 } from './ui.js';
 import {
+  DEFAULT_NUTRITION_MEALS,
   MARMITAS_ITEM_GROUPS,
+  DEFAULT_HORTIFRUTI_IDS,
+  resolveMeatDaysSplit,
+  buildAutoMealDescriptions,
   calculateMarmitasPlan,
   calculateCustomQuantityConversion,
   COOKING_FACTORS,
@@ -271,6 +275,8 @@ let currentMarmitasExpandedRaw = { matheus: false, scarlet: false };
 let currentMarmitasCalcOpts = {
   calcMode: 'periodo',
   selectedGroups: [...MARMITAS_ITEM_GROUPS],
+  meatSplit: { mode: 'padrao' },
+  selectedHortifruti: [...DEFAULT_HORTIFRUTI_IDS],
   specificItem: 'carne_vermelha',
   specificDirection: 'pronto_para_cru',
   specificGrams: 500
@@ -7886,7 +7892,7 @@ function initMarmitasModule() {
     // Os alternadores usam classe (btn-primary/is-selected) como estado visual;
     // expõe o mesmo estado para leitores de tela.
     try {
-      marmitasTab.querySelectorAll('[data-marmitas-person],[data-marmitas-calc-mode],[data-marmitas-scope],[data-marmitas-preset],[data-marmitas-toggle-group],[data-marmitas-spec-item],[data-marmitas-spec-dir]').forEach(btn => {
+      marmitasTab.querySelectorAll('[data-marmitas-person],[data-marmitas-calc-mode],[data-marmitas-scope],[data-marmitas-preset],[data-marmitas-toggle-group],[data-marmitas-spec-item],[data-marmitas-spec-dir],[data-marmitas-meat-mode],[data-marmitas-horti-toggle]').forEach(btn => {
         const active = btn.classList.contains('btn-primary') || btn.classList.contains('is-selected');
         btn.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
@@ -8268,6 +8274,181 @@ function initMarmitasModule() {
       return;
     }
 
+    const quickEditBtn = e.target.closest('[data-marmitas-quick-edit]');
+    if (quickEditBtn) {
+      const personKey = quickEditBtn.getAttribute('data-marmitas-quick-edit') === 'scarlet' ? 'scarlet' : 'matheus';
+      const flagKey = `quickEdit_${personKey}`;
+      currentMarmitasExpandedRaw[flagKey] = !currentMarmitasExpandedRaw[flagKey];
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const quickPresetBtn = e.target.closest('[data-marmitas-quick-preset]');
+    if (quickPresetBtn) {
+      const raw = quickPresetBtn.getAttribute('data-marmitas-quick-preset') || '';
+      const [pKey, preset] = raw.split(':');
+      const personKey = pKey === 'scarlet' ? 'scarlet' : 'matheus';
+      const box = marmitasTab.querySelector(`[data-quick-edit-box="${personKey}"]`);
+      if (!box) return;
+      const setField = (meal, field, val) => {
+        const input = box.querySelector(`[data-qe-field="${personKey}:${meal}:${field}"]`);
+        if (input) input.value = String(val);
+      };
+      const baseAlm = DEFAULT_NUTRITION_MEALS[personKey].almoco;
+      if (preset === 'arroz_padrao') {
+        setField('almoco', 'arrozProntoG', baseAlm.arrozProntoG);
+        setField('almoco', 'macarraoProntoG', 0);
+        setField('almoco', 'batataDoceProntaG', 0);
+      } else if (preset === 'trocar_macarrao') {
+        setField('almoco', 'arrozProntoG', 0);
+        setField('almoco', 'macarraoProntoG', baseAlm.arrozProntoG + 20);
+        setField('almoco', 'batataDoceProntaG', 0);
+      } else if (preset === 'trocar_batata') {
+        setField('almoco', 'arrozProntoG', 0);
+        setField('almoco', 'macarraoProntoG', 0);
+        setField('almoco', 'batataDoceProntaG', baseAlm.arrozProntoG + 30);
+      } else if (preset === 'manha_ovos') {
+        setField('manha', 'ovos', 2);
+        setField('manha', 'queijoG', 0);
+      } else if (preset === 'manha_queijo') {
+        setField('manha', 'ovos', 0);
+        setField('manha', 'queijoG', 40);
+      }
+      playSubtleClick(state?.settings?.soundEnabled);
+      showToast('⚡ Substituição aplicada nos campos! Clique em Salvar para confirmar.', 'info', 2200);
+      return;
+    }
+
+    const quickSaveBtn = e.target.closest('[data-marmitas-quick-save]');
+    if (quickSaveBtn) {
+      const personKey = quickSaveBtn.getAttribute('data-marmitas-quick-save') === 'scarlet' ? 'scarlet' : 'matheus';
+      const label = personKey === 'scarlet' ? 'Scarlet' : 'Matheus';
+      const box = marmitasTab.querySelector(`[data-quick-edit-box="${personKey}"]`);
+      if (!box) return;
+
+      const readNum = (meal, field) => {
+        const input = box.querySelector(`[data-qe-field="${personKey}:${meal}:${field}"]`);
+        const v = parseFloat(input ? input.value : 0);
+        return Number.isFinite(v) && v >= 0 ? Math.round(v) : 0;
+      };
+
+      const currentPerson = getNutritionState(state)[personKey];
+      const nextMeals = {
+        manha: {
+          paes: readNum('manha', 'paes'),
+          frutas: readNum('manha', 'frutas'),
+          ovos: readNum('manha', 'ovos'),
+          queijoG: readNum('manha', 'queijoG'),
+          requeijaoG: readNum('manha', 'requeijaoG')
+        },
+        almoco: {
+          arrozProntoG: readNum('almoco', 'arrozProntoG'),
+          feijaoProntoG: readNum('almoco', 'feijaoProntoG'),
+          carneProntaG: readNum('almoco', 'carneProntaG'),
+          macarraoProntoG: readNum('almoco', 'macarraoProntoG'),
+          batataDoceProntaG: readNum('almoco', 'batataDoceProntaG'),
+          legumesProntoG: readNum('almoco', 'legumesProntoG')
+        },
+        tarde: {
+          frutas: readNum('tarde', 'frutas'),
+          yopro: readNum('tarde', 'yopro'),
+          wheyG: readNum('tarde', 'wheyG'),
+          leiteEmPoG: readNum('tarde', 'leiteEmPoG')
+        },
+        noite: {
+          paes: readNum('noite', 'paes'),
+          carneProntaG: readNum('noite', 'carneProntaG')
+        }
+      };
+
+      const descs = buildAutoMealDescriptions(nextMeals, personKey);
+      nextMeals.manha.descricao = descs.manha;
+      nextMeals.almoco.descricao = descs.almoco;
+      nextMeals.tarde.descricao = descs.tarde;
+      nextMeals.noite.descricao = descs.noite;
+
+      if (!state.nutrition || typeof state.nutrition !== 'object') {
+        state.nutrition = {};
+      }
+      state.nutrition[personKey] = {
+        sourceName: currentPerson.sourceName || 'Editado no card',
+        rawText: currentPerson.rawText || '',
+        photo: currentPerson.photo || '',
+        updatedAt: new Date().toISOString(),
+        meals: nextMeals
+      };
+
+      currentMarmitasExpandedRaw[`quickEdit_${personKey}`] = false;
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      rerenderMarmitas();
+      showToast(`✅ Cardápio de ${label} atualizado! Calculadora e potes recalculados.`, 'success', 3200);
+      return;
+    }
+
+    const meatModeBtn = e.target.closest('[data-marmitas-meat-mode]');
+    if (meatModeBtn) {
+      const mode = meatModeBtn.getAttribute('data-marmitas-meat-mode') || 'padrao';
+      currentMarmitasCalcOpts.meatSplit = { mode };
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const meatStepBtn = e.target.closest('[data-marmitas-meat-step]');
+    if (meatStepBtn) {
+      const raw = meatStepBtn.getAttribute('data-marmitas-meat-step') || '';
+      const [meatType, deltaStr] = raw.split(':');
+      const delta = parseInt(deltaStr, 10) || 0;
+      const curSplit = resolveMeatDaysSplit(currentMarmitasPeriod, currentMarmitasCalcOpts.meatSplit);
+      const next = {
+        mode: 'custom',
+        bovinaDays: curSplit.bovinaDays,
+        frangoDays: curSplit.frangoDays,
+        suinaDays: curSplit.suinaDays
+      };
+      if (meatType === 'bovina') next.bovinaDays = Math.max(0, next.bovinaDays + delta);
+      else if (meatType === 'frango') next.frangoDays = Math.max(0, next.frangoDays + delta);
+      else if (meatType === 'suina') next.suinaDays = Math.max(0, next.suinaDays + delta);
+
+      const sumDays = next.bovinaDays + next.frangoDays + next.suinaDays;
+      if (sumDays > 0) {
+        currentMarmitasPeriod = sumDays;
+      } else {
+        next.bovinaDays = 1;
+        currentMarmitasPeriod = 1;
+      }
+      currentMarmitasCalcOpts.meatSplit = next;
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const hortiToggleBtn = e.target.closest('[data-marmitas-horti-toggle]');
+    if (hortiToggleBtn) {
+      const hortiId = hortiToggleBtn.getAttribute('data-marmitas-horti-toggle');
+      const curSet = new Set(Array.isArray(currentMarmitasCalcOpts.selectedHortifruti) ? currentMarmitasCalcOpts.selectedHortifruti : DEFAULT_HORTIFRUTI_IDS);
+      if (curSet.has(hortiId)) curSet.delete(hortiId);
+      else curSet.add(hortiId);
+      currentMarmitasCalcOpts.selectedHortifruti = Array.from(curSet);
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const resetPrepBtn = e.target.closest('#btn-marmitas-reset-prep');
+    if (resetPrepBtn) {
+      if (!state.nutrition || typeof state.nutrition !== 'object') state.nutrition = {};
+      state.nutrition.prepChecklist = {};
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      showToast('🔄 Checklist de preparo reiniciado para a nova fornada!', 'info', 2500);
+      return;
+    }
+
     const viewPhotoBtn = e.target.closest('[data-marmitas-view-photo]');
     if (viewPhotoBtn) {
       const personKey = viewPhotoBtn.getAttribute('data-marmitas-view-photo') === 'scarlet' ? 'scarlet' : 'matheus';
@@ -8439,11 +8620,46 @@ function initMarmitasModule() {
       }
     };
 
+    const sendHortiBtn = e.target.closest('#btn-send-hortifruti-to-market');
+    if (sendHortiBtn) {
+      playSubtleClick(state?.settings?.soundEnabled);
+      const effectiveMeals = getEffectiveNutritionMeals(state);
+      const plan = calculateMarmitasPlan(
+        currentMarmitasPeriod,
+        'completo',
+        effectiveMeals,
+        COOKING_FACTORS,
+        currentMarmitasPerson,
+        ['paes_frutas'],
+        currentMarmitasCalcOpts.meatSplit,
+        currentMarmitasCalcOpts.selectedHortifruti
+      );
+      const hortiOnly = (plan.allShoppingItems || []).filter(it => it && it.hortiId);
+      if (hortiOnly.length === 0) {
+        showToast('Selecione ao menos 1 salada, legume ou fruta para enviar.', 'warning', 3000);
+        return;
+      }
+      upsertMarmitasShoppingItems(
+        hortiOnly,
+        `🥗🍌 ${hortiOnly.length} ${hortiOnly.length === 1 ? 'item de hortifrúti enviado' : 'itens de hortifrúti (saladas, legumes e frutas) enviados'} para a Lista de Mercado!`
+      );
+      return;
+    }
+
     const sendBtn = e.target.closest('#btn-send-marmitas-to-market');
     if (sendBtn) {
       playSubtleClick(state?.settings?.soundEnabled);
       const effectiveMeals = getEffectiveNutritionMeals(state);
-      const plan = calculateMarmitasPlan(currentMarmitasPeriod, currentMarmitasScope, effectiveMeals, COOKING_FACTORS, currentMarmitasPerson, currentMarmitasCalcOpts.selectedGroups);
+      const plan = calculateMarmitasPlan(
+        currentMarmitasPeriod,
+        currentMarmitasScope,
+        effectiveMeals,
+        COOKING_FACTORS,
+        currentMarmitasPerson,
+        currentMarmitasCalcOpts.selectedGroups,
+        currentMarmitasCalcOpts.meatSplit,
+        currentMarmitasCalcOpts.selectedHortifruti
+      );
       if (!plan || !plan.shoppingItems || plan.shoppingItems.length === 0) {
         showToast('Selecione ao menos 1 alimento nos cartões para enviar.', 'warning', 3000);
         return;
@@ -8475,8 +8691,26 @@ function initMarmitasModule() {
     }
   });
 
-  // Inputs numéricos personalizados (dias e gramas específicas): preserva o foco ao digitar
+  // Inputs numéricos personalizados (dias, gramas específicas e checklist de preparo): preserva o foco ao digitar
   marmitasTab.addEventListener('change', (e) => {
+    if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-marmitas-prep-check')) {
+      const stepId = e.target.getAttribute('data-marmitas-prep-check');
+      if (!state.nutrition || typeof state.nutrition !== 'object') state.nutrition = {};
+      if (!state.nutrition.prepChecklist || typeof state.nutrition.prepChecklist !== 'object') {
+        state.nutrition.prepChecklist = {};
+      }
+      if (e.target.checked) {
+        state.nutrition.prepChecklist[stepId] = true;
+        playTaskCompleteSound(state?.settings?.soundEnabled);
+      } else {
+        delete state.nutrition.prepChecklist[stepId];
+        playSubtleClick(state?.settings?.soundEnabled);
+      }
+      saveState(state);
+      triggerAutoSyncIfEnabled();
+      rerenderMarmitas();
+      return;
+    }
     if (e.target && e.target.id === 'input-marmitas-custom-days') {
       const val = parseInt(e.target.value, 10);
       if (Number.isFinite(val) && val >= 1) {
