@@ -204,6 +204,7 @@ import {
   MARMITAS_ITEM_GROUPS,
   DEFAULT_HORTIFRUTI_IDS,
   resolveMeatDaysSplit,
+  resolveCarbDaysSplit,
   buildAutoMealDescriptions,
   calculateMarmitasPlan,
   calculateCustomQuantityConversion,
@@ -276,6 +277,7 @@ let currentMarmitasCalcOpts = {
   calcMode: 'periodo',
   selectedGroups: [...MARMITAS_ITEM_GROUPS],
   meatSplit: { mode: 'padrao' },
+  carbSplit: { mode: 'padrao' },
   selectedHortifruti: [...DEFAULT_HORTIFRUTI_IDS],
   specificItem: 'carne_vermelha',
   specificDirection: 'pronto_para_cru',
@@ -8425,6 +8427,44 @@ function initMarmitasModule() {
       return;
     }
 
+    const carbModeBtn = e.target.closest('[data-marmitas-carb-mode]');
+    if (carbModeBtn) {
+      const mode = carbModeBtn.getAttribute('data-marmitas-carb-mode') || 'padrao';
+      currentMarmitasCalcOpts.carbSplit = { mode };
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
+    const carbStepBtn = e.target.closest('[data-marmitas-carb-step]');
+    if (carbStepBtn) {
+      const raw = carbStepBtn.getAttribute('data-marmitas-carb-step') || '';
+      const [carbType, deltaStr] = raw.split(':');
+      const delta = parseInt(deltaStr, 10) || 0;
+      const curSplit = resolveCarbDaysSplit(currentMarmitasPeriod, currentMarmitasCalcOpts.carbSplit);
+      const next = {
+        mode: 'custom',
+        arrozDays: curSplit.arrozDays,
+        macarraoDays: curSplit.macarraoDays,
+        batataDoceDays: curSplit.batataDoceDays
+      };
+      if (carbType === 'arroz') next.arrozDays = Math.max(0, next.arrozDays + delta);
+      else if (carbType === 'macarrao') next.macarraoDays = Math.max(0, next.macarraoDays + delta);
+      else if (carbType === 'batata_doce') next.batataDoceDays = Math.max(0, next.batataDoceDays + delta);
+
+      const sumDays = next.arrozDays + next.macarraoDays + next.batataDoceDays;
+      if (sumDays > 0) {
+        currentMarmitasPeriod = sumDays;
+      } else {
+        next.arrozDays = 1;
+        currentMarmitasPeriod = 1;
+      }
+      currentMarmitasCalcOpts.carbSplit = next;
+      playSubtleClick(state?.settings?.soundEnabled);
+      rerenderMarmitas();
+      return;
+    }
+
     const hortiToggleBtn = e.target.closest('[data-marmitas-horti-toggle]');
     if (hortiToggleBtn) {
       const hortiId = hortiToggleBtn.getAttribute('data-marmitas-horti-toggle');
@@ -8658,7 +8698,8 @@ function initMarmitasModule() {
         currentMarmitasPerson,
         currentMarmitasCalcOpts.selectedGroups,
         currentMarmitasCalcOpts.meatSplit,
-        currentMarmitasCalcOpts.selectedHortifruti
+        currentMarmitasCalcOpts.selectedHortifruti,
+        currentMarmitasCalcOpts.carbSplit
       );
       if (!plan || !plan.shoppingItems || plan.shoppingItems.length === 0) {
         showToast('Selecione ao menos 1 alimento nos cartões para enviar.', 'warning', 3000);

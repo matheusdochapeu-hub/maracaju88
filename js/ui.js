@@ -4,6 +4,7 @@ import {
   SPECIFIC_QUANTITY_ITEMS,
   DEFAULT_HORTIFRUTI_IDS,
   resolveMeatDaysSplit,
+  resolveCarbDaysSplit,
   calculateMarmitasProductionPlan,
   getDailyNutritionSummary,
   calculateMarmitasPlan,
@@ -4302,19 +4303,21 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
   const specificGrams = Math.max(1, Math.round(Number(calcOpts.specificGrams) || 500));
 
   const meatSplitOpt = calcOpts.meatSplit || { mode: 'padrao' };
+  const carbSplitOpt = calcOpts.carbSplit || { mode: 'padrao' };
   const selectedHortifruti = Array.isArray(calcOpts.selectedHortifruti)
     ? calcOpts.selectedHortifruti
     : DEFAULT_HORTIFRUTI_IDS;
 
   const nutritionState = getNutritionState(state);
   const effectiveMeals = getEffectiveNutritionMeals(state);
-  const plan = calculateMarmitasPlan(safePeriod, scope, effectiveMeals, COOKING_FACTORS, activePerson, selectedGroups, meatSplitOpt, selectedHortifruti);
+  const plan = calculateMarmitasPlan(safePeriod, scope, effectiveMeals, COOKING_FACTORS, activePerson, selectedGroups, meatSplitOpt, selectedHortifruti, carbSplitOpt);
   const daily = getDailyNutritionSummary(effectiveMeals, COOKING_FACTORS, activePerson);
   const prodPlan = calculateMarmitasProductionPlan({
     dias: safePeriod,
     meals: effectiveMeals,
     factors: COOKING_FACTORS,
     meatSplit: meatSplitOpt,
+    carbSplit: carbSplitOpt,
     person: activePerson
   });
   const specificResult = calculateCustomQuantityConversion({
@@ -4337,6 +4340,7 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
   const cardCheckLabel = (groupKey) => (selectedSet.has(groupKey) ? '✓ Incluído' : '+ Incluir');
 
   const mb = plan.meatBreakdown || resolveMeatDaysSplit(safePeriod, meatSplitOpt);
+  const cb = plan.carbBreakdown || resolveCarbDaysSplit(safePeriod, carbSplitOpt);
   const hortiItems = Array.isArray(plan.hortifrutiItems) ? plan.hortifrutiItems : [];
   const hortiSaladas = hortiItems.filter(i => i.section === 'saladas');
   const hortiLegumes = hortiItems.filter(i => i.section === 'legumes');
@@ -4539,7 +4543,74 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
           </div>
         </div>
 
-        <!-- Linha 1 Simétrica: Base das Marmitas (Carne, Arroz, Feijão) -->
+        <!-- Divisão / Substituição de Carboidratos no Período (Arroz, Macarrão e Batata-Doce) -->
+        <div class="marmitas-carb-split-box" style="background: var(--bg-surface); border: 1px solid rgba(234, 179, 8, 0.35); border-radius: var(--radius-md); padding: 0.75rem; margin-bottom: 0.85rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
+            <strong style="font-size: 0.8rem; color: #a16207; display: flex; align-items: center; gap: 0.35rem;">
+              <span>🍚🍝🍠</span> Substituir / Dividir Arroz por Macarrão ou Batata-Doce (${safePeriod} ${safePeriod === 1 ? 'dia' : 'dias'})
+            </strong>
+            <div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-xs ${cb.mode === 'padrao' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-carb-mode="padrao" style="font-size: 0.7rem; font-weight: 700;">
+                🍚 100% Arroz (/2.2)
+              </button>
+              <button type="button" class="btn btn-xs ${cb.mode === 'misto' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-carb-mode="misto" style="font-size: 0.7rem; font-weight: 700;">
+                ⚖️ Misto (Arroz+Macarrão+Batata)
+              </button>
+              <button type="button" class="btn btn-xs ${cb.mode === 'arroz_macarrao' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-carb-mode="arroz_macarrao" style="font-size: 0.7rem; font-weight: 700;">
+                🍚🍝 Arroz + Macarrão
+              </button>
+              <button type="button" class="btn btn-xs ${cb.mode === 'so_macarrao' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-carb-mode="so_macarrao" style="font-size: 0.7rem; font-weight: 700;">
+                🍝 100% Macarrão
+              </button>
+              <button type="button" class="btn btn-xs ${cb.mode === 'so_batata_doce' ? 'btn-primary' : 'btn-secondary'}" data-marmitas-carb-mode="so_batata_doce" style="font-size: 0.7rem; font-weight: 700;">
+                🍠 100% Batata-Doce
+              </button>
+            </div>
+          </div>
+
+          <div class="marmitas-carb-split-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.5rem;">
+            <!-- Arroz -->
+            <div style="background: var(--bg-card); border: 1px solid ${cb.arroz.days > 0 ? 'rgba(234, 179, 8, 0.45)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
+              <div>
+                <div style="font-size: 0.74rem; font-weight: 800; color: #a16207;">🍚 Arroz Cru</div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary);"><strong>${cb.arroz.cruG}g</strong> cru <span style="color: var(--text-muted);">(/2.2)</span></div>
+              </div>
+              <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-carb-step="arroz:-1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Menos 1 dia de arroz">−</button>
+                <span style="font-size: 0.78rem; font-weight: 800; min-width: 34px; text-align: center;">${cb.arroz.days}d</span>
+                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-carb-step="arroz:1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Mais 1 dia de arroz">+</button>
+              </div>
+            </div>
+
+            <!-- Macarrão -->
+            <div style="background: var(--bg-card); border: 1px solid ${cb.macarrao.days > 0 ? 'rgba(217, 119, 6, 0.45)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
+              <div>
+                <div style="font-size: 0.74rem; font-weight: 800; color: #b45309;">🍝 Macarrão Cru</div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary);"><strong>${cb.macarrao.cruG}g</strong> cru <span style="color: var(--text-muted);">(/2.5)</span></div>
+              </div>
+              <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-carb-step="macarrao:-1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Menos 1 dia de macarrão">−</button>
+                <span style="font-size: 0.78rem; font-weight: 800; min-width: 34px; text-align: center;">${cb.macarrao.days}d</span>
+                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-carb-step="macarrao:1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Mais 1 dia de macarrão">+</button>
+              </div>
+            </div>
+
+            <!-- Batata-Doce -->
+            <div style="background: var(--bg-card); border: 1px solid ${cb.batataDoce.days > 0 ? 'rgba(180, 83, 9, 0.4)' : 'var(--border-subtle)'}; border-radius: var(--radius-sm); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
+              <div>
+                <div style="font-size: 0.74rem; font-weight: 800; color: #9a3412;">🍠 Batata-Doce</div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary);"><strong>${cb.batataDoce.cruaKgStr} kg</strong> c/ casca <span style="color: var(--text-muted);">(0.90x)</span></div>
+              </div>
+              <div style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-carb-step="batata_doce:-1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Menos 1 dia de batata-doce">−</button>
+                <span style="font-size: 0.78rem; font-weight: 800; min-width: 34px; text-align: center;">${cb.batataDoce.days}d</span>
+                <button type="button" class="btn btn-xs btn-secondary" data-marmitas-carb-step="batata_doce:1" style="min-width: 28px; min-height: 28px; padding: 0; font-weight: 800;" aria-label="Mais 1 dia de batata-doce">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Linha 1 Simétrica: Base das Marmitas (Carne, Arroz/Carbo, Feijão) -->
         <div class="marmitas-cards-grid-core">
           <button type="button" class="marmitas-nutri-card ${cardStateCls('carne')}" data-marmitas-toggle-group="carne" style="--card-accent-color: #b91c1c; --card-accent-border: rgba(220, 38, 38, 0.35);">
             <div class="marmitas-card-top">
@@ -4569,24 +4640,41 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
 
           <button type="button" class="marmitas-nutri-card ${cardStateCls('arroz')}" data-marmitas-toggle-group="arroz" style="--card-accent-color: #a16207; --card-accent-border: rgba(234, 179, 8, 0.45);">
             <div class="marmitas-card-top">
-              <span class="marmitas-card-title"><span>🍚</span> Arroz Cru</span>
+              <span class="marmitas-card-title">
+                <span>${cb.mode === 'so_macarrao' ? '🍝' : (cb.mode === 'so_batata_doce' ? '🍠' : '🍚')}</span>
+                ${cb.mode === 'so_macarrao' ? 'Macarrão Cru' : (cb.mode === 'so_batata_doce' ? 'Batata-Doce' : (cb.isSplitActive ? 'Arroz / Carbo' : 'Arroz Cru'))}
+              </span>
               <span class="marmitas-card-badges">
-                <span class="marmitas-card-badge">/2.2</span>
+                <span class="marmitas-card-badge">${cb.mode === 'so_macarrao' ? '/2.5' : (cb.mode === 'so_batata_doce' ? '0.90x' : (cb.isSplitActive ? 'Dividido' : '/2.2'))}</span>
                 <span class="marmitas-card-check">${cardCheckLabel('arroz')}</span>
               </span>
             </div>
             <div class="marmitas-card-value">
-              <span>${plan.totaisInNatura.arrozCruG}g</span>
-              <span class="marmitas-card-unit">(~${plan.totaisInNatura.arrozPacotes1Kg} pct 1kg)</span>
+              ${cb.mode === 'so_macarrao' ? `
+                <span>${cb.macarrao.cruG}g</span>
+                <span class="marmitas-card-unit">(~${cb.macarrao.pacotes500g} pct 500g)</span>
+              ` : (cb.mode === 'so_batata_doce' ? `
+                <span>${cb.batataDoce.cruaKgStr} kg</span>
+                <span class="marmitas-card-unit">c/ casca</span>
+              ` : (cb.isSplitActive ? `
+                <span>${cb.totalCruG >= 1000 ? `${(cb.totalCruG / 1000).toFixed(2)} kg` : `${cb.totalCruG}g`}</span>
+                <span class="marmitas-card-unit">in natura</span>
+              ` : `
+                <span>${plan.totaisInNatura.arrozCruG}g</span>
+                <span class="marmitas-card-unit">(~${plan.totaisInNatura.arrozPacotes1Kg} pct 1kg)</span>
+              `))}
             </div>
             <div class="marmitas-card-meta">
-              Rende ~<strong>${plan.totaisProntos.arrozProntoG}g</strong> cozido (${safePeriod} ${safePeriod === 1 ? 'almoço' : 'almoços'}).
-              ${(plan.totaisInNatura.macarraoCruG > 0 || plan.totaisInNatura.batataDoceCruaG > 0) ? `
-                <div style="font-size: 0.68rem; color: var(--brand-forest); font-weight: 700; margin-top: 0.15rem;">
-                  ${plan.totaisInNatura.macarraoCruG > 0 ? `🍝 +${plan.totaisInNatura.macarraoCruG}g macarrão cru` : ''}
-                  ${plan.totaisInNatura.batataDoceCruaG > 0 ? ` 🍠 +${plan.totaisInNatura.batataDoceCruaG}g batata-doce` : ''}
-                </div>
-              ` : ''}
+              Rende ~<strong>${cb.totalProntoG}g</strong> cozido (${cb.totalDays} ${cb.totalDays === 1 ? 'almoço' : 'almoços'}).
+              <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 0.2rem;">
+                ${cb.isSplitActive
+                  ? [
+                      cb.arroz.days > 0 ? `🍚 Arroz ${cb.arroz.cruG}g (${cb.arroz.days}d)` : '',
+                      cb.macarrao.days > 0 ? `🍝 Macarrão ${cb.macarrao.cruG}g (${cb.macarrao.days}d)` : '',
+                      cb.batataDoce.days > 0 ? `🍠 Batata-Doce ${cb.batataDoce.cruaKgStr}kg (${cb.batataDoce.days}d)` : ''
+                    ].filter(Boolean).join(' • ')
+                  : `🍚 Arroz ${cb.equivFullPeriod.arrozCruG}g • 🍝 Macarrão ${cb.equivFullPeriod.macarraoCruG}g • 🍠 Batata-Doce ${cb.equivFullPeriod.batataDoceCruaKgStr}kg`}
+              </div>
             </div>
           </button>
 
@@ -4821,10 +4909,14 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
               • <strong>Legumes:</strong> ${prodPlan.matheus.porPote.legumesG > 0 ? `${prodPlan.matheus.porPote.legumesG}g ` : ''}cenoura, beterraba e chuchu cozidos
             </div>
             <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.35rem; border-top: 1px dashed rgba(22, 163, 74, 0.25); padding-top: 0.3rem;">
-              📦 Sabores: ${[
+              📦 Carnes: ${[
                 prodPlan.matheus.potesPorCarne.bovina > 0 ? `🥩 ${prodPlan.matheus.potesPorCarne.bovina} Bovina` : '',
                 prodPlan.matheus.potesPorCarne.frango > 0 ? `🍗 ${prodPlan.matheus.potesPorCarne.frango} Frango` : '',
                 prodPlan.matheus.potesPorCarne.suina > 0 ? `🐷 ${prodPlan.matheus.potesPorCarne.suina} Suína` : ''
+              ].filter(Boolean).join(' • ')} • Carbo: ${[
+                prodPlan.matheus.potesPorCarbo.arroz > 0 ? `🍚 ${prodPlan.matheus.potesPorCarbo.arroz} Arroz` : '',
+                prodPlan.matheus.potesPorCarbo.macarrao > 0 ? `🍝 ${prodPlan.matheus.potesPorCarbo.macarrao} Macarrão` : '',
+                prodPlan.matheus.potesPorCarbo.batataDoce > 0 ? `🍠 ${prodPlan.matheus.potesPorCarbo.batataDoce} Batata` : ''
               ].filter(Boolean).join(' • ')} • 🌙 Noite: +${prodPlan.matheus.carneNoiteDiariaG}g carne/noite
             </div>
           </div>
@@ -4844,10 +4936,14 @@ export function renderMarmitasTab(state, activePerson = 'casal', period = 7, sco
               • <strong>Legumes:</strong> ${prodPlan.scarlet.porPote.legumesG > 0 ? `${prodPlan.scarlet.porPote.legumesG}g ` : ''}cenoura, beterraba e chuchu cozidos
             </div>
             <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.35rem; border-top: 1px dashed rgba(13, 148, 136, 0.25); padding-top: 0.3rem;">
-              📦 Sabores: ${[
+              📦 Carnes: ${[
                 prodPlan.scarlet.potesPorCarne.bovina > 0 ? `🥩 ${prodPlan.scarlet.potesPorCarne.bovina} Bovina` : '',
                 prodPlan.scarlet.potesPorCarne.frango > 0 ? `🍗 ${prodPlan.scarlet.potesPorCarne.frango} Frango` : '',
                 prodPlan.scarlet.potesPorCarne.suina > 0 ? `🐷 ${prodPlan.scarlet.potesPorCarne.suina} Suína` : ''
+              ].filter(Boolean).join(' • ')} • Carbo: ${[
+                prodPlan.scarlet.potesPorCarbo.arroz > 0 ? `🍚 ${prodPlan.scarlet.potesPorCarbo.arroz} Arroz` : '',
+                prodPlan.scarlet.potesPorCarbo.macarrao > 0 ? `🍝 ${prodPlan.scarlet.potesPorCarbo.macarrao} Macarrão` : '',
+                prodPlan.scarlet.potesPorCarbo.batataDoce > 0 ? `🍠 ${prodPlan.scarlet.potesPorCarbo.batataDoce} Batata` : ''
               ].filter(Boolean).join(' • ')} • 🌙 Noite: +${prodPlan.scarlet.carneNoiteDiariaG}g carne/noite
             </div>
           </div>

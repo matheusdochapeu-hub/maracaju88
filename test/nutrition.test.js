@@ -9,6 +9,7 @@ import {
   HORTIFRUTI_WEEKLY_CATALOG,
   DEFAULT_HORTIFRUTI_IDS,
   resolveMeatDaysSplit,
+  resolveCarbDaysSplit,
   calculateMarmitasProductionPlan,
   buildAutoMealDescriptions,
   getDailyNutritionSummary,
@@ -539,4 +540,61 @@ test('Marmitas v2.10.8: Planejador de Produção e Edição Rápida nos cards fu
   assert.ok(mockHtml.includes('data-marmitas-horti-toggle="morango_congelado"'));
   assert.ok(mockHtml.includes('data-marmitas-horti-toggle="melancia"'));
 });
+
+test('Marmitas v2.10.9: Substituição/Divisão de Arroz por Macarrão ou Batata-Doce no período e linha comparativa no card', async () => {
+  // 1. Modo padrão (7 dias) mantém 602g de arroz e calcula equivalentes para 1330g cozidos
+  const planPadrao = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['arroz']);
+  assert.equal(planPadrao.carbBreakdown.mode, 'padrao');
+  assert.equal(planPadrao.carbBreakdown.isSplitActive, false);
+  assert.equal(planPadrao.carbBreakdown.equivFullPeriod.arrozCruG, 602);
+  // 1330g / 2.5 = 532g macarrão cru
+  assert.equal(planPadrao.carbBreakdown.equivFullPeriod.macarraoCruG, 532);
+  // 1330g / 0.90 = 1478g (1.48 kg) batata-doce c/ casca
+  assert.equal(planPadrao.carbBreakdown.equivFullPeriod.batataDoceCruaG, 1478);
+  assert.equal(planPadrao.carbBreakdown.equivFullPeriod.batataDoceCruaKgStr, '1.48');
+
+  // 2. Modo 100% Macarrão (7 dias) substitui o arroz por macarrão na lista de compras
+  const planSoMac = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['arroz'], null, null, { mode: 'so_macarrao' });
+  assert.equal(planSoMac.totaisInNatura.arrozCruG, 0);
+  assert.equal(planSoMac.totaisInNatura.macarraoCruG, 532);
+  assert.equal(planSoMac.shoppingItems.length, 1);
+  assert.equal(planSoMac.shoppingItems[0].name, 'Macarrão in natura');
+  assert.equal(planSoMac.shoppingItems[0].quantity, '2 pct'); // 532g -> 2 pacotes de 500g
+
+  // 3. Modo 100% Batata-Doce (7 dias) substitui o arroz por batata-doce
+  const planSoBatata = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['arroz'], null, null, { mode: 'so_batata_doce' });
+  assert.equal(planSoBatata.totaisInNatura.arrozCruG, 0);
+  assert.equal(planSoBatata.totaisInNatura.batataDoceCruaG, 1478);
+  assert.equal(planSoBatata.shoppingItems.length, 1);
+  assert.equal(planSoBatata.shoppingItems[0].name, 'Batata-Doce in natura');
+  assert.equal(planSoBatata.shoppingItems[0].quantity, '1.48 kg');
+
+  // 4. Modo Misto (7 dias = 3d Arroz, 2d Macarrão, 2d Batata-Doce) gera os 3 itens na lista
+  const splitMisto = resolveCarbDaysSplit(7, { mode: 'misto' });
+  assert.equal(splitMisto.arrozDays, 3);
+  assert.equal(splitMisto.macarraoDays, 2);
+  assert.equal(splitMisto.batataDoceDays, 2);
+
+  const planMisto = calculateMarmitasPlan(7, 'completo', DEFAULT_NUTRITION_MEALS, COOKING_FACTORS, 'casal', ['arroz'], null, null, { mode: 'misto' });
+  assert.equal(planMisto.shoppingItems.length, 3);
+  assert.ok(planMisto.shoppingItems.some(i => i.name === 'Arroz in natura'));
+  assert.ok(planMisto.shoppingItems.some(i => i.name === 'Macarrão in natura'));
+  assert.ok(planMisto.shoppingItems.some(i => i.name === 'Batata-Doce in natura'));
+
+  // 5. Renderização da UI inclui a linha comparativa e os botões de substituição
+  const ui = await import('../js/ui.js');
+  let mockHtml = '';
+  globalThis.document = {
+    getElementById: (id) => (id === 'marmitas-main-view'
+      ? { set innerHTML(v) { mockHtml = v; }, get innerHTML() { return mockHtml; } }
+      : null)
+  };
+  ui.renderMarmitasTab({}, 'casal', 7, 'completo');
+  assert.ok(mockHtml.includes('🍚 Arroz 602g • 🍝 Macarrão 532g • 🍠 Batata-Doce 1.48kg'));
+  assert.ok(mockHtml.includes('data-marmitas-carb-mode="so_macarrao"'));
+  assert.ok(mockHtml.includes('data-marmitas-carb-mode="so_batata_doce"'));
+  assert.ok(mockHtml.includes('data-marmitas-carb-step="macarrao:1"'));
+  assert.ok(mockHtml.includes('data-marmitas-carb-step="batata_doce:1"'));
+});
+
 

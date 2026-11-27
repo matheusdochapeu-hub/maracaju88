@@ -830,10 +830,84 @@ export function resolveMeatDaysSplit(dias = 7, meatSplit = null) {
 }
 
 /**
- * Calcula o planejamento completo de compras e marmitas para N dias (ex: 3, 7, 15, 30 dias),
- * permite filtrar por grupos específicos e suporta divisão de carnes por tipo (Bovina, Frango, Suína).
+ * Calcula a distribuição de dias entre Arroz, Macarrão e Batata-Doce para o período selecionado.
+ * Presets:
+ * - 'padrao': 100% Arroz (fator padrão /2.2)
+ * - 'misto': ~3/7 Arroz, ~2/7 Macarrão, ~2/7 Batata-Doce
+ * - 'arroz_macarrao': 50% Arroz, 50% Macarrão
+ * - 'arroz_batata': 50% Arroz, 50% Batata-Doce
+ * - 'so_macarrao': 100% Macarrão (/2.5)
+ * - 'so_batata_doce': 100% Batata-Doce (0.90x c/ casca)
+ * - 'so_arroz': 100% Arroz (/2.2)
+ * - 'custom': usa os dias { arrozDays, macarraoDays, batataDoceDays } informados pelo usuário
  */
-export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEFAULT_NUTRITION_MEALS, factors = COOKING_FACTORS, person = 'casal', selectedItems = null, meatSplitOpt = null, selectedHortifruti = null) {
+export function resolveCarbDaysSplit(dias = 7, carbSplit = null) {
+  const safeDias = Math.max(1, Math.min(365, Math.round(Number(dias) || 7)));
+  if (!carbSplit || typeof carbSplit !== 'object' || !carbSplit.mode || carbSplit.mode === 'padrao') {
+    return {
+      mode: 'padrao',
+      isSplitActive: false,
+      arrozDays: safeDias,
+      macarraoDays: 0,
+      batataDoceDays: 0,
+      totalDays: safeDias
+    };
+  }
+
+  const mode = carbSplit.mode;
+  let arrozDays = 0;
+  let macarraoDays = 0;
+  let batataDoceDays = 0;
+
+  if (mode === 'misto') {
+    arrozDays = Math.round((safeDias * 3) / 7);
+    batataDoceDays = safeDias >= 3 ? Math.max(1, Math.round((safeDias * 2) / 7)) : 0;
+    macarraoDays = Math.max(0, safeDias - arrozDays - batataDoceDays);
+  } else if (mode === 'arroz_macarrao') {
+    arrozDays = Math.ceil(safeDias / 2);
+    macarraoDays = Math.max(0, safeDias - arrozDays);
+    batataDoceDays = 0;
+  } else if (mode === 'arroz_batata') {
+    arrozDays = Math.ceil(safeDias / 2);
+    macarraoDays = 0;
+    batataDoceDays = Math.max(0, safeDias - arrozDays);
+  } else if (mode === 'so_macarrao') {
+    arrozDays = 0;
+    macarraoDays = safeDias;
+    batataDoceDays = 0;
+  } else if (mode === 'so_batata_doce') {
+    arrozDays = 0;
+    macarraoDays = 0;
+    batataDoceDays = safeDias;
+  } else if (mode === 'so_arroz') {
+    arrozDays = safeDias;
+    macarraoDays = 0;
+    batataDoceDays = 0;
+  } else {
+    arrozDays = Math.max(0, Math.round(Number(carbSplit.arrozDays ?? carbSplit.arroz ?? 0)));
+    macarraoDays = Math.max(0, Math.round(Number(carbSplit.macarraoDays ?? carbSplit.macarrao ?? 0)));
+    batataDoceDays = Math.max(0, Math.round(Number(carbSplit.batataDoceDays ?? carbSplit.batataDoce ?? 0)));
+    if (arrozDays === 0 && macarraoDays === 0 && batataDoceDays === 0) {
+      arrozDays = safeDias;
+    }
+  }
+
+  return {
+    mode,
+    isSplitActive: true,
+    arrozDays,
+    macarraoDays,
+    batataDoceDays,
+    totalDays: arrozDays + macarraoDays + batataDoceDays
+  };
+}
+
+/**
+ * Calcula o planejamento completo de compras e marmitas para N dias (ex: 3, 7, 15, 30 dias),
+ * permite filtrar por grupos específicos e suporta divisão de carnes (Bovina, Frango, Suína)
+ * e substituição/divisão de carboidratos (Arroz, Macarrão, Batata-Doce).
+ */
+export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEFAULT_NUTRITION_MEALS, factors = COOKING_FACTORS, person = 'casal', selectedItems = null, meatSplitOpt = null, selectedHortifruti = null, carbSplitOpt = null) {
   const safeDias = Math.max(1, Math.min(365, Math.round(Number(dias) || 7)));
   const daily = getDailyNutritionSummary(meals, factors, person);
   const isAlmocoOnly = escopo === 'almoco';
@@ -896,9 +970,22 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
     }
   };
 
-  // Arroz, Feijão e opcionais do almoço (Macarrão, Batata-Doce, Legumes)
-  const arrozProntoG = daily.prontoDiario.arrozAlmocoProntoG * safeDias;
-  const arrozCruG = daily.inNaturaDiario.arrozCruG * safeDias;
+  // Arroz, Feijão e substituição/divisão de carboidrato do almoço (Arroz, Macarrão, Batata-Doce)
+  const arrozDiv = factors.arrozCruDiv || 2.2;
+  const macDiv = factors.macarraoCruDiv || 2.5;
+  const batRend = factors.batataDoceBrutaRend || 0.90;
+
+  const cSplit = resolveCarbDaysSplit(safeDias, carbSplitOpt);
+  const dailyCarboBaseProntoG = (daily.prontoDiario.arrozAlmocoProntoG || 0)
+    + (daily.prontoDiario.macarraoAlmocoProntoG || 0)
+    + (daily.prontoDiario.batataDoceAlmocoProntaG || 0);
+
+  const arrozProntoG = cSplit.isSplitActive
+    ? (dailyCarboBaseProntoG * cSplit.arrozDays)
+    : (daily.prontoDiario.arrozAlmocoProntoG * safeDias);
+  const arrozCruG = cSplit.isSplitActive
+    ? Math.round(arrozProntoG / arrozDiv)
+    : (daily.inNaturaDiario.arrozCruG * safeDias);
   const arrozCruKg = (arrozCruG / 1000).toFixed(2);
   const arrozPacotes1Kg = arrozCruG > 0 ? Math.ceil(arrozCruG / 1000) : 0;
 
@@ -907,12 +994,62 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
   const feijaoCruKg = (feijaoCruG / 1000).toFixed(2);
   const feijaoPacotes1Kg = feijaoCruG > 0 ? Math.ceil(feijaoCruG / 1000) : 0;
 
-  const macarraoProntoG = (daily.prontoDiario.macarraoAlmocoProntoG || 0) * safeDias;
-  const macarraoCruG = (daily.inNaturaDiario.macarraoCruG || 0) * safeDias;
-  const batataDoceProntaG = (daily.prontoDiario.batataDoceAlmocoProntaG || 0) * safeDias;
-  const batataDoceCruaG = (daily.inNaturaDiario.batataDoceCruaG || 0) * safeDias;
+  const macarraoProntoG = cSplit.isSplitActive
+    ? (dailyCarboBaseProntoG * cSplit.macarraoDays)
+    : ((daily.prontoDiario.macarraoAlmocoProntoG || 0) * safeDias);
+  const macarraoCruG = cSplit.isSplitActive
+    ? Math.round(macarraoProntoG / macDiv)
+    : ((daily.inNaturaDiario.macarraoCruG || 0) * safeDias);
+
+  const batataDoceProntaG = cSplit.isSplitActive
+    ? (dailyCarboBaseProntoG * cSplit.batataDoceDays)
+    : ((daily.prontoDiario.batataDoceAlmocoProntaG || 0) * safeDias);
+  const batataDoceCruaG = cSplit.isSplitActive
+    ? Math.round(batataDoceProntaG / batRend)
+    : ((daily.inNaturaDiario.batataDoceCruaG || 0) * safeDias);
+
   const legumesProntoG = (daily.prontoDiario.legumesAlmocoProntoG || 0) * safeDias;
   const legumesCruG = (daily.inNaturaDiario.legumesCruG || 0) * safeDias;
+
+  const fullPeriodCarboProntoG = dailyCarboBaseProntoG * safeDias;
+  const equivArrozCruG = daily.inNaturaDiario.arrozCruG > 0
+    ? (daily.inNaturaDiario.arrozCruG * safeDias)
+    : Math.round(fullPeriodCarboProntoG / arrozDiv);
+  const equivMacarraoCruG = Math.round(fullPeriodCarboProntoG / macDiv);
+  const equivBatataCruaG = Math.round(fullPeriodCarboProntoG / batRend);
+
+  const carbBreakdown = {
+    mode: cSplit.mode,
+    isSplitActive: cSplit.isSplitActive,
+    totalDays: cSplit.totalDays,
+    totalProntoG: arrozProntoG + macarraoProntoG + batataDoceProntaG,
+    totalCruG: arrozCruG + macarraoCruG + batataDoceCruaG,
+    equivFullPeriod: {
+      arrozCruG: equivArrozCruG,
+      macarraoCruG: equivMacarraoCruG,
+      batataDoceCruaG: equivBatataCruaG,
+      batataDoceCruaKgStr: (equivBatataCruaG / 1000).toFixed(2)
+    },
+    arroz: {
+      days: cSplit.arrozDays,
+      prontoG: arrozProntoG,
+      cruG: arrozCruG,
+      pacotes1Kg: arrozPacotes1Kg
+    },
+    macarrao: {
+      days: cSplit.macarraoDays,
+      prontoG: macarraoProntoG,
+      cruG: macarraoCruG,
+      pacotes500g: macarraoCruG > 0 ? Math.max(1, Math.ceil(macarraoCruG / 500)) : 0
+    },
+    batataDoce: {
+      days: cSplit.batataDoceDays,
+      prontaG: batataDoceProntaG,
+      cruaG: batataDoceCruaG,
+      cruaKg: parseFloat((batataDoceCruaG / 1000).toFixed(2)),
+      cruaKgStr: (batataDoceCruaG / 1000).toFixed(2)
+    }
+  };
 
   // Outros itens (se escopo completo)
   const paes = isAlmocoOnly ? 0 : daily.prontoDiario.paesTotal * safeDias;
@@ -977,39 +1114,42 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
   }
 
   if (arrozCruG > 0) {
+    const arrozDiasVal = cSplit.isSplitActive ? cSplit.arrozDays : safeDias;
     allShoppingItems.push({
       groupKey: 'arroz',
       title: `Arroz in natura (${arrozPacotes1Kg} pct de 1kg)`,
       name: `Arroz in natura`,
       category: 'mercado',
       quantity: `${arrozPacotes1Kg} kg`,
-      notes: `Consumo exato: ${arrozCruG}g cru para ${safeDias} ${safeDias === 1 ? 'dia' : 'dias'} de marmita (${arrozProntoG}g pronto).`,
+      notes: `Consumo exato: ${arrozCruG}g cru para ${arrozDiasVal} ${arrozDiasVal === 1 ? 'dia' : 'dias'} de marmita (${arrozProntoG}g pronto).`,
       estimatedUnitPrice: 6.50
     });
   }
 
   if (macarraoCruG > 0) {
     const pct500 = Math.max(1, Math.ceil(macarraoCruG / 500));
+    const macDiasVal = cSplit.isSplitActive ? cSplit.macarraoDays : safeDias;
     allShoppingItems.push({
       groupKey: 'arroz',
       title: `Macarrão in natura (${macarraoCruG}g / ~${pct500} pct 500g)`,
       name: `Macarrão in natura`,
       category: 'mercado',
       quantity: `${pct500} pct`,
-      notes: `Consumo exato: ${macarraoCruG}g cru para ${safeDias} ${safeDias === 1 ? 'dia' : 'dias'} (${macarraoProntoG}g cozido).`,
+      notes: `Consumo exato: ${macarraoCruG}g cru para ${macDiasVal} ${macDiasVal === 1 ? 'dia' : 'dias'} (${macarraoProntoG}g cozido).`,
       estimatedUnitPrice: 5.50
     });
   }
 
   if (batataDoceCruaG > 0) {
     const batKg = (batataDoceCruaG / 1000).toFixed(2);
+    const batDiasVal = cSplit.isSplitActive ? cSplit.batataDoceDays : safeDias;
     allShoppingItems.push({
       groupKey: 'arroz',
       title: `Batata-Doce in natura (${batKg} kg)`,
       name: `Batata-Doce in natura`,
       category: 'hortifruti',
       quantity: `${batKg} kg`,
-      notes: `Compra com casca: ${batataDoceCruaG}g para render ${batataDoceProntaG}g cozida em ${safeDias} ${safeDias === 1 ? 'dia' : 'dias'}.`,
+      notes: `Compra com casca: ${batataDoceCruaG}g para render ${batataDoceProntaG}g cozida em ${batDiasVal} ${batDiasVal === 1 ? 'dia' : 'dias'}.`,
       estimatedUnitPrice: 6.00
     });
   }
@@ -1183,6 +1323,7 @@ export function calculateMarmitasPlan(dias = 7, escopo = 'completo', meals = DEF
     dias: safeDias,
     escopo,
     meatBreakdown,
+    carbBreakdown,
     hortifrutiItems,
     totaisProntos: {
       carneProntaG,
@@ -1228,11 +1369,13 @@ export function calculateMarmitasProductionPlan({
   meals = DEFAULT_NUTRITION_MEALS,
   factors = COOKING_FACTORS,
   meatSplit = null,
+  carbSplit = null,
   person = 'casal'
 } = {}) {
   const safeDias = Math.max(1, Math.min(365, Math.round(Number(dias) || 7)));
   const split = resolveMeatDaysSplit(safeDias, meatSplit);
   const effDays = split.isSplitActive ? Math.max(1, split.totalDays) : safeDias;
+  const cSplit = resolveCarbDaysSplit(effDays, carbSplit);
 
   const bovMult = factors.carneVermelhaCruaMult || factors.carneCruaMult || (900 / 540);
   const frangoMult = factors.frangoCruaMult || (1 / 0.72);
@@ -1251,6 +1394,7 @@ export function calculateMarmitasProductionPlan({
     const macarraoG = Number(alm.macarraoProntoG) || 0;
     const batataDoceG = Number(alm.batataDoceProntaG) || 0;
     const legumesG = Number(alm.legumesProntoG) || 0;
+    const carboBaseG = arrozG + macarraoG + batataDoceG;
     const totalPoteG = arrozG + feijaoG + carneG + macarraoG + batataDoceG + legumesG;
     const carneNoiteG = Number(noi.carneProntaG) || 0;
 
@@ -1265,6 +1409,7 @@ export function calculateMarmitasProductionPlan({
         carneG,
         macarraoG,
         batataDoceG,
+        carboBaseG,
         legumesG,
         totalPoteG
       },
@@ -1272,6 +1417,11 @@ export function calculateMarmitasProductionPlan({
         bovina: split.bovinaDays,
         frango: split.frangoDays,
         suina: split.suinaDays
+      },
+      potesPorCarbo: {
+        arroz: cSplit.arrozDays,
+        macarrao: cSplit.macarraoDays,
+        batataDoce: cSplit.batataDoceDays
       },
       carneNoiteDiariaG: carneNoiteG
     };
@@ -1294,17 +1444,22 @@ export function calculateMarmitasProductionPlan({
   const dailyFeijaoG = activePersons.reduce((acc, p) => acc + p.porPote.feijaoG, 0);
   const dailyMacarraoG = activePersons.reduce((acc, p) => acc + p.porPote.macarraoG, 0);
   const dailyBatataDoceG = activePersons.reduce((acc, p) => acc + p.porPote.batataDoceG, 0);
+  const dailyCarboBaseG = activePersons.reduce((acc, p) => acc + p.porPote.carboBaseG, 0);
   const dailyLegumesG = activePersons.reduce((acc, p) => acc + p.porPote.legumesG, 0);
 
+  const fornadaArrozProntoG = cSplit.isSplitActive ? (dailyCarboBaseG * cSplit.arrozDays) : (dailyArrozG * effDays);
+  const fornadaMacarraoProntoG = cSplit.isSplitActive ? (dailyCarboBaseG * cSplit.macarraoDays) : (dailyMacarraoG * effDays);
+  const fornadaBatataDoceProntaG = cSplit.isSplitActive ? (dailyCarboBaseG * cSplit.batataDoceDays) : (dailyBatataDoceG * effDays);
+
   const fornada = {
-    arrozProntoG: dailyArrozG * effDays,
-    arrozCruG: Math.round((dailyArrozG * effDays) / arrozDiv),
+    arrozProntoG: fornadaArrozProntoG,
+    arrozCruG: Math.round(fornadaArrozProntoG / arrozDiv),
     feijaoProntoG: dailyFeijaoG * effDays,
     feijaoCruG: Math.round((dailyFeijaoG * effDays) / feijaoDiv),
-    macarraoProntoG: dailyMacarraoG * effDays,
-    macarraoCruG: Math.round((dailyMacarraoG * effDays) / macDiv),
-    batataDoceProntaG: dailyBatataDoceG * effDays,
-    batataDoceCruaG: Math.round((dailyBatataDoceG * effDays) / batRend),
+    macarraoProntoG: fornadaMacarraoProntoG,
+    macarraoCruG: Math.round(fornadaMacarraoProntoG / macDiv),
+    batataDoceProntaG: fornadaBatataDoceProntaG,
+    batataDoceCruaG: Math.round(fornadaBatataDoceProntaG / batRend),
     legumesProntoG: dailyLegumesG * effDays,
     carneAlmocoProntaG: dailyAlmocoCarneG * effDays,
     carneNoiteProntaG: dailyNoiteCarneG * effDays,
@@ -1329,6 +1484,12 @@ export function calculateMarmitasProductionPlan({
   };
   fornada.carneAlmocoCruaTotalG = fornada.bovina.almocoCruaG + fornada.frango.almocoCruaG + fornada.suina.almocoCruaG;
 
+  const carboTitleParts = [
+    fornada.arrozProntoG > 0 ? `${fornada.arrozCruG}g arroz cru → ~${fornada.arrozProntoG}g cozido` : '',
+    fornada.macarraoProntoG > 0 ? `${fornada.macarraoCruG}g macarrão cru → ~${fornada.macarraoProntoG}g cozido` : '',
+    fornada.batataDoceProntaG > 0 ? `${fornada.batataDoceCruaG}g batata-doce → ~${fornada.batataDoceProntaG}g cozida` : ''
+  ].filter(Boolean);
+
   const checklistSteps = [
     {
       id: 'prep_carnes_descongelar',
@@ -1343,11 +1504,11 @@ export function calculateMarmitasProductionPlan({
     {
       id: 'prep_arroz_carbo',
       icon: '🍚',
-      title: `Cozinhar base de carboidrato (${fornada.arrozCruG}g arroz cru → ~${fornada.arrozProntoG}g cozido)`,
+      title: `Cozinhar base de carboidrato (${carboTitleParts.join(' + ') || '0g'})`,
       detail: [
-        fornada.arrozProntoG > 0 ? `Arroz: ${matheusPot.porPote.arrozG}g/pote Matheus • ${scarletPot.porPote.arrozG}g/pote Scarlet` : '',
-        fornada.macarraoProntoG > 0 ? `🍝 Macarrão: ${fornada.macarraoCruG}g cru → ${fornada.macarraoProntoG}g cozido` : '',
-        fornada.batataDoceProntaG > 0 ? `🍠 Batata-doce: ${fornada.batataDoceCruaG}g bruta → ${fornada.batataDoceProntaG}g cozida` : ''
+        fornada.arrozProntoG > 0 ? `🍚 Arroz (${cSplit.arrozDays}d): ${matheusPot.porPote.carboBaseG}g/pote Matheus • ${scarletPot.porPote.carboBaseG}g/pote Scarlet` : '',
+        fornada.macarraoProntoG > 0 ? `🍝 Macarrão (${cSplit.macarraoDays}d): ${fornada.macarraoCruG}g cru → ${fornada.macarraoProntoG}g cozido` : '',
+        fornada.batataDoceProntaG > 0 ? `🍠 Batata-doce (${cSplit.batataDoceDays}d): ${fornada.batataDoceCruaG}g bruta → ${fornada.batataDoceProntaG}g cozida` : ''
       ].filter(Boolean).join(' • ') || 'Carboidrato zerado'
     },
     {
