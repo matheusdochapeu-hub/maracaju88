@@ -1,5 +1,5 @@
 import { deduplicatePets, getPetAvatarUrl } from './pets.js';
-import { mergeRotinaMatheusState } from './rotina-matheus.js';
+import { mergeRotinaMatheusState, CATALOGO_PRODUTOS_ROTINA } from './rotina-matheus.js';
 import { DEFAULT_ROOM_CATEGORIES } from './categories.js';
 import { getMonthlyBenefitDetails, getCurrentBenefitCycleKey } from './benefits.js';
 import {
@@ -8,6 +8,28 @@ import {
   filterDeletedFromState,
   normalizePurchasesInState
 } from './storage.js';
+
+const DEFAULT_ROTINA_ARSENAL_KEYS = new Set(
+  (Array.isArray(CATALOGO_PRODUTOS_ROTINA) ? CATALOGO_PRODUTOS_ROTINA : []).map(p => p && p.key).filter(Boolean)
+);
+
+function getRecordTimestamp(rec) {
+  if (!rec || typeof rec !== 'object') return 0;
+  const raw = rec.updatedAt || rec.boughtAt || rec.createdAt;
+  if (!raw) return 0;
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  const ts = Date.parse(String(raw));
+  return Number.isFinite(ts) ? ts : 0;
+}
+
+function mergeRecordByTimestamp(baseItem, incomingItem) {
+  const baseTs = getRecordTimestamp(baseItem);
+  const incTs = getRecordTimestamp(incomingItem);
+  if (baseTs > 0 && incTs > 0 && baseTs !== incTs) {
+    return baseTs > incTs ? { ...incomingItem, ...baseItem } : { ...baseItem, ...incomingItem };
+  }
+  return { ...baseItem, ...incomingItem };
+}
 // ============================================================
 //  MARACAJU - GOOGLE SHEETS SYNC & BACKUP CLIENT
 // ============================================================
@@ -53,7 +75,7 @@ export async function testSheetsConnection(url, token, timeoutMs = 10000) {
   }
 }
 
-export async function backupToSheets(state, overrideUrl = null, overrideToken = null, timeoutMs = 15000) {
+export async function backupToSheets(state, overrideUrl = null, overrideToken = null, timeoutMs = 15000, options = {}) {
   const url = overrideUrl || (state && state.settings && state.settings.sheetsUrl);
   const token = overrideToken !== null ? overrideToken : (state && state.settings && state.settings.sheetsToken);
 
@@ -177,7 +199,19 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
       };
     })(),
     categories: state.categories || {},
-    rotinaMatheus: state.rotinaMatheus || undefined,
+    rotinaMatheus: state.rotinaMatheus ? {
+      dias: state.rotinaMatheus.dias || {},
+      ds: state.rotinaMatheus.ds || {},
+      dsUpdatedAt: state.rotinaMatheus.dsUpdatedAt || {},
+      subtab: 'hoje',
+      updatedAt: state.rotinaMatheus.updatedAt || new Date().toISOString(),
+      ocrMap: state.rotinaMatheus.ocrMap || {},
+      autoRotinaFotos: state.rotinaMatheus.autoRotinaFotos !== false,
+      // Envia apenas produtos customizados detectados via OCR (os 26 padrão já estão no código)
+      arsenal: Array.isArray(state.rotinaMatheus.arsenal)
+        ? state.rotinaMatheus.arsenal.filter(p => p && p.key && !DEFAULT_ROTINA_ARSENAL_KEYS.has(p.key))
+        : []
+    } : undefined,
     userPasswords: state.userPasswords || {},
     settings: {
       benefits: (state.settings && state.settings.benefits) ? state.settings.benefits : undefined,
@@ -186,27 +220,30 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
     }
   };
 
-  // Se o JSON ainda ultrapassar 44.000 caracteres (limite de 50.000 por célula do Google Sheets),
-  // compacta progressivamente campos secundários mantendo nfeKey e itens das compras preservados.
+  // O Apps Script grava Backup_JSON fatiado em múltiplas colunas de 45.000 caracteres cada.
+  // Só enxugamos campos secundários caso o payload passe de 88.000 caracteres (ou se forçado).
+  const maxChars = (options && options.maxPayloadChars) || 88000;
   const buildPayload = (data) => ({
     action: "backup",
     token: token ? token.trim() : "",
     data
   });
   let payload = buildPayload(compactData);
+  let payloadStr = JSON.stringify(payload);
 
   // Passo 1: enxuga catálogo transitório e texto bruto da nutrição
-  if (JSON.stringify(payload).length > 44000) {
+  if (payloadStr.length > maxChars) {
     compactData.catalog = [];
     if (compactData.nutrition) {
       if (compactData.nutrition.matheus) compactData.nutrition.matheus.rawText = '';
       if (compactData.nutrition.scarlet) compactData.nutrition.scarlet.rawText = '';
     }
     payload = buildPayload(compactData);
+    payloadStr = JSON.stringify(payload);
   }
 
   // Passo 2: compacta campos redundantes em comprasRegistros mantendo nfeKey e lista de itens
-  if (JSON.stringify(payload).length > 44000) {
+  if (payloadStr.length > maxChars) {
     compactData.comprasRegistros = (compactData.comprasRegistros || []).map(r => ({
       id: r.id,
       marketName: r.marketName || r.establishment || r.estabelecimento || '',
@@ -228,23 +265,26 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
       updatedAt: r.updatedAt
     }));
     payload = buildPayload(compactData);
+    payloadStr = JSON.stringify(payload);
   }
 
   // Passo 3: limita histórico antigo de tarefas (> 45 dias) para priorizar itens de notas fiscais
-  if (JSON.stringify(payload).length > 44000 && compactData.history && typeof compactData.history === 'object') {
+  if (payloadStr.length > maxChars && compactData.history && typeof compactData.history === 'object') {
     const recentDates = Object.keys(compactData.history).sort().slice(-45);
     const trimmedHistory = {};
     recentDates.forEach(d => { trimmedHistory[d] = compactData.history[d]; });
     compactData.history = trimmedHistory;
     payload = buildPayload(compactData);
+    payloadStr = JSON.stringify(payload);
   }
 
   // Passo 4 (último recurso): mantém itens nas 30 compras mais recentes e enxuga apenas as mais antigas
-  if (JSON.stringify(payload).length > 44000) {
+  if (payloadStr.length > maxChars) {
     compactData.comprasRegistros = (compactData.comprasRegistros || []).map((r, idx) => (
       idx < 30 ? r : { ...r, items: [] }
     ));
     payload = buildPayload(compactData);
+    payloadStr = JSON.stringify(payload);
   }
 
   const controller = new AbortController();
@@ -252,14 +292,18 @@ export async function backupToSheets(state, overrideUrl = null, overrideToken = 
 
   try {
     // Usamos text/plain para evitar bloqueios de CORS pré-flight (OPTIONS) no Apps Script
-    const response = await fetch(url.trim(), {
+    const fetchOpts = {
       method: "POST",
       headers: {
         "Content-Type": "text/plain;charset=utf-8"
       },
-      body: JSON.stringify(payload),
+      body: payloadStr,
       signal: controller.signal
-    });
+    };
+    if (options && options.keepalive && payloadStr.length < 60000) {
+      fetchOpts.keepalive = true;
+    }
+    const response = await fetch(url.trim(), fetchOpts);
 
     clearTimeout(timer);
 
@@ -389,7 +433,8 @@ export function applyCloudBackup(currentState, cloudData) {
           frequency: freq,
           weekDays: Array.isArray(t.weekDays) ? t.weekDays : (t.frequency === 'dias_alternados' ? [1, 3, 5] : []),
           notes: t.notes || '',
-          createdAt: t.createdAt || new Date().toISOString()
+          createdAt: t.createdAt || new Date().toISOString(),
+          ...(t.updatedAt ? { updatedAt: t.updatedAt } : {})
         };
       };
 
@@ -402,10 +447,15 @@ export function applyCloudBackup(currentState, cloudData) {
         const clean = sanitizeTask(item);
         if (clean && clean.id) {
           const existing = map.get(clean.id);
-          if (existing && Array.isArray(existing.weekDays) && existing.weekDays.length > 0 && (!clean.weekDays || clean.weekDays.length === 0)) {
-            clean.weekDays = existing.weekDays;
+          if (!existing) {
+            map.set(clean.id, clean);
+          } else {
+            const mergedTask = mergeRecordByTimestamp(existing, clean);
+            if (Array.isArray(existing.weekDays) && existing.weekDays.length > 0 && (!mergedTask.weekDays || mergedTask.weekDays.length === 0)) {
+              mergedTask.weekDays = existing.weekDays;
+            }
+            map.set(clean.id, mergedTask);
           }
-          map.set(clean.id, clean);
         }
       });
       return Array.from(map.values());
@@ -413,12 +463,34 @@ export function applyCloudBackup(currentState, cloudData) {
     history: (() => {
       const localHist = (safeCurrent.history && typeof safeCurrent.history === 'object') ? safeCurrent.history : {};
       const cloudHist = (cloudData.history && typeof cloudData.history === 'object') ? cloudData.history : {};
-      const mergedHist = { ...localHist };
-      for (const [dateKey, dayData] of Object.entries(cloudHist)) {
-        if (typeof dayData === 'object' && dayData !== null) {
-          mergedHist[dateKey] = { ...(mergedHist[dateKey] || {}), ...dayData };
+      const mergedHist = {};
+      const allDates = new Set([...Object.keys(localHist), ...Object.keys(cloudHist)]);
+      allDates.forEach(dateKey => {
+        const lDay = (localHist[dateKey] && typeof localHist[dateKey] === 'object') ? localHist[dateKey] : {};
+        const cDay = (cloudHist[dateKey] && typeof cloudHist[dateKey] === 'object') ? cloudHist[dateKey] : {};
+        const dayOut = {};
+        const allTaskIds = new Set([...Object.keys(lDay), ...Object.keys(cDay)]);
+        allTaskIds.forEach(tId => {
+          const lEntry = lDay[tId];
+          const cEntry = cDay[tId];
+          if (lEntry && !cEntry) {
+            dayOut[tId] = lEntry;
+          } else if (cEntry && !lEntry) {
+            dayOut[tId] = cEntry;
+          } else if (lEntry && cEntry) {
+            const lTs = getRecordTimestamp(lEntry);
+            const cTs = getRecordTimestamp(cEntry);
+            if (lTs > 0 || cTs > 0) {
+              dayOut[tId] = lTs > cTs ? lEntry : cEntry;
+            } else {
+              dayOut[tId] = { ...lEntry, ...cEntry };
+            }
+          }
+        });
+        if (Object.keys(dayOut).length > 0) {
+          mergedHist[dateKey] = dayOut;
         }
-      }
+      });
       return mergedHist;
     })(),
     carro: (() => {
@@ -434,11 +506,11 @@ export function applyCloudBackup(currentState, cloudData) {
           if (!existing) {
             map.set(item.id, item);
           } else {
-            const mergedItem = { ...existing, ...item };
-            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+            const mergedItem = mergeRecordByTimestamp(existing, item);
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!mergedItem.photos || mergedItem.photos.length === 0)) {
               mergedItem.photos = existing.photos;
             }
-            if (existing.photoUrl && !item.photoUrl) {
+            if (existing.photoUrl && !mergedItem.photoUrl) {
               mergedItem.photoUrl = existing.photoUrl;
             }
             map.set(item.id, mergedItem);
@@ -460,11 +532,11 @@ export function applyCloudBackup(currentState, cloudData) {
           if (!existing) {
             map.set(item.id, item);
           } else {
-            const mergedItem = { ...existing, ...item };
-            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+            const mergedItem = mergeRecordByTimestamp(existing, item);
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!mergedItem.photos || mergedItem.photos.length === 0)) {
               mergedItem.photos = existing.photos;
             }
-            if (existing.photoUrl && !item.photoUrl) {
+            if (existing.photoUrl && !mergedItem.photoUrl) {
               mergedItem.photoUrl = existing.photoUrl;
             }
             map.set(item.id, mergedItem);
@@ -486,14 +558,14 @@ export function applyCloudBackup(currentState, cloudData) {
           if (!existing) {
             map.set(item.id, item);
           } else {
-            const mergedItem = { ...existing, ...item };
-            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+            const mergedItem = mergeRecordByTimestamp(existing, item);
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!mergedItem.photos || mergedItem.photos.length === 0)) {
               mergedItem.photos = existing.photos;
             }
-            if (existing.photoUrl && !item.photoUrl) {
+            if (existing.photoUrl && !mergedItem.photoUrl) {
               mergedItem.photoUrl = existing.photoUrl;
             }
-            if (existing.imageUrl && !item.imageUrl) {
+            if (existing.imageUrl && !mergedItem.imageUrl) {
               mergedItem.imageUrl = existing.imageUrl;
             }
             map.set(item.id, mergedItem);
@@ -515,11 +587,11 @@ export function applyCloudBackup(currentState, cloudData) {
           if (!existing) {
             map.set(item.id, item);
           } else {
-            const mergedItem = { ...existing, ...item };
-            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+            const mergedItem = mergeRecordByTimestamp(existing, item);
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!mergedItem.photos || mergedItem.photos.length === 0)) {
               mergedItem.photos = existing.photos;
             }
-            if (existing.photoUrl && !item.photoUrl) {
+            if (existing.photoUrl && !mergedItem.photoUrl) {
               mergedItem.photoUrl = existing.photoUrl;
             }
             map.set(item.id, mergedItem);
@@ -541,12 +613,12 @@ export function applyCloudBackup(currentState, cloudData) {
           if (!existing) {
             map.set(item.id, item);
           } else {
-            const mergedItem = { ...existing, ...item };
+            const mergedItem = mergeRecordByTimestamp(existing, item);
             // PRESERVAÇÃO DE FOTOS LOCAIS DO ITEM DE MERCADO
-            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!item.photos || item.photos.length === 0)) {
+            if (Array.isArray(existing.photos) && existing.photos.length > 0 && (!mergedItem.photos || mergedItem.photos.length === 0)) {
               mergedItem.photos = existing.photos;
             }
-            if (existing.imageUrl && !item.imageUrl) {
+            if (existing.imageUrl && !mergedItem.imageUrl) {
               mergedItem.imageUrl = existing.imageUrl;
             }
             map.set(item.id, mergedItem);
@@ -563,37 +635,45 @@ export function applyCloudBackup(currentState, cloudData) {
       const map = new Map();
       // 1. Carrega registros vindos da nuvem
       cloudList.forEach(p => { if (p && p.id) map.set(p.id, p); });
-      // 2. Mescla registros locais (preservando lançamentos novos, fotos e edições recentes de pagamento/totais)
+      // 2. Mescla registros locais (comparando updatedAt para que edições mais recentes feitas em outro aparelho vençam)
       localList.forEach(localItem => {
         if (localItem && localItem.id) {
           const cloudItem = map.get(localItem.id);
           if (!cloudItem) {
             map.set(localItem.id, localItem);
           } else {
-            // Mescla itens internos preservando fotos em cada item se existirem
-            const mergedItems = Array.isArray(localItem.items) && localItem.items.length > 0
-              ? localItem.items.map((it, idx) => {
-                  const cloudIt = (Array.isArray(cloudItem.items) && cloudItem.items[idx]) ? cloudItem.items[idx] : {};
-                  const itMerged = { ...cloudIt, ...it };
-                  if (Array.isArray(it.photos) && it.photos.length > 0 && (!cloudIt.photos || cloudIt.photos.length === 0)) {
-                    itMerged.photos = it.photos;
-                  }
-                  return itMerged;
-                })
-              : (Array.isArray(cloudItem.items) ? cloudItem.items : []);
+            const localTs = getRecordTimestamp(localItem);
+            const cloudTs = getRecordTimestamp(cloudItem);
+            const cloudIsNewer = cloudTs > 0 && cloudTs > localTs;
+            const primary = cloudIsNewer ? cloudItem : localItem;
+            const secondary = cloudIsNewer ? localItem : cloudItem;
+
+            const primaryItems = Array.isArray(primary.items) && primary.items.length > 0
+              ? primary.items
+              : (Array.isArray(secondary.items) ? secondary.items : []);
+            const secondaryItems = Array.isArray(secondary.items) ? secondary.items : [];
+
+            const mergedItems = primaryItems.map((it, idx) => {
+              const secIt = secondaryItems[idx] || {};
+              const itMerged = { ...secIt, ...it };
+              if (Array.isArray(secIt.photos) && secIt.photos.length > 0 && (!itMerged.photos || itMerged.photos.length === 0)) {
+                itMerged.photos = secIt.photos;
+              }
+              return itMerged;
+            });
 
             const mergedItem = {
-              ...cloudItem,
-              ...localItem,
+              ...secondary,
+              ...primary,
               items: mergedItems,
-              paymentMethod: localItem.paymentMethod || cloudItem.paymentMethod || 'va',
-              total: (localItem.total !== undefined && localItem.total !== null) ? localItem.total : cloudItem.total,
-              notes: localItem.notes || cloudItem.notes || '',
-              date: localItem.date || cloudItem.date
+              paymentMethod: primary.paymentMethod || secondary.paymentMethod || 'va',
+              total: (primary.total !== undefined && primary.total !== null) ? primary.total : secondary.total,
+              notes: primary.notes !== undefined ? primary.notes : (secondary.notes || ''),
+              date: primary.date || secondary.date
             };
 
             // Preserva fotos do cupom fiscal / comprovante se a nuvem veio sem fotos
-            if (Array.isArray(localItem.photos) && localItem.photos.length > 0 && (!cloudItem.photos || cloudItem.photos.length === 0)) {
+            if (Array.isArray(localItem.photos) && localItem.photos.length > 0 && (!mergedItem.photos || mergedItem.photos.length === 0)) {
               mergedItem.photos = localItem.photos;
             }
 
@@ -759,7 +839,10 @@ export function applyCloudBackup(currentState, cloudData) {
       ...(safeCurrent.userPasswords || {}),
       ...(cloudData.userPasswords || {})
     },
-    rotinaMatheus: mergeRotinaMatheusState(safeCurrent.rotinaMatheus, cloudData.rotinaMatheus),
+    rotinaMatheus: mergeRotinaMatheusState(
+      safeCurrent.rotinaMatheus,
+      cloudData.rotinaMatheus ? { ...cloudData.rotinaMatheus, _isCloudSnapshot: true } : undefined
+    ),
     nutrition: (() => {
       const localN = (safeCurrent.nutrition && typeof safeCurrent.nutrition === 'object') ? safeCurrent.nutrition : {};
       const cloudN = (cloudData.nutrition && typeof cloudData.nutrition === 'object') ? cloudData.nutrition : {};
@@ -835,17 +918,25 @@ export function applyCloudBackup(currentState, cloudData) {
 export function mergeCloudWithLocalPriority(localState, cloudData) {
   if (!cloudData || typeof cloudData !== 'object') return localState;
   const local = localState || {};
+  const taggedCloud = cloudData.rotinaMatheus
+    ? { ...cloudData, rotinaMatheus: { ...cloudData.rotinaMatheus, _isCloudSnapshot: true } }
+    : cloudData;
   // Direção normal (nuvem vence) só para o que já é "local vence" por desenho:
   // compras/notas, ajustes do aparelho e benefícios.
-  const normal = applyCloudBackup(local, cloudData);
+  const normal = applyCloudBackup(local, taggedCloud);
   // Direção invertida: o aparelho vence nos conflitos das demais coleções.
-  const swapped = applyCloudBackup(cloudData, local);
+  const swapped = applyCloudBackup(taggedCloud, local);
+  const preservedSubtab = (local.rotinaMatheus && local.rotinaMatheus.subtab) || 'hoje';
   const merged = {
     ...swapped,
     activeUserId: normal.activeUserId,
     comprasRegistros: normal.comprasRegistros,
+    rotinaMatheus: mergeRotinaMatheusState(local.rotinaMatheus, taggedCloud.rotinaMatheus),
     settings: { ...normal.settings, lastCloudUpdatedAt: (local.settings || {}).lastCloudUpdatedAt }
   };
+  if (merged.rotinaMatheus) {
+    merged.rotinaMatheus.subtab = preservedSubtab;
+  }
   normalizePurchasesInState(merged);
   filterDeletedFromState(merged);
   return merged;

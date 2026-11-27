@@ -239,8 +239,17 @@ function doPost(e) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var now = new Date();
 
-    // 1. Atualiza Aba: Backup_JSON (Snapshot completo para restauração exata)
+    // 1. Atualiza Aba: Backup_JSON (Snapshot completo para restauração exata — prioridade crítica)
     syncBackupJsonSheet(ss, data, now);
+
+    // Se o cliente solicitar modo rápido (fastBackup), retorna imediatamente após gravar Backup_JSON
+    if (payload.fast === true) {
+      return createJsonResponse({
+        status: "success",
+        message: "Backup rápido gravado com sucesso no Google Sheets!",
+        timestamp: now.toISOString()
+      });
+    }
 
     // 2. Atualiza Aba: Resumo_Geral (Gamificação e Placar)
     syncResumoSheet(ss, data, now);

@@ -89,9 +89,11 @@ export function addShoppingItem(state, data, userId = 'matheus') {
 
     if (data.suggestedBy) existing.suggestedBy = data.suggestedBy;
     if (data.notes) existing.notes = data.notes.trim();
+    existing.updatedAt = new Date().toISOString();
     return { item: existing, merged: true };
   }
 
+  const nowIso = new Date().toISOString();
   const item = {
     id: makeId('cmp'),
     name,
@@ -108,7 +110,8 @@ export function addShoppingItem(state, data, userId = 'matheus') {
     addedBy: userId,
     suggestedBy: suggested,
     boughtBy: null,
-    createdAt: new Date().toISOString(),
+    createdAt: nowIso,
+    updatedAt: nowIso,
     boughtAt: null,
     photos: Array.isArray(data.photos) ? data.photos : []
   };
@@ -144,6 +147,7 @@ export function updateShoppingItem(state, id, data) {
 
   if (data.suggestedBy !== undefined) item.suggestedBy = data.suggestedBy;
   if (data.photos !== undefined) item.photos = data.photos;
+  item.updatedAt = new Date().toISOString();
   return item;
 }
 
@@ -152,6 +156,7 @@ export function addPhotoToShoppingItem(state, id, photoUrl) {
   if (!item) return false;
   if (!Array.isArray(item.photos)) item.photos = [];
   item.photos.push(photoUrl);
+  item.updatedAt = new Date().toISOString();
   return true;
 }
 
@@ -159,27 +164,40 @@ export function removePhotoFromShoppingItem(state, id, index) {
   const item = list(state).find(i => i.id === id);
   if (!item || !Array.isArray(item.photos) || index < 0 || index >= item.photos.length) return false;
   item.photos.splice(index, 1);
+  item.updatedAt = new Date().toISOString();
   return true;
 }
 
 export function toggleShoppingItem(state, id, userId = 'matheus') {
   const item = list(state).find(i => i.id === id);
   if (!item) return null;
+  const nowIso = new Date().toISOString();
   item.bought = !item.bought;
   item.boughtBy = item.bought ? userId : null;
-  item.boughtAt = item.bought ? new Date().toISOString() : null;
+  item.boughtAt = item.bought ? nowIso : null;
+  item.updatedAt = nowIso;
   return item;
 }
 
 export function deleteShoppingItem(state, id) {
   const arr = list(state);
   const idx = arr.findIndex(i => i.id === id);
+  if (idx !== -1 && state && state.deletedIds && state.deletedIds.compras) {
+    state.deletedIds.compras[String(id)] = Date.now();
+  }
   return idx !== -1 ? arr.splice(idx, 1)[0] : null;
 }
 
 export function clearBoughtItems(state) {
-  const before = list(state).length;
-  state.compras = list(state).filter(i => !i.bought);
+  const arr = list(state);
+  const before = arr.length;
+  if (state && state.deletedIds && state.deletedIds.compras) {
+    const now = Date.now();
+    arr.forEach(i => {
+      if (i && i.bought && i.id) state.deletedIds.compras[String(i.id)] = now;
+    });
+  }
+  state.compras = arr.filter(i => !i.bought);
   return before - state.compras.length;
 }
 
@@ -259,8 +277,9 @@ export function buildShoppingListExportText(state, format = 'checklist', options
 }// Reabre todos os comprados (útil para reaproveitar a lista do mês anterior)
 export function restoreBoughtItems(state) {
   let count = 0;
+  const nowIso = new Date().toISOString();
   list(state).forEach(i => {
-    if (i.bought) { i.bought = false; i.boughtBy = null; i.boughtAt = null; count++; }
+    if (i.bought) { i.bought = false; i.boughtBy = null; i.boughtAt = null; i.updatedAt = nowIso; count++; }
   });
   return count;
 }
@@ -363,6 +382,7 @@ export function addPhotoToMarketPurchase(state, id, photoUrl) {
   if (!p) return false;
   if (!Array.isArray(p.photos)) p.photos = [];
   p.photos.push(photoUrl);
+  p.updatedAt = new Date().toISOString();
   return true;
 }
 
@@ -370,6 +390,7 @@ export function removePhotoFromMarketPurchase(state, id, index) {
   const p = purchasesList(state).find(item => item.id === id);
   if (!p || !Array.isArray(p.photos) || index < 0 || index >= p.photos.length) return false;
   p.photos.splice(index, 1);
+  p.updatedAt = new Date().toISOString();
   return true;
 }
 
@@ -768,6 +789,7 @@ export function markShoppingItemsAsBought(state, itemIds, userId = 'matheus') {
     if (idSet.has(item.id)) {
       item.bought = true;
       item.boughtAt = now;
+      item.updatedAt = now;
       item.boughtBy = userId;
       count++;
     }
@@ -782,6 +804,12 @@ export function removeShoppingItemsFromList(state, itemIds) {
   if (!Array.isArray(state.compras) || !Array.isArray(itemIds) || itemIds.length === 0) return 0;
   const idSet = new Set(itemIds);
   const before = state.compras.length;
+  if (state && state.deletedIds && state.deletedIds.compras) {
+    const now = Date.now();
+    itemIds.forEach(id => {
+      if (id) state.deletedIds.compras[String(id)] = now;
+    });
+  }
   state.compras = state.compras.filter(item => !idSet.has(item.id));
   return before - state.compras.length;
 }

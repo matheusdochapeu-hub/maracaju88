@@ -385,22 +385,46 @@ window.addEventListener('online', () => {
   if (hasPendingCloudPush()) triggerAutoSyncIfEnabled(true);
 });
 
-// Ao retornar ao aplicativo (desbloqueio de tela no celular ou volta de aba) ou foco na janela, puxa a planilha
+// Sincronização instantânea entre abas abertas no mesmo navegador/aparelho
+window.addEventListener('storage', (e) => {
+  if (!e || e.key !== APP_CONFIG.storageKey || !e.newValue || isApplyingCloudState) return;
+  try {
+    const incoming = JSON.parse(e.newValue);
+    if (incoming && typeof incoming === 'object') {
+      const curSubtab = state && state.rotinaMatheus && state.rotinaMatheus.subtab;
+      state = loadState();
+      if (curSubtab && state.rotinaMatheus) {
+        state.rotinaMatheus.subtab = curSubtab;
+      }
+      if (!isUserBusyInUI()) {
+        refreshAllUI();
+      }
+    }
+  } catch (err) {}
+});
+
+// Ao retornar ao aplicativo (desbloqueio de tela no celular ou volta de aba) ou foco na janela, puxa a planilha.
+// Ao sair/bloquear a tela com alterações pendentes no debounce, dispara o envio imediatamente (keepalive).
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     syncPullFromSheets(true);
+  } else if (document.visibilityState === 'hidden') {
+    flushPendingCloudPushOnHide();
   }
+});
+window.addEventListener('pagehide', () => {
+  flushPendingCloudPushOnHide();
 });
 window.addEventListener('focus', () => {
   syncPullFromSheets(true);
 });
 
-// Sincronização periódica contínua em segundo plano (a cada 30 segundos se visível)
+// Sincronização periódica contínua em segundo plano (a cada 25 segundos se visível)
 setInterval(() => {
   if (document.visibilityState === 'visible' && !isSyncPulling && !autoSyncTimeout && !isPushingToCloud) {
     syncPullFromSheets(true);
   }
-}, 30000);
+}, 25000);
 
 // -------------------------------------------------------------
 // CONTROLE DE ACESSO EXCLUSIVO (Matheus & Scarlet)
@@ -1001,7 +1025,8 @@ function getRotinaMatheusCallbacks() {
 }
 
 function initRotinaMatheusModule() {
-  ensureRotinaMatheusState(state);
+  const rmInit = ensureRotinaMatheusState(state);
+  rmInit.subtab = 'hoje';
   const headerBtn = document.getElementById('btn-header-rotina-matheus');
   if (headerBtn) {
     headerBtn.addEventListener('click', () => {
@@ -1010,6 +1035,9 @@ function initRotinaMatheusModule() {
         switchTab(previousCasaTab || 'compras');
       } else {
         if (currentTab && currentTab !== 'rotina') previousCasaTab = currentTab;
+        // Sempre abre o Meu Espaço na aba "✅ Hoje" (cuidados do dia)
+        const rm = ensureRotinaMatheusState(state);
+        rm.subtab = 'hoje';
         switchTab('rotina');
       }
     });
@@ -1031,7 +1059,7 @@ function initRotinaMatheusModule() {
       playSubtleClick(state.settings.soundEnabled);
       const rm = ensureRotinaMatheusState(state);
       rm.subtab = btn.getAttribute('data-rotina-subtab') || 'hoje';
-      saveState(state);
+      // Troca de sub-aba é apenas navegação visual: não grava subtab no backup da nuvem
       renderRotinaMatheusTab(state, getRotinaMatheusCallbacks());
     });
   }
@@ -1262,6 +1290,7 @@ function initHeaderControls() {
         return;
       }
       const count = removeShoppingItemsFromList(state, ids);
+      ids.forEach(id => markDeleted(state, 'compras', id));
       saveState(state);
       triggerAutoSyncIfEnabled();
       closeModal('modal-match-shopping-items');
@@ -2867,6 +2896,11 @@ function initSettingsModule() {
       }
 
       setUserPassword(uId, p1);
+      if (!state.userPasswords || typeof state.userPasswords !== 'object') {
+        state.userPasswords = {};
+      }
+      state.userPasswords[uId] = { updatedAt: new Date().toISOString() };
+      saveState(state);
       closeModal('modal-change-password');
       showToast(`Senha de ${uId === 'scarlet' ? 'Scarlet' : 'Matheus'} salva com sucesso! 🔐`, 'success', 3500);
     });
@@ -2907,9 +2941,22 @@ function initSettingsModule() {
       const syncDot = document.getElementById('sync-dot');
       if (syncDot) syncDot.className = 'sync-status-indicator syncing';
 
+      const stampAtStart = pendingPushStamp || Date.now();
       try {
+        await mergeLatestCloudBeforePush(true);
         await backupToSheets(state);
-        saveState(state);
+        lastCloudContactAt = Date.now();
+        clearPendingCloudPush(stampAtStart);
+        isApplyingCloudState = true;
+        try {
+          saveState(state);
+        } finally {
+          isApplyingCloudState = false;
+        }
+        if (syncDot) {
+          syncDot.className = 'sync-status-indicator synced';
+          syncDot.title = `Sincronizado com Google Sheets às ${new Date().toLocaleTimeString('pt-BR')}`;
+        }
         showToast('Backup no Google Sheets concluído com sucesso!', 'success', 3500);
       } catch (err) {
         showToast(`Falha no backup: ${err.message}`, 'error', 5000);
@@ -3017,12 +3064,15 @@ let autoSyncTimeout = null;
 // repetido com espera progressiva e, antes de gravar, a planilha é mesclada
 // com prioridade para o aparelho (sem apagar o que o outro aparelho lançou).
 const PENDING_PUSH_KEY = 'maracaju_pending_cloud_push';
-const PUSH_RETRY_DELAYS = [5000, 15000, 30000, 60000, 120000];
+const PUSH_RETRY_DELAYS = [3000, 8000, 20000, 45000, 90000];
+const AUTO_SYNC_DEBOUNCE_MS = 400;
+const PRE_PUSH_MERGE_SKIP_WINDOW_MS = 20000;
 let pendingPushStamp = 0;
 try { pendingPushStamp = Number(localStorage.getItem(PENDING_PUSH_KEY)) || 0; } catch (e) {}
 let isPushingToCloud = false;
 let pushRetryTimer = null;
 let pushRetryAttempt = 0;
+let lastCloudContactAt = 0;
 
 function markPendingCloudPush() {
   pendingPushStamp = Date.now();
@@ -3050,10 +3100,16 @@ function schedulePushRetry() {
   }, delay);
 }
 
-async function mergeLatestCloudBeforePush() {
+async function mergeLatestCloudBeforePush(force = false) {
+  // Se o aparelho já sincronizou com a nuvem nos últimos 20s, evita um GET completo (~7s)
+  // antes de cada clique, reduzindo o tempo de salvamento automático pela metade.
+  if (!force && lastCloudContactAt > 0 && (Date.now() - lastCloudContactAt < PRE_PUSH_MERGE_SKIP_WINDOW_MS)) {
+    return;
+  }
   let cloudData = null;
   try {
-    cloudData = await restoreFromSheets(state);
+    cloudData = await restoreFromSheets(state, null, null, 7000);
+    lastCloudContactAt = Date.now();
   } catch (e) {
     console.warn('[Maracaju] Não consegui ler a planilha antes do envio:', e.message);
     return;
@@ -3079,6 +3135,23 @@ async function mergeLatestCloudBeforePush() {
   }
 }
 
+function flushPendingCloudPushOnHide() {
+  if (!state || !state.settings || !state.settings.sheetsUrl || state.settings.autoSync === false) return;
+  if (!hasPendingCloudPush() && !autoSyncTimeout) return;
+  if (autoSyncTimeout) {
+    clearTimeout(autoSyncTimeout);
+    autoSyncTimeout = null;
+  }
+  if (isPushingToCloud) return;
+  const stampAtStart = pendingPushStamp || Date.now();
+  backupToSheets(state, null, null, 15000, { keepalive: true })
+    .then(() => {
+      lastCloudContactAt = Date.now();
+      clearPendingCloudPush(stampAtStart);
+    })
+    .catch(() => {});
+}
+
 function triggerAutoSyncIfEnabled(immediate = false) {
   if (!state.settings.sheetsUrl) return;
   // Respeita o botão "Sincronização automática" dos Ajustes. Antes o toggle
@@ -3088,20 +3161,24 @@ function triggerAutoSyncIfEnabled(immediate = false) {
   const syncDot = document.getElementById('sync-dot');
   if (syncDot) {
     syncDot.className = 'sync-status-indicator syncing';
-    syncDot.title = 'Sincronizando com o Google Sheets...';
+    syncDot.title = 'Salvando alterações na nuvem...';
   }
 
   const runSync = async () => {
     autoSyncTimeout = null;
     if (isPushingToCloud) {
-      autoSyncTimeout = setTimeout(runSync, 1500);
+      autoSyncTimeout = setTimeout(runSync, AUTO_SYNC_DEBOUNCE_MS);
       return;
     }
     isPushingToCloud = true;
     const stampAtStart = pendingPushStamp || Date.now();
     try {
-      await mergeLatestCloudBeforePush();
-      await backupToSheets(state, null, null, 30000);
+      await mergeLatestCloudBeforePush(false);
+      await backupToSheets(state, null, null, 25000);
+      lastCloudContactAt = Date.now();
+      if (state && state.settings) {
+        state.settings.lastCloudUpdatedAt = state.lastUpdated;
+      }
       clearPendingCloudPush(stampAtStart);
       pushRetryAttempt = 0;
       if (syncDot) {
@@ -3112,15 +3189,15 @@ function triggerAutoSyncIfEnabled(immediate = false) {
       console.warn('[Maracaju] Auto-sync falhou em background:', err);
       if (syncDot) {
         syncDot.className = 'sync-status-indicator error';
-        syncDot.title = `Alterações pendentes — nova tentativa automática (${err.message})`;
+        syncDot.title = `Alterações salvas no aparelho — tentando enviar à nuvem (${err.message})`;
       }
       schedulePushRetry();
     } finally {
       isPushingToCloud = false;
     }
-    // Algo foi salvo durante o envio: manda de novo
+    // Algo foi salvo durante o envio: manda de novo rapidamente
     if (hasPendingCloudPush() && pendingPushStamp > stampAtStart && !autoSyncTimeout) {
-      autoSyncTimeout = setTimeout(runSync, 800);
+      autoSyncTimeout = setTimeout(runSync, AUTO_SYNC_DEBOUNCE_MS);
     }
   };
 
@@ -3130,7 +3207,7 @@ function triggerAutoSyncIfEnabled(immediate = false) {
     runSync();
   } else {
     if (autoSyncTimeout) clearTimeout(autoSyncTimeout);
-    autoSyncTimeout = setTimeout(runSync, 1200);
+    autoSyncTimeout = setTimeout(runSync, AUTO_SYNC_DEBOUNCE_MS);
   }
 }
 
@@ -3179,6 +3256,7 @@ async function syncPullFromSheets(silent = false) {
 
   try {
     const cloudData = await restoreFromSheets(state);
+    lastCloudContactAt = Date.now();
     if (cloudData) {
       const cloudStamp = String(cloudData.lastUpdated || cloudData.updatedAt || '');
       const knownStamp = state.settings && state.settings.lastCloudUpdatedAt;
@@ -3633,11 +3711,15 @@ function initComprasModule() {
   const btnClearBought = document.getElementById('btn-clear-bought-items');
   if (btnClearBought) {
     btnClearBought.addEventListener('click', () => {
+      const boughtIds = (Array.isArray(state.compras) ? state.compras : [])
+        .filter(i => i && i.bought && i.id)
+        .map(i => i.id);
       const removedCount = clearBoughtItems(state);
       if (removedCount === 0) {
         showToast('Nenhum item marcado como comprado para limpar.', 'info');
         return;
       }
+      boughtIds.forEach(id => markDeleted(state, 'compras', id));
       saveState(state);
       triggerAutoSyncIfEnabled();
       showToast(`${removedCount} ${removedCount === 1 ? 'item comprado foi limpo' : 'itens comprados foram limpos'} da lista! 🧹`, 'success');

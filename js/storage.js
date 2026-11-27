@@ -485,6 +485,12 @@ export function loadState() {
     filterDeletedFromState(merged);
     ensureRecoveredPurchases(merged);
 
+    // Sempre inicia o Meu Espaço na sub-aba "hoje" (cuidados do dia), evitando
+    // que um subtab="fotos" antigo salvo no localStorage puxe a tela ao abrir.
+    if (merged.rotinaMatheus && typeof merged.rotinaMatheus === 'object') {
+      merged.rotinaMatheus.subtab = 'hoje';
+    }
+
     deduplicatePets(merged);
 
     // Migração: remove a chave legada assim que o estado novo já existe no

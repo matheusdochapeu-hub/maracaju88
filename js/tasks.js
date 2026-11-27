@@ -125,7 +125,8 @@ export function toggleTaskDone(state, taskId, dateStr = getLocalDateString(), us
     title: task.title,
     room: task.room,
     frequency: task.frequency || 'diaria',
-    completedAt: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    completedAt: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+    updatedAt: now.toISOString()
   };
   return { status: 'completed', doneBy: user.name };
 }

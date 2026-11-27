@@ -35,6 +35,7 @@ export function addPhotoToSonho(state, id, photoUrl) {
   if (!item) return false;
   if (!Array.isArray(item.photos)) item.photos = [];
   item.photos.push(photoUrl);
+  item.updatedAt = new Date().toISOString();
   return true;
 }
 
@@ -42,6 +43,7 @@ export function removePhotoFromSonho(state, id, index) {
   const item = list(state).find(s => s.id === id);
   if (!item || !Array.isArray(item.photos) || index < 0 || index >= item.photos.length) return false;
   item.photos.splice(index, 1);
+  item.updatedAt = new Date().toISOString();
   return true;
 }
 
@@ -73,6 +75,7 @@ export function toggleSonhoMilestone(state, sonhoId, milestoneId) {
   const m = item && (item.milestones || []).find(x => x.id === milestoneId);
   if (!m) return false;
   m.done = !m.done;
+  item.updatedAt = new Date().toISOString();
   return m.done;
 }
 
@@ -83,6 +86,7 @@ export function addSonhoMilestone(state, sonhoId, title) {
   if (!item.milestones) item.milestones = [];
   const m = { id: makeId('m'), title: t, done: false };
   item.milestones.push(m);
+  item.updatedAt = new Date().toISOString();
   return m;
 }
 
@@ -103,7 +107,11 @@ export function removeSonhoMilestone(state, sonhoId, milestoneId) {
   if (!item || !item.milestones) return false;
   const before = item.milestones.length;
   item.milestones = item.milestones.filter(m => m.id !== milestoneId);
-  return item.milestones.length < before;
+  if (item.milestones.length < before) {
+    item.updatedAt = new Date().toISOString();
+    return true;
+  }
+  return false;
 }
 
 export function getSonhoProgress(sonho) {

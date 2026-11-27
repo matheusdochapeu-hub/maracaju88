@@ -4,6 +4,40 @@ Este arquivo consolida a memória técnica, auditorias de código, regras arquit
 
 ---
 
+## [2026-11-27 11:15] - Correção do Redirecionamento Forçado para Aba Fotos no Meu Espaço & Turbo Sync Multi-Aparelhos (v2.10.7)
+
+### 🐞 Problemas Relatados
+1. Ao acessar **⚡ Meu Espaço** para ver os cuidados do dia, o aplicativo puxava de forma forçada para a sub-aba **📸 Fotos**.
+2. Pedido para verificar e melhorar a sincronização com backup e entre aparelhos, aumentando a velocidade e aprimorando o salvamento automático conforme cada alteração é feita.
+
+### 🔍 Causas Raiz Identificadas
+1. **`subtab: "fotos"` gravado na planilha Google e invertido no merge pré-push**:
+   - O campo `rotinaMatheus.subtab` estava salvo como `"fotos"` no `Backup_JSON` da nuvem.
+   - Sempre que o usuário clicava em **✅ Hoje** ou marcava um cuidado, `saveState` disparava `mergeLatestCloudBeforePush()`, que chamava `mergeCloudWithLocalPriority(localState, cloudData)`.
+   - Dentro de `mergeCloudWithLocalPriority`, a chamada invertida `swapped = applyCloudBackup(cloudData, local)` passava `cloudData` como 1º argumento para `mergeRotinaMatheusState(localRM, cloudRM)`, fazendo `subtab` assumir `cloudData.rotinaMatheus.subtab` (`"fotos"`) e re-renderizando a tela de volta para a aba Fotos!
+   - Além disso, toda renderização da sub-aba Fotos executava `renderGaleriaGitHub().then(() => sincronizarArsenalERotina(false))`, que chamava `save()` incondicionalmente mesmo sem mudança nos produtos.
+2. **Latência no Auto-Save (~15-18s por clique) e Conflitos Multi-Aparelhos**:
+   - Cada alteração aguardava `1200ms` de debounce e sempre fazia um `GET ?action=restore` completo (~6,8s) antes de enviar o `POST action=backup`, mesmo quando o aparelho já havia acabado de sincronizar segundos antes.
+   - `rotinaMatheus.dias` fazia união incondicional (`Set`), impedindo desmarcar cuidados ou limpar o dia (a nuvem marcava de volta).
+   - `applyCloudBackup` em `comprasRegistros` aplicava `{ ...cloudItem, ...localItem }` sem comparar `updatedAt`, ignorando edições feitas em outro aparelho.
+
+### 🛠️ Soluções Implementadas
+1. **Fim do Pulo Forçado para Fotos (`js/rotina-matheus.js`, `js/sheets.js`, `js/storage.js`, `js/app.js`)**:
+   - Clicar em **⚡ Meu Espaço** (`#btn-header-rotina-matheus`) e `loadState()` sempre abrem na sub-aba **`✅ Hoje`** (`subtab = 'hoje'`).
+   - `subtab` foi isolado como estado puramente visual de navegação: trocar de sub-aba não dispara `saveState`/push para a planilha, `backupToSheets` grava sempre `subtab: 'hoje'`, e `mergeRotinaMatheusState`/`mergeCloudWithLocalPriority` jamais puxam `subtab` da nuvem.
+   - `sincronizarArsenalERotina` aborta se o usuário já saiu da sub-aba `fotos` e só chama `save()` quando há alteração real nos produtos detectados.
+2. **Auto-Save Turbo & Sincronização por `updatedAt` (`js/app.js`, `js/sheets.js`, `js/shopping.js`, `js/projects.js`, `js/sonhos.js`, `js/tasks.js`)**:
+   - Debounce do auto-sync reduzido de `1200ms` para **`400ms`**.
+   - Janela inteligente `PRE_PUSH_MERGE_SKIP_WINDOW_MS` (`20s`): edições consecutivas pulam o `GET ?action=restore` redundante antes do `POST`, cortando ~7 segundos de espera a cada clique.
+   - Flush imediato com `keepalive: true` em `visibilitychange` (`hidden`) e `pagehide` (garante envio ao bloquear o celular logo após marcar um item) + sincronização instantânea entre abas via evento `storage`.
+   - Enxugamento de ~10 KB no payload da nuvem (envia apenas produtos OCR customizados em `rotinaMatheus.arsenal`) e limite multi-célula ajustado para `88.000` caracteres, preservando `catalog` e `nutrition` na planilha.
+   - Resolução de conflitos por `updatedAt` em `rotinaMatheus.dias`, `rotinaMatheus.ds`, `comprasRegistros`, `compras`, `carro`, `reformas`, `sonhos`, `shoppingWishlist` e `tasks`, além de tombstones automáticos em `clearBoughtItems` e `removeShoppingItemsFromList`.
+
+### 📦 Versão
+- **v2.10.7** em `js/config.js`, `sw.js` (`maracaju-v2.10.7`), `package.json` e `?v=2.10.7` no `index.html`.
+
+---
+
 ## [2026-11-24 22:05] - URL do Apps Script na busca escondia os lançamentos (v2.10.2)
 
 ### 🐞 Sintoma (print do usuário)

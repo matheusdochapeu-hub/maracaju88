@@ -715,12 +715,15 @@ const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'
 const MANHA_KEYS = ['m1', 'm2', 'm3'];
 const NOITE_KEYS = ['n1', 'n2'];
 
+export const ROTINA_VALID_SUBTABS = ['hoje', 'capilar', 'guias', 'fotos', 'ciclos'];
+
 export function ensureRotinaMatheusState(state) {
-  if (!state) return { dias: {}, ds: {}, subtab: 'hoje', capStageSel: 0 };
+  if (!state) return { dias: {}, ds: {}, dsUpdatedAt: {}, subtab: 'hoje', capStageSel: 0 };
   if (!state.rotinaMatheus || typeof state.rotinaMatheus !== 'object') {
     state.rotinaMatheus = {
       dias: {},
       ds: {},
+      dsUpdatedAt: {},
       subtab: 'hoje',
       updatedAt: new Date().toISOString()
     };
@@ -737,6 +740,12 @@ export function ensureRotinaMatheusState(state) {
   }
   if (!state.rotinaMatheus.dias) state.rotinaMatheus.dias = {};
   if (!state.rotinaMatheus.ds) state.rotinaMatheus.ds = {};
+  if (!state.rotinaMatheus.dsUpdatedAt || typeof state.rotinaMatheus.dsUpdatedAt !== 'object') {
+    state.rotinaMatheus.dsUpdatedAt = {};
+  }
+  if (!ROTINA_VALID_SUBTABS.includes(state.rotinaMatheus.subtab)) {
+    state.rotinaMatheus.subtab = 'hoje';
+  }
   if (!state.rotinaMatheus.ocrMap || typeof state.rotinaMatheus.ocrMap !== 'object') state.rotinaMatheus.ocrMap = {};
   if (state.rotinaMatheus.autoRotinaFotos === undefined) state.rotinaMatheus.autoRotinaFotos = true;
   if (!Array.isArray(state.rotinaMatheus.arsenal) || state.rotinaMatheus.arsenal.length === 0) {
@@ -745,28 +754,97 @@ export function ensureRotinaMatheusState(state) {
   return state.rotinaMatheus;
 }
 
+function parseEntryTimestamp(val) {
+  if (!val) return 0;
+  if (typeof val === 'number' && Number.isFinite(val)) return val;
+  const parsed = Date.parse(String(val));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function mergeRotinaMatheusState(localRM, cloudRM) {
+  // A sub-aba ativa ("hoje", "capilar", "guias", "fotos", "ciclos") é estado local de navegação:
+  // NUNCA deve ser puxada da nuvem (o que forçava o app a pular para a aba Fotos).
+  const safeSubtab = (localRM && ROTINA_VALID_SUBTABS.includes(localRM.subtab) && !localRM._isCloudSnapshot)
+    ? localRM.subtab
+    : 'hoje';
   const base = {
     dias: {},
     ds: {},
-    subtab: (localRM && localRM.subtab) || 'hoje',
+    dsUpdatedAt: {},
+    subtab: safeSubtab,
     updatedAt: new Date().toISOString()
   };
-  const mergeDias = (src) => {
-    if (!src || !src.dias) return;
-    Object.entries(src.dias).forEach(([dayKey, val]) => {
-      if (!val) return;
-      const prev = base.dias[dayKey] || { done: [], min: false };
-      const unionDone = Array.from(new Set([...(prev.done || []), ...(Array.isArray(val.done) ? val.done : [])]));
+
+  const allDayKeys = new Set([
+    ...Object.keys((cloudRM && cloudRM.dias) || {}),
+    ...Object.keys((localRM && localRM.dias) || {})
+  ]);
+  allDayKeys.forEach(dayKey => {
+    const cVal = cloudRM && cloudRM.dias ? cloudRM.dias[dayKey] : null;
+    const lVal = localRM && localRM.dias ? localRM.dias[dayKey] : null;
+    if (lVal && !cVal) {
       base.dias[dayKey] = {
-        done: unionDone,
-        min: Boolean(prev.min || val.min)
+        done: Array.isArray(lVal.done) ? [...lVal.done] : [],
+        min: Boolean(lVal.min),
+        ...(lVal.updatedAt ? { updatedAt: lVal.updatedAt } : {})
       };
-    });
-  };
-  mergeDias(cloudRM);
-  mergeDias(localRM);
-  base.ds = { ...((cloudRM && cloudRM.ds) || {}), ...((localRM && localRM.ds) || {}) };
+      return;
+    }
+    if (cVal && !lVal) {
+      base.dias[dayKey] = {
+        done: Array.isArray(cVal.done) ? [...cVal.done] : [],
+        min: Boolean(cVal.min),
+        ...(cVal.updatedAt ? { updatedAt: cVal.updatedAt } : {})
+      };
+      return;
+    }
+    if (lVal && cVal) {
+      const lTs = parseEntryTimestamp(lVal.updatedAt);
+      const cTs = parseEntryTimestamp(cVal.updatedAt);
+      // Se algum dos lados tem carimbo de modificação (updatedAt), vence a alteração mais recente
+      // (permitindo desmarcar cuidados, desativar Modo Sobrevivência ou limpar o dia sem ressuscitar da nuvem).
+      if (lTs > 0 || cTs > 0) {
+        const winner = lTs >= cTs ? lVal : cVal;
+        const winTs = Math.max(lTs, cTs);
+        base.dias[dayKey] = {
+          done: Array.isArray(winner.done) ? [...winner.done] : [],
+          min: Boolean(winner.min),
+          updatedAt: winTs
+        };
+      } else {
+        const unionDone = Array.from(new Set([...(Array.isArray(cVal.done) ? cVal.done : []), ...(Array.isArray(lVal.done) ? lVal.done : [])]));
+        base.dias[dayKey] = {
+          done: unionDone,
+          min: Boolean(cVal.min || lVal.min)
+        };
+      }
+    }
+  });
+
+  // Mescla datas de ciclos (ds) respeitando quem atualizou ou limpou mais recentemente
+  const cDs = (cloudRM && cloudRM.ds) || {};
+  const lDs = (localRM && localRM.ds) || {};
+  const cDsTs = (cloudRM && cloudRM.dsUpdatedAt) || {};
+  const lDsTs = (localRM && localRM.dsUpdatedAt) || {};
+  const allCycleKeys = new Set([
+    ...Object.keys(cDs),
+    ...Object.keys(lDs),
+    ...Object.keys(cDsTs),
+    ...Object.keys(lDsTs)
+  ]);
+  allCycleKeys.forEach(k => {
+    const lTs = parseEntryTimestamp(lDsTs[k]);
+    const cTs = parseEntryTimestamp(cDsTs[k]);
+    if (lTs > 0 || cTs > 0) {
+      const winVal = lTs >= cTs ? lDs[k] : cDs[k];
+      base.dsUpdatedAt[k] = Math.max(lTs, cTs);
+      if (winVal) base.ds[k] = winVal;
+    } else {
+      const val = lDs[k] !== undefined ? lDs[k] : cDs[k];
+      if (val) base.ds[k] = val;
+    }
+  });
+
   base.ocrMap = { ...((cloudRM && cloudRM.ocrMap) || {}), ...((localRM && localRM.ocrMap) || {}) };
   base.autoRotinaFotos = (localRM && localRM.autoRotinaFotos !== undefined)
     ? localRM.autoRotinaFotos
@@ -1302,6 +1380,7 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
             diaAtual.min = false;
           }
         }
+        diaAtual.updatedAt = Date.now();
         save();
         renderRotinaMatheusTab(state, callbacks);
       });
@@ -1321,6 +1400,7 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
           });
           notify('⚡ Modo sobrevivência ativado', 'success');
         }
+        diaAtual.updatedAt = Date.now();
         save();
         renderRotinaMatheusTab(state, callbacks);
       });
@@ -1330,7 +1410,7 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
         if (!confirm('Desmarcar todos os itens de hoje?')) return;
-        rm.dias[H] = { done: [], min: false };
+        rm.dias[H] = { done: [], min: false, updatedAt: Date.now() };
         save();
         renderRotinaMatheusTab(state, callbacks);
         notify('Itens de hoje desmarcados');
@@ -1462,9 +1542,9 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
     });
 
     const inDesc = document.getElementById('rm-date-desc');
-    if (inDesc) inDesc.addEventListener('change', (e) => { rm.ds.desc = e.target.value; save(); renderRotinaMatheusTab(state, callbacks); });
+    if (inDesc) inDesc.addEventListener('change', (e) => { rm.ds.desc = e.target.value; rm.dsUpdatedAt.desc = Date.now(); save(); renderRotinaMatheusTab(state, callbacks); });
     const inCorte = document.getElementById('rm-date-corte');
-    if (inCorte) inCorte.addEventListener('change', (e) => { rm.ds.corte = e.target.value; save(); renderRotinaMatheusTab(state, callbacks); });
+    if (inCorte) inCorte.addEventListener('change', (e) => { rm.ds.corte = e.target.value; rm.dsUpdatedAt.corte = Date.now(); save(); renderRotinaMatheusTab(state, callbacks); });
 
     container.querySelectorAll('[data-rm-add-shop]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -2125,29 +2205,35 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
     };
 
     const sincronizarArsenalERotina = async (runDeepOcr = false) => {
+      if (rm.subtab !== 'fotos') return;
       const stEl = document.getElementById('rm-ai-status');
       const localFs = await listarFotosIdb();
+      if (rm.subtab !== 'fotos') return;
       const ghFs = (ghFotosCache && Array.isArray(ghFotosCache.list)) ? ghFotosCache.list : [];
+      let ocrAdded = false;
       if (runDeepOcr && typeof onOcrImage === 'function') {
         // Roda OCR nas fotos que ainda não possuem match no catálogo nem texto OCR salvo
         for (const f of localFs) {
+          if (rm.subtab !== 'fotos') return;
           if (!identificarProdutoPorTextoOuId({ id: f.id, cat: f.cat, ocrText: f.ocrText || rm.ocrMap[f.id] || '' }) && f.blob) {
             if (stEl) stEl.textContent = `🔍 Lendo rótulo da foto local ${f.id}...`;
             const txt = await onOcrImage(f.blob);
-            if (txt) { f.ocrText = txt; rm.ocrMap[f.id] = txt; await idbFoto('readwrite', s => s.put(f)); }
+            if (txt) { f.ocrText = txt; rm.ocrMap[f.id] = txt; ocrAdded = true; await idbFoto('readwrite', s => s.put(f)); }
           }
         }
         for (const gf of ghFs) {
+          if (rm.subtab !== 'fotos') return;
           if (!identificarProdutoPorTextoOuId({ id: gf.id, path: gf.path, cat: gf.cat, ocrText: rm.ocrMap[gf.id] || '' })) {
             try {
               if (stEl) stEl.textContent = `🔍 Lendo rótulo da foto do GitHub ${gf.id}...`;
               const url = await baixarFotoGitHub(gf);
               const txt = await onOcrImage(url);
-              if (txt) rm.ocrMap[gf.id] = txt;
+              if (txt) { rm.ocrMap[gf.id] = txt; ocrAdded = true; }
             } catch (e) {}
           }
         }
       }
+      if (rm.subtab !== 'fotos') return;
       const todasFotos = [
         ...CATALOGO_PRODUTOS_ROTINA.map(p => ({ id: (p.photoIds && p.photoIds[0]) || p.key, cat: p.cat })),
         ...ghFs,
@@ -2155,8 +2241,15 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
       ];
       const detectados = analisarListaFotosArsenal(todasFotos, rm.ocrMap);
       if (detectados.length) {
-        rm.arsenal = detectados.map(p => ({ key: p.key, nome: p.nome, curto: p.curto, cat: p.cat, slot: p.slot, quando: p.quando, comoUsar: p.comoUsar }));
-        save();
+        const nextArsenal = detectados.map(p => ({ key: p.key, nome: p.nome, curto: p.curto, cat: p.cat, slot: p.slot, quando: p.quando, comoUsar: p.comoUsar }));
+        const prevKeys = (Array.isArray(rm.arsenal) ? rm.arsenal : []).map(p => p && p.key).filter(Boolean).sort().join('|');
+        const nextKeys = nextArsenal.map(p => p && p.key).filter(Boolean).sort().join('|');
+        rm.arsenal = nextArsenal;
+        // Só dispara saveState/cloud push se houve mudança real no arsenal ou novo OCR,
+        // evitando ciclos de sincronização ao apenas abrir a sub-aba Fotos.
+        if (ocrAdded || prevKeys !== nextKeys) {
+          save();
+        }
       }
       renderResumoAi(detectados.length ? detectados : CATALOGO_PRODUTOS_ROTINA, [...ghFs, ...localFs]);
       if (stEl) {
@@ -2178,7 +2271,9 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
     renderResumoAi(CATALOGO_PRODUTOS_ROTINA);
     atualizarGaleria();
     renderGaleriaGitHub().then(() => {
-      if (rm.autoRotinaFotos !== false) sincronizarArsenalERotina(false);
+      if (rm.subtab === 'fotos' && rm.autoRotinaFotos !== false) {
+        sincronizarArsenalERotina(false);
+      }
     });
     return;
   }
@@ -2217,6 +2312,7 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
       btn.addEventListener('click', () => {
         const k = btn.getAttribute('data-rm-ciclo');
         rm.ds[k] = H;
+        rm.dsUpdatedAt[k] = Date.now();
         save();
         renderRotinaMatheusTab(state, callbacks);
         notify('Ciclo atualizado ✅', 'success');
@@ -2226,6 +2322,7 @@ export function renderRotinaMatheusTab(state, callbacks = {}) {
       btn.addEventListener('click', () => {
         const k = btn.getAttribute('data-rm-ciclo-clear');
         delete rm.ds[k];
+        rm.dsUpdatedAt[k] = Date.now();
         save();
         renderRotinaMatheusTab(state, callbacks);
       });

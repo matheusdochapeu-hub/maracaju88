@@ -94,6 +94,7 @@ export function addPhoto(state, key, id, dataUrl) {
   if (!item) return false;
   if (!item.photos) item.photos = [];
   item.photos.push(dataUrl);
+  item.updatedAt = new Date().toISOString();
   return true;
 }
 
@@ -101,6 +102,7 @@ export function removePhoto(state, key, id, index) {
   const item = findProject(state, key, id);
   if (!item || !item.photos || index < 0 || index >= item.photos.length) return false;
   item.photos.splice(index, 1);
+  item.updatedAt = new Date().toISOString();
   return true;
 }
 
@@ -111,6 +113,7 @@ export function addLink(state, key, id, { url, title }) {
   if (!item.links) item.links = [];
   const link = { id: makeId('lnk'), title: (title || '').trim() || cleanUrl, url: cleanUrl };
   item.links.push(link);
+  item.updatedAt = new Date().toISOString();
   return link;
 }
 
@@ -120,6 +123,7 @@ export function removeLink(state, key, id, linkId) {
   const idx = item.links.findIndex(l => l.id === linkId);
   if (idx === -1) return false;
   item.links.splice(idx, 1);
+  item.updatedAt = new Date().toISOString();
   return true;
 }
 
@@ -130,6 +134,7 @@ export function addChecklistItem(state, key, id, title) {
   if (!item.checklist) item.checklist = [];
   const check = { id: makeId('chk'), title: t, done: false };
   item.checklist.push(check);
+  item.updatedAt = new Date().toISOString();
   return check;
 }
 
@@ -138,6 +143,7 @@ export function toggleChecklistItem(state, key, id, checkId) {
   const check = item && (item.checklist || []).find(c => c.id === checkId);
   if (!check) return false;
   check.done = !check.done;
+  item.updatedAt = new Date().toISOString();
   return check.done;
 }
 
@@ -158,7 +164,11 @@ export function removeChecklistItem(state, key, id, checkId) {
   if (!item || !item.checklist) return false;
   const before = item.checklist.length;
   item.checklist = item.checklist.filter(c => c.id !== checkId);
-  return item.checklist.length < before;
+  if (item.checklist.length < before) {
+    item.updatedAt = new Date().toISOString();
+    return true;
+  }
+  return false;
 }
 
 export function getProjectsSummary(state, key, statusIds) {

@@ -169,3 +169,101 @@ test('PRODUTOS_SUGERIDOS_SHOPPING lista apenas o que falta para completar o arse
   assert.ok(w.looksFotografados[0].combinacao.includes('Tênis Couro'));
   assert.ok(w.looksBase.length === 4);
 });
+
+test('Meu Espaço: sincronização da nuvem NUNCA força subtab para "fotos" e respeita desmarcação de cuidados por updatedAt', () => {
+  const localState = {
+    activeUserId: 'matheus',
+    rotinaMatheus: {
+      subtab: 'hoje',
+      dias: {
+        '2026-11-27': {
+          done: ['agua'],
+          min: false,
+          updatedAt: 2000
+        }
+      },
+      ds: {},
+      dsUpdatedAt: { corte: 2000 }
+    }
+  };
+
+  const cloudData = {
+    activeUserId: 'matheus',
+    rotinaMatheus: {
+      subtab: 'fotos',
+      dias: {
+        '2026-11-27': {
+          done: ['agua', 'escova_m', 'raspador'],
+          min: true,
+          updatedAt: 1000
+        }
+      },
+      ds: { corte: '2026-11-10' },
+      dsUpdatedAt: { corte: 1000 }
+    }
+  };
+
+  // 1. No merge antes do push (mergeCloudWithLocalPriority), subtab continua 'hoje' e desmarcações recentes vencem
+  const mergedLocalPrio = mergeCloudWithLocalPriority(localState, cloudData);
+  assert.equal(mergedLocalPrio.rotinaMatheus.subtab, 'hoje');
+  assert.deepEqual(mergedLocalPrio.rotinaMatheus.dias['2026-11-27'].done, ['agua']);
+  assert.equal(mergedLocalPrio.rotinaMatheus.dias['2026-11-27'].min, false);
+  assert.equal(mergedLocalPrio.rotinaMatheus.ds.corte, undefined);
+
+  // 2. No pull direto da nuvem (applyCloudBackup), subtab também não é puxado para 'fotos'
+  const mergedPull = applyCloudBackup({ activeUserId: 'matheus', rotinaMatheus: { subtab: 'hoje', dias: {} } }, cloudData);
+  assert.equal(mergedPull.rotinaMatheus.subtab, 'hoje');
+});
+
+test('Sincronização entre aparelhos: edição mais recente (updatedAt) em comprasRegistros e carro vence no pull da nuvem', () => {
+  const deviceBState = {
+    comprasRegistros: [
+      {
+        id: 'nfe_shared_1',
+        marketName: 'Savegnago',
+        date: '2026-11-26',
+        total: 100.00,
+        paymentMethod: 'va',
+        updatedAt: '2026-11-26T10:00:00.000Z',
+        photos: ['data:image/jpeg;base64,LOCALPHOTO']
+      }
+    ],
+    carro: [
+      {
+        id: 'car_shared_1',
+        title: 'Revisão 50.000km',
+        status: 'pendente',
+        updatedAt: '2026-11-26T10:00:00.000Z'
+      }
+    ]
+  };
+
+  const cloudFromDeviceA = {
+    comprasRegistros: [
+      {
+        id: 'nfe_shared_1',
+        marketName: 'Savegnago Supermercados',
+        date: '2026-11-26',
+        total: 148.90,
+        paymentMethod: 'vr',
+        updatedAt: '2026-11-27T11:00:00.000Z',
+        items: [{ alias: 'Picanha', qty: 1, unitPrice: 148.90, totalPrice: 148.90 }]
+      }
+    ],
+    carro: [
+      {
+        id: 'car_shared_1',
+        title: 'Revisão 50.000km',
+        status: 'concluido',
+        updatedAt: '2026-11-27T11:00:00.000Z'
+      }
+    ]
+  };
+
+  const synced = applyCloudBackup(deviceBState, cloudFromDeviceA);
+  assert.equal(synced.comprasRegistros[0].total, 148.90);
+  assert.equal(synced.comprasRegistros[0].paymentMethod, 'vr');
+  assert.equal(synced.comprasRegistros[0].items.length, 1);
+  assert.deepEqual(synced.comprasRegistros[0].photos, ['data:image/jpeg;base64,LOCALPHOTO']);
+  assert.equal(synced.carro[0].status, 'concluido');
+});
