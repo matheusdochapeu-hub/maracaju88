@@ -2719,8 +2719,9 @@ body.modal-open {
 
 .marmitas-cards-grid-core {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
+  align-items: stretch;
 }
 
 .marmitas-cards-grid-extras {
@@ -2728,18 +2729,124 @@ body.modal-open {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 0.75rem;
   margin-top: 0.75rem;
+  align-items: stretch;
+}
+
+@media (max-width: 780px) {
+  .marmitas-cards-grid-core {
+    grid-template-columns: 1fr;
+  }
+}
+
+.marmitas-toolbar-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.65rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.marmitas-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  align-items: stretch;
+}
+
+.marmitas-config-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.marmitas-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.marmitas-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.marmitas-preset-row .btn-xs {
+  min-height: 30px;
+  padding: 0.22rem 0.55rem;
+  font-size: 0.71rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.marmitas-stepper-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.45rem;
+}
+
+.marmitas-stepper-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.55rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 48px;
+}
+
+.marmitas-stepper-controls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.marmitas-stepper-controls .btn-xs {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.marmitas-stepper-val {
+  font-size: 0.78rem;
+  font-weight: 800;
+  min-width: 36px;
+  text-align: center;
 }
 
 .marmitas-nutri-card {
   background: var(--bg-card);
   border: 1.5px solid var(--card-accent-border, var(--border-subtle));
   border-radius: var(--radius-md);
-  padding: 0.9rem;
+  padding: 0.85rem 0.9rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  justify-content: space-between;
+  gap: 0.4rem;
   min-width: 0;
+  height: 100%;
   cursor: pointer;
   text-align: left;
   width: 100%;
